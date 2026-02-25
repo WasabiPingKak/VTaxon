@@ -1,0 +1,52 @@
+erDiagram
+    users ||--o{ oauth_accounts : "has"
+    users ||--o{ vtuber_traits : "has"
+    species_cache ||--o{ vtuber_traits : "referenced by"
+
+    users {
+        uuid id PK
+        varchar display_name
+        varchar avatar_url
+        varchar role "admin | user"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    oauth_accounts {
+        uuid id PK
+        uuid user_id FK
+        varchar provider "youtube | twitch"
+        varchar provider_account_id
+        varchar provider_display_name
+        varchar provider_avatar_url
+        varchar access_token
+        varchar refresh_token
+        timestamp token_expires_at
+        timestamp created_at
+    }
+
+    species_cache {
+        integer taxon_id PK "GBIF usageKey"
+        varchar scientific_name
+        varchar common_name_en
+        varchar common_name_zh
+        varchar taxon_rank
+        varchar taxon_path "Materialized Path"
+        varchar kingdom
+        varchar phylum
+        varchar class
+        varchar order_
+        varchar family
+        varchar genus
+        timestamp cached_at
+    }
+
+    vtuber_traits {
+        uuid id PK
+        uuid user_id FK
+        integer taxon_id FK
+        varchar display_name "龍、狐狸 etc"
+        varchar trait_note
+        timestamp created_at
+        timestamp updated_at
+    }
