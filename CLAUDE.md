@@ -20,13 +20,23 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 | 角色粒度 | 一個頻道 = 一個角色 |
 | 權限 | 頻道主編輯自己的資料 + 管理者（admin）全域權限 |
 | 複合種 | 只記錄包含哪些物種，不記錄比例，所有 trait 等權 |
+| 認證方式 | Supabase Auth（OAuth → JWT） |
+| 部署方案 | Flask on Google Cloud Run；前端待定（Vercel / Cloudflare Pages） |
 
 ## 技術棧
 
-- **前端**：React
+- **前端**：React + Vite
 - **後端**：Python Flask
-- **資料庫**：PostgreSQL（Supabase 或 Neon 免費方案）
+- **資料庫**：PostgreSQL（Supabase）
+- **認證**：Supabase Auth（OAuth → JWT）
+- **後端部署**：Google Cloud Run
 - **外部 API**：GBIF Species API（生物分類查詢）
+
+## 認證流程
+
+1. **登入**：前端呼叫 Supabase Auth SDK，使用者透過 YouTube / Twitch OAuth 登入，取得 JWT。
+2. **API 驗證**：前端在每次 API 請求的 `Authorization: Bearer <JWT>` 標頭帶上 JWT。Flask 後端使用 Supabase JWT secret 在本地驗證簽章，不需要每次回呼 Supabase。
+3. **權限檢查**：從 JWT 中取得 `user_id`，查詢 `users` 表的 `role` 欄位判斷權限（`admin` 或 `user`）。
 
 ## 資料模型（4 張表）
 
@@ -61,6 +71,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 
 ## 開發注意事項
 
-- 資料庫選用免費方案（Supabase / Neon），注意儲存空間限制。
+- 資料庫選用 Supabase 免費方案，注意儲存空間限制。
+- Google Cloud Run 有冷啟動延遲，Flask 應用應盡量縮短啟動時間（精簡 import、延遲載入非必要模組）。
 - 幻想物種目前用 proxy species 做法，資料表結構已預留未來擴充空間（可加 `is_fictional` 欄位）。
 - `taxon_path` 欄位需要 `varchar_pattern_ops` 索引以支援前綴查詢。

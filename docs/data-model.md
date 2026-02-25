@@ -8,7 +8,7 @@
 | 生物分類資料 | GBIF 即時查詢 + 本地快取 |
 | 幻想物種 | 做法 A：使用者自選現實 proxy species |
 | 角色粒度 | 一個頻道 = 一個角色 |
-| 技術棧 | React + Flask + PostgreSQL (Supabase/Neon) |
+| 技術棧 | React + Vite / Flask on Cloud Run / PostgreSQL (Supabase) / Supabase Auth |
 | 權限模型 | 頻道主編輯自己的資料 + 管理者全域權限 |
 
 ---
