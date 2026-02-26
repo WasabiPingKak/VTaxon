@@ -24,7 +24,19 @@ def update_me():
         return jsonify({'error': 'User not found'}), 404
 
     data = request.get_json() or {}
-    allowed = {'display_name', 'avatar_url'}
+    allowed = {'display_name', 'avatar_url', 'organization', 'country_flags'}
+
+    if 'country_flags' in data:
+        flags = data['country_flags']
+        if not isinstance(flags, list):
+            return jsonify({'error': 'country_flags must be a list'}), 400
+        cleaned = []
+        for f in flags:
+            if not isinstance(f, str) or len(f) != 2:
+                return jsonify({'error': 'Each flag must be a 2-character country code'}), 400
+            cleaned.append(f.upper())
+        data['country_flags'] = cleaned
+
     for key in allowed:
         if key in data:
             setattr(user, key, data[key])

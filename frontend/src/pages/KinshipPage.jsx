@@ -29,30 +29,30 @@ export default function KinshipPage() {
     }
   }
 
-  if (loading) return <p style={{ textAlign: 'center', marginTop: '40px' }}>Loading kinship data...</p>;
-  if (!data || !targetUser) return <p style={{ textAlign: 'center', marginTop: '40px' }}>User not found.</p>;
+  if (loading) return <p style={{ textAlign: 'center', marginTop: '40px' }}>正在載入親緣資料…</p>;
+  if (!data || !targetUser) return <p style={{ textAlign: 'center', marginTop: '40px' }}>找不到該使用者。</p>;
 
   const hasResults = (data.real?.length > 0) || (data.fictional?.length > 0);
 
   return (
     <div style={{ maxWidth: '700px', margin: '40px auto', padding: '0 20px' }}>
-      <h2>Kinship Results for {targetUser.display_name}</h2>
+      <h2>{targetUser.display_name} 的親緣關係</h2>
 
       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', cursor: 'pointer' }}>
         <input type="checkbox" checked={includeHuman} onChange={(e) => setIncludeHuman(e.target.checked)} />
-        Include Homo sapiens comparisons
+        包含人類（Homo sapiens）的比較結果
       </label>
 
       {!hasResults && (
-        <p style={{ color: '#999' }}>No kinship data available. This user needs species traits first.</p>
+        <p style={{ color: '#999' }}>尚無親緣資料。此使用者需要先新增物種特徵。</p>
       )}
 
       {data.real?.map((group, i) => (
-        <TraitGroup key={`real-${i}`} label="Real Species" group={group} />
+        <TraitGroup key={`real-${i}`} label="現實物種" group={group} />
       ))}
 
       {data.fictional?.map((group, i) => (
-        <TraitGroup key={`fic-${i}`} label="Fictional Species" group={group} />
+        <TraitGroup key={`fic-${i}`} label="奇幻生物" group={group} />
       ))}
     </div>
   );
@@ -62,11 +62,11 @@ function TraitGroup({ label, group }) {
   return (
     <div style={{ marginBottom: '32px' }}>
       <h3 style={{ borderBottom: '2px solid #4a90d9', paddingBottom: '8px' }}>
-        {label}: {group.trait.display_name}
+        {label}：{group.trait.display_name}
       </h3>
 
       {group.rankings.length === 0 ? (
-        <p style={{ color: '#999' }}>No matching characters found for this trait.</p>
+        <p style={{ color: '#999' }}>找不到此特徵的相符角色。</p>
       ) : (
         <div>
           {group.rankings.map((r, idx) => (
@@ -76,7 +76,7 @@ function TraitGroup({ label, group }) {
             }}>
               <div>
                 <Link to={`/kinship/${r.user?.id}`} style={{ textDecoration: 'none', color: '#333' }}>
-                  <strong>{r.user?.display_name || 'Unknown'}</strong>
+                  <strong>{r.user?.display_name || '未知'}</strong>
                 </Link>
                 <span style={{ marginLeft: '10px', color: '#888' }}>
                   {r.trait.display_name}
@@ -87,7 +87,7 @@ function TraitGroup({ label, group }) {
                 background: r.distance <= 2 ? '#27ae60' : r.distance <= 4 ? '#f39c12' : '#e74c3c',
                 color: '#fff', fontSize: '0.85em',
               }}>
-                Distance: {r.distance}
+                距離：{r.distance}
               </span>
             </div>
           ))}

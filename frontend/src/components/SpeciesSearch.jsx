@@ -27,14 +27,14 @@ export default function SpeciesSearch({ onSelect }) {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search species (e.g. cat, wolf, eagle)"
+          placeholder="搜尋物種（例如：貓、狼、鷹，或輸入學名）"
           style={{ flex: 1, padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
         />
         <button type="submit" disabled={searching} style={{
           padding: '8px 16px', background: '#4a90d9', color: '#fff',
           border: 'none', borderRadius: '4px', cursor: 'pointer',
         }}>
-          {searching ? 'Searching...' : 'Search'}
+          {searching ? '搜尋中…' : '搜尋'}
         </button>
       </form>
 
@@ -47,7 +47,12 @@ export default function SpeciesSearch({ onSelect }) {
             }}>
               <div>
                 <strong style={{ fontStyle: 'italic' }}>{sp.scientific_name}</strong>
-                {sp.common_name_en && <span style={{ marginLeft: '8px', color: '#666' }}>({sp.common_name_en})</span>}
+                {sp.common_name_zh && (
+                  <span style={{ marginLeft: '8px', color: '#333', fontWeight: 500 }}>{sp.common_name_zh}</span>
+                )}
+                {sp.common_name_en && (
+                  <span style={{ marginLeft: '8px', color: '#666' }}>({sp.common_name_en})</span>
+                )}
                 <div style={{ fontSize: '0.85em', color: '#999' }}>
                   {[sp.kingdom, sp.phylum, sp.class, sp.order, sp.family].filter(Boolean).join(' > ')}
                 </div>
@@ -57,12 +62,18 @@ export default function SpeciesSearch({ onSelect }) {
                   padding: '4px 12px', background: '#27ae60', color: '#fff',
                   border: 'none', borderRadius: '4px', cursor: 'pointer',
                 }}>
-                  Add
+                  新增
                 </button>
               )}
             </div>
           ))}
         </div>
+      )}
+
+      {!searching && results.length === 0 && query.trim() && (
+        <p style={{ color: '#999', textAlign: 'center' }}>
+          找不到具體物種？請嘗試輸入學名搜尋
+        </p>
       )}
     </div>
   );

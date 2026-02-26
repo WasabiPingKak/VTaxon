@@ -8,22 +8,22 @@ export default function LoginPage() {
 
   return (
     <div style={{ maxWidth: '400px', margin: '80px auto', textAlign: 'center', padding: '0 20px' }}>
-      <h2 style={{ marginBottom: '32px' }}>Sign In</h2>
+      <h2 style={{ marginBottom: '32px' }}>登入</h2>
       <p style={{ color: '#666', marginBottom: '32px' }}>
-        Sign in with your streaming platform account to start tagging your character's species traits.
+        使用你的直播平台帳號登入，開始標註角色的物種特徵。
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <button onClick={signInWithGoogle} style={{
           padding: '12px', fontSize: '1em', cursor: 'pointer',
           border: '1px solid #ccc', borderRadius: '6px', background: '#fff',
         }}>
-          Sign in with Google (YouTube)
+          使用 Google（YouTube）登入
         </button>
         <button onClick={signInWithTwitch} style={{
           padding: '12px', fontSize: '1em', cursor: 'pointer',
           border: '1px solid #ccc', borderRadius: '6px', background: '#9146ff', color: '#fff',
         }}>
-          Sign in with Twitch
+          使用 Twitch 登入
         </button>
       </div>
     </div>

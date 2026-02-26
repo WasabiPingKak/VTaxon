@@ -12,6 +12,8 @@ class User(db.Model):
     display_name = db.Column(db.Text, nullable=False)
     avatar_url = db.Column(db.Text)
     role = db.Column(db.Text, nullable=False, default='user')
+    organization = db.Column(db.Text)
+    country_flags = db.Column(db.JSON, default=list)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
                            default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False,
@@ -29,6 +31,8 @@ class User(db.Model):
             'display_name': self.display_name,
             'avatar_url': self.avatar_url,
             'role': self.role,
+            'organization': self.organization,
+            'country_flags': self.country_flags or [],
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
         }

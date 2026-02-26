@@ -11,7 +11,7 @@
 | 環境變數 | `backend/.env.example` | Supabase URL/Key/JWT Secret + DB URL |
 | Config | `backend/app/config.py` | 讀取所有 Supabase 相關環境變數 |
 | ORM Models | `backend/app/models.py` | 5 張表的 SQLAlchemy model（User, OAuthAccount, SpeciesCache, FictionalSpecies, VtuberTrait），含 `to_dict()` 序列化 |
-| JWT 驗證 | `backend/app/auth.py` | `login_required` 裝飾器（驗 Supabase HS256 JWT）、`admin_required` 裝飾器 |
+| JWT 驗證 | `backend/app/auth.py` | `login_required` 裝飾器（JWKS ES256 驗證 + HS256 fallback）、`admin_required` 裝飾器 |
 | App Factory | `backend/app/__init__.py` | 整合 CORS、Blueprint 註冊、`/health` 含 DB 連線檢查 |
 | 依賴 | `backend/requirements.txt` | 新增 flask-cors, PyJWT, cryptography, requests |
 
@@ -88,6 +88,26 @@
 | DB Schema | `supabase/init.sql` | 完整建表 SQL（含 RLS、索引、觸發器） |
 | 前端環境 | `frontend/.env.example` | `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` |
 
+### Phase 8：個人資料編輯 + 中文 UI ✅
+
+| 項目 | 檔案 | 說明 |
+|------|------|------|
+| DB 欄位 | `supabase/init.sql` | users 表新增 `organization`, `country_flags` |
+| Model 更新 | `backend/app/models.py` | User model + to_dict() 新增兩欄位 |
+| API 更新 | `backend/app/routes/users.py` | PATCH /me 支援 organization, country_flags（含驗證） |
+| JWT 驗證修正 | `backend/app/auth.py` | 改用 JWKS（ES256）驗證，支援新版 Supabase signing keys |
+| GBIF 中文名 | `backend/app/services/gbif.py` | CJK 查詢時自動取得中文俗名（vernacularNames API） |
+| 國家工具 | `frontend/src/lib/countries.js` | ~100 國中文名靜態資料 + getCountryName() |
+| 國旗元件 | `frontend/src/components/CountryFlag.jsx` | [TW] 台灣 badge 顯示 |
+| 國家選擇器 | `frontend/src/components/CountryPicker.jsx` | 可搜尋多選（支援中文搜尋） |
+| 個人資料編輯頁 | `frontend/src/pages/ProfileEditPage.jsx` | /profile/edit：名稱、組織、國旗表單 |
+| Navbar 改版 | `frontend/src/components/Navbar.jsx` | 登入後顯示圓形頭像 + 名字，文字中文化 |
+| 全站中文化 | 所有 pages + components | 所有 UI 文字改為繁體中文 |
+
+- 新路由：`/profile/edit` → `ProfileEditPage`
+- 搜尋結果顯示順序：學名 + 中文名（如有）+ 英文名
+- 新增 trait 時 display_name 優先使用中文名
+
 ---
 
 ## 下一步待做事項
@@ -95,22 +115,19 @@
 以下是 MVP 已完成但仍需要在後續會話中處理的事項：
 
 ### 高優先
-1. **端對端測試**：用實際 Supabase 連線測試完整流程（登入 → 標註 → 親緣查詢）
-2. **前端 `.env` 設定**：填入真實的 Supabase URL 和 Anon Key
-3. **奇幻生物 seed 匯入**：在 Supabase SQL Editor 執行 `seeds/fictional_species.sql`
-4. **前端奇幻生物搜尋**：目前前端只有現實物種搜尋，需新增奇幻生物的瀏覽/選擇 UI
-5. **Cloud Run 部署**：設定 GCP 專案 + 環境變數 + 部署
+1. **奇幻生物 seed 匯入**：在 Supabase SQL Editor 執行 `seeds/fictional_species.sql`
+2. **前端奇幻生物搜尋**：目前前端只有現實物種搜尋，需新增奇幻生物的瀏覽/選擇 UI
+3. **Cloud Run 部署**：設定 GCP 專案 + 環境變數 + 部署
 
 ### 中優先
-6. **分類樹瀏覽頁面**：以樹狀結構呈現所有已建檔角色
-7. **錯誤處理優化**：統一的 error handler + 前端 loading/error 狀態
-8. **GBIF 中文名稱**：目前 GBIF API 不直接回傳中文名，考慮整合 TaiCOL
-9. **CSS/UI 美化**：目前用 inline style，可考慮 Tailwind 或 CSS modules
+4. **分類樹瀏覽頁面**：以樹狀結構呈現所有已建檔角色
+5. **錯誤處理優化**：統一的 error handler + 前端 loading/error 狀態
+6. **CSS/UI 美化**：目前用 inline style，可考慮 Tailwind 或 CSS modules
 
 ### 低優先
-10. **OAuth 帳號表管理**：`oauth_accounts` 表的 CRUD（記錄 YouTube/Twitch 帳號連結）
-11. **分頁**：traits 和 kinship 結果的分頁機制
-12. **效能優化**：kinship 計算可改用 SQL 前綴查詢加速
+7. **OAuth 帳號表管理**：`oauth_accounts` 表的 CRUD（記錄 YouTube/Twitch 帳號連結）
+8. **分頁**：traits 和 kinship 結果的分頁機制
+9. **效能優化**：kinship 計算可改用 SQL 前綴查詢加速
 
 ---
 
@@ -145,17 +162,21 @@ VTaxon/
 │   │   ├── lib/
 │   │   │   ├── supabase.js      # Supabase client
 │   │   │   ├── api.js           # API fetch wrapper
-│   │   │   └── AuthContext.jsx  # 認證 context + hooks
+│   │   │   ├── AuthContext.jsx  # 認證 context + hooks
+│   │   │   └── countries.js     # 國家代碼 + 中文名
 │   │   ├── components/
-│   │   │   ├── Navbar.jsx
-│   │   │   └── SpeciesSearch.jsx
+│   │   │   ├── Navbar.jsx       # 含頭像 + 中文 UI
+│   │   │   ├── SpeciesSearch.jsx # 含中文名顯示
+│   │   │   ├── CountryFlag.jsx  # 國旗 badge
+│   │   │   └── CountryPicker.jsx # 多選國家選擇器
 │   │   ├── pages/
 │   │   │   ├── HomePage.jsx
 │   │   │   ├── LoginPage.jsx
 │   │   │   ├── ProfilePage.jsx
+│   │   │   ├── ProfileEditPage.jsx # 個人資料編輯
 │   │   │   ├── SearchPage.jsx
 │   │   │   └── KinshipPage.jsx
-│   │   ├── App.jsx              # 路由設定
+│   │   ├── App.jsx              # 路由設定（含 /profile/edit）
 │   │   └── main.jsx             # 入口
 │   ├── vite.config.js           # dev proxy → localhost:5000
 │   └── package.json
@@ -171,7 +192,7 @@ VTaxon/
 | GET | `/health` | - | 健康檢查 + DB 連線狀態 |
 | POST | `/api/auth/callback` | JWT | 建立/更新使用者 |
 | GET | `/api/users/me` | JWT | 取得自己的資料 |
-| PATCH | `/api/users/me` | JWT | 更新自己的資料 |
+| PATCH | `/api/users/me` | JWT | 更新自己的資料（display_name, avatar_url, organization, country_flags） |
 | GET | `/api/users/<id>` | - | 公開查看角色 |
 | GET | `/api/species/search?q=` | - | GBIF 物種搜尋 |
 | GET | `/api/species/<taxon_id>` | - | 取得單一物種 |
