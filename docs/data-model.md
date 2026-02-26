@@ -6,7 +6,7 @@
 |---------|------|
 | 帳號識別 | OAuth 多平台連結，一個 user = 一個角色 |
 | 生物分類資料 | GBIF 即時查詢 + 本地快取 |
-| 幻想物種 | 做法 A：使用者自選現實 proxy species |
+| 幻想物種 | 獨立分類系統（來源→子體系→葉節點），與現實分類完全獨立 |
 | 角色粒度 | 一個頻道 = 一個角色 |
 | 技術棧 | React + Vite / Flask on Cloud Run / PostgreSQL (Supabase) / Supabase Auth |
 | 權限模型 | 頻道主編輯自己的資料 + 管理者全域權限 |
@@ -20,6 +20,7 @@ erDiagram
     users ||--o{ oauth_accounts : "has"
     users ||--o{ vtuber_traits : "has"
     species_cache ||--o{ vtuber_traits : "referenced by"
+    fictional_species ||--o{ vtuber_traits : "referenced by"
 
     users {
         uuid id PK
@@ -59,10 +60,21 @@ erDiagram
         timestamp cached_at
     }
 
+    fictional_species {
+        serial id PK
+        varchar name "例：九尾狐、Western Dragon"
+        varchar origin "Level 1：東方神話、西方神話..."
+        varchar sub_origin "Level 2：日本神話、北歐神話...（nullable）"
+        varchar category_path "東方神話|日本神話|九尾狐"
+        text description "選填描述"
+        timestamp created_at
+    }
+
     vtuber_traits {
         uuid id PK
         uuid user_id FK
-        integer taxon_id FK "proxy species 的 GBIF ID"
+        integer taxon_id FK "現實物種 GBIF ID（nullable）"
+        integer fictional_species_id FK "奇幻生物 ID（nullable）"
         varchar display_name "使用者看到的名稱，例：龍、狐狸"
         varchar trait_note "選填備註"
         timestamp created_at
@@ -99,14 +111,25 @@ erDiagram
 - `kingdom` ~ `genus`：拆開存放方便篩選和顯示，但計算距離時以 `taxon_path` 為主。
 - `cached_at`：記錄快取時間，必要時可設定過期重新拉取。
 
+### `fictional_species` — 奇幻生物分類
+
+獨立於現實生物分類的奇幻生物分類表，以文化來源為主軸。
+
+- 分類階層：來源（Level 1）→ 子體系（Level 2）→ 葉節點（具體生物）。
+- `origin`：最上層分類，例如「東方神話」「西方神話」「克蘇魯神話」「奇幻文學」。
+- `sub_origin`：第二層分類，例如「日本神話」「北歐神話」「希臘神話」。可為 NULL（如「克蘇魯神話」直接到葉節點）。
+- `category_path`：用 `|` 分隔的完整分類鏈（Materialized Path），用於計算奇幻生物之間的親緣距離。
+- 分類資料由管理者手動預建，暫不開放使用者申請新增。
+
 ### `vtuber_traits` — 角色的物種特徵（多對多）
 
-連結角色與物種。一個角色可以有多筆 trait（複合種）。
+連結角色與物種。一個角色可以有多筆 trait（複合種），可同時擁有現實物種和奇幻生物的 trait。
 
-- `taxon_id`：指向 `species_cache`，這是實際用於計算的物種。對幻想物種來說，這裡存的是 proxy species。
-- `display_name`：使用者看到的名稱。現實物種就是「狐狸」「貓」，幻想物種則是「龍」「鳳凰」等。這讓前端顯示和後端計算脫鉤。
+- `taxon_id`：指向 `species_cache`（nullable），代表現實物種。
+- `fictional_species_id`：指向 `fictional_species`（nullable），代表奇幻生物。
+- 兩者至少須填一個（CHECK constraint）。一筆 trait 通常只關聯其中一個。
+- `display_name`：使用者看到的名稱。現實物種就是「狐狸」「貓」，幻想物種則是「龍」「鳳凰」等。
 - 複合種的處理：一個角色有多個物種特徵時，每個特徵各存一筆，不記錄比例。所有 trait 在親緣計算中等權處理。
-- 不再區分 `trait_type`（生理/靈魂/服裝）——簡化模型。如果未來需要區分，加欄位即可。
 
 ---
 
@@ -117,23 +140,48 @@ erDiagram
 ALTER TABLE oauth_accounts
   ADD CONSTRAINT uq_provider_account UNIQUE (provider, provider_account_id);
 
--- vtuber_traits: 同一角色不應重複綁定同一物種
+-- vtuber_traits: 同一角色不應重複綁定同一現實物種
+CREATE UNIQUE INDEX uq_user_real_taxon
+    ON vtuber_traits (user_id, taxon_id)
+    WHERE taxon_id IS NOT NULL;
+
+-- vtuber_traits: 同一角色不應重複綁定同一奇幻生物
+CREATE UNIQUE INDEX uq_user_fictional
+    ON vtuber_traits (user_id, fictional_species_id)
+    WHERE fictional_species_id IS NOT NULL;
+
+-- vtuber_traits: 至少填一個物種
 ALTER TABLE vtuber_traits
-  ADD CONSTRAINT uq_user_taxon UNIQUE (user_id, taxon_id);
+    ADD CONSTRAINT chk_species_type
+    CHECK (taxon_id IS NOT NULL OR fictional_species_id IS NOT NULL);
 
 -- species_cache: taxon_path 的前綴查詢需要索引
 CREATE INDEX idx_taxon_path ON species_cache (taxon_path varchar_pattern_ops);
+
+-- fictional_species: category_path 的前綴查詢需要索引
+CREATE INDEX idx_fictional_category_path
+    ON fictional_species (category_path varchar_pattern_ops);
+
+-- fictional_species: 按來源查詢
+CREATE INDEX idx_fictional_origin ON fictional_species (origin);
 
 -- vtuber_traits: 按 user 查詢
 CREATE INDEX idx_traits_user ON vtuber_traits (user_id);
 
 -- vtuber_traits: 按 taxon 查詢（找所有同物種角色）
 CREATE INDEX idx_traits_taxon ON vtuber_traits (taxon_id);
+
+-- vtuber_traits: 按 fictional_species 查詢
+CREATE INDEX idx_traits_fictional ON vtuber_traits (fictional_species_id);
 ```
 
 ---
 
 ## 親緣距離計算邏輯（概念）
+
+現實物種與奇幻生物的距離**分開計算、分開顯示**兩個分數。
+
+### 現實物種距離
 
 兩個**單一物種**角色 A、B 的距離：
 
@@ -146,12 +194,25 @@ CREATE INDEX idx_traits_taxon ON vtuber_traits (taxon_id);
 - 家貓 `Animalia|Chordata|Mammalia|Carnivora|Felidae|Felis|Felis catus`
 - 共同前綴到 `Carnivora`（4 層），赤狐有 7 層 → 距離 = 7 - 4 = 3
 
-兩個**複合種**角色的距離：
+### 奇幻生物距離
 
-A 有 n 個 trait，B 有 m 個 trait。對所有 trait 配對計算距離，取平均。
+使用 `fictional_species.category_path` 做相同的 LCP 比較。
+
+例如：
+- 九尾狐 `東方神話|日本神話|九尾狐`
+- 河童 `東方神話|日本神話|河童`
+- 共同前綴到 `日本神話`（2 層），九尾狐有 3 層 → 距離 = 3 - 2 = 1
+
+### 複合種
+
+A 有 n 個現實 trait，B 有 m 個現實 trait。對所有現實 trait 配對計算距離，取平均：
 
 ```
-distance(A, B) = (1 / (n * m)) * Σ Σ taxon_distance(a, b)
+real_distance(A, B) = (1 / (n * m)) * Σ Σ taxon_distance(a, b)
 ```
+
+奇幻 trait 同理，獨立計算平均距離。
+
+若其中一方沒有某類 trait（例如只有現實物種而沒有奇幻生物），則該類距離不計算、不顯示。
 
 此演算法為初始版本，未來可替換為 TimeTree 的演化分歧時間來獲得更精確的結果。

@@ -16,7 +16,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 |------|------|
 | 帳號識別 | OAuth 多平台連結（YouTube / Twitch），一個 user = 一個角色 |
 | 生物分類資料 | GBIF API 即時查詢 + 本地 PostgreSQL 快取 |
-| 幻想物種 | 使用者自選現實物種作為 proxy（例：龍 → 科摩多巨蜥） |
+| 幻想物種 | 獨立分類系統（來源→子體系→葉節點），與現實分類完全獨立 |
 | 角色粒度 | 一個頻道 = 一個角色 |
 | 權限 | 頻道主編輯自己的資料 + 管理者（admin）全域權限 |
 | 複合種 | 只記錄包含哪些物種，不記錄比例，所有 trait 等權 |
@@ -38,7 +38,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 2. **API 驗證**：前端在每次 API 請求的 `Authorization: Bearer <JWT>` 標頭帶上 JWT。Flask 後端使用 Supabase JWT secret 在本地驗證簽章，不需要每次回呼 Supabase。
 3. **權限檢查**：從 JWT 中取得 `user_id`，查詢 `users` 表的 `role` 欄位判斷權限（`admin` 或 `user`）。
 
-## 資料模型（4 張表）
+## 資料模型（5 張表）
 
 ### users
 角色主體。一筆 user = 一個 Vtuber 角色。
@@ -52,16 +52,32 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 從 GBIF 拉回的分類資料快取。
 - `taxon_id` (int, PK, = GBIF usageKey), `scientific_name`, `common_name_en`, `common_name_zh`, `taxon_rank`, `taxon_path` (Materialized Path, 用 `|` 分隔), `kingdom`, `phylum`, `class`, `order_`, `family`, `genus`, `cached_at`
 
+### fictional_species
+奇幻生物獨立分類表，以文化來源為主軸的分類體系。
+- `id` (serial, PK), `name`, `origin` (Level 1：東方神話、西方神話...), `sub_origin` (Level 2：日本神話、北歐神話..., nullable), `category_path` (Materialized Path, 用 `|` 分隔), `description`, `created_at`
+
 ### vtuber_traits
-角色與物種的多對多關聯。
-- `id` (uuid, PK), `user_id` (FK → users), `taxon_id` (FK → species_cache), `display_name` (使用者看到的名稱，如「龍」), `trait_note`, `created_at`, `updated_at`
-- UNIQUE constraint: (user_id, taxon_id)
+角色與物種的多對多關聯。一筆 trait 可關聯現實物種或奇幻生物（至少一個）。
+- `id` (uuid, PK), `user_id` (FK → users), `taxon_id` (FK → species_cache, nullable), `fictional_species_id` (FK → fictional_species, nullable), `display_name` (使用者看到的名稱，如「龍」), `trait_note`, `created_at`, `updated_at`
+- CHECK constraint: `taxon_id IS NOT NULL OR fictional_species_id IS NOT NULL`
+- Partial unique index: (user_id, taxon_id) WHERE taxon_id IS NOT NULL
+- Partial unique index: (user_id, fictional_species_id) WHERE fictional_species_id IS NOT NULL
 
 ## 親緣距離計算
 
+現實物種與奇幻生物的距離**分開計算、分開顯示**兩個分數：
+
+### 現實物種距離
 - 單一物種：比較兩者 `taxon_path` 的最長共同前綴（Longest Common Prefix），距離 = 總階層數 - 共同階層數。
-- 複合種：所有 trait 配對的距離取平均。`distance(A, B) = (1 / (n * m)) * Σ Σ taxon_distance(a, b)`
+- 複合種：所有現實 trait 配對的距離取平均。`distance(A, B) = (1 / (n * m)) * Σ Σ taxon_distance(a, b)`
+
+### 奇幻生物距離
+- 比較兩者 `category_path` 的最長共同前綴，距離 = 總階層數 - 共同階層數。
+- 複合種：所有奇幻 trait 配對的距離取平均，公式同上。
+
+### 共通規則
 - 系統排除人類 (Homo sapiens)，僅記錄動物或幻想物種特徵。
+- 若其中一方沒有某類 trait（例如只有現實物種而沒有奇幻生物），則該類距離不計算、不顯示。
 
 ## 外部 API 參考
 
@@ -73,5 +89,5 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 
 - 資料庫選用 Supabase 免費方案，注意儲存空間限制。
 - Google Cloud Run 有冷啟動延遲，Flask 應用應盡量縮短啟動時間（精簡 import、延遲載入非必要模組）。
-- 幻想物種目前用 proxy species 做法，資料表結構已預留未來擴充空間（可加 `is_fictional` 欄位）。
+- 奇幻生物使用獨立分類系統（`fictional_species` 表），分類由管理者手動預建。
 - `taxon_path` 欄位需要 `varchar_pattern_ops` 索引以支援前綴查詢。
