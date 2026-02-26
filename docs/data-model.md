@@ -179,15 +179,15 @@ CREATE INDEX idx_traits_fictional ON vtuber_traits (fictional_species_id);
 
 ## 親緣距離計算邏輯（概念）
 
-現實物種與奇幻生物的距離**分開計算、分開顯示**兩個分數。
+現實物種與奇幻生物的距離**分開計算、分開顯示**。
 
 ### 現實物種距離
 
-兩個**單一物種**角色 A、B 的距離：
+每個現實物種 trait 各自獨立產生一組最近角色排行：
 
-1. 取 A 和 B 的 `taxon_path`
-2. 找最長共同前綴（Longest Common Prefix）
-3. 距離 = 總階層數 - 共同階層數
+1. 取該 trait 的 `taxon_path`
+2. 與資料庫中所有角色的現實 trait 做最長共同前綴（LCP）比較
+3. 距離 = 總階層數 - 共同前綴層數
 
 例如：
 - 赤狐 `Animalia|Chordata|Mammalia|Carnivora|Canidae|Vulpes|Vulpes vulpes`
@@ -196,7 +196,7 @@ CREATE INDEX idx_traits_fictional ON vtuber_traits (fictional_species_id);
 
 ### 奇幻生物距離
 
-使用 `fictional_species.category_path` 做相同的 LCP 比較。
+使用 `fictional_species.category_path` 做相同的 LCP 比較，每個奇幻 trait 各自獨立產生一組排行。
 
 例如：
 - 九尾狐 `東方神話|日本神話|九尾狐`
@@ -205,14 +205,15 @@ CREATE INDEX idx_traits_fictional ON vtuber_traits (fictional_species_id);
 
 ### 複合種
 
-A 有 n 個現實 trait，B 有 m 個現實 trait。對所有現實 trait 配對計算距離，取平均：
+複合種角色的每個 trait 獨立查詢，產生多組結果，UI 並列顯示。
 
-```
-real_distance(A, B) = (1 / (n * m)) * Σ Σ taxon_distance(a, b)
-```
+複合種範例：
+角色有「海蛞蝓 + 麻雀」兩個 trait，系統對每個 trait 分別做查詢：
+- 以「海蛞蝓」為基準 → 找出所有與 *Chromodoris* 最近的角色排行
+- 以「麻雀」為基準 → 找出所有與 *Passer* 最近的角色排行
 
-奇幻 trait 同理，獨立計算平均距離。
+UI 同時並列顯示兩組結果。
 
-若其中一方沒有某類 trait（例如只有現實物種而沒有奇幻生物），則該類距離不計算、不顯示。
+若某 trait 類型在雙方之一不存在（例如一方只有現實物種而沒有奇幻生物），則該類不產生結果。
 
 此演算法為初始版本，未來可替換為 TimeTree 的演化分歧時間來獲得更精確的結果。
