@@ -78,7 +78,8 @@ class SpeciesCache(db.Model):
                           default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
-        return {
+        from .services.taxonomy_zh import get_taxonomy_zh_for_ranks
+        result = {
             'taxon_id': self.taxon_id,
             'scientific_name': self.scientific_name,
             'common_name_en': self.common_name_en,
@@ -92,6 +93,12 @@ class SpeciesCache(db.Model):
             'family': self.family,
             'genus': self.genus,
         }
+        result.update(get_taxonomy_zh_for_ranks(
+            kingdom=self.kingdom, phylum=self.phylum,
+            class_=self.class_, order=self.order_,
+            family=self.family, genus=self.genus,
+        ))
+        return result
 
 
 class FictionalSpecies(db.Model):

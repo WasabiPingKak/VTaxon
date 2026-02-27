@@ -195,7 +195,9 @@ VTaxon/
 | PATCH | `/api/users/me` | JWT | 更新自己的資料（display_name, avatar_url, organization, country_flags） |
 | GET | `/api/users/<id>` | - | 公開查看角色 |
 | GET | `/api/species/search?q=` | - | GBIF 物種搜尋 |
+| GET | `/api/species/search/stream?q=` | - | NDJSON 串流物種搜尋（逐筆回傳） |
 | GET | `/api/species/<taxon_id>` | - | 取得單一物種 |
+| GET | `/api/species/<taxon_id>/children/stream` | - | NDJSON 串流亞種查詢（逐筆回傳） |
 | POST | `/api/traits` | JWT | 新增 trait |
 | GET | `/api/traits?user_id=` | - | 查詢角色 traits |
 | DELETE | `/api/traits/<id>` | JWT | 刪除 trait |

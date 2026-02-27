@@ -22,6 +22,10 @@ async function apiFetch(path, options = {}) {
   return data;
 }
 
+// Session-level cache for species search (cleared on page refresh)
+const searchCache = new Map();
+const childrenCache = new Map();
+
 export const api = {
   // Auth
   authCallback: (body) => apiFetch('/auth/callback', {
@@ -36,8 +40,100 @@ export const api = {
   getUser: (id) => apiFetch(`/users/${id}`),
 
   // Species
-  searchSpecies: (q) => apiFetch(`/species/search?q=${encodeURIComponent(q)}`),
+  searchSpecies: async (q) => {
+    const key = q.trim().toLowerCase();
+    if (searchCache.has(key)) return searchCache.get(key);
+    const data = await apiFetch(`/species/search?q=${encodeURIComponent(q)}`);
+    searchCache.set(key, data);
+    return data;
+  },
+  searchSpeciesStream: async (q, onResult) => {
+    const key = q.trim().toLowerCase();
+    if (searchCache.has(key)) {
+      const cached = searchCache.get(key);
+      for (const sp of cached) onResult(sp);
+      return;
+    }
+    const headers = { ...await getAuthHeaders() };
+    const res = await fetch(`/api/species/search/stream?q=${encodeURIComponent(q)}`, { headers });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || `API error ${res.status}`);
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const all = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (line.trim()) {
+          const sp = JSON.parse(line);
+          if (sp.error) throw new Error(sp.error);
+          all.push(sp);
+          onResult(sp);
+        }
+      }
+    }
+    if (buffer.trim()) {
+      const sp = JSON.parse(buffer);
+      if (sp.error) throw new Error(sp.error);
+      all.push(sp);
+      onResult(sp);
+    }
+    searchCache.set(key, all);
+  },
+  matchSpecies: (name) => apiFetch(`/species/match?name=${encodeURIComponent(name)}`),
   getSpecies: (id) => apiFetch(`/species/${id}`),
+  getSubspecies: async (taxonId) => {
+    if (childrenCache.has(taxonId)) return childrenCache.get(taxonId);
+    const data = await apiFetch(`/species/${taxonId}/children`);
+    childrenCache.set(taxonId, data);
+    return data;
+  },
+  getSubspeciesStream: async (taxonId, onResult) => {
+    if (childrenCache.has(taxonId)) {
+      const cached = childrenCache.get(taxonId);
+      for (const sp of (cached.results || cached)) onResult(sp);
+      return;
+    }
+    const headers = { ...await getAuthHeaders() };
+    const res = await fetch(`/api/species/${taxonId}/children/stream`, { headers });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || `API error ${res.status}`);
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const all = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (line.trim()) {
+          const sp = JSON.parse(line);
+          if (sp.error) throw new Error(sp.error);
+          all.push(sp);
+          onResult(sp);
+        }
+      }
+    }
+    if (buffer.trim()) {
+      const sp = JSON.parse(buffer);
+      if (sp.error) throw new Error(sp.error);
+      all.push(sp);
+      onResult(sp);
+    }
+    childrenCache.set(taxonId, { results: all });
+  },
 
   // Traits
   getTraits: (userId) => apiFetch(`/traits?user_id=${userId}`),
