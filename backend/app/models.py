@@ -14,6 +14,8 @@ class User(db.Model):
     role = db.Column(db.Text, nullable=False, default='user')
     organization = db.Column(db.Text)
     country_flags = db.Column(db.JSON, default=list)
+    social_links = db.Column(db.JSON, default=dict)
+    primary_platform = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
                            default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False,
@@ -33,9 +35,21 @@ class User(db.Model):
             'role': self.role,
             'organization': self.organization,
             'country_flags': self.country_flags or [],
+            'social_links': self.social_links or {},
+            'primary_platform': self.primary_platform,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
         }
+
+
+class AuthIdAlias(db.Model):
+    __tablename__ = 'auth_id_aliases'
+
+    auth_id = db.Column(db.String(36), primary_key=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id',
+                        ondelete='CASCADE'), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
 
 
 class OAuthAccount(db.Model):
@@ -47,6 +61,10 @@ class OAuthAccount(db.Model):
                         ondelete='CASCADE'), nullable=False)
     provider = db.Column(db.Text, nullable=False)
     provider_account_id = db.Column(db.Text, nullable=False)
+    provider_display_name = db.Column(db.Text)
+    provider_avatar_url = db.Column(db.Text)
+    channel_url = db.Column(db.Text)
+    show_on_profile = db.Column(db.Boolean, nullable=False, default=True)
     access_token = db.Column(db.Text)
     refresh_token = db.Column(db.Text)
     token_expires_at = db.Column(db.DateTime(timezone=True))
@@ -57,6 +75,22 @@ class OAuthAccount(db.Model):
         db.UniqueConstraint('provider', 'provider_account_id',
                             name='uq_provider_account'),
     )
+
+    def to_dict(self, public=False):
+        result = {
+            'id': self.id,
+            'provider': self.provider,
+            'provider_display_name': self.provider_display_name,
+            'provider_avatar_url': self.provider_avatar_url,
+            'channel_url': self.channel_url,
+        }
+        if not public:
+            result.update({
+                'provider_account_id': self.provider_account_id,
+                'show_on_profile': self.show_on_profile,
+                'created_at': self.created_at.isoformat(),
+            })
+        return result
 
 
 class SpeciesCache(db.Model):

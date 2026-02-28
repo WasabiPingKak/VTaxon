@@ -39,6 +39,18 @@ export const api = {
   }),
   getUser: (id) => apiFetch(`/users/${id}`),
 
+  // OAuth Accounts
+  getMyOAuthAccounts: () => apiFetch('/users/me/oauth-accounts'),
+  syncOAuthAccounts: (body) => apiFetch('/users/me/oauth-accounts/sync', {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+  updateOAuthAccount: (id, body) => apiFetch(`/users/me/oauth-accounts/${id}`, {
+    method: 'PATCH', body: JSON.stringify(body),
+  }),
+  deleteOAuthAccount: (id) => apiFetch(`/users/me/oauth-accounts/${id}`, {
+    method: 'DELETE',
+  }),
+
   // Species
   searchSpecies: async (q) => {
     const key = q.trim().toLowerCase();

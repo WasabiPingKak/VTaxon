@@ -5,7 +5,7 @@ import jwt
 import requests
 from flask import current_app, g, jsonify, request
 
-from .models import User
+from .models import AuthIdAlias, User
 
 logger = logging.getLogger(__name__)
 
@@ -111,10 +111,17 @@ def login_required(f):
     """Decorator that requires a valid JWT."""
     @wraps(f)
     def decorated(*args, **kwargs):
+        from .extensions import db
         user_id = get_current_user()
         if not user_id:
             return jsonify({'error': 'Authentication required'}), 401
-        g.current_user_id = user_id
+        # Keep the raw JWT sub for alias creation in auth_callback
+        g.raw_auth_id = user_id
+        # Resolve alias: if this auth ID maps to a different VTaxon user
+        alias = db.session.get(AuthIdAlias, user_id)
+        if alias:
+            user_id = alias.user_id
+        g.current_user_id = str(user_id)
         return f(*args, **kwargs)
     return decorated
 

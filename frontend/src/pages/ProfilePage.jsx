@@ -4,14 +4,58 @@ import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import SpeciesSearch from '../components/SpeciesSearch';
 import CountryFlag from '../components/CountryFlag';
+import ChannelCard from '../components/ChannelCard';
+
+const SNS_LABELS = {
+  twitter: 'Twitter / X',
+  threads: 'Threads',
+  instagram: 'Instagram',
+  bluesky: 'Bluesky',
+  discord: 'Discord',
+  facebook: 'Facebook',
+  marshmallow: '棉花糖',
+};
+
+/** Taxonomy breadcrumb: 中文(Latin) > ... up to genus */
+function TraitBreadcrumb({ species }) {
+  const ranks = [
+    { key: 'kingdom', label: species.kingdom, zh: species.kingdom_zh },
+    { key: 'phylum', label: species.phylum, zh: species.phylum_zh },
+    { key: 'class', label: species.class, zh: species.class_zh },
+    { key: 'order', label: species.order, zh: species.order_zh },
+    { key: 'family', label: species.family, zh: species.family_zh },
+    { key: 'genus', label: species.genus, zh: species.genus_zh },
+  ].filter(r => r.label);
+
+  if (ranks.length === 0) return null;
+
+  return (
+    <div style={{ fontSize: '0.8em', color: '#888', marginTop: '2px', lineHeight: 1.4 }}>
+      {ranks.map((r, i) => (
+        <span key={r.key}>
+          {i > 0 && <span style={{ margin: '0 3px' }}>&gt;</span>}
+          {r.zh ? (
+            <span>{r.zh}<span style={{ color: '#aaa' }}>({r.label})</span></span>
+          ) : (
+            <span style={{ fontStyle: 'italic' }}>{r.label}</span>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
   const [traits, setTraits] = useState([]);
+  const [oauthAccounts, setOauthAccounts] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
-    if (user) loadTraits();
+    if (user) {
+      loadTraits();
+      loadOAuthAccounts();
+    }
   }, [user]);
 
   if (!loading && !user) return <Navigate to="/login" replace />;
@@ -21,6 +65,15 @@ export default function ProfilePage() {
     try {
       const data = await api.getTraits(user.id);
       setTraits(data.traits || []);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function loadOAuthAccounts() {
+    try {
+      const data = await api.getUser(user.id);
+      setOauthAccounts(data.oauth_accounts || []);
     } catch (err) {
       console.error(err);
     }
@@ -77,6 +130,20 @@ export default function ProfilePage() {
               ))}
             </div>
           )}
+          {user.social_links && Object.keys(user.social_links).length > 0 && (
+            <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
+              {Object.entries(user.social_links).map(([key, url]) => (
+                <a key={key} href={url} target="_blank" rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-block', padding: '2px 8px', borderRadius: '4px',
+                    background: '#f0f0f0', color: '#4a90d9', fontSize: '0.85em',
+                    textDecoration: 'none',
+                  }}>
+                  {SNS_LABELS[key] || key}
+                </a>
+              ))}
+            </div>
+          )}
           <Link to="/profile/edit" style={{
             ...smallBtnStyle, display: 'inline-block', marginTop: '8px',
             textDecoration: 'none', color: '#333',
@@ -85,6 +152,16 @@ export default function ProfilePage() {
           </Link>
         </div>
       </div>
+
+      {/* Channel cards */}
+      {oauthAccounts.length > 0 && (
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
+          {oauthAccounts.map(a => (
+            <ChannelCard key={a.id} account={a} mode="compact"
+              isPrimary={user.primary_platform === a.provider} />
+          ))}
+        </div>
+      )}
 
       {/* Traits section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -118,22 +195,34 @@ export default function ProfilePage() {
           {traits.map((trait) => (
             <div key={trait.id} style={{
               padding: '12px 16px', borderBottom: '1px solid #eee',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
             }}>
-              <div>
-                <strong>{trait.display_name}</strong>
-                {trait.species && (
-                  <span style={{ marginLeft: '8px', color: '#888', fontStyle: 'italic' }}>
-                    {trait.species.scientific_name}
-                  </span>
-                )}
-                {trait.fictional && (
-                  <span style={{ marginLeft: '8px', color: '#888' }}>
-                    [{trait.fictional.origin}]
-                  </span>
-                )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
+                  {trait.display_name && (
+                    <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#222' }}>
+                      {trait.display_name}
+                    </span>
+                  )}
+                  {trait.species && (
+                    <span style={{ fontStyle: 'italic', color: '#555' }}>
+                      {trait.species.scientific_name}
+                    </span>
+                  )}
+                  {trait.species?.common_name_en && (
+                    <span style={{ color: '#999', fontSize: '0.9em' }}>
+                      ({trait.species.common_name_en})
+                    </span>
+                  )}
+                  {trait.fictional && (
+                    <span style={{ color: '#888' }}>
+                      [{trait.fictional.origin}]
+                    </span>
+                  )}
+                </div>
+                {trait.species && <TraitBreadcrumb species={trait.species} />}
                 {trait.trait_note && (
-                  <div style={{ fontSize: '0.85em', color: '#999' }}>{trait.trait_note}</div>
+                  <div style={{ fontSize: '0.85em', color: '#999', marginTop: '2px' }}>{trait.trait_note}</div>
                 )}
               </div>
               <button onClick={() => handleDeleteTrait(trait.id)} style={{

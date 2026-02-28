@@ -11,9 +11,22 @@ CREATE TABLE users (
     role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
     organization TEXT,
     country_flags JSONB DEFAULT '[]'::jsonb,
+    social_links JSONB DEFAULT '{}'::jsonb,
+    primary_platform TEXT CHECK (primary_platform IN ('youtube', 'twitch')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- 1b. auth_id_aliases — 跨 email OAuth 帳號綁定別名
+-- 當使用者用不同 email 的 OAuth 綁定第二個平台時，
+-- Supabase 會建立新的 auth.users 記錄。此表將新的 auth ID 映射回原本的 VTaxon user。
+CREATE TABLE auth_id_aliases (
+    auth_id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_auth_id_aliases_user_id ON auth_id_aliases(user_id);
 
 -- 2. oauth_accounts — 平台帳號連結
 CREATE TABLE oauth_accounts (
@@ -21,6 +34,10 @@ CREATE TABLE oauth_accounts (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     provider TEXT NOT NULL CHECK (provider IN ('youtube', 'twitch')),
     provider_account_id TEXT NOT NULL,
+    provider_display_name TEXT,
+    provider_avatar_url TEXT,
+    channel_url TEXT,
+    show_on_profile BOOLEAN NOT NULL DEFAULT true,
     access_token TEXT,
     refresh_token TEXT,
     token_expires_at TIMESTAMPTZ,
@@ -95,6 +112,7 @@ CREATE UNIQUE INDEX idx_vtuber_traits_user_fictional
 -- ============================================================
 
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auth_id_aliases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE oauth_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE species_cache ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fictional_species ENABLE ROW LEVEL SECURITY;
@@ -106,6 +124,10 @@ CREATE POLICY "users_select_all" ON users
 
 CREATE POLICY "users_update_own" ON users
     FOR UPDATE USING (auth.uid() = id);
+
+-- auth_id_aliases: 後端 service_role 讀寫，一般使用者可讀自己的
+CREATE POLICY "aliases_select_own" ON auth_id_aliases
+    FOR SELECT USING (auth.uid() = auth_id OR auth.uid() = user_id);
 
 -- oauth_accounts: 只有本人可讀寫自己的帳號連結
 CREATE POLICY "oauth_select_own" ON oauth_accounts
