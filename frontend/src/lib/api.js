@@ -50,6 +50,9 @@ export const api = {
   deleteOAuthAccount: (id) => apiFetch(`/users/me/oauth-accounts/${id}`, {
     method: 'DELETE',
   }),
+  refreshOAuthAccount: (id) => apiFetch(`/users/me/oauth-accounts/${id}/refresh`, {
+    method: 'POST',
+  }),
 
   // Species
   searchSpecies: async (q) => {

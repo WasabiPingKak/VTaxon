@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
+import { useToast } from '../lib/ToastContext';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import CountryPicker from '../components/CountryPicker';
 import ChannelCard from '../components/ChannelCard';
 
@@ -22,6 +24,7 @@ const SUPABASE_PROVIDER_MAP = { youtube: 'google', twitch: 'twitch' };
 
 export default function ProfileEditPage() {
   const { user, loading, setUser, session, linkProvider, unlinkProvider } = useAuth();
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
   const [displayName, setDisplayName] = useState('');
@@ -32,6 +35,8 @@ export default function ProfileEditPage() {
 
   const [oauthAccounts, setOauthAccounts] = useState([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
+  // Per-account loading states: { [accountId]: 'refreshing' | 'toggling' | 'settingPrimary' }
+  const [accountLoading, setAccountLoading] = useState({});
 
   useEffect(() => {
     if (user) {
@@ -81,13 +86,20 @@ export default function ProfileEditPage() {
   }
 
   async function handleToggleShow(account) {
+    setAccountLoading(prev => ({ ...prev, [account.id]: 'toggling' }));
     try {
       const updated = await api.updateOAuthAccount(account.id, {
         show_on_profile: !account.show_on_profile,
       });
       setOauthAccounts(prev => prev.map(a => a.id === account.id ? updated : a));
+      addToast(
+        updated.show_on_profile ? '已設為在個人頁顯示' : '已取消在個人頁顯示',
+        { type: 'success', duration: 3000 },
+      );
     } catch (err) {
-      alert(err.message);
+      addToast(`更新顯示設定失敗：${err.message}`, { type: 'error' });
+    } finally {
+      setAccountLoading(prev => ({ ...prev, [account.id]: null }));
     }
   }
 
@@ -102,12 +114,17 @@ export default function ProfileEditPage() {
     }
   }
 
-  async function handleSetPrimary(provider) {
+  async function handleSetPrimary(account) {
+    setAccountLoading(prev => ({ ...prev, [account.id]: 'settingPrimary' }));
     try {
-      const updated = await api.updateMe({ primary_platform: provider });
+      const updated = await api.updateMe({ primary_platform: account.provider });
       setUser(updated);
+      const label = account.provider === 'youtube' ? 'YouTube' : 'Twitch';
+      addToast(`已將 ${label} 設為主要平台`, { type: 'success', duration: 3000 });
     } catch (err) {
-      alert(err.message);
+      addToast(`設定主要平台失敗：${err.message}`, { type: 'error' });
+    } finally {
+      setAccountLoading(prev => ({ ...prev, [account.id]: null }));
     }
   }
 
@@ -125,6 +142,41 @@ export default function ProfileEditPage() {
       }
     } catch (err) {
       alert(err.message);
+    }
+  }
+
+  async function handleRefresh(account) {
+    setAccountLoading(prev => ({ ...prev, [account.id]: 'refreshing' }));
+    try {
+      const updated = await api.refreshOAuthAccount(account.id);
+      setOauthAccounts(prev => prev.map(a => a.id === account.id ? updated : a));
+      // Update user avatar if this is the primary platform
+      if (user.primary_platform === account.provider && updated.provider_avatar_url) {
+        setUser(prev => ({ ...prev, avatar_url: updated.provider_avatar_url }));
+      }
+      addToast('同步成功', { type: 'success', duration: 3000 });
+    } catch (err) {
+      // No token (auto-linked account) or token expired → offer one-time OAuth redirect
+      if (err.message.includes('請重新登入') || err.message.includes('授權已過期')) {
+        const providerLabel = PROVIDER_LABELS[account.provider];
+        if (confirm(`需要授權 ${providerLabel} 以同步資料，是否前往授權？（僅需一次）`)) {
+          const supabaseProvider = SUPABASE_PROVIDER_MAP[account.provider];
+          sessionStorage.setItem('vtaxon_login_provider', supabaseProvider);
+          await supabase.auth.signInWithOAuth({
+            provider: supabaseProvider,
+            options: {
+              redirectTo: window.location.origin + '/profile/edit',
+              ...(supabaseProvider === 'google'
+                ? { scopes: 'https://www.googleapis.com/auth/youtube.readonly' }
+                : {}),
+            },
+          });
+        }
+      } else {
+        addToast(`同步失敗：${err.message}`, { type: 'error' });
+      }
+    } finally {
+      setAccountLoading(prev => ({ ...prev, [account.id]: null }));
     }
   }
 
@@ -156,11 +208,15 @@ export default function ProfileEditPage() {
                   account={account}
                   mode="full"
                   isPrimary={user.primary_platform === account.provider}
-                  onSetPrimary={() => handleSetPrimary(account.provider)}
+                  onSetPrimary={() => handleSetPrimary(account)}
+                  onRefresh={() => handleRefresh(account)}
                   onSaveUrl={(url) => handleSaveChannelUrl(account, url)}
                   onToggleShow={() => handleToggleShow(account)}
                   onUnlink={() => handleUnlink(account)}
                   disableUnlink={isLastAccount}
+                  refreshing={accountLoading[account.id] === 'refreshing'}
+                  toggling={accountLoading[account.id] === 'toggling'}
+                  settingPrimary={accountLoading[account.id] === 'settingPrimary'}
                 />
               ))}
 

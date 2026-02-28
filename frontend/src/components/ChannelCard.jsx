@@ -54,8 +54,9 @@ function AvatarFallback({ provider, size }) {
 
 export default function ChannelCard({
   account, mode = 'compact',
-  isPrimary = false, onSetPrimary,
+  isPrimary = false, onSetPrimary, onRefresh,
   onSaveUrl, onToggleShow, onUnlink, disableUnlink,
+  refreshing = false, toggling = false, settingPrimary = false,
 }) {
   const [imgError, setImgError] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -123,13 +124,29 @@ export default function ChannelCard({
             {primaryBadge}
             {!isPrimary && onSetPrimary && (
               <button type="button" onClick={onSetPrimary}
+                disabled={settingPrimary}
                 style={{
                   padding: '1px 8px', borderRadius: '3px',
                   background: 'none', border: '1px solid #ccc',
-                  cursor: 'pointer', fontSize: '0.72em', color: '#666',
-                  lineHeight: '1.4',
+                  cursor: settingPrimary ? 'not-allowed' : 'pointer',
+                  fontSize: '0.72em', color: '#666',
+                  lineHeight: '1.4', opacity: settingPrimary ? 0.6 : 1,
                 }}>
-                設為主要
+                {settingPrimary ? '設定中…' : '設為主要'}
+              </button>
+            )}
+            {onRefresh && (
+              <button type="button" onClick={onRefresh}
+                disabled={refreshing}
+                title="同步平台資料"
+                style={{
+                  padding: '1px 8px', borderRadius: '3px',
+                  background: 'none', border: '1px solid #ccc',
+                  cursor: refreshing ? 'not-allowed' : 'pointer',
+                  fontSize: '0.72em', color: '#666',
+                  lineHeight: '1.4', opacity: refreshing ? 0.6 : 1,
+                }}>
+                {refreshing ? '同步中…' : '同步'}
               </button>
             )}
           </div>
@@ -181,9 +198,15 @@ export default function ChannelCard({
         )}
 
         {onToggleShow && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', cursor: 'pointer' }}>
-            <input type="checkbox" checked={account.show_on_profile} onChange={onToggleShow} />
-            <span style={{ fontSize: '0.9em', color: '#555' }}>在個人頁顯示</span>
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px',
+            cursor: toggling ? 'not-allowed' : 'pointer', opacity: toggling ? 0.6 : 1,
+          }}>
+            <input type="checkbox" checked={account.show_on_profile}
+              onChange={onToggleShow} disabled={toggling} />
+            <span style={{ fontSize: '0.9em', color: '#555' }}>
+              {toggling ? '更新中…' : '在個人頁顯示'}
+            </span>
           </label>
         )}
       </div>

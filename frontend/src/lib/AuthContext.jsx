@@ -65,9 +65,25 @@ export function AuthProvider({ children }) {
 
       const meta = session.user?.user_metadata || {};
       const loginProvider = sessionStorage.getItem('vtaxon_login_provider');
+      const identities = session.user?.identities || [];
+
+      // Fetch YouTube channel data BEFORE authCallback so first-time registration
+      // can use the channel title as display_name instead of Google account name
+      let ytChannel = null;
+      const googleIdentity = identities.find(i => i.provider === 'google');
+      if (googleIdentity && session.provider_token) {
+        ytChannel = await fetchYouTubeChannel(session.provider_token);
+      }
+
+      // Use YouTube channel title if available, otherwise fall back to Google name
+      const displayName = ytChannel?.channelTitle
+        || meta.full_name || meta.name || 'Unnamed Vtuber';
+      const avatarUrl = ytChannel?.channelAvatar
+        || meta.avatar_url || meta.picture;
+
       await api.authCallback({
-        display_name: meta.full_name || meta.name || 'Unnamed Vtuber',
-        avatar_url: meta.avatar_url || meta.picture,
+        display_name: displayName,
+        avatar_url: avatarUrl,
         ...(pendingLink ? { link_to_user_id: pendingLink } : {}),
         ...(loginProvider ? { login_provider: loginProvider } : {}),
       });
@@ -78,7 +94,6 @@ export function AuthProvider({ children }) {
       }
 
       // Sync OAuth identities to backend
-      const identities = session.user?.identities || [];
       // Only create new accounts on fresh OAuth redirect (loginProvider set),
       // not on page refresh — prevents re-creating explicitly unlinked accounts
       const isFreshOAuth = !!loginProvider;
@@ -86,18 +101,20 @@ export function AuthProvider({ children }) {
       if (identities.length > 0) {
         const syncBody = { identities, create_missing: isFreshOAuth };
 
-        // YouTube channel auto-detection via provider_token
-        // Only attempt when token is freshly available (right after OAuth redirect)
-        const googleIdentity = identities.find(i => i.provider === 'google');
-        if (googleIdentity && session.provider_token) {
-          const ytChannel = await fetchYouTubeChannel(session.provider_token);
-          if (ytChannel) {
-            syncBody.channel_url = ytChannel.channelUrl;
-            syncBody.provider_for_url = 'youtube';
-            if (ytChannel.channelAvatar) {
-              syncBody.provider_avatar_url = ytChannel.channelAvatar;
-              syncBody.avatar_for_provider = 'youtube';
-            }
+        // Send provider_token so backend can store it for later refresh
+        if (session.provider_token && loginProvider) {
+          syncBody.provider_token = session.provider_token;
+          syncBody.token_provider = loginProvider === 'google' ? 'youtube' : loginProvider;
+        }
+
+        // Attach YouTube channel data if available
+        if (ytChannel) {
+          syncBody.channel_url = ytChannel.channelUrl;
+          syncBody.provider_for_url = 'youtube';
+          syncBody.channel_display_name = ytChannel.channelTitle;
+          if (ytChannel.channelAvatar) {
+            syncBody.provider_avatar_url = ytChannel.channelAvatar;
+            syncBody.avatar_for_provider = 'youtube';
           }
         }
 
@@ -120,7 +137,7 @@ export function AuthProvider({ children }) {
           if (!sessionStorage.getItem(key)) {
             sessionStorage.setItem(key, '1');
             addToast(
-              `已自動偵測到你的 ${autoLinked.join('、')} 帳號並完成綁定（使用相同 Email）`,
+              `偵測到使用相同 Email 的 ${autoLinked.join('、')} 帳號，可在編輯頁面中綁定`,
               { duration: 6000 },
             );
           }

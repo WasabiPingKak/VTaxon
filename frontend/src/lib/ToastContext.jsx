@@ -5,9 +5,9 @@ const ToastContext = createContext(null);
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
-  const addToast = useCallback((message, { duration = 5000 } = {}) => {
+  const addToast = useCallback((message, { duration = 5000, type = 'info' } = {}) => {
     const id = Date.now() + Math.random();
-    setToasts(prev => [...prev, { id, message }]);
+    setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, duration);
@@ -26,9 +26,13 @@ export function ToastProvider({ children }) {
           zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '8px',
           maxWidth: '400px',
         }}>
-          {toasts.map(t => (
+          {toasts.map(t => {
+            const bg = t.type === 'success' ? '#2e7d32'
+              : t.type === 'error' ? '#c62828'
+              : '#1a73e8';
+            return (
             <div key={t.id} style={{
-              background: '#1a73e8', color: '#fff', padding: '12px 16px',
+              background: bg, color: '#fff', padding: '12px 16px',
               borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
               fontSize: '0.9em', lineHeight: '1.4',
               display: 'flex', alignItems: 'flex-start', gap: '10px',
@@ -41,7 +45,8 @@ export function ToastProvider({ children }) {
                 lineHeight: 1, opacity: 0.7, flexShrink: 0,
               }}>✕</button>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
       <style>{`
