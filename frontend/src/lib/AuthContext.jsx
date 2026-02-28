@@ -5,7 +5,7 @@ import { useToast } from './ToastContext';
 
 const AuthContext = createContext(null);
 
-const PROVIDER_LABELS = { google: 'YouTube', twitch: 'Twitch' };
+const PROVIDER_LABELS = { google: 'YouTube', youtube: 'YouTube', twitch: 'Twitch' };
 
 async function fetchYouTubeChannel(accessToken) {
   try {
@@ -125,22 +125,27 @@ export function AuthProvider({ children }) {
         }
       }
 
-      // Detect auto-linked providers (Supabase Automatic Linking by email)
-      // loginProvider already read above from sessionStorage
+      // Detect auto-linked providers that are NOT yet bound in our backend.
+      // Only show toast for providers that exist in Supabase identities but
+      // have no oauth_accounts record (i.e. truly unbound).
+      const providerMap = { google: 'youtube', twitch: 'twitch' };
       if (loginProvider && identities.length > 1) {
-        const autoLinked = identities
-          .map(i => i.provider)
-          .filter(p => p !== loginProvider)
-          .map(p => PROVIDER_LABELS[p] || p);
-        if (autoLinked.length > 0) {
-          const key = `vtaxon_autolink_notified_${session.user.id}`;
-          if (!sessionStorage.getItem(key)) {
-            sessionStorage.setItem(key, '1');
+        try {
+          const boundAccounts = await api.getMyOAuthAccounts();
+          const boundProviders = new Set(boundAccounts.map(a => a.provider));
+          const unbound = identities
+            .map(i => providerMap[i.provider] || i.provider)
+            .filter(p => p !== (providerMap[loginProvider] || loginProvider))
+            .filter(p => !boundProviders.has(p));
+          if (unbound.length > 0) {
+            const labels = unbound.map(p => PROVIDER_LABELS[p] || p);
             addToast(
-              `偵測到使用相同 Email 的 ${autoLinked.join('、')} 帳號，可在編輯頁面中綁定`,
+              `偵測到使用相同 Email 的 ${labels.join('、')} 帳號，可在編輯頁面中綁定`,
               { duration: 6000 },
             );
           }
+        } catch {
+          // Silently ignore — toast is non-critical
         }
       }
 
