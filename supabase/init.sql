@@ -86,7 +86,8 @@ CREATE TABLE vtuber_traits (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     taxon_id INTEGER REFERENCES species_cache(taxon_id),
     fictional_species_id INTEGER REFERENCES fictional_species(id),
-    display_name TEXT NOT NULL,    -- 使用者看到的名稱，如「龍」
+    display_name TEXT,             -- (deprecated, 向下相容保留，稍後 DROP)
+    breed_name TEXT,               -- 品種名稱，如「博美犬」
     trait_note TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),

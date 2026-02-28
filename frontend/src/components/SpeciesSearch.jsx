@@ -10,9 +10,30 @@ if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-st
       0%, 100% { opacity: 0.4; }
       50% { opacity: 1; }
     }
+    @keyframes vtaxonSpin {
+      to { transform: rotate(360deg); }
+    }
   `;
   document.head.appendChild(style);
 }
+
+const RANK_LABELS = {
+  ORDER: '目',
+  FAMILY: '科',
+  GENUS: '屬',
+  SPECIES: '種',
+  SUBSPECIES: '亞種',
+  VARIETY: '變種',
+};
+
+const HIGH_RANKS = new Set(['ORDER', 'FAMILY', 'GENUS']);
+
+// Soft colors for family-level grouping left border
+const FAMILY_COLORS = [
+  '#4a90d9', '#27ae60', '#e67e22', '#9b59b6',
+  '#e74c3c', '#1abc9c', '#f39c12', '#2980b9',
+  '#8e44ad', '#16a085', '#d35400', '#c0392b',
+];
 
 /** Loading skeleton — 3 pulsing grey bars */
 function LoadingSkeleton() {
@@ -39,20 +60,46 @@ function LoadingSkeleton() {
   );
 }
 
+/** Rank badge */
+function RankBadge({ rank }) {
+  const label = RANK_LABELS[(rank || '').toUpperCase()];
+  if (!label) return null;
+  const isHigh = HIGH_RANKS.has((rank || '').toUpperCase());
+  return (
+    <span style={{
+      display: 'inline-block', padding: '1px 6px', borderRadius: '3px',
+      fontSize: '0.75em', fontWeight: 600, marginRight: '4px',
+      background: isHigh ? '#e8f4fd' : '#f0f0f0',
+      color: isHigh ? '#2980b9' : '#666',
+      border: isHigh ? '1px solid #bee0f5' : '1px solid #ddd',
+    }}>
+      {label}
+    </span>
+  );
+}
+
 /**
  * Group search results by species_key for subspecies collapsing.
+ * High-rank results (ORDER/FAMILY/GENUS) are kept as standalone entries.
  * Returns: [{ speciesKey, species: mainResult|null, subspecies: [...] }, ...]
  */
 function groupBySpecies(results) {
   const groups = new Map();
 
   for (const sp of results) {
+    const rank = (sp.taxon_rank || '').toUpperCase();
+
+    // High-rank items are standalone — use their own taxon_id as key
+    if (HIGH_RANKS.has(rank)) {
+      groups.set(sp.taxon_id, { speciesKey: sp.taxon_id, species: sp, subspecies: [], highRank: true });
+      continue;
+    }
+
     const key = sp.species_key || sp.taxon_id;
     if (!groups.has(key)) {
       groups.set(key, { speciesKey: key, species: null, subspecies: [] });
     }
     const g = groups.get(key);
-    const rank = (sp.taxon_rank || '').toUpperCase();
     if (rank === 'SPECIES') {
       g.species = sp;
     } else {
@@ -93,16 +140,18 @@ function Breadcrumb({ sp }) {
 /**
  * Single species/subspecies result row.
  */
-function SpeciesRow({ sp, onSelect, indent, connector }) {
+function SpeciesRow({ sp, onSelect, indent, connector, familyColor }) {
   const zhName = sp.common_name_zh;
   const binomial = sp.canonical_name || sp.scientific_name;
   const enName = sp.common_name_en;
   const hasChinese = !!zhName;
+  const rank = (sp.taxon_rank || '').toUpperCase();
 
   return (
     <div style={{
       padding: indent ? '6px 14px 6px 32px' : '10px 14px',
       borderBottom: '1px solid #f0f0f0',
+      borderLeft: familyColor ? `3px solid ${familyColor}` : 'none',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
@@ -115,6 +164,7 @@ function SpeciesRow({ sp, onSelect, indent, connector }) {
               {connector}
             </span>
           )}
+          <RankBadge rank={rank} />
           {hasChinese ? (
             <>
               <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#222' }}>{zhName}</span>
@@ -145,7 +195,7 @@ function SpeciesRow({ sp, onSelect, indent, connector }) {
 }
 
 /** A species group: main species row + collapsible subspecies (lazy-loaded via children API) */
-function SpeciesGroup({ group, onSelect }) {
+function SpeciesGroup({ group, onSelect, familyColor }) {
   const [expanded, setExpanded] = useState(false);
   const [childrenLoaded, setChildrenLoaded] = useState(false);
   const [loadingChildren, setLoadingChildren] = useState(false);
@@ -154,6 +204,7 @@ function SpeciesGroup({ group, onSelect }) {
   // Use the species-level result or the first subspecies as the header
   const mainResult = group.species || group.subspecies[0];
   const isSpeciesRank = (mainResult?.taxon_rank || '').toUpperCase() === 'SPECIES';
+  const isHighRank = group.highRank;
 
   // Subspecies to display (exclude main if it was promoted from subspecies list)
   // Sort: Chinese-named entries first
@@ -161,8 +212,8 @@ function SpeciesGroup({ group, onSelect }) {
     .sort((a, b) => (a.common_name_zh ? 0 : 1) - (b.common_name_zh ? 0 : 1));
   const displaySubspecies = sortedSubspecies;
 
-  // Show expander for all SPECIES-rank results (children API may have more)
-  const showExpander = isSpeciesRank;
+  // Show expander only for SPECIES-rank results (not high ranks)
+  const showExpander = isSpeciesRank && !isHighRank;
 
   // Count label
   const countLabel = displaySubspecies.length > 0
@@ -198,7 +249,7 @@ function SpeciesGroup({ group, onSelect }) {
     <div>
       {/* Main species row */}
       <div style={{ position: 'relative' }}>
-        <SpeciesRow sp={mainResult} onSelect={onSelect} />
+        <SpeciesRow sp={mainResult} onSelect={onSelect} familyColor={familyColor} />
         {showExpander && (
           <button
             onClick={handleExpand}
@@ -214,32 +265,40 @@ function SpeciesGroup({ group, onSelect }) {
         )}
       </div>
 
-      {/* Expanded subspecies (shown during and after loading) */}
+      {/* Loading indicator for children streaming — top of subspecies list */}
+      {expanded && loadingChildren && (
+        <div style={{
+          padding: '6px 14px 6px 32px', background: '#f0f7ff', borderBottom: '1px solid #e0e0e0',
+          borderLeft: familyColor ? `3px solid ${familyColor}` : 'none',
+          display: 'flex', alignItems: 'center', gap: '8px',
+        }}>
+          <div style={{
+            width: '12px', height: '12px', border: '2px solid #4a90d9',
+            borderTopColor: 'transparent', borderRadius: '50%',
+            animation: 'vtaxonSpin 0.8s linear infinite',
+          }} />
+          <span style={{ fontSize: '0.8em', color: '#4a90d9' }}>載入亞種中…</span>
+        </div>
+      )}
+
+      {/* Expanded subspecies */}
       {expanded && displaySubspecies.map((sub, i) => (
         <SpeciesRow
           key={sub.taxon_id}
           sp={sub}
           onSelect={onSelect}
           indent
-          connector={i === displaySubspecies.length - 1 ? '└' : '├'}
+          connector={i === displaySubspecies.length - 1 && !loadingChildren ? '└' : '├'}
+          familyColor={familyColor}
         />
       ))}
-
-      {/* Loading skeleton for children streaming */}
-      {expanded && loadingChildren && (
-        <div style={{ padding: '8px 14px 8px 32px', background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
-            <div style={{ height: '12px', width: '60px', background: '#e0e0e0', borderRadius: '4px', animation: 'vtaxonPulse 1.5s ease-in-out infinite' }} />
-            <div style={{ height: '12px', width: '120px', background: '#e0e0e0', borderRadius: '4px', animation: 'vtaxonPulse 1.5s ease-in-out infinite', animationDelay: '0.1s' }} />
-          </div>
-        </div>
-      )}
 
       {/* No subspecies found message */}
       {expanded && !loadingChildren && childrenLoaded && displaySubspecies.length === 0 && (
         <div style={{
           padding: '8px 14px 8px 32px', color: '#bbb', fontSize: '0.85em',
           background: '#fafafa', borderBottom: '1px solid #f0f0f0',
+          borderLeft: familyColor ? `3px solid ${familyColor}` : 'none',
         }}>
           無已知亞種
         </div>
@@ -248,23 +307,35 @@ function SpeciesGroup({ group, onSelect }) {
   );
 }
 
-export default function SpeciesSearch({ onSelect }) {
+export default function SpeciesSearch({ onSelect, onCancel }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  const groups = useMemo(() => {
+  const { groups, familyColorMap } = useMemo(() => {
     const g = groupBySpecies(results);
     g.sort((a, b) => {
       const mainA = a.species || a.subspecies[0];
       const mainB = b.species || b.subspecies[0];
-      const aHasZh = mainA?.common_name_zh ? 0 : 1;
-      const bHasZh = mainB?.common_name_zh ? 0 : 1;
-      if (aHasZh !== bHasZh) return aHasZh - bHasZh;
-      return (mainA?.scientific_name || '').localeCompare(mainB?.scientific_name || '');
+      const pathA = mainA?.taxon_path || '';
+      const pathB = mainB?.taxon_path || '';
+      return pathA.localeCompare(pathB);
     });
-    return g;
+
+    // Assign colors by family
+    const colorMap = new Map();
+    let colorIdx = 0;
+    for (const group of g) {
+      const main = group.species || group.subspecies[0];
+      const family = main?.family || '';
+      if (family && !colorMap.has(family)) {
+        colorMap.set(family, FAMILY_COLORS[colorIdx % FAMILY_COLORS.length]);
+        colorIdx++;
+      }
+    }
+
+    return { groups: g, familyColorMap: colorMap };
   }, [results]);
 
   async function handleSearch(e) {
@@ -287,7 +358,7 @@ export default function SpeciesSearch({ onSelect }) {
 
   return (
     <div>
-      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
         <input
           type="text"
           value={query}
@@ -301,24 +372,58 @@ export default function SpeciesSearch({ onSelect }) {
         }}>
           {searching ? '搜尋中…' : '搜尋'}
         </button>
+        {onCancel && (
+          <button type="button" onClick={onCancel} style={{
+            padding: '8px 16px', background: '#fff', color: '#666',
+            border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer',
+          }}>
+            取消
+          </button>
+        )}
       </form>
+
+      <div style={{ fontSize: '0.8em', color: '#999', marginBottom: '16px', lineHeight: 1.7 }}>
+        可選擇不同範圍：科（如貓科 Felidae）、屬（犬屬 Canis）、種（家貓 <i>Felis catus</i>）、亞種等。
+        <br />
+        選了較大範圍後再選更小的，會自動取代；反過來則會提示你已有更準確的。
+        <br />
+        若中文搜不到，試試學名（如 <i>Canis lupus</i>、Canidae）。
+        <br />
+        <span style={{ color: '#c0392b' }}>
+          「品種」（如柴犬、布偶貓）不是物種分類，請先選對應的種，再用「+ 品種」標記。
+        </span>
+      </div>
 
       {searching && results.length === 0 && <LoadingSkeleton />}
 
       {groups.length > 0 && (
         <div style={{ border: '1px solid #e0e0e0', borderRadius: '4px', maxHeight: '500px', overflow: 'auto' }}>
-          {groups.map((g) => (
-            <SpeciesGroup key={g.speciesKey} group={g} onSelect={onSelect} />
-          ))}
           {searching && (
-            <div style={{ padding: '12px 14px', borderTop: '1px solid #f0f0f0' }}>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
-                <div style={{ height: '14px', width: '80px', background: '#e0e0e0', borderRadius: '4px', animation: 'vtaxonPulse 1.5s ease-in-out infinite' }} />
-                <div style={{ height: '14px', width: '160px', background: '#e0e0e0', borderRadius: '4px', animation: 'vtaxonPulse 1.5s ease-in-out infinite', animationDelay: '0.1s' }} />
-              </div>
-              <div style={{ height: '10px', width: '240px', background: '#e0e0e0', borderRadius: '4px', animation: 'vtaxonPulse 1.5s ease-in-out infinite', animationDelay: '0.15s' }} />
+            <div style={{
+              padding: '8px 14px', background: '#f0f7ff', borderBottom: '1px solid #e0e0e0',
+              display: 'flex', alignItems: 'center', gap: '8px',
+              position: 'sticky', top: 0, zIndex: 1,
+            }}>
+              <div style={{
+                width: '14px', height: '14px', border: '2px solid #4a90d9',
+                borderTopColor: 'transparent', borderRadius: '50%',
+                animation: 'vtaxonSpin 0.8s linear infinite',
+              }} />
+              <span style={{ fontSize: '0.85em', color: '#4a90d9' }}>搜尋中…</span>
             </div>
           )}
+          {groups.map((g) => {
+            const main = g.species || g.subspecies[0];
+            const family = main?.family || '';
+            return (
+              <SpeciesGroup
+                key={g.speciesKey}
+                group={g}
+                onSelect={onSelect}
+                familyColor={familyColorMap.get(family)}
+              />
+            );
+          })}
         </div>
       )}
 

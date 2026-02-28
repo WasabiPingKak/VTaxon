@@ -168,7 +168,8 @@ class VtuberTrait(db.Model):
     taxon_id = db.Column(db.Integer, db.ForeignKey('species_cache.taxon_id'))
     fictional_species_id = db.Column(db.Integer,
                                      db.ForeignKey('fictional_species.id'))
-    display_name = db.Column(db.Text, nullable=False)
+    display_name = db.Column(db.Text)  # deprecated, kept for migration compat
+    breed_name = db.Column(db.Text)
     trait_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
                            default=lambda: datetime.now(timezone.utc))
@@ -186,13 +187,23 @@ class VtuberTrait(db.Model):
             name='ck_trait_has_species'),
     )
 
+    def computed_display_name(self):
+        """Compute display_name from related species/fictional for backward compat."""
+        if self.species:
+            return (self.species.common_name_zh
+                    or self.species.scientific_name)
+        if self.fictional:
+            return self.fictional.name
+        return self.display_name
+
     def to_dict(self):
         result = {
             'id': self.id,
             'user_id': self.user_id,
             'taxon_id': self.taxon_id,
             'fictional_species_id': self.fictional_species_id,
-            'display_name': self.display_name,
+            'display_name': self.computed_display_name(),
+            'breed_name': self.breed_name,
             'trait_note': self.trait_note,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),

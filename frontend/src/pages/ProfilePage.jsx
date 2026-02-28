@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
@@ -15,6 +15,35 @@ const SNS_LABELS = {
   facebook: 'Facebook',
   marshmallow: '棉花糖',
 };
+
+const RANK_LABELS = {
+  ORDER: '目',
+  FAMILY: '科',
+  GENUS: '屬',
+  SPECIES: '種',
+  SUBSPECIES: '亞種',
+  VARIETY: '變種',
+};
+
+/** Simple toast notification */
+function Toast({ message, type, onClose }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 4000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+      padding: '12px 24px', borderRadius: '8px', zIndex: 9999,
+      background: type === 'error' ? '#e74c3c' : type === 'warning' ? '#f39c12' : '#27ae60',
+      color: '#fff', fontSize: '0.95em', boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+      maxWidth: '90vw', textAlign: 'center',
+    }}>
+      {message}
+    </div>
+  );
+}
 
 /** Taxonomy breadcrumb: 中文(Latin) > ... up to genus */
 function TraitBreadcrumb({ species }) {
@@ -45,11 +74,85 @@ function TraitBreadcrumb({ species }) {
   );
 }
 
+/** Inline breed name editor — only shown for SPECIES-rank traits */
+function BreedEditor({ trait, onSave }) {
+  const rank = (trait.species?.taxon_rank || '').toUpperCase();
+  if (rank !== 'SPECIES' && rank !== 'SUBSPECIES' && rank !== 'VARIETY') return null;
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(trait.breed_name || '');
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await onSave(trait.id, value.trim() || null);
+      setEditing(false);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <span style={{ fontSize: '0.85em', color: '#888', marginLeft: '4px' }}>
+        {trait.breed_name ? (
+          <span onClick={() => setEditing(true)} style={{ cursor: 'pointer' }}>
+            ({trait.breed_name})
+          </span>
+        ) : (
+          <button onClick={() => setEditing(true)} title="品種是人為培育的分類，如柴犬、布偶貓，不是生物學上的亞種" style={{
+            background: 'none', border: '1px dashed #ccc', borderRadius: '3px',
+            padding: '0 6px', fontSize: '0.85em', color: '#aaa', cursor: 'pointer',
+          }}>
+            + 品種
+          </button>
+        )}
+      </span>
+    );
+  }
+
+  return (
+    <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center', marginLeft: '4px' }}>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="如：柴犬、布偶貓"
+        autoFocus
+        style={{
+          padding: '2px 6px', border: '1px solid #ccc', borderRadius: '3px',
+          fontSize: '0.85em', width: '100px',
+        }}
+        onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
+      />
+      <button onClick={handleSave} disabled={saving} style={{
+        padding: '2px 8px', background: '#27ae60', color: '#fff',
+        border: 'none', borderRadius: '3px', fontSize: '0.8em', cursor: 'pointer',
+      }}>
+        {saving ? '…' : '存'}
+      </button>
+      <button onClick={() => setEditing(false)} style={{
+        padding: '2px 8px', background: '#ccc', color: '#333',
+        border: 'none', borderRadius: '3px', fontSize: '0.8em', cursor: 'pointer',
+      }}>
+        取消
+      </button>
+    </span>
+  );
+}
+
 export default function ProfilePage() {
   const { user, loading } = useAuth();
   const [traits, setTraits] = useState([]);
   const [oauthAccounts, setOauthAccounts] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type, key: Date.now() });
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -81,15 +184,30 @@ export default function ProfilePage() {
 
   async function handleAddTrait(species) {
     try {
-      await api.createTrait({
+      const result = await api.createTrait({
         taxon_id: species.taxon_id,
-        display_name: species.common_name_zh || species.common_name_en || species.scientific_name,
       });
+      if (result.replaced) {
+        showToast(`已新增，原本的「${result.replaced.replaced_display_name}」已被取代（新的範圍更小、更準確）`);
+      } else {
+        showToast('特徵新增成功');
+      }
       setShowSearch(false);
       loadTraits();
     } catch (err) {
-      alert(err.message);
+      if (err.data?.code === 'ancestor_blocked') {
+        showToast(`無法新增：你已經有「${err.data.existing_display_name}」，範圍比這個更小更準確`, 'warning');
+      } else if (err.data?.code === 'rank_not_allowed') {
+        showToast(err.message, 'error');
+      } else {
+        showToast(err.message, 'error');
+      }
     }
+  }
+
+  async function handleUpdateBreed(traitId, breedName) {
+    await api.updateTrait(traitId, { breed_name: breedName });
+    loadTraits();
   }
 
   async function handleDeleteTrait(traitId) {
@@ -102,8 +220,25 @@ export default function ProfilePage() {
     }
   }
 
+  function getTraitDisplayName(trait) {
+    if (trait.species) {
+      return trait.species.common_name_zh || trait.species.scientific_name;
+    }
+    return trait.display_name;
+  }
+
+  function getTraitRank(trait) {
+    if (trait.species?.taxon_rank) {
+      return (trait.species.taxon_rank || '').toUpperCase();
+    }
+    return null;
+  }
+
   return (
     <div style={{ maxWidth: '700px', margin: '40px auto', padding: '0 20px' }}>
+      {/* Toast */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} key={toast.key} />}
+
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
         {user.avatar_url ? (
@@ -167,12 +302,14 @@ export default function ProfilePage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h3 style={{ margin: 0 }}>物種特徵</h3>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setShowSearch(!showSearch)} style={{
-            padding: '6px 14px', background: '#4a90d9', color: '#fff',
-            border: 'none', borderRadius: '4px', cursor: 'pointer',
-          }}>
-            {showSearch ? '取消' : '+ 新增特徵'}
-          </button>
+          {!showSearch && (
+            <button onClick={() => setShowSearch(true)} style={{
+              padding: '6px 14px', background: '#4a90d9', color: '#fff',
+              border: 'none', borderRadius: '4px', cursor: 'pointer',
+            }}>
+              + 新增特徵
+            </button>
+          )}
           <Link to={`/kinship/${user.id}`} style={{
             padding: '6px 14px', background: '#27ae60', color: '#fff',
             borderRadius: '4px', textDecoration: 'none',
@@ -182,57 +319,73 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {showSearch && (
-        <div style={{ marginBottom: '24px', padding: '16px', background: '#f9f9f9', borderRadius: '8px' }}>
-          <SpeciesSearch onSelect={handleAddTrait} />
+      {traits.length === 0 ? (
+        <p style={{ color: '#999', marginBottom: '16px' }}>尚未新增物種特徵，點擊上方按鈕開始新增！</p>
+      ) : (
+        <div style={{ marginBottom: '16px' }}>
+          {traits.map((trait) => {
+            const displayName = getTraitDisplayName(trait);
+            const rank = getTraitRank(trait);
+            const rankLabel = rank ? RANK_LABELS[rank] : null;
+
+            return (
+              <div key={trait.id} style={{
+                padding: '12px 16px', borderBottom: '1px solid #eee',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
+                    {rankLabel && (
+                      <span style={{
+                        display: 'inline-block', padding: '1px 6px', borderRadius: '3px',
+                        fontSize: '0.75em', fontWeight: 600,
+                        background: '#e8f4fd', color: '#2980b9', border: '1px solid #bee0f5',
+                      }}>
+                        {rankLabel}
+                      </span>
+                    )}
+                    {displayName && (
+                      <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#222' }}>
+                        {displayName}
+                      </span>
+                    )}
+                    {trait.species && (
+                      <span style={{ fontStyle: 'italic', color: '#555' }}>
+                        {trait.species.scientific_name}
+                      </span>
+                    )}
+                    {trait.species?.common_name_en && (
+                      <span style={{ color: '#999', fontSize: '0.9em' }}>
+                        ({trait.species.common_name_en})
+                      </span>
+                    )}
+                    {trait.fictional && (
+                      <span style={{ color: '#888' }}>
+                        [{trait.fictional.origin}]
+                      </span>
+                    )}
+                    <BreedEditor trait={trait} onSave={handleUpdateBreed} />
+                  </div>
+                  {trait.species && <TraitBreadcrumb species={trait.species} />}
+                  {trait.trait_note && (
+                    <div style={{ fontSize: '0.85em', color: '#999', marginTop: '2px' }}>{trait.trait_note}</div>
+                  )}
+                </div>
+                <button onClick={() => handleDeleteTrait(trait.id)} style={{
+                  padding: '4px 10px', background: '#e74c3c', color: '#fff',
+                  border: 'none', borderRadius: '4px', cursor: 'pointer',
+                }}>
+                  移除
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {traits.length === 0 ? (
-        <p style={{ color: '#999' }}>尚未新增物種特徵，點擊上方按鈕開始新增！</p>
-      ) : (
-        <div>
-          {traits.map((trait) => (
-            <div key={trait.id} style={{
-              padding: '12px 16px', borderBottom: '1px solid #eee',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-            }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
-                  {trait.display_name && (
-                    <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#222' }}>
-                      {trait.display_name}
-                    </span>
-                  )}
-                  {trait.species && (
-                    <span style={{ fontStyle: 'italic', color: '#555' }}>
-                      {trait.species.scientific_name}
-                    </span>
-                  )}
-                  {trait.species?.common_name_en && (
-                    <span style={{ color: '#999', fontSize: '0.9em' }}>
-                      ({trait.species.common_name_en})
-                    </span>
-                  )}
-                  {trait.fictional && (
-                    <span style={{ color: '#888' }}>
-                      [{trait.fictional.origin}]
-                    </span>
-                  )}
-                </div>
-                {trait.species && <TraitBreadcrumb species={trait.species} />}
-                {trait.trait_note && (
-                  <div style={{ fontSize: '0.85em', color: '#999', marginTop: '2px' }}>{trait.trait_note}</div>
-                )}
-              </div>
-              <button onClick={() => handleDeleteTrait(trait.id)} style={{
-                padding: '4px 10px', background: '#e74c3c', color: '#fff',
-                border: 'none', borderRadius: '4px', cursor: 'pointer',
-              }}>
-                移除
-              </button>
-            </div>
-          ))}
+      {showSearch && (
+        <div style={{ marginBottom: '24px', padding: '16px', background: '#f9f9f9', borderRadius: '8px' }}>
+          <SpeciesSearch onSelect={handleAddTrait} onCancel={() => setShowSearch(false)} />
         </div>
       )}
     </div>

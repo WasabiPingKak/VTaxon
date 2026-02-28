@@ -17,7 +17,10 @@ async function apiFetch(path, options = {}) {
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(data.error || `API error ${res.status}`);
+    const err = new Error(data.error || `API error ${res.status}`);
+    err.status = res.status;
+    err.data = data;
+    throw err;
   }
   return data;
 }
@@ -154,6 +157,9 @@ export const api = {
   getTraits: (userId) => apiFetch(`/traits?user_id=${userId}`),
   createTrait: (body) => apiFetch('/traits', {
     method: 'POST', body: JSON.stringify(body),
+  }),
+  updateTrait: (id, body) => apiFetch(`/traits/${id}`, {
+    method: 'PATCH', body: JSON.stringify(body),
   }),
   deleteTrait: (id) => apiFetch(`/traits/${id}`, { method: 'DELETE' }),
 

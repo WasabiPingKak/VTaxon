@@ -11,13 +11,20 @@ export default function SearchPage() {
       return;
     }
     try {
-      await api.createTrait({
+      const result = await api.createTrait({
         taxon_id: species.taxon_id,
-        display_name: species.common_name_zh || species.common_name_en || species.scientific_name,
       });
-      alert('已新增特徵！');
+      if (result.replaced) {
+        alert(`已新增，原本的「${result.replaced.replaced_display_name}」已被取代（新的範圍更小、更準確）`);
+      } else {
+        alert('已新增特徵！');
+      }
     } catch (err) {
-      alert(err.message);
+      if (err.data?.code === 'ancestor_blocked') {
+        alert(`無法新增：你已經有「${err.data.existing_display_name}」，範圍比這個更小更準確`);
+      } else {
+        alert(err.message);
+      }
     }
   }
 

@@ -71,7 +71,7 @@ def suggest_species(query, limit=10):
             continue
         # Only include SPECIES and SUBSPECIES ranks
         rank = (r.get('rank') or '').upper()
-        if rank not in ('SPECIES', 'SUBSPECIES', 'VARIETY'):
+        if rank not in ('ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
             continue
         seen_keys.add(key)
         species_list.append(_gbif_result_to_dict(r, key))
@@ -79,11 +79,8 @@ def suggest_species(query, limit=10):
     # Enrich with Chinese names
     _enrich_chinese_names(species_list)
 
-    # Sort: entries with Chinese names first, then alphabetically by scientific name
-    species_list.sort(key=lambda s: (
-        0 if s.get('common_name_zh') else 1,
-        s.get('scientific_name') or '',
-    ))
+    # Sort by taxon_path for taxonomy tree order
+    species_list.sort(key=lambda s: s.get('taxon_path') or '')
 
     return species_list
 
@@ -160,7 +157,7 @@ def _suggest_species_stream(query, limit=10):
         if status and status != 'ACCEPTED':
             continue
         rank = (r.get('rank') or '').upper()
-        if rank not in ('SPECIES', 'SUBSPECIES', 'VARIETY'):
+        if rank not in ('ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
             continue
         seen_keys.add(key)
         species_list.append(_gbif_result_to_dict(r, key))
