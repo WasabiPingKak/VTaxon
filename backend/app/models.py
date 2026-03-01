@@ -108,11 +108,12 @@ class SpeciesCache(db.Model):
     order_ = db.Column('order_', db.Text)
     family = db.Column(db.Text)
     genus = db.Column(db.Text)
+    path_zh = db.Column(db.JSON, default=dict)
     cached_at = db.Column(db.DateTime(timezone=True), nullable=False,
                           default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
-        from .services.taxonomy_zh import get_taxonomy_zh_for_ranks
+        path_zh = self.path_zh or {}
         result = {
             'taxon_id': self.taxon_id,
             'scientific_name': self.scientific_name,
@@ -126,12 +127,13 @@ class SpeciesCache(db.Model):
             'order': self.order_,
             'family': self.family,
             'genus': self.genus,
+            'kingdom_zh': path_zh.get('kingdom'),
+            'phylum_zh': path_zh.get('phylum'),
+            'class_zh': path_zh.get('class'),
+            'order_zh': path_zh.get('order'),
+            'family_zh': path_zh.get('family'),
+            'genus_zh': path_zh.get('genus'),
         }
-        result.update(get_taxonomy_zh_for_ranks(
-            kingdom=self.kingdom, phylum=self.phylum,
-            class_=self.class_, order=self.order_,
-            family=self.family, genus=self.genus,
-        ))
         return result
 
 
@@ -158,6 +160,32 @@ class FictionalSpecies(db.Model):
         }
 
 
+class Breed(db.Model):
+    __tablename__ = 'breeds'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    taxon_id = db.Column(db.Integer, db.ForeignKey('species_cache.taxon_id'),
+                         nullable=False)
+    name_en = db.Column(db.Text, nullable=False)
+    name_zh = db.Column(db.Text)
+    breed_group = db.Column(db.Text)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        db.UniqueConstraint('taxon_id', 'name_en', name='uq_breed_taxon_name'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'taxon_id': self.taxon_id,
+            'name_en': self.name_en,
+            'name_zh': self.name_zh,
+            'breed_group': self.breed_group,
+        }
+
+
 class VtuberTrait(db.Model):
     __tablename__ = 'vtuber_traits'
 
@@ -169,7 +197,9 @@ class VtuberTrait(db.Model):
     fictional_species_id = db.Column(db.Integer,
                                      db.ForeignKey('fictional_species.id'))
     display_name = db.Column(db.Text)  # deprecated, kept for migration compat
-    breed_name = db.Column(db.Text)
+    breed_name = db.Column(db.Text)    # legacy free-text, prefer breed_id
+    breed_id = db.Column(db.Integer, db.ForeignKey('breeds.id',
+                         ondelete='SET NULL'))
     trait_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
                            default=lambda: datetime.now(timezone.utc))
@@ -180,6 +210,7 @@ class VtuberTrait(db.Model):
     species = db.relationship('SpeciesCache', backref='traits', lazy='joined')
     fictional = db.relationship('FictionalSpecies', backref='traits',
                                 lazy='joined')
+    breed = db.relationship('Breed', backref='traits', lazy='joined')
 
     __table_args__ = (
         db.CheckConstraint(
@@ -197,17 +228,27 @@ class VtuberTrait(db.Model):
         return self.display_name
 
     def to_dict(self):
+        # Prefer breed object name over legacy free-text breed_name
+        breed_display = None
+        if self.breed:
+            breed_display = self.breed.name_zh or self.breed.name_en
+        elif self.breed_name:
+            breed_display = self.breed_name
+
         result = {
             'id': self.id,
             'user_id': self.user_id,
             'taxon_id': self.taxon_id,
             'fictional_species_id': self.fictional_species_id,
             'display_name': self.computed_display_name(),
-            'breed_name': self.breed_name,
+            'breed_name': breed_display,
+            'breed_id': self.breed_id,
             'trait_note': self.trait_note,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
         }
+        if self.breed:
+            result['breed'] = self.breed.to_dict()
         if self.species:
             result['species'] = self.species.to_dict()
         if self.fictional:

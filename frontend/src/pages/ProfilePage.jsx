@@ -74,18 +74,34 @@ function TraitBreadcrumb({ species }) {
   );
 }
 
-/** Inline breed name editor — only shown for SPECIES-rank traits */
+/** Inline breed editor — API-driven select for SPECIES/SUBSPECIES-rank traits */
 function BreedEditor({ trait, onSave }) {
   const rank = (trait.species?.taxon_rank || '').toUpperCase();
   if (rank !== 'SPECIES' && rank !== 'SUBSPECIES' && rank !== 'VARIETY') return null;
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(trait.breed_name || '');
+  const [breeds, setBreeds] = useState([]);
+  const [loadingBreeds, setLoadingBreeds] = useState(false);
+  const [selectedBreedId, setSelectedBreedId] = useState(trait.breed_id || '');
   const [saving, setSaving] = useState(false);
+
+  async function handleOpen() {
+    setEditing(true);
+    setLoadingBreeds(true);
+    try {
+      const data = await api.getBreeds(trait.taxon_id);
+      setBreeds(data.breeds || []);
+    } catch {
+      setBreeds([]);
+    } finally {
+      setLoadingBreeds(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
     try {
-      await onSave(trait.id, value.trim() || null);
+      const breedId = selectedBreedId ? parseInt(selectedBreedId, 10) : null;
+      await onSave(trait.id, breedId);
       setEditing(false);
     } catch (err) {
       alert(err.message);
@@ -98,11 +114,11 @@ function BreedEditor({ trait, onSave }) {
     return (
       <span style={{ fontSize: '0.85em', color: '#888', marginLeft: '4px' }}>
         {trait.breed_name ? (
-          <span onClick={() => setEditing(true)} style={{ cursor: 'pointer' }}>
+          <span onClick={handleOpen} style={{ cursor: 'pointer' }}>
             ({trait.breed_name})
           </span>
         ) : (
-          <button onClick={() => setEditing(true)} title="品種是人為培育的分類，如柴犬、布偶貓，不是生物學上的亞種" style={{
+          <button onClick={handleOpen} title="品種是人為培育的分類，如柴犬、布偶貓，不是生物學上的亞種" style={{
             background: 'none', border: '1px dashed #ccc', borderRadius: '3px',
             padding: '0 6px', fontSize: '0.85em', color: '#aaa', cursor: 'pointer',
           }}>
@@ -115,19 +131,29 @@ function BreedEditor({ trait, onSave }) {
 
   return (
     <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center', marginLeft: '4px' }}>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="如：柴犬、布偶貓"
-        autoFocus
-        style={{
-          padding: '2px 6px', border: '1px solid #ccc', borderRadius: '3px',
-          fontSize: '0.85em', width: '100px',
-        }}
-        onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
-      />
-      <button onClick={handleSave} disabled={saving} style={{
+      {loadingBreeds ? (
+        <span style={{ fontSize: '0.85em', color: '#999' }}>載入中…</span>
+      ) : breeds.length === 0 ? (
+        <span style={{ fontSize: '0.85em', color: '#999' }}>無可選品種</span>
+      ) : (
+        <select
+          value={selectedBreedId}
+          onChange={(e) => setSelectedBreedId(e.target.value)}
+          autoFocus
+          style={{
+            padding: '2px 6px', border: '1px solid #ccc', borderRadius: '3px',
+            fontSize: '0.85em',
+          }}
+        >
+          <option value="">（不指定品種）</option>
+          {breeds.map(b => (
+            <option key={b.id} value={b.id}>
+              {b.name_zh ? `${b.name_zh} (${b.name_en})` : b.name_en}
+            </option>
+          ))}
+        </select>
+      )}
+      <button onClick={handleSave} disabled={saving || loadingBreeds} style={{
         padding: '2px 8px', background: '#27ae60', color: '#fff',
         border: 'none', borderRadius: '3px', fontSize: '0.8em', cursor: 'pointer',
       }}>
@@ -205,8 +231,8 @@ export default function ProfilePage() {
     }
   }
 
-  async function handleUpdateBreed(traitId, breedName) {
-    await api.updateTrait(traitId, { breed_name: breedName });
+  async function handleUpdateBreed(traitId, breedId) {
+    await api.updateTrait(traitId, { breed_id: breedId });
     loadTraits();
   }
 

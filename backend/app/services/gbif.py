@@ -199,12 +199,8 @@ def get_species(taxon_id):
     cached = db.session.get(SpeciesCache, taxon_id)
     if cached:
         d = cached.to_dict()
-        # Add taxonomy_zh from static table if not stored
-        d.update(get_taxonomy_zh_for_ranks(
-            kingdom=cached.kingdom, phylum=cached.phylum,
-            class_=cached.class_, order=cached.order_,
-            family=cached.family, genus=cached.genus,
-        ))
+        # Fill in any missing *_zh from static table (backward compat for old rows)
+        _fill_missing_rank_zh(d, cached)
         return d
 
     resp = requests.get(f'{GBIF_BASE}/species/{taxon_id}', timeout=10)
@@ -221,12 +217,20 @@ def get_species(taxon_id):
     if not cached:
         return None
     d = cached.to_dict()
-    d.update(get_taxonomy_zh_for_ranks(
-        kingdom=cached.kingdom, phylum=cached.phylum,
-        class_=cached.class_, order=cached.order_,
-        family=cached.family, genus=cached.genus,
-    ))
+    _fill_missing_rank_zh(d, cached)
     return d
+
+
+def _fill_missing_rank_zh(d, species):
+    """Fill in missing *_zh fields from static table without overwriting existing values."""
+    static_zh = get_taxonomy_zh_for_ranks(
+        kingdom=species.kingdom, phylum=species.phylum,
+        class_=species.class_, order=species.order_,
+        family=species.family, genus=species.genus,
+    )
+    for key, val in static_zh.items():
+        if val and not d.get(key):
+            d[key] = val
 
 
 def cache_from_search_result(gbif_data):
@@ -382,6 +386,11 @@ def _cache_enriched_species(species_list):
             if existing:
                 if sp.get('common_name_zh') and not existing.common_name_zh:
                     existing.common_name_zh = sp['common_name_zh']
+                # Backfill path_zh if empty
+                if not existing.path_zh or existing.path_zh == {}:
+                    pzh = _build_path_zh(sp)
+                    if pzh:
+                        existing.path_zh = pzh
             else:
                 entry = SpeciesCache(
                     taxon_id=taxon_id,
@@ -396,6 +405,7 @@ def _cache_enriched_species(species_list):
                     order_=sp.get('order'),
                     family=sp.get('family'),
                     genus=sp.get('genus'),
+                    path_zh=_build_path_zh(sp),
                 )
                 db.session.add(entry)
         db.session.commit()
@@ -524,6 +534,23 @@ def _search_via_taicol(query, limit=10):
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+def _build_path_zh(data):
+    """Build path_zh dict from static table + Wikidata fallback.
+
+    Called once when a species is first cached, so Wikidata HTTP calls
+    only happen at cache-write time, never on the /tree read path.
+    """
+    result = {}
+    for field, rank in [('kingdom', 'KINGDOM'), ('phylum', 'PHYLUM'),
+                        ('class', 'CLASS'), ('order', 'ORDER'),
+                        ('family', 'FAMILY'), ('genus', 'GENUS')]:
+        latin = data.get(field) or data.get(field + '_')
+        if latin:
+            zh = get_taxonomy_zh(latin) or _resolve_rank_zh(latin, rank=rank)
+            result[field] = zh
+    return result
+
+
 def _cache_species(data, common_name_zh=None):
     """Create or update a SpeciesCache entry from GBIF data."""
     usage_key = data.get('key') or data.get('usageKey')
@@ -531,12 +558,15 @@ def _cache_species(data, common_name_zh=None):
         return None
 
     taxon_path = _build_taxon_path(data)
+    path_zh = _build_path_zh(data)
 
     existing = db.session.get(SpeciesCache, usage_key)
     if existing:
         existing.taxon_path = taxon_path
         if common_name_zh and not existing.common_name_zh:
             existing.common_name_zh = common_name_zh
+        if path_zh and (not existing.path_zh or existing.path_zh == {}):
+            existing.path_zh = path_zh
         db.session.commit()
         return existing
 
@@ -553,6 +583,7 @@ def _cache_species(data, common_name_zh=None):
         order_=data.get('order'),
         family=data.get('family'),
         genus=data.get('genus'),
+        path_zh=path_zh,
     )
     db.session.add(species)
     db.session.commit()

@@ -20,6 +20,7 @@ const RANK_KEYS = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
 const RANK_NAMES = {
   0: 'KINGDOM', 1: 'PHYLUM', 2: 'CLASS', 3: 'ORDER',
   4: 'FAMILY', 5: 'GENUS', 6: 'SPECIES', 7: 'SUBSPECIES',
+  8: 'BREED',
 };
 
 /**
@@ -70,9 +71,27 @@ function buildTree(entries) {
         child.nameZh = entry.common_name_zh;
       }
 
-      // If this is the last part, attach the vtuber here
+      // If this is the last part, handle breed sub-node or attach directly
       if (i === parts.length - 1) {
-        child.vtubers.push(entry);
+        if (entry.breed_id) {
+          const breedKey = `${pathKey}|__breed__${entry.breed_id}`;
+          if (!child.children.has(`__breed__${entry.breed_id}`)) {
+            child.children.set(`__breed__${entry.breed_id}`, {
+              name: entry.breed_name_en || entry.breed_name || '',
+              nameZh: entry.breed_name_zh || entry.breed_name || '',
+              rank: 'BREED',
+              pathKey: breedKey,
+              count: 0,
+              children: new Map(),
+              vtubers: [],
+            });
+          }
+          const breedNode = child.children.get(`__breed__${entry.breed_id}`);
+          breedNode.count++;
+          breedNode.vtubers.push(entry);
+        } else {
+          child.vtubers.push(entry);
+        }
       }
 
       current = child;
@@ -95,6 +114,11 @@ function computeHighlightPaths(entries, userId) {
     const parts = (entry.taxon_path || '').split('|');
     for (let i = 1; i <= parts.length; i++) {
       paths.add(parts.slice(0, i).join('|'));
+    }
+    // Include breed node path if present
+    if (entry.breed_id) {
+      const fullPath = parts.join('|');
+      paths.add(`${fullPath}|__breed__${entry.breed_id}`);
     }
   }
   return paths;
@@ -179,6 +203,9 @@ export default function TaxonomyTree({ currentUser }) {
       const parts = (entry.taxon_path || '').split('|');
       for (let i = 1; i <= parts.length; i++) {
         all.add(parts.slice(0, i).join('|'));
+      }
+      if (entry.breed_id) {
+        all.add(`${parts.join('|')}|__breed__${entry.breed_id}`);
       }
     }
     setExpandedSet(all);

@@ -61,6 +61,7 @@ CREATE TABLE species_cache (
     order_ TEXT,
     family TEXT,
     genus TEXT,
+    path_zh JSONB DEFAULT '{}'::jsonb,
     cached_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -80,14 +81,30 @@ CREATE TABLE fictional_species (
 
 CREATE INDEX idx_fictional_species_category_path ON fictional_species(category_path text_pattern_ops);
 
--- 5. vtuber_traits — 角色與物種的多對多關聯
+-- 5. breeds — 品種（物種的子層級）
+CREATE TABLE breeds (
+    id          SERIAL PRIMARY KEY,
+    taxon_id    INTEGER NOT NULL REFERENCES species_cache(taxon_id),
+    name_en     TEXT NOT NULL,
+    name_zh     TEXT,
+    breed_group TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (taxon_id, name_en)
+);
+
+ALTER TABLE breeds ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "breeds_select_all" ON breeds FOR SELECT USING (true);
+CREATE INDEX idx_breeds_taxon_id ON breeds(taxon_id);
+
+-- 6. vtuber_traits — 角色與物種的多對多關聯
 CREATE TABLE vtuber_traits (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     taxon_id INTEGER REFERENCES species_cache(taxon_id),
     fictional_species_id INTEGER REFERENCES fictional_species(id),
     display_name TEXT,             -- (deprecated, 向下相容保留，稍後 DROP)
-    breed_name TEXT,               -- 品種名稱，如「博美犬」
+    breed_name TEXT,               -- 品種名稱（legacy 自由文字，優先使用 breed_id）
+    breed_id   INTEGER REFERENCES breeds(id) ON DELETE SET NULL,
     trait_note TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -97,6 +114,7 @@ CREATE TABLE vtuber_traits (
 CREATE INDEX idx_vtuber_traits_user_id ON vtuber_traits(user_id);
 CREATE INDEX idx_vtuber_traits_taxon_id ON vtuber_traits(taxon_id);
 CREATE INDEX idx_vtuber_traits_fictional_species_id ON vtuber_traits(fictional_species_id);
+CREATE INDEX idx_vtuber_traits_breed_id ON vtuber_traits(breed_id);
 
 -- 同一角色不能重複標註同一現實物種
 CREATE UNIQUE INDEX idx_vtuber_traits_user_taxon

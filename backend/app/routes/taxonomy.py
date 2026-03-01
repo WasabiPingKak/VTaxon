@@ -1,19 +1,10 @@
 from flask import Blueprint, jsonify
 
+from ..cache import get_tree_cache, set_tree_cache
 from ..extensions import db
 from ..models import User, VtuberTrait, SpeciesCache
-from ..services.gbif import _resolve_rank_zh
 
 taxonomy_bp = Blueprint('taxonomy', __name__)
-
-RANK_FIELDS = [
-    ('kingdom', 'KINGDOM'),
-    ('phylum', 'PHYLUM'),
-    ('class', 'CLASS'),
-    ('order', 'ORDER'),
-    ('family', 'FAMILY'),
-    ('genus', 'GENUS'),
-]
 
 
 @taxonomy_bp.route('/tree', methods=['GET'])
@@ -21,7 +12,12 @@ def get_taxonomy_tree():
     """Return all vtuber traits with real species, joined with user and species data.
 
     Frontend builds the tree structure from the flat list using taxon_path.
+    Uses in-process cache (TTL 5 min) to avoid repeated DB queries.
     """
+    cached = get_tree_cache()
+    if cached:
+        return jsonify(cached)
+
     rows = (
         db.session.query(VtuberTrait, SpeciesCache, User)
         .join(SpeciesCache, VtuberTrait.taxon_id == SpeciesCache.taxon_id)
@@ -32,18 +28,18 @@ def get_taxonomy_tree():
 
     entries = []
     for trait, species, user in rows:
-        sp_dict = species.to_dict()
+        # Read pre-computed path_zh from DB (written at cache-time by _cache_species)
+        path_zh = species.path_zh or {}
 
-        # Build path_zh with Wikidata fallback for missing Chinese names
-        path_zh = {}
-        for field, rank_enum in RANK_FIELDS:
-            zh_key = f'{field}_zh'
-            zh = sp_dict.get(zh_key)
-            if not zh:
-                latin = getattr(species, field if field != 'class' else 'class_', None)
-                if latin:
-                    zh = _resolve_rank_zh(latin, rank=rank_enum)
-            path_zh[field] = zh
+        # Breed info: prefer breed object, fallback to legacy free-text
+        breed_id = trait.breed_id
+        breed_name_zh = None
+        breed_name_en = None
+        breed_name = trait.breed_name  # legacy fallback
+        if trait.breed:
+            breed_name_zh = trait.breed.name_zh
+            breed_name_en = trait.breed.name_en
+            breed_name = breed_name_zh or breed_name_en
 
         entries.append({
             'user_id': user.id,
@@ -55,8 +51,13 @@ def get_taxonomy_tree():
             'taxon_path': species.taxon_path,
             'scientific_name': species.scientific_name,
             'common_name_zh': species.common_name_zh,
-            'breed_name': trait.breed_name,
+            'breed_name': breed_name,
+            'breed_id': breed_id,
+            'breed_name_zh': breed_name_zh,
+            'breed_name_en': breed_name_en,
             'path_zh': path_zh,
         })
 
-    return jsonify({'entries': entries})
+    result = {'entries': entries}
+    set_tree_cache(result)
+    return jsonify(result)

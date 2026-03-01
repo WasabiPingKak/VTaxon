@@ -1,8 +1,9 @@
 from flask import Blueprint, g, jsonify, request
 
 from ..auth import login_required
+from ..cache import invalidate_tree_cache
 from ..extensions import db
-from ..models import FictionalSpecies, SpeciesCache, VtuberTrait
+from ..models import Breed, FictionalSpecies, SpeciesCache, VtuberTrait
 from ..services.gbif import get_species
 
 traits_bp = Blueprint('traits', __name__)
@@ -90,15 +91,26 @@ def create_trait():
         if existing:
             return jsonify({'error': 'You already have this fictional species trait'}), 409
 
+    # Validate breed_id if provided
+    breed_id = data.get('breed_id')
+    if breed_id:
+        breed = db.session.get(Breed, breed_id)
+        if not breed:
+            return jsonify({'error': 'Breed not found'}), 404
+        if taxon_id and breed.taxon_id != taxon_id:
+            return jsonify({'error': 'Breed does not belong to this species'}), 400
+
     trait = VtuberTrait(
         user_id=g.current_user_id,
         taxon_id=taxon_id,
         fictional_species_id=fictional_species_id,
-        breed_name=data.get('breed_name'),
+        breed_id=breed_id,
+        breed_name=data.get('breed_name') if not breed_id else None,
         trait_note=data.get('trait_note'),
     )
     db.session.add(trait)
     db.session.commit()
+    invalidate_tree_cache()
 
     result = trait.to_dict()
     if replaced_info:
@@ -128,12 +140,23 @@ def update_trait(trait_id):
 
     data = request.get_json() or {}
 
-    if 'breed_name' in data:
+    if 'breed_id' in data:
+        breed_id = data['breed_id']
+        if breed_id is not None:
+            breed = db.session.get(Breed, breed_id)
+            if not breed:
+                return jsonify({'error': 'Breed not found'}), 404
+            if trait.taxon_id and breed.taxon_id != trait.taxon_id:
+                return jsonify({'error': 'Breed does not belong to this species'}), 400
+        trait.breed_id = breed_id
+        trait.breed_name = None  # clear legacy field when using breed_id
+    elif 'breed_name' in data:
         trait.breed_name = data['breed_name']
     if 'trait_note' in data:
         trait.trait_note = data['trait_note']
 
     db.session.commit()
+    invalidate_tree_cache()
     return jsonify(trait.to_dict())
 
 
@@ -148,4 +171,5 @@ def delete_trait(trait_id):
 
     db.session.delete(trait)
     db.session.commit()
+    invalidate_tree_cache()
     return jsonify({'message': 'Trait deleted'}), 200

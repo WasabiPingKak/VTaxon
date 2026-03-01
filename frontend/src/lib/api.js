@@ -153,6 +153,9 @@ export const api = {
     childrenCache.set(taxonId, { results: all });
   },
 
+  // Breeds
+  getBreeds: (taxonId) => apiFetch(`/breeds?taxon_id=${taxonId}`),
+
   // Traits
   getTraits: (userId) => apiFetch(`/traits?user_id=${userId}`),
   createTrait: (body) => apiFetch('/traits', {

@@ -78,6 +78,24 @@ export default function TreeNode({
       {/* Expanded content */}
       {isExpanded && (
         <div>
+          {/* Vtuber cards at this node (before children) */}
+          {node.vtubers.length > 0 && (
+            <div style={{
+              marginLeft: (depth + 1) * 20,
+              display: 'flex', flexWrap: 'wrap', gap: '6px',
+              padding: '4px 0',
+            }}>
+              {node.vtubers.map(v => (
+                <VtuberCard
+                  key={`${v.user_id}-${v.taxon_id}`}
+                  entry={v}
+                  isCurrentUser={currentUserId && v.user_id === currentUserId}
+                  onClick={() => onSelectVtuber(v)}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Child taxonomy nodes */}
           {displayChildren.map(child => (
             <TreeNode
@@ -107,24 +125,6 @@ export default function TreeNode({
               </button>
             </div>
           )}
-
-          {/* Vtuber cards at this node */}
-          {node.vtubers.length > 0 && (
-            <div style={{
-              marginLeft: (depth + 1) * 20,
-              display: 'flex', flexWrap: 'wrap', gap: '6px',
-              padding: '4px 0',
-            }}>
-              {node.vtubers.map(v => (
-                <VtuberCard
-                  key={`${v.user_id}-${v.taxon_id}`}
-                  entry={v}
-                  isCurrentUser={currentUserId && v.user_id === currentUserId}
-                  onClick={() => onSelectVtuber(v)}
-                />
-              ))}
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -140,4 +140,5 @@ const RANK_SHORT = {
   GENUS: '屬',
   SPECIES: '種',
   SUBSPECIES: '亞種',
+  BREED: '品種',
 };
