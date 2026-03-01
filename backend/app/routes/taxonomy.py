@@ -2,8 +2,18 @@ from flask import Blueprint, jsonify
 
 from ..extensions import db
 from ..models import User, VtuberTrait, SpeciesCache
+from ..services.gbif import _resolve_rank_zh
 
 taxonomy_bp = Blueprint('taxonomy', __name__)
+
+RANK_FIELDS = [
+    ('kingdom', 'KINGDOM'),
+    ('phylum', 'PHYLUM'),
+    ('class', 'CLASS'),
+    ('order', 'ORDER'),
+    ('family', 'FAMILY'),
+    ('genus', 'GENUS'),
+]
 
 
 @taxonomy_bp.route('/tree', methods=['GET'])
@@ -23,6 +33,18 @@ def get_taxonomy_tree():
     entries = []
     for trait, species, user in rows:
         sp_dict = species.to_dict()
+
+        # Build path_zh with Wikidata fallback for missing Chinese names
+        path_zh = {}
+        for field, rank_enum in RANK_FIELDS:
+            zh_key = f'{field}_zh'
+            zh = sp_dict.get(zh_key)
+            if not zh:
+                latin = getattr(species, field if field != 'class' else 'class_', None)
+                if latin:
+                    zh = _resolve_rank_zh(latin, rank=rank_enum)
+            path_zh[field] = zh
+
         entries.append({
             'user_id': user.id,
             'display_name': user.display_name,
@@ -34,14 +56,7 @@ def get_taxonomy_tree():
             'scientific_name': species.scientific_name,
             'common_name_zh': species.common_name_zh,
             'breed_name': trait.breed_name,
-            'path_zh': {
-                'kingdom': sp_dict.get('kingdom_zh'),
-                'phylum': sp_dict.get('phylum_zh'),
-                'class': sp_dict.get('class_zh'),
-                'order': sp_dict.get('order_zh'),
-                'family': sp_dict.get('family_zh'),
-                'genus': sp_dict.get('genus_zh'),
-            },
+            'path_zh': path_zh,
         })
 
     return jsonify({'entries': entries})

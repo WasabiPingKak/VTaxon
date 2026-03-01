@@ -35,7 +35,7 @@ RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species
 def clear_chinese_name_caches():
     """Clear all in-memory Chinese name LRU caches across all services."""
     _resolve_chinese_name.cache_clear()
-    _resolve_genus_zh.cache_clear()
+    _resolve_rank_zh.cache_clear()
     wikidata_clear_cache()
     taicol_clear_cache()
 
@@ -275,37 +275,43 @@ def _resolve_chinese_name(taxon_id, scientific_name):
 
 
 @lru_cache(maxsize=500)
-def _resolve_genus_zh(genus_name):
-    """Resolve Chinese name for a genus via GBIF match → Wikidata.
+def _resolve_rank_zh(taxon_name, rank=None):
+    """Resolve Chinese name for any taxon via static table → GBIF match → Wikidata.
 
-    Cached to avoid repeated lookups for the same genus.
+    Cached to avoid repeated lookups for the same taxon.
     Returns Chinese name string or None.
     """
-    if not genus_name:
+    if not taxon_name:
         return None
 
     # Static table first
-    zh = get_taxonomy_zh(genus_name)
+    zh = get_taxonomy_zh(taxon_name)
     if zh:
         return zh
 
-    # GBIF match to get genus taxon_id, then Wikidata
+    # GBIF match to get taxon_id, then Wikidata
     try:
-        resp = requests.get(f'{GBIF_BASE}/species/match', params={
-            'name': genus_name,
-            'rank': 'GENUS',
-            'verbose': 'false',
-        }, timeout=10)
+        params = {'name': taxon_name, 'verbose': 'false'}
+        if rank:
+            params['rank'] = rank
+        resp = requests.get(f'{GBIF_BASE}/species/match',
+                            params=params, timeout=10)
         resp.raise_for_status()
         data = resp.json()
-        genus_key = data.get('usageKey')
-        if genus_key:
-            zh_name, _en = get_chinese_name_by_gbif_id(genus_key)
+        usage_key = data.get('usageKey')
+        if usage_key:
+            zh_name, _en = get_chinese_name_by_gbif_id(usage_key)
             return zh_name
     except Exception:
-        log.debug('genus_zh Wikidata fallback failed for %s', genus_name)
+        log.debug('rank_zh Wikidata fallback failed for %s (rank=%s)',
+                  taxon_name, rank)
 
     return None
+
+
+def _resolve_genus_zh(genus_name):
+    """Resolve Chinese name for a genus. Delegates to _resolve_rank_zh."""
+    return _resolve_rank_zh(genus_name, rank='GENUS')
 
 
 def _enrich_chinese_names(species_list):
