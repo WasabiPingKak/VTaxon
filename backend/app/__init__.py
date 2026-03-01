@@ -23,12 +23,14 @@ def create_app(config_name=None):
     from .routes.species import species_bp
     from .routes.traits import traits_bp
     from .routes.kinship import kinship_bp
+    from .routes.taxonomy import taxonomy_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(species_bp, url_prefix='/api/species')
     app.register_blueprint(traits_bp, url_prefix='/api/traits')
     app.register_blueprint(kinship_bp, url_prefix='/api/kinship')
+    app.register_blueprint(taxonomy_bp, url_prefix='/api/taxonomy')
 
     @app.route('/health')
     def health():

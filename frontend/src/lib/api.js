@@ -163,6 +163,9 @@ export const api = {
   }),
   deleteTrait: (id) => apiFetch(`/traits/${id}`, { method: 'DELETE' }),
 
+  // Taxonomy
+  getTaxonomyTree: () => apiFetch('/taxonomy/tree'),
+
   // Kinship
   getKinship: (userId, includeHuman = false) =>
     apiFetch(`/kinship/${userId}?include_human=${includeHuman}`),

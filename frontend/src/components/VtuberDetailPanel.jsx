@@ -1,0 +1,144 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+
+const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
+const RANK_LABELS = {
+  kingdom: '界', phylum: '門', class: '綱', order: '目',
+  family: '科', genus: '屬',
+};
+
+export default function VtuberDetailPanel({ entry, onClose }) {
+  const [imgError, setImgError] = useState(false);
+
+  if (!entry) return null;
+
+  const pathParts = (entry.taxon_path || '').split('|');
+  const pathZh = entry.path_zh || {};
+
+  const flags = (entry.country_flags || [])
+    .map(c => {
+      const upper = c.toUpperCase();
+      const cp = [...upper].map(ch => 0x1F1E6 - 65 + ch.charCodeAt(0));
+      return String.fromCodePoint(...cp);
+    })
+    .join(' ');
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)',
+          zIndex: 999,
+        }}
+      />
+      {/* Panel */}
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0,
+        width: '360px', maxWidth: '90vw',
+        background: '#fff', zIndex: 1000,
+        boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
+        display: 'flex', flexDirection: 'column',
+        overflow: 'hidden',
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '16px 20px', borderBottom: '1px solid #eee',
+        }}>
+          <span style={{ fontWeight: 600, fontSize: '1.1em' }}>Vtuber 詳情</span>
+          <button type="button" onClick={onClose} style={{
+            background: 'none', border: 'none', fontSize: '1.4em',
+            cursor: 'pointer', color: '#999', padding: '4px',
+          }}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+          {/* Avatar + name */}
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            {entry.avatar_url && !imgError ? (
+              <img
+                src={entry.avatar_url} alt=""
+                style={{ width: 80, height: 80, borderRadius: '50%' }}
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div style={{
+                width: 80, height: 80, borderRadius: '50%', margin: '0 auto',
+                background: '#ddd', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: '32px', color: '#999',
+              }}>?</div>
+            )}
+            <div style={{ marginTop: '10px', fontSize: '1.2em', fontWeight: 600 }}>
+              {entry.display_name} {flags}
+            </div>
+          </div>
+
+          {/* Species info */}
+          <div style={{
+            background: '#f8f9fa', borderRadius: '8px', padding: '14px',
+            marginBottom: '16px',
+          }}>
+            <div style={{ fontWeight: 600, marginBottom: '8px' }}>物種資訊</div>
+            <div style={{ fontSize: '0.9em', lineHeight: '1.8' }}>
+              <div><span style={labelStyle}>學名</span> {entry.scientific_name}</div>
+              {entry.common_name_zh && (
+                <div><span style={labelStyle}>中文名</span> {entry.common_name_zh}</div>
+              )}
+              {entry.breed_name && (
+                <div><span style={labelStyle}>品種</span> {entry.breed_name}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Taxonomy path */}
+          <div style={{
+            background: '#f8f9fa', borderRadius: '8px', padding: '14px',
+            marginBottom: '16px',
+          }}>
+            <div style={{ fontWeight: 600, marginBottom: '8px' }}>分類路徑</div>
+            <div style={{ fontSize: '0.85em', lineHeight: '2' }}>
+              {RANK_ORDER.map((rank, i) => {
+                const latin = pathParts[i];
+                const zh = pathZh[rank];
+                if (!latin) return null;
+                return (
+                  <div key={rank} style={{ paddingLeft: i * 12 }}>
+                    <span style={{ color: '#999', marginRight: '6px' }}>{RANK_LABELS[rank]}</span>
+                    {zh ? `${zh} (${latin})` : latin}
+                  </div>
+                );
+              })}
+              {/* Species / subspecies at end */}
+              <div style={{ paddingLeft: RANK_ORDER.length * 12, fontWeight: 600 }}>
+                {entry.common_name_zh
+                  ? `${entry.common_name_zh} (${entry.scientific_name})`
+                  : entry.scientific_name}
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <Link to={`/kinship/${entry.user_id}`} style={actionBtn}>
+              查看親緣關係
+            </Link>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+const labelStyle = {
+  display: 'inline-block', width: '50px',
+  color: '#888', fontWeight: 500,
+};
+
+const actionBtn = {
+  display: 'inline-block', textDecoration: 'none',
+  padding: '8px 16px', background: '#4a90d9', color: '#fff',
+  borderRadius: '6px', fontSize: '0.9em', textAlign: 'center',
+};
