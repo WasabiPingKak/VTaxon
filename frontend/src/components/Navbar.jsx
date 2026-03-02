@@ -65,7 +65,9 @@ export default function Navbar() {
         fontWeight: 'bold',
         color: '#fff',
         textShadow: '0 0 12px rgba(56,189,248,0.5)',
+        display: 'flex', alignItems: 'center', gap: 6,
       }}>
+        <img src="/favicon.svg" alt="" width={22} height={22} />
         VTaxon
       </Link>
 

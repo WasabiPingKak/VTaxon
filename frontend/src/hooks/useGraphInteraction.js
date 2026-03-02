@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef } from 'react';
+import { taxonomyNodeRadius } from '../components/graph/renderers.js';
 
 /**
  * Manages hover and click interactions for graph nodes.
  * Performs hit-testing against node positions and shapes.
  */
-export default function useGraphInteraction(nodes) {
+export default function useGraphInteraction(nodes, maxCount) {
   const [hoveredNode, setHoveredNode] = useState(null);
   const lastHitRef = useRef(null);
 
@@ -32,14 +33,14 @@ export default function useGraphInteraction(nodes) {
         const halfH = d._nodeHeight ? d._nodeHeight / 2 + 4 : 17;
         if (Math.abs(dx) <= halfW && Math.abs(dy) <= halfH) return node;
       } else {
-        // Circle — radius scales with count
+        // Circle — area-proportional radius
         const count = d._count || 0;
-        const r = Math.min(5 + Math.sqrt(count) * 2.5, 14) + 4;
+        const r = taxonomyNodeRadius(count, maxCount) + 4;
         if (dx * dx + dy * dy <= r * r) return node;
       }
     }
     return null;
-  }, [nodes]);
+  }, [nodes, maxCount]);
 
   const handleHover = useCallback((worldX, worldY) => {
     const hit = hitTest(worldX, worldY);

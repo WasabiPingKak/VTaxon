@@ -214,11 +214,21 @@ export default function useTreeLayout(entries, expandedSet, currentUserId) {
       if (n.y > maxY) maxY = n.y;
     }
 
+    // Compute maxCount across all taxonomy circle nodes (for area-proportional sizing)
+    let maxCount = 1;
+    for (const n of nodes) {
+      const d = n.data;
+      if (!d._vtuber && d._rank !== 'SPECIES' && d._rank !== 'SUBSPECIES' && d._rank !== 'BREED') {
+        if ((d._count || 0) > maxCount) maxCount = d._count;
+      }
+    }
+
     return {
       nodes,
       edges,
       rootData: root,
       bounds: { minX, maxX, minY, maxY },
+      maxCount,
     };
   }, [entries, expandedSet, currentUserId]);
 }

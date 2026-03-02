@@ -72,7 +72,7 @@ export default function TaxonomyGraph({ currentUser }) {
   }, [focusedUserId, entries]);
 
   // d3 layout (before traceBack computations so focusedEntries can sort by X)
-  const { nodes, edges, bounds, rootData } = useTreeLayout(
+  const { nodes, edges, bounds, rootData, maxCount } = useTreeLayout(
     entries, expandedSet, currentUser?.id,
   );
   nodesRef.current = nodes;
@@ -272,7 +272,7 @@ export default function TaxonomyGraph({ currentUser }) {
   const { positionMap, isAnimating } = useNodeAnimation(nodes);
 
   // Interaction
-  const { hoveredNode, handleHover, handleClick: hitTestClick } = useGraphInteraction(nodes);
+  const { hoveredNode, handleHover, handleClick: hitTestClick } = useGraphInteraction(nodes, maxCount);
 
   // Image preloader
   const imageCacheRef = useImagePreloader(entries);
@@ -530,7 +530,8 @@ export default function TaxonomyGraph({ currentUser }) {
     closeVtuberIds,
     positionMap,
     flashMap: flashMapRef.current,
-  }), [hoveredNode, imageCacheRef, focusedUserId, closeVtuberIds, positionMap, flashTick]);
+    maxCount,
+  }), [hoveredNode, imageCacheRef, focusedUserId, closeVtuberIds, positionMap, flashTick, maxCount]);
 
   const onRender = useCallback((ctx, transform, canvasSize) => {
     drawGraph(ctx, nodes, edges, transform, canvasSize, renderState);

@@ -13,6 +13,15 @@ import {
 // ── LOD thresholds ──
 const LOD_DOTS_ONLY = 0.2;
 
+// ── Taxonomy node radius (area-proportional) ──
+const MIN_R = 5;
+const MAX_R = 30;
+
+export function taxonomyNodeRadius(count, maxCount) {
+  if (!count || !maxCount || maxCount <= 0) return MIN_R;
+  return MIN_R + (MAX_R - MIN_R) * Math.sqrt(count / maxCount);
+}
+
 // ── Helpers ──
 function hexToRgba(hex, alpha) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -260,7 +269,7 @@ function drawTaxonomyNode(ctx, node, scale, state) {
   const d = node.data;
   const rc = RANK_COLORS[d._rank] || RANK_COLORS.ROOT;
   const count = d._count || 0;
-  const r = Math.min(5 + Math.sqrt(count) * 2.5, 14);
+  const r = taxonomyNodeRadius(count, state.maxCount);
   const hovered = state.hoveredNode === node;
 
   ctx.beginPath();
