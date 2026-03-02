@@ -426,6 +426,42 @@ export default function TaxonomyGraph({ currentUser }) {
     setFocusedEntryKey(null);
   }, []);
 
+  // All entries for the selected vtuber (for trait tabs in detail panel)
+  const selectedVtuberEntries = useMemo(() => {
+    if (!selectedVtuber || !entries) return [];
+    return entries.filter(e => e.user_id === selectedVtuber.user_id);
+  }, [selectedVtuber?.user_id, entries]);
+
+  // Switch entry from detail panel trait tabs — update panel + focus + camera
+  const handleSwitchEntry = useCallback((newEntry) => {
+    setSelectedVtuber(newEntry);
+    setFocusedUserId(newEntry.user_id);
+    const key = (newEntry.taxon_path || '') + '\0' + (newEntry.breed_id || '');
+    setFocusedEntryKey(key);
+
+    // Ensure paths are expanded so the node exists in the layout
+    setExpandedSet(prev => {
+      const next = new Set(prev);
+      const userPaths = computeHighlightPaths(entries || [], newEntry.user_id);
+      let changed = false;
+      for (const p of userPaths) {
+        if (!next.has(p)) { next.add(p); changed = true; }
+      }
+      return changed ? next : prev;
+    });
+
+    // Pan camera to the new entry's node after layout update
+    setTimeout(() => {
+      let pathKey = newEntry.taxon_path;
+      if (newEntry.breed_id) pathKey += `|__breed__${newEntry.breed_id}`;
+      pathKey += `|__vtuber__${newEntry.user_id}`;
+      const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
+      if (targetNode) {
+        canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
+      }
+    }, 100);
+  }, [entries]);
+
   // Listen for Navbar "refocus self" event
   const [refocusTick, setRefocusTick] = useState(0);
   useEffect(() => {
@@ -614,8 +650,10 @@ export default function TaxonomyGraph({ currentUser }) {
       {selectedVtuber && (
         <VtuberDetailPanel
           entry={selectedVtuber}
+          allEntries={selectedVtuberEntries.length > 1 ? selectedVtuberEntries : undefined}
           onClose={() => setSelectedVtuber(null)}
           onFocus={handleSetFocus}
+          onSwitchEntry={handleSwitchEntry}
         />
       )}
     </>

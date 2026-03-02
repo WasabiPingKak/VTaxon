@@ -7,7 +7,7 @@
 ### `fictional_species.sql`
 **用途**：初始化奇幻生物分類資料（`fictional_species` 表）。
 
-包含東方神話（日本、中國）、西方神話（希臘、北歐等）等分類體系的預建資料。
+包含東方神話（日本、中國）、西方神話（希臘、北歐等）等分類體系的預建資料（38 筆，含 `name_zh` 中文名稱）。
 
 **何時執行**：首次部署後執行一次。資料為靜態預建，不需要重複執行。
 
@@ -25,6 +25,21 @@
 - 重新生成品種資料後（重新跑 `scripts/fetch_breeds_wikidata.py`），直接再執行一次即可覆蓋
 
 **前置條件**：`breeds` 表需有 `wikidata_id` 和 `source` 欄位（`init.sql` 已包含）。
+
+---
+
+### `fictional_species_expansion.sql`
+**用途**：擴充奇幻生物分類資料，新增 3 大 origin 共 44 筆。
+
+| Origin | Sub-origins | 筆數 |
+|--------|-------------|------|
+| 非物質生命 | 能量態生命、意識態生命、資訊態生命 | 22 |
+| 人造生命 | 機械生命、生物合成 | 8 |
+| 現代虛構 | 克蘇魯神話、都市傳說、異常存在 | 14 |
+
+新增資料的 origin/sub_origin 使用中文；name 維持英文，與原始 38 筆格式一致。
+
+**何時執行**：在 `fictional_species.sql` 之後執行一次。可安全重複執行（INSERT 不含 ON CONFLICT，若重複執行會產生重複資料，建議只跑一次）。
 
 ---
 
@@ -57,14 +72,26 @@
 
 ---
 
+### `backfill_fictional_name_zh.sql`
+**用途**：為已存在的 38 筆原始奇幻生物回填 `name_zh`（繁體中文名稱）。
+
+僅在原始種子資料已匯入但缺少 `name_zh` 時使用。新版 `fictional_species.sql` 已內建 `name_zh`，首次部署無需此檔。
+
+**何時執行**：
+- 已有舊資料的環境，執行 `migrations/005_fictional_name_zh.sql` 加欄位後，跑此檔回填
+- 可安全重複執行（UPDATE 覆蓋）
+
+---
+
 ## 執行順序建議（首次部署）
 
 ```
-1. supabase/init.sql          -- 建表
-2. fictional_species.sql      -- 奇幻生物
-3. breeds.sql                 -- 品種資料
-4. (可選) test_data.sql       -- 測試資料
-5. (可選) backfill_path_zh.sql -- 中文路徑回填
+1. supabase/init.sql                    -- 建表（含 name_zh 欄位）
+2. fictional_species.sql                -- 奇幻生物（基礎 38 筆，含 name_zh）
+3. fictional_species_expansion.sql      -- 奇幻生物擴充（非物質生命、人造生命、現代虛構 +44 筆）
+4. breeds.sql                           -- 品種資料
+5. (可選) test_data.sql                 -- 測試資料
+6. (可選) backfill_path_zh.sql          -- 中文路徑回填
 ```
 
 ## 重新生成品種資料

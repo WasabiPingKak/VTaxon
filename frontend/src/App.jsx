@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './lib/AuthContext';
 import { ToastProvider } from './lib/ToastContext';
 import Navbar from './components/Navbar';
@@ -6,7 +6,8 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import SearchPage from './pages/SearchPage';
-import ProfileEditPage from './pages/ProfileEditPage';
+import SettingsPage from './pages/SettingsPage';
+import AdminPage from './pages/AdminPage';
 
 function AppContent() {
   const location = useLocation();
@@ -24,8 +25,10 @@ function AppContent() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/profile/edit" element={<ProfileEditPage />} />
+            <Route path="/profile/edit" element={<Navigate to="/settings" replace />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/admin" element={<AdminPage />} />
           </Routes>
         </main>
       )}

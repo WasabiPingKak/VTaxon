@@ -170,4 +170,17 @@ export const api = {
   // Taxonomy
   getTaxonomyTree: () => apiFetch('/taxonomy/tree'),
 
+  // Fictional Species
+  getFictionalSpecies: () => apiFetch('/fictional-species'),
+  createFictionalRequest: (body) => apiFetch('/fictional-species/requests', {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+
+  // Admin: Fictional Species Requests
+  getRequests: (status = 'pending') =>
+    apiFetch(`/fictional-species/requests?status=${encodeURIComponent(status)}`),
+  updateRequest: (id, body) => apiFetch(`/fictional-species/requests/${id}`, {
+    method: 'PATCH', body: JSON.stringify(body),
+  }),
+
 };

@@ -3,63 +3,108 @@
 -- Run this in Supabase SQL Editor after init.sql
 -- ============================================================
 
--- === Eastern Mythology ===
+-- === 東方神話 ===
 
--- Japanese Mythology
-INSERT INTO fictional_species (name, origin, sub_origin, category_path, description) VALUES
-('Dragon (Eastern)', 'Eastern Mythology', 'Japanese Mythology', 'Eastern Mythology|Japanese Mythology|Dragon', 'Japanese dragon (Ryū), associated with water and weather'),
-('Kitsune', 'Eastern Mythology', 'Japanese Mythology', 'Eastern Mythology|Japanese Mythology|Kitsune', 'Fox spirit with shapeshifting abilities'),
-('Tanuki', 'Eastern Mythology', 'Japanese Mythology', 'Eastern Mythology|Japanese Mythology|Tanuki', 'Raccoon dog spirit known for mischief'),
-('Oni', 'Eastern Mythology', 'Japanese Mythology', 'Eastern Mythology|Japanese Mythology|Oni', 'Demon or ogre from Japanese folklore'),
-('Tengu', 'Eastern Mythology', 'Japanese Mythology', 'Eastern Mythology|Japanese Mythology|Tengu', 'Bird-like supernatural being'),
-('Nekomata', 'Eastern Mythology', 'Japanese Mythology', 'Eastern Mythology|Japanese Mythology|Nekomata', 'Fork-tailed cat spirit'),
-('Kappa', 'Eastern Mythology', 'Japanese Mythology', 'Eastern Mythology|Japanese Mythology|Kappa', 'Water spirit resembling a turtle-like creature'),
-('Bakeneko', 'Eastern Mythology', 'Japanese Mythology', 'Eastern Mythology|Japanese Mythology|Bakeneko', 'Supernatural cat with shapeshifting powers');
+-- 日本神話
+INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
+('Dragon (Eastern)', '東方龍', '東方神話', '日本神話', '東方神話|日本神話|Dragon', '日本龍（竜），與水和天候相關的神獸'),
+('Kitsune', '妖狐', '東方神話', '日本神話', '東方神話|日本神話|Kitsune', '擁有變身能力的狐狸精靈'),
+('Tanuki', '狸貓', '東方神話', '日本神話', '東方神話|日本神話|Tanuki', '善於惡作劇的狸貓妖怪'),
+('Oni', '鬼', '東方神話', '日本神話', '東方神話|日本神話|Oni', '日本民間傳說中的鬼怪或惡鬼'),
+('Tengu', '天狗', '東方神話', '日本神話', '東方神話|日本神話|Tengu', '鳥喙人身的山中精怪'),
+('Nekomata', '貓又', '東方神話', '日本神話', '東方神話|日本神話|Nekomata', '尾巴分叉的貓妖'),
+('Kappa', '河童', '東方神話', '日本神話', '東方神話|日本神話|Kappa', '棲息於河川的龜殼水妖'),
+('Bakeneko', '化貓', '東方神話', '日本神話', '東方神話|日本神話|Bakeneko', '具有變身能力的貓妖'),
+('Yuki-onna', '雪女', '東方神話', '日本神話', '東方神話|日本神話|Yuki-onna', '冰雪之中現身的美麗女妖'),
+('Shikigami', '式神', '東方神話', '日本神話', '東方神話|日本神話|Shikigami', '陰陽師召喚驅使的靈體'),
+('Zashiki-warashi', '座敷童子', '東方神話', '日本神話', '東方神話|日本神話|Zashiki-warashi', '棲息於家宅中的守護童靈'),
+('Tsukumogami', '付喪神', '東方神話', '日本神話', '東方神話|日本神話|Tsukumogami', '器物經百年化為靈的妖怪泛稱'),
+('Yamata no Orochi', '八岐大蛇', '東方神話', '日本神話', '東方神話|日本神話|Yamata no Orochi', '八首八尾的傳說巨蛇'),
+('Nue', '鵺', '東方神話', '日本神話', '東方神話|日本神話|Nue', '猿首蛇尾虎爪的日本複合妖獸'),
+('Jorogumo', '絡新婦', '東方神話', '日本神話', '東方神話|日本神話|Jorogumo', '化為美女誘人的蜘蛛妖'),
+('Kamaitachi', '鎌鼬', '東方神話', '日本神話', '東方神話|日本神話|Kamaitachi', '以旋風之速斬切的鼬妖'),
+('Tennyo', '天女', '東方神話', '日本神話', '東方神話|日本神話|Tennyo', '身著羽衣自天界降臨的仙女'),
+('Inugami', '犬神', '東方神話', '日本神話', '東方神話|日本神話|Inugami', '由怨念或祭祀產生的犬靈')
+ON CONFLICT(name) DO NOTHING;
 
--- Chinese Mythology
-INSERT INTO fictional_species (name, origin, sub_origin, category_path, description) VALUES
-('Dragon (Chinese)', 'Eastern Mythology', 'Chinese Mythology', 'Eastern Mythology|Chinese Mythology|Dragon', 'Chinese long dragon, symbol of power and good fortune'),
-('Phoenix (Fenghuang)', 'Eastern Mythology', 'Chinese Mythology', 'Eastern Mythology|Chinese Mythology|Phoenix', 'Fenghuang, king of birds'),
-('Qilin', 'Eastern Mythology', 'Chinese Mythology', 'Eastern Mythology|Chinese Mythology|Qilin', 'Auspicious chimeric beast'),
-('Jiangshi', 'Eastern Mythology', 'Chinese Mythology', 'Eastern Mythology|Chinese Mythology|Jiangshi', 'Reanimated corpse that hops'),
-('Pixiu', 'Eastern Mythology', 'Chinese Mythology', 'Eastern Mythology|Chinese Mythology|Pixiu', 'Winged lion creature that attracts wealth');
+-- 中國神話
+INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
+('Dragon (Chinese)', '中國龍', '東方神話', '中國神話', '東方神話|中國神話|Dragon', '中國龍（長龍），象徵權力與吉祥的神獸'),
+('Phoenix (Fenghuang)', '鳳凰', '東方神話', '中國神話', '東方神話|中國神話|Phoenix', '百鳥之王，象徵祥瑞的神鳥'),
+('Qilin', '麒麟', '東方神話', '中國神話', '東方神話|中國神話|Qilin', '象徵吉祥的瑞獸'),
+('Jiangshi', '殭屍', '東方神話', '中國神話', '東方神話|中國神話|Jiangshi', '以跳躍方式移動的復活屍體'),
+('Pixiu', '貔貅', '東方神話', '中國神話', '東方神話|中國神話|Pixiu', '有翼獅形招財瑞獸'),
+('Nine-tailed Fox', '九尾狐', '東方神話', '中國神話', '東方神話|中國神話|Nine-tailed Fox', '修煉千年、尾分九條的狐妖'),
+('Bai Ze', '白澤', '東方神話', '中國神話', '東方神話|中國神話|Bai Ze', '通曉萬妖的神獸，人面獸身'),
+('Taotie', '饕餮', '東方神話', '中國神話', '東方神話|中國神話|Taotie', '四大凶獸之一，貪食無厭的巨獸'),
+('Black Tortoise', '玄武', '東方神話', '中國神話', '東方神話|中國神話|Black Tortoise', '龜蛇合體的北方守護神獸'),
+('White Tiger', '白虎', '東方神話', '中國神話', '東方神話|中國神話|White Tiger', '西方守護神獸'),
+('Vermilion Bird', '朱雀', '東方神話', '中國神話', '東方神話|中國神話|Vermilion Bird', '南方守護火鳥神獸'),
+('Azure Dragon', '青龍', '東方神話', '中國神話', '東方神話|中國神話|Azure Dragon', '東方守護龍神獸'),
+('Dragon Turtle', '龍龜', '東方神話', '中國神話', '東方神話|中國神話|Dragon Turtle', '龍首龜身的瑞獸'),
+('Chi Dragon', '螭龍', '東方神話', '中國神話', '東方神話|中國神話|Chi Dragon', '無角幼龍或蛟龍亞種'),
+('Yaksha', '夜叉', '東方神話', '中國神話', '東方神話|中國神話|Yaksha', '佛教傳入的半神護法，亦正亦邪'),
+('Jiao Dragon', '蛟', '東方神話', '中國神話', '東方神話|中國神話|Jiao Dragon', '水中蛟龍，龍族未化之前身'),
+('Nian', '年獸', '東方神話', '中國神話', '東方神話|中國神話|Nian', '每逢年末現身的恐怖巨獸'),
+('Qiongqi', '窮奇', '東方神話', '中國神話', '東方神話|中國神話|Qiongqi', '四大凶獸之一，有翼虎形'),
+('Hundun', '混沌', '東方神話', '中國神話', '東方神話|中國神話|Hundun', '四大凶獸之一，無面無目的渾圓怪物'),
+('Taowu', '檮杌', '東方神話', '中國神話', '東方神話|中國神話|Taowu', '四大凶獸之一，虎形人面')
+ON CONFLICT(name) DO NOTHING;
 
--- === Western Mythology ===
+-- === 西方神話 ===
 
--- Greek Mythology
-INSERT INTO fictional_species (name, origin, sub_origin, category_path, description) VALUES
-('Phoenix (Western)', 'Western Mythology', 'Greek Mythology', 'Western Mythology|Greek Mythology|Phoenix', 'Firebird that is reborn from ashes'),
-('Centaur', 'Western Mythology', 'Greek Mythology', 'Western Mythology|Greek Mythology|Centaur', 'Half-human, half-horse creature'),
-('Minotaur', 'Western Mythology', 'Greek Mythology', 'Western Mythology|Greek Mythology|Minotaur', 'Bull-headed humanoid'),
-('Harpy', 'Western Mythology', 'Greek Mythology', 'Western Mythology|Greek Mythology|Harpy', 'Wind spirit with bird body and human face'),
-('Siren', 'Western Mythology', 'Greek Mythology', 'Western Mythology|Greek Mythology|Siren', 'Enchanting sea creature with alluring voice'),
-('Cerberus', 'Western Mythology', 'Greek Mythology', 'Western Mythology|Greek Mythology|Cerberus', 'Three-headed dog guarding the underworld'),
-('Medusa', 'Western Mythology', 'Greek Mythology', 'Western Mythology|Greek Mythology|Medusa', 'Snake-haired gorgon');
+-- 希臘神話
+INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
+('Phoenix (Western)', '不死鳥', '西方神話', '希臘神話', '西方神話|希臘神話|Phoenix', '浴火重生的火焰鳥'),
+('Centaur', '半人馬', '西方神話', '希臘神話', '西方神話|希臘神話|Centaur', '上半身為人、下半身為馬的生物'),
+('Minotaur', '牛頭人', '西方神話', '希臘神話', '西方神話|希臘神話|Minotaur', '牛頭人身的怪物'),
+('Harpy', '鷹身女妖', '西方神話', '希臘神話', '西方神話|希臘神話|Harpy', '鳥身人面的風之精靈'),
+('Siren', '海妖', '西方神話', '希臘神話', '西方神話|希臘神話|Siren', '以歌聲魅惑水手的海中生物'),
+('Cerberus', '地獄犬', '西方神話', '希臘神話', '西方神話|希臘神話|Cerberus', '守護冥界入口的三頭犬'),
+('Medusa', '梅杜莎', '西方神話', '希臘神話', '西方神話|希臘神話|Medusa', '蛇髮女妖，凝視會使人石化'),
+('Chimera', '奇美拉', '西方神話', '希臘神話', '西方神話|希臘神話|Chimera', '獅首羊身蛇尾的複合神話怪物'),
+('Pegasus', '飛馬', '西方神話', '希臘神話', '西方神話|希臘神話|Pegasus', '背生雙翼的神馬'),
+('Titan', '泰坦', '西方神話', '希臘神話', '西方神話|希臘神話|Titan', '神族之前的原初巨神種族'),
+('Cyclops', '獨眼巨人', '西方神話', '希臘神話', '西方神話|希臘神話|Cyclops', '額頭僅有一眼的巨人族')
+ON CONFLICT(name) DO NOTHING;
 
--- Norse Mythology
-INSERT INTO fictional_species (name, origin, sub_origin, category_path, description) VALUES
-('Dragon (Norse)', 'Western Mythology', 'Norse Mythology', 'Western Mythology|Norse Mythology|Dragon', 'Norse dragon like Níðhöggr'),
-('Elf (Norse)', 'Western Mythology', 'Norse Mythology', 'Western Mythology|Norse Mythology|Elf', 'Light or dark elf from Norse mythology'),
-('Dwarf (Norse)', 'Western Mythology', 'Norse Mythology', 'Western Mythology|Norse Mythology|Dwarf', 'Master craftsmen of Norse legend'),
-('Fenrir', 'Western Mythology', 'Norse Mythology', 'Western Mythology|Norse Mythology|Fenrir', 'Monstrous wolf'),
-('Valkyrie', 'Western Mythology', 'Norse Mythology', 'Western Mythology|Norse Mythology|Valkyrie', 'Chooser of the slain, divine warrior maiden');
+-- 北歐神話
+INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
+('Dragon (Norse)', '北歐龍', '西方神話', '北歐神話', '西方神話|北歐神話|Dragon', '北歐巨龍，如尼德霍格'),
+('Dwarf (Norse)', '矮人', '西方神話', '北歐神話', '西方神話|北歐神話|Dwarf', '北歐傳說中的鍛造大師'),
+('Fenrir', '芬里爾', '西方神話', '北歐神話', '西方神話|北歐神話|Fenrir', '北歐神話中的巨狼'),
+('Valkyrie', '女武神', '西方神話', '北歐神話', '西方神話|北歐神話|Valkyrie', '挑選戰死英靈的神聖女戰士')
+ON CONFLICT(name) DO NOTHING;
 
--- European Folklore
-INSERT INTO fictional_species (name, origin, sub_origin, category_path, description) VALUES
-('Dragon (Western)', 'Western Mythology', 'European Folklore', 'Western Mythology|European Folklore|Dragon', 'Fire-breathing winged dragon'),
-('Vampire', 'Western Mythology', 'European Folklore', 'Western Mythology|European Folklore|Vampire', 'Undead creature that feeds on blood'),
-('Werewolf', 'Western Mythology', 'European Folklore', 'Western Mythology|European Folklore|Werewolf', 'Human that transforms into a wolf'),
-('Fairy', 'Western Mythology', 'European Folklore', 'Western Mythology|European Folklore|Fairy', 'Small magical winged being'),
-('Unicorn', 'Western Mythology', 'European Folklore', 'Western Mythology|European Folklore|Unicorn', 'Horse with a single spiraling horn'),
-('Griffin', 'Western Mythology', 'European Folklore', 'Western Mythology|European Folklore|Griffin', 'Lion body with eagle head and wings');
+-- 歐洲民間傳說
+INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
+('Dragon (Western)', '西方龍', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Dragon', '噴火飛翼巨龍'),
+('Vampire', '吸血鬼', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Vampire', '吸食血液的不死生物'),
+('Werewolf', '狼人', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Werewolf', '能變身為狼的人類'),
+('Fairy', '妖精', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Fairy', '擁有翅膀的小型魔法生物'),
+('Unicorn', '獨角獸', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Unicorn', '額頭長有螺旋角的神馬'),
+('Griffin', '獅鷲', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Griffin', '獅身鷹首的有翼神獸'),
+('Gargoyle', '石像鬼', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Gargoyle', '哥德建築石雕化為活物的怪物'),
+('Kobold', '地精', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Kobold', '地底穴居的小型爬蟲人形生物'),
+('Troll', '巨魔', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Troll', '棲息於橋下或山洞的醜陋巨怪'),
+('Manticore', '蠍尾獅', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Manticore', '人面獅身蠍尾的複合猛獸')
+ON CONFLICT(name) DO NOTHING;
 
--- === Fantasy/Modern ===
-INSERT INTO fictional_species (name, origin, sub_origin, category_path, description) VALUES
-('Angel', 'Fantasy', 'General', 'Fantasy|General|Angel', 'Divine winged celestial being'),
-('Demon (Fantasy)', 'Fantasy', 'General', 'Fantasy|General|Demon', 'Dark supernatural entity'),
-('Slime', 'Fantasy', 'General', 'Fantasy|General|Slime', 'Amorphous gelatinous creature'),
-('Succubus', 'Fantasy', 'General', 'Fantasy|General|Succubus', 'Seductive demonic entity'),
-('Lich', 'Fantasy', 'General', 'Fantasy|General|Lich', 'Undead sorcerer'),
-('Golem', 'Fantasy', 'General', 'Fantasy|General|Golem', 'Animated construct'),
-('Mermaid', 'Fantasy', 'General', 'Fantasy|General|Mermaid', 'Half-human, half-fish aquatic being'),
-('Elf (Fantasy)', 'Fantasy', 'General', 'Fantasy|General|Elf', 'Pointy-eared magical humanoid');
+-- === 奇幻文學 ===
+INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
+('Angel', '天使', '奇幻文學', '通用', '奇幻文學|通用|Angel', '有翼的神聖天界存在'),
+('Demon (Fantasy)', '惡魔', '奇幻文學', '通用', '奇幻文學|通用|Demon', '黑暗的超自然邪惡存在'),
+('Slime', '史萊姆', '奇幻文學', '通用', '奇幻文學|通用|Slime', '不定形的膠狀生物'),
+('Succubus', '魅魔', '奇幻文學', '通用', '奇幻文學|通用|Succubus', '以魅惑為武器的魔族'),
+('Lich', '巫妖', '奇幻文學', '通用', '奇幻文學|通用|Lich', '以魔法維持不死的亡靈法師'),
+('Golem', '魔像', '奇幻文學', '通用', '奇幻文學|通用|Golem', '由魔法驅動的人造構裝體'),
+('Mermaid', '人魚', '奇幻文學', '通用', '奇幻文學|通用|Mermaid', '上半身為人、下半身為魚的水中生物'),
+('Elf (Fantasy)', '精靈', '奇幻文學', '通用', '奇幻文學|通用|Elf', '尖耳的魔法人形種族'),
+('Demon Lord', '魔王', '奇幻文學', '通用', '奇幻文學|通用|Demon Lord', '魔族的最高統治者'),
+('Goblin', '哥布林', '奇幻文學', '通用', '奇幻文學|通用|Goblin', '矮小的綠皮膚人形魔物'),
+('Mimic', '寶箱怪', '奇幻文學', '通用', '奇幻文學|通用|Mimic', '偽裝成寶箱等物品伏擊冒險者的怪物'),
+('Skeleton', '骷髏人', '奇幻文學', '通用', '奇幻文學|通用|Skeleton', '被魔法驅動的白骨不死兵'),
+('Orc', '半獸人', '奇幻文學', '通用', '奇幻文學|通用|Orc', '殘暴好戰的人形種族'),
+('Light Elf', '光精靈', '奇幻文學', '通用', '奇幻文學|通用|Light Elf', '居住於精靈之鄉的光明精靈'),
+('Dark Elf', '暗精靈', '奇幻文學', '通用', '奇幻文學|通用|Dark Elf', '居住於地底世界的黑暗精靈')
+ON CONFLICT(name) DO NOTHING;

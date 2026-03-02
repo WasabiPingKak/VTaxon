@@ -72,7 +72,8 @@ CREATE INDEX idx_species_cache_taxon_path ON species_cache(taxon_path text_patte
 -- 4. fictional_species — 奇幻生物獨立分類
 CREATE TABLE fictional_species (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
+    name_zh TEXT,                  -- 繁體中文名稱（台灣用語）
     origin TEXT NOT NULL,          -- Level 1: 東方神話、西方神話...
     sub_origin TEXT,               -- Level 2: 日本神話、北歐神話... (nullable)
     category_path TEXT,            -- Materialized Path, '|' 分隔
@@ -101,7 +102,21 @@ CREATE INDEX idx_breeds_taxon_id ON breeds(taxon_id);
 CREATE INDEX idx_breeds_name_zh_pattern ON breeds (name_zh text_pattern_ops);
 CREATE INDEX idx_breeds_name_en_lower ON breeds (lower(name_en) text_pattern_ops);
 
--- 6. vtuber_traits — 角色與物種的多對多關聯
+-- 6. fictional_species_requests — 使用者建議新增的虛構物種
+CREATE TABLE fictional_species_requests (
+    id SERIAL PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    name_zh TEXT NOT NULL,
+    name_en TEXT,
+    suggested_origin TEXT,
+    suggested_sub_origin TEXT,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    admin_note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 7. vtuber_traits — 角色與物種的多對多關聯
 CREATE TABLE vtuber_traits (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -140,6 +155,7 @@ ALTER TABLE auth_id_aliases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE oauth_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE species_cache ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fictional_species ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fictional_species_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vtuber_traits ENABLE ROW LEVEL SECURITY;
 
 -- users: 所有人可讀，本人可改自己的資料
@@ -170,6 +186,13 @@ CREATE POLICY "species_cache_select_all" ON species_cache
 -- fictional_species: 所有人可讀
 CREATE POLICY "fictional_species_select_all" ON fictional_species
     FOR SELECT USING (true);
+
+-- fictional_species_requests: 本人可新增和查看自己的建議
+CREATE POLICY "fictional_requests_insert_own" ON fictional_species_requests
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "fictional_requests_select_own" ON fictional_species_requests
+    FOR SELECT USING (auth.uid() = user_id);
 
 -- vtuber_traits: 所有人可讀，本人可增刪改自己的 trait
 CREATE POLICY "traits_select_all" ON vtuber_traits

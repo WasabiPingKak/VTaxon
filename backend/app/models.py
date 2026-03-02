@@ -144,6 +144,7 @@ class FictionalSpecies(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, nullable=False)
+    name_zh = db.Column(db.Text)
     origin = db.Column(db.Text, nullable=False)
     sub_origin = db.Column(db.Text)
     category_path = db.Column(db.Text)
@@ -155,11 +156,52 @@ class FictionalSpecies(db.Model):
         return {
             'id': self.id,
             'name': self.name,
+            'name_zh': self.name_zh,
             'origin': self.origin,
             'sub_origin': self.sub_origin,
             'category_path': self.category_path,
             'description': self.description,
         }
+
+
+class FictionalSpeciesRequest(db.Model):
+    __tablename__ = 'fictional_species_requests'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id',
+                        ondelete='SET NULL'))
+    name_zh = db.Column(db.Text, nullable=False)
+    name_en = db.Column(db.Text)
+    suggested_origin = db.Column(db.Text)
+    suggested_sub_origin = db.Column(db.Text)
+    description = db.Column(db.Text)
+    status = db.Column(db.Text, nullable=False, default='pending')
+    admin_note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref='fictional_requests', lazy='joined')
+
+    def to_dict(self):
+        result = {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name_zh': self.name_zh,
+            'name_en': self.name_en,
+            'suggested_origin': self.suggested_origin,
+            'suggested_sub_origin': self.suggested_sub_origin,
+            'description': self.description,
+            'status': self.status,
+            'admin_note': self.admin_note,
+            'created_at': self.created_at.isoformat(),
+        }
+        if self.user:
+            result['user'] = {
+                'id': self.user.id,
+                'display_name': self.user.display_name,
+                'avatar_url': self.user.avatar_url,
+            }
+        return result
 
 
 class Breed(db.Model):

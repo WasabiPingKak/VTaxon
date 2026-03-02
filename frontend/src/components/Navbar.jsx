@@ -151,6 +151,34 @@ export default function Navbar() {
                   >
                     我的檔案
                   </Link>
+                  <Link
+                    to="/settings"
+                    onClick={() => setDropdownOpen(false)}
+                    style={{
+                      display: 'block',
+                      padding: '10px 14px',
+                      textDecoration: 'none',
+                      color: 'rgba(255,255,255,0.8)',
+                      fontSize: '0.85em',
+                    }}
+                  >
+                    設定
+                  </Link>
+                  {user.role === 'admin' && (
+                    <Link
+                      to="/admin"
+                      onClick={() => setDropdownOpen(false)}
+                      style={{
+                        display: 'block',
+                        padding: '10px 14px',
+                        textDecoration: 'none',
+                        color: 'rgba(255,255,255,0.8)',
+                        fontSize: '0.85em',
+                      }}
+                    >
+                      管理後台
+                    </Link>
+                  )}
                   <button
                     type="button"
                     onClick={() => { setDropdownOpen(false); signOut(); }}

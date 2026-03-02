@@ -177,6 +177,12 @@ export default function TaxonomyTree({ currentUser }) {
     return () => { cancelled = true; };
   }, []);
 
+  // All entries for the selected vtuber (for trait tabs in detail panel)
+  const selectedVtuberEntries = useMemo(() => {
+    if (!selectedVtuber || !entries) return [];
+    return entries.filter(e => e.user_id === selectedVtuber.user_id);
+  }, [selectedVtuber?.user_id, entries]);
+
   // Build tree
   const tree = useMemo(() => {
     if (!entries) return null;
@@ -319,7 +325,9 @@ export default function TaxonomyTree({ currentUser }) {
       {selectedVtuber && (
         <VtuberDetailPanel
           entry={selectedVtuber}
+          allEntries={selectedVtuberEntries.length > 1 ? selectedVtuberEntries : undefined}
           onClose={() => setSelectedVtuber(null)}
+          onSwitchEntry={setSelectedVtuber}
         />
       )}
     </div>
