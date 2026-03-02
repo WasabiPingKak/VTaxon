@@ -66,7 +66,9 @@ INSERT INTO species_cache (taxon_id, scientific_name, common_name_en, common_nam
 (5264,    'Corvidae',             'Crows and Jays',    '鴉科',  'FAMILY',     'Animalia|Chordata|Aves|Passeriformes|Corvidae',                           'Animalia','Chordata','Aves','Passeriformes','Corvidae', NULL,            '{"kingdom":"動物界","phylum":"脊索動物門","class":"鳥綱","order":"雀形目","family":"鴉科"}'),
 -- 食肉目 Carnivora（ORDER 級）
 (732,     'Carnivora',            'Carnivores',        '食肉目','ORDER',      'Animalia|Chordata|Mammalia|Carnivora',                                    'Animalia','Chordata','Mammalia','Carnivora', NULL, NULL,                 '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"食肉目"}')
-ON CONFLICT (taxon_id) DO NOTHING;
+ON CONFLICT (taxon_id) DO UPDATE SET
+  common_name_zh = EXCLUDED.common_name_zh,
+  path_zh = EXCLUDED.path_zh;
 
 
 -- ============================================================
