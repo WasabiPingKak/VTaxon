@@ -11,6 +11,30 @@ traits_bp = Blueprint('traits', __name__)
 ALLOWED_RANKS = {'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'}
 
 
+def _canonical_name(scientific_name):
+    """Extract canonical name (genus + lowercase epithets), stripping author."""
+    parts = scientific_name.split()
+    canon = [parts[0]]
+    for p in parts[1:]:
+        if p[0].islower():
+            canon.append(p)
+        else:
+            break
+    return ' '.join(canon)
+
+
+def _breed_matches_taxon(breed, taxon_id):
+    """Check if a breed belongs to this taxon, tolerating GBIF key changes."""
+    if breed.taxon_id == taxon_id:
+        return True
+    # Fallback: compare canonical scientific names
+    sp = SpeciesCache.query.get(taxon_id)
+    breed_sp = SpeciesCache.query.get(breed.taxon_id)
+    if sp and breed_sp:
+        return _canonical_name(sp.scientific_name) == _canonical_name(breed_sp.scientific_name)
+    return False
+
+
 @traits_bp.route('', methods=['POST'])
 @login_required
 def create_trait():
@@ -97,7 +121,7 @@ def create_trait():
         breed = db.session.get(Breed, breed_id)
         if not breed:
             return jsonify({'error': 'Breed not found'}), 404
-        if taxon_id and breed.taxon_id != taxon_id:
+        if taxon_id and not _breed_matches_taxon(breed, taxon_id):
             return jsonify({'error': 'Breed does not belong to this species'}), 400
 
     trait = VtuberTrait(
@@ -146,7 +170,7 @@ def update_trait(trait_id):
             breed = db.session.get(Breed, breed_id)
             if not breed:
                 return jsonify({'error': 'Breed not found'}), 404
-            if trait.taxon_id and breed.taxon_id != trait.taxon_id:
+            if trait.taxon_id and not _breed_matches_taxon(breed, trait.taxon_id):
                 return jsonify({'error': 'Breed does not belong to this species'}), 400
         trait.breed_id = breed_id
         trait.breed_name = None  # clear legacy field when using breed_id

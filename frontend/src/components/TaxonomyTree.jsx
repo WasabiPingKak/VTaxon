@@ -3,7 +3,7 @@ import { api } from '../lib/api';
 import TreeNode from './TreeNode';
 import VtuberDetailPanel from './VtuberDetailPanel';
 
-// Inject pulse animation keyframes once (shared with SpeciesSearch)
+// Inject shared animation keyframes once
 if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-style')) {
   const style = document.createElement('style');
   style.id = 'vtaxon-pulse-style';
@@ -11,6 +11,16 @@ if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-st
     @keyframes vtaxonPulse {
       0%, 100% { opacity: 0.4; }
       50% { opacity: 1; }
+    }
+    @keyframes vtaxonSpin {
+      to { transform: rotate(360deg); }
+    }
+    .vtaxon-spinner {
+      width: 14px; height: 14px;
+      border: 2px solid #4a90d9;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: vtaxonSpin 0.8s linear infinite;
     }
   `;
   document.head.appendChild(style);
@@ -124,6 +134,22 @@ function computeHighlightPaths(entries, userId) {
   return paths;
 }
 
+/**
+ * Find a node in the tree by its pathKey.
+ */
+function findNode(root, pathKey) {
+  if (root.pathKey === pathKey) return root;
+  const parts = pathKey.split('|');
+  let current = root;
+  for (const part of parts) {
+    const child = current.children.get(part);
+    if (!child) return null;
+    if (child.pathKey === pathKey) return child;
+    current = child;
+  }
+  return null;
+}
+
 export default function TaxonomyTree({ currentUser }) {
   const [entries, setEntries] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -190,8 +216,23 @@ export default function TaxonomyTree({ currentUser }) {
   const handleToggle = (pathKey) => {
     setExpandedSet(prev => {
       const next = new Set(prev);
-      if (next.has(pathKey)) next.delete(pathKey);
-      else next.add(pathKey);
+      if (next.has(pathKey)) {
+        next.delete(pathKey);
+      } else {
+        next.add(pathKey);
+        // Auto-expand through empty intermediate nodes
+        // Walk down the tree to find the node, then drill down while:
+        // - node has no vtubers AND
+        // - node has exactly 1 child
+        if (tree) {
+          let node = findNode(tree, pathKey);
+          while (node && node.vtubers.length === 0 && node.children.size === 1) {
+            const child = [...node.children.values()][0];
+            next.add(child.pathKey);
+            node = child;
+          }
+        }
+      }
       return next;
     });
   };

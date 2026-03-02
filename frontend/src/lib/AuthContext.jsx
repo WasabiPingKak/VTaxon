@@ -86,6 +86,7 @@ export function AuthProvider({ children }) {
         avatar_url: avatarUrl,
         ...(pendingLink ? { link_to_user_id: pendingLink } : {}),
         ...(loginProvider ? { login_provider: loginProvider } : {}),
+        ...(ytChannel?.channelAvatar ? { yt_avatar: true } : {}),
       });
 
       // Clear pending link regardless of outcome

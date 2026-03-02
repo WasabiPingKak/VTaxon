@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
 from ..auth import login_required
+from ..cache import invalidate_tree_cache
 from ..extensions import db
 from ..models import AuthIdAlias, User
 
@@ -62,8 +63,14 @@ def auth_callback():
             db.session.rollback()
             user = db.session.get(User, user_id)
     else:
-        # Existing user: don't overwrite display_name / avatar_url
-        # to preserve user-customized name and primary_platform avatar
-        db.session.commit()
+        # Existing user: update avatar_url if frontend provides a fresh
+        # YouTube channel avatar (indicated by yt_avatar flag).
+        # This ensures YT avatar replaces stale Google avatar on re-login.
+        if data.get('yt_avatar') and data.get('avatar_url'):
+            user.avatar_url = data['avatar_url']
+            db.session.commit()
+            invalidate_tree_cache()
+        else:
+            db.session.commit()
 
     return jsonify(user.to_dict()), 200

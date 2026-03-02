@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import SpeciesSearch from '../components/SpeciesSearch';
 import CountryFlag from '../components/CountryFlag';
 import ChannelCard from '../components/ChannelCard';
+import RankBadge from '../components/RankBadge';
 
 const SNS_LABELS = {
   twitter: 'Twitter / X',
@@ -16,14 +17,6 @@ const SNS_LABELS = {
   marshmallow: '棉花糖',
 };
 
-const RANK_LABELS = {
-  ORDER: '目',
-  FAMILY: '科',
-  GENUS: '屬',
-  SPECIES: '種',
-  SUBSPECIES: '亞種',
-  VARIETY: '變種',
-};
 
 /** Simple toast notification */
 function Toast({ message, type, onClose }) {
@@ -74,34 +67,82 @@ function TraitBreadcrumb({ species }) {
   );
 }
 
-/** Inline breed editor — API-driven select for SPECIES/SUBSPECIES-rank traits */
-function BreedEditor({ trait, onSave }) {
+/** Inline breed editor — searchable breed picker for SPECIES/SUBSPECIES-rank traits */
+function BreedEditor({ trait, onSave, onSaveManual }) {
   const rank = (trait.species?.taxon_rank || '').toUpperCase();
   if (rank !== 'SPECIES' && rank !== 'SUBSPECIES' && rank !== 'VARIETY') return null;
+
   const [editing, setEditing] = useState(false);
   const [breeds, setBreeds] = useState([]);
   const [loadingBreeds, setLoadingBreeds] = useState(false);
-  const [selectedBreedId, setSelectedBreedId] = useState(trait.breed_id || '');
   const [saving, setSaving] = useState(false);
+  // 'search' = pick from list, 'manual' = free text
+  const [mode, setMode] = useState('search');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBreed, setSelectedBreed] = useState(null);
+  const [manualName, setManualName] = useState('');
+
+  const hasBreeds = breeds.length > 0;
+  const panelRef = useRef(null);
+
+  // Click outside to close
+  useEffect(() => {
+    if (!editing) return;
+    function onPointerDown(e) {
+      if (panelRef.current && !panelRef.current.contains(e.target)) {
+        setEditing(false);
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => document.removeEventListener('pointerdown', onPointerDown, true);
+  }, [editing]);
 
   async function handleOpen() {
     setEditing(true);
     setLoadingBreeds(true);
+    setSearchQuery('');
+    setSelectedBreed(null);
+    setManualName(trait.breed_name || '');
     try {
       const data = await api.getBreeds(trait.taxon_id);
-      setBreeds(data.breeds || []);
+      const list = data.breeds || [];
+      setBreeds(list);
+      if (list.length > 0) {
+        setMode('search');
+        // Pre-select if trait already has a breed_id
+        if (trait.breed_id) {
+          const existing = list.find(b => b.id === trait.breed_id);
+          if (existing) setSelectedBreed(existing);
+        }
+      } else {
+        setMode('manual');
+      }
     } catch {
       setBreeds([]);
+      setMode('manual');
     } finally {
       setLoadingBreeds(false);
     }
   }
 
+  function handleClose() {
+    setEditing(false);
+    setSearchQuery('');
+    setSelectedBreed(null);
+    setManualName('');
+  }
+
   async function handleSave() {
     setSaving(true);
     try {
-      const breedId = selectedBreedId ? parseInt(selectedBreedId, 10) : null;
-      await onSave(trait.id, breedId);
+      if (mode === 'search' && selectedBreed) {
+        await onSave(trait.id, selectedBreed.id);
+      } else if (mode === 'manual') {
+        await onSaveManual(trait.id, manualName.trim());
+      } else if (mode === 'search' && !selectedBreed) {
+        // Clear breed
+        await onSave(trait.id, null);
+      }
       setEditing(false);
     } catch (err) {
       alert(err.message);
@@ -110,17 +151,46 @@ function BreedEditor({ trait, onSave }) {
     }
   }
 
+  // Filter breeds by search query (local, no API call)
+  const filteredBreeds = (() => {
+    if (!hasBreeds) return [];
+    const q = searchQuery.trim();
+    if (!q) return breeds;
+    const isCJK = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(q);
+    return breeds
+      .filter(b => {
+        if (isCJK) {
+          return b.name_zh && b.name_zh.includes(q);
+        }
+        return b.name_en && b.name_en.toLowerCase().startsWith(q.toLowerCase());
+      });
+  })();
+
   if (!editing) {
+    const isSystemBreed = !!trait.breed_id;
     return (
-      <span style={{ fontSize: '0.85em', color: '#888', marginLeft: '4px' }}>
+      <span style={{ marginLeft: '6px' }}>
         {trait.breed_name ? (
-          <span onClick={handleOpen} style={{ cursor: 'pointer' }}>
-            ({trait.breed_name})
+          <span
+            onClick={handleOpen}
+            title={isSystemBreed ? '系統品種（點擊修改）' : '手動輸入品種（點擊修改）'}
+            style={{
+              display: 'inline-block', padding: '2px 8px', borderRadius: '4px',
+              fontSize: '0.8em', fontWeight: 600, cursor: 'pointer',
+              background: isSystemBreed ? '#fef3e6' : '#f3f4f6',
+              color: isSystemBreed ? '#e67e22' : '#6b7280',
+              border: `1px solid ${isSystemBreed ? '#f5d5a0' : '#d1d5db'}`,
+              borderStyle: isSystemBreed ? 'solid' : 'dashed',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.outline = '2px solid #4a90d9'; e.currentTarget.style.outlineOffset = '1px'; }}
+            onMouseLeave={e => { e.currentTarget.style.outline = 'none'; }}
+          >
+            {trait.breed_name} ✎
           </span>
         ) : (
           <button onClick={handleOpen} title="品種是人為培育的分類，如柴犬、布偶貓，不是生物學上的亞種" style={{
             background: 'none', border: '1px dashed #ccc', borderRadius: '3px',
-            padding: '0 6px', fontSize: '0.85em', color: '#aaa', cursor: 'pointer',
+            padding: '0 6px', fontSize: '0.8em', color: '#aaa', cursor: 'pointer',
           }}>
             + 品種
           </button>
@@ -129,43 +199,152 @@ function BreedEditor({ trait, onSave }) {
     );
   }
 
+  if (loadingBreeds) {
+    return (
+      <span style={{ fontSize: '0.85em', color: '#999', marginLeft: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+        <span style={{
+          display: 'inline-block', width: '14px', height: '14px',
+          border: '2px solid #ddd', borderTopColor: '#e67e22',
+          borderRadius: '50%',
+          animation: 'vtaxonSpin 0.8s linear infinite',
+        }} />
+        載入品種中…
+      </span>
+    );
+  }
+
+  const canSave = mode === 'manual'
+    ? manualName.trim().length > 0
+    : selectedBreed !== null;
+
   return (
-    <span style={{ display: 'inline-flex', gap: '4px', alignItems: 'center', marginLeft: '4px' }}>
-      {loadingBreeds ? (
-        <span style={{ fontSize: '0.85em', color: '#999' }}>載入中…</span>
-      ) : breeds.length === 0 ? (
-        <span style={{ fontSize: '0.85em', color: '#999' }}>無可選品種</span>
+    <div ref={panelRef} style={{
+      marginLeft: '4px', marginTop: '6px',
+      border: '1px solid #ddd', borderRadius: '6px',
+      background: '#fff', width: '320px', maxWidth: '90vw',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+    }}>
+      {mode === 'search' ? (
+        <>
+          {/* Search input */}
+          <div style={{ padding: '8px 10px 4px', position: 'relative' }}>
+            <input
+              type="text"
+              value={selectedBreed ? (selectedBreed.name_zh ? `${selectedBreed.name_zh} (${selectedBreed.name_en})` : selectedBreed.name_en) : searchQuery}
+              onChange={(e) => {
+                if (selectedBreed) {
+                  setSelectedBreed(null);
+                  setSearchQuery(e.target.value);
+                } else {
+                  setSearchQuery(e.target.value);
+                }
+              }}
+              onFocus={() => { if (selectedBreed) { setSelectedBreed(null); setSearchQuery(''); } }}
+              placeholder="搜尋品種…"
+              autoFocus
+              style={{
+                width: '100%', padding: '6px 10px', border: '1px solid #ccc',
+                borderRadius: '4px', fontSize: '0.9em', boxSizing: 'border-box',
+                background: selectedBreed ? '#e8f5e9' : '#fff',
+              }}
+            />
+          </div>
+          {/* Candidate list (hidden when a breed is selected) */}
+          {!selectedBreed && (
+            <div style={{
+              maxHeight: '400px', overflowY: 'auto',
+              borderTop: '1px solid #eee',
+            }}>
+              {filteredBreeds.length === 0 ? (
+                <div style={{ padding: '10px', color: '#999', fontSize: '0.85em', textAlign: 'center' }}>
+                  無匹配品種
+                </div>
+              ) : (
+                filteredBreeds.map(b => (
+                  <div
+                    key={b.id}
+                    onClick={() => setSelectedBreed(b)}
+                    style={{
+                      padding: '6px 12px', cursor: 'pointer', fontSize: '0.9em',
+                      borderBottom: '1px solid #f5f5f5',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f0f7ff'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    {b.name_zh ? (
+                      <><strong>{b.name_zh}</strong> <span style={{ color: '#888' }}>({b.name_en})</span></>
+                    ) : (
+                      <span>{b.name_en}</span>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+          {/* Switch to manual */}
+          <div style={{
+            padding: '6px 12px', borderTop: '1px solid #eee',
+            fontSize: '0.8em',
+          }}>
+            <span
+              onClick={() => { setMode('manual'); setManualName(''); }}
+              style={{ color: '#4a90d9', cursor: 'pointer' }}
+            >
+              找不到？手動輸入品種名稱 →
+            </span>
+          </div>
+        </>
       ) : (
-        <select
-          value={selectedBreedId}
-          onChange={(e) => setSelectedBreedId(e.target.value)}
-          autoFocus
-          style={{
-            padding: '2px 6px', border: '1px solid #ccc', borderRadius: '3px',
-            fontSize: '0.85em',
-          }}
-        >
-          <option value="">（不指定品種）</option>
-          {breeds.map(b => (
-            <option key={b.id} value={b.id}>
-              {b.name_zh ? `${b.name_zh} (${b.name_en})` : b.name_en}
-            </option>
-          ))}
-        </select>
+        /* Manual mode */
+        <div style={{ padding: '8px 10px' }}>
+          {!hasBreeds && (
+            <div style={{ fontSize: '0.8em', color: '#999', marginBottom: '6px' }}>
+              此物種尚無內建品種資料，可手動輸入品種名稱
+            </div>
+          )}
+          <input
+            type="text"
+            value={manualName}
+            onChange={(e) => setManualName(e.target.value)}
+            placeholder="輸入品種名稱…"
+            autoFocus
+            style={{
+              width: '100%', padding: '6px 10px', border: '1px solid #ccc',
+              borderRadius: '4px', fontSize: '0.9em', boxSizing: 'border-box',
+            }}
+          />
+          {hasBreeds && (
+            <div style={{ marginTop: '6px', fontSize: '0.8em' }}>
+              <span
+                onClick={() => { setMode('search'); setSearchQuery(''); setSelectedBreed(null); }}
+                style={{ color: '#4a90d9', cursor: 'pointer' }}
+              >
+                ← 返回品種清單
+              </span>
+            </div>
+          )}
+        </div>
       )}
-      <button onClick={handleSave} disabled={saving || loadingBreeds} style={{
-        padding: '2px 8px', background: '#27ae60', color: '#fff',
-        border: 'none', borderRadius: '3px', fontSize: '0.8em', cursor: 'pointer',
+      {/* Action buttons */}
+      <div style={{
+        padding: '6px 10px 8px', borderTop: '1px solid #eee',
+        display: 'flex', gap: '6px', justifyContent: 'flex-end',
       }}>
-        {saving ? '…' : '存'}
-      </button>
-      <button onClick={() => setEditing(false)} style={{
-        padding: '2px 8px', background: '#ccc', color: '#333',
-        border: 'none', borderRadius: '3px', fontSize: '0.8em', cursor: 'pointer',
-      }}>
-        取消
-      </button>
-    </span>
+        <button onClick={handleSave} disabled={saving || !canSave} style={{
+          padding: '4px 12px', background: canSave ? '#27ae60' : '#ccc',
+          color: '#fff', border: 'none', borderRadius: '4px',
+          fontSize: '0.85em', cursor: canSave ? 'pointer' : 'default',
+        }}>
+          {saving ? '…' : '存'}
+        </button>
+        <button onClick={handleClose} style={{
+          padding: '4px 12px', background: '#f0f0f0', color: '#333',
+          border: 'none', borderRadius: '4px', fontSize: '0.85em', cursor: 'pointer',
+        }}>
+          取消
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -210,19 +389,27 @@ export default function ProfilePage() {
 
   async function handleAddTrait(species) {
     try {
-      const result = await api.createTrait({
-        taxon_id: species.taxon_id,
-      });
+      const body = { taxon_id: species.taxon_id };
+      // If this is a breed result, include breed_id
+      if (species.result_type === 'breed' && species.breed?.id) {
+        body.breed_id = species.breed.id;
+      }
+      const result = await api.createTrait(body);
       if (result.replaced) {
         showToast(`已新增，原本的「${result.replaced.replaced_display_name}」已被取代（新的範圍更小、更準確）`);
       } else {
-        showToast('特徵新增成功');
+        const breedName = species.result_type === 'breed'
+          ? (species.breed?.name_zh || species.breed?.name_en)
+          : null;
+        showToast(breedName ? `特徵新增成功（品種：${breedName}）` : '特徵新增成功');
       }
       setShowSearch(false);
       loadTraits();
     } catch (err) {
       if (err.data?.code === 'ancestor_blocked') {
         showToast(`無法新增：你已經有「${err.data.existing_display_name}」，範圍比這個更小更準確`, 'warning');
+      } else if (err.status === 409 && species.result_type === 'breed') {
+        showToast('你已經有這個物種的特徵了，可以在現有特徵上修改品種', 'warning');
       } else if (err.data?.code === 'rank_not_allowed') {
         showToast(err.message, 'error');
       } else {
@@ -233,6 +420,11 @@ export default function ProfilePage() {
 
   async function handleUpdateBreed(traitId, breedId) {
     await api.updateTrait(traitId, { breed_id: breedId });
+    loadTraits();
+  }
+
+  async function handleUpdateBreedManual(traitId, breedName) {
+    await api.updateTrait(traitId, { breed_name: breedName || null });
     loadTraits();
   }
 
@@ -352,7 +544,6 @@ export default function ProfilePage() {
           {traits.map((trait) => {
             const displayName = getTraitDisplayName(trait);
             const rank = getTraitRank(trait);
-            const rankLabel = rank ? RANK_LABELS[rank] : null;
 
             return (
               <div key={trait.id} style={{
@@ -361,15 +552,7 @@ export default function ProfilePage() {
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
-                    {rankLabel && (
-                      <span style={{
-                        display: 'inline-block', padding: '1px 6px', borderRadius: '3px',
-                        fontSize: '0.75em', fontWeight: 600,
-                        background: '#e8f4fd', color: '#2980b9', border: '1px solid #bee0f5',
-                      }}>
-                        {rankLabel}
-                      </span>
-                    )}
+                    {rank && <RankBadge rank={rank} />}
                     {displayName && (
                       <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#222' }}>
                         {displayName}
@@ -390,7 +573,7 @@ export default function ProfilePage() {
                         [{trait.fictional.origin}]
                       </span>
                     )}
-                    <BreedEditor trait={trait} onSave={handleUpdateBreed} />
+                    <BreedEditor trait={trait} onSave={handleUpdateBreed} onSaveManual={handleUpdateBreedManual} />
                   </div>
                   {trait.species && <TraitBreadcrumb species={trait.species} />}
                   {trait.trait_note && (

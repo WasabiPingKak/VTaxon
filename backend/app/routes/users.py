@@ -5,6 +5,7 @@ from flask import Blueprint, g, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
 from ..auth import login_required
+from ..cache import invalidate_tree_cache
 from ..extensions import db
 from ..models import OAuthAccount, User
 
@@ -87,6 +88,7 @@ def update_me():
             user.avatar_url = primary_account.provider_avatar_url
 
     db.session.commit()
+    invalidate_tree_cache()
     return jsonify(user.to_dict())
 
 
@@ -157,10 +159,15 @@ def sync_oauth_accounts():
                                 or identity_data.get('preferred_username', ''))
             twitch_login = None
 
-        # Use YouTube channel avatar if provided, otherwise fall back to
-        # identity_data (which for Google is the Google account avatar)
+        # Use YouTube channel avatar if provided by frontend.
+        # For youtube provider WITHOUT explicit YT avatar, skip identity_data
+        # fallback — identity_data contains the Google account avatar, not
+        # the YouTube channel avatar, and we don't want to overwrite a
+        # previously-stored correct YT avatar with a Google one.
         if db_provider == avatar_for_provider and avatar_url_input:
             avatar_url = avatar_url_input
+        elif db_provider == 'youtube':
+            avatar_url = None  # don't use Google avatar for youtube provider
         else:
             avatar_url = (identity_data.get('avatar_url')
                           or identity_data.get('picture', ''))
@@ -231,6 +238,7 @@ def sync_oauth_accounts():
             if user.avatar_url != primary_account.provider_avatar_url:
                 user.avatar_url = primary_account.provider_avatar_url
                 db.session.commit()
+                invalidate_tree_cache()
 
     return jsonify([a.to_dict() for a in synced])
 
@@ -302,6 +310,7 @@ def refresh_oauth_account(account_id):
                 user.avatar_url = account.provider_avatar_url
 
         db.session.commit()
+        invalidate_tree_cache()
         return jsonify(account.to_dict())
 
     except requests.RequestException as e:
