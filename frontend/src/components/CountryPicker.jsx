@@ -6,7 +6,6 @@ export default function CountryPicker({ selected = [], onChange }) {
   const [search, setSearch] = useState('');
   const ref = useRef(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e) {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -42,25 +41,25 @@ export default function CountryPicker({ selected = [], onChange }) {
         onClick={() => setOpen(!open)}
         style={{
           display: 'flex', flexWrap: 'wrap', gap: '6px',
-          padding: '8px', border: '1px solid #ccc', borderRadius: '4px',
-          minHeight: '40px', cursor: 'pointer', background: '#fff',
+          padding: '8px', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px',
+          minHeight: '40px', cursor: 'pointer', background: '#1a2433',
         }}
       >
         {selected.length === 0 && (
-          <span style={{ color: '#999' }}>點擊選擇國家/地區…</span>
+          <span style={{ color: 'rgba(255,255,255,0.35)' }}>點擊選擇國家/地區…</span>
         )}
         {selected.map((code) => {
           const country = COUNTRIES.find((c) => c.code === code);
           return (
             <span key={code} style={{
               display: 'inline-flex', alignItems: 'center', gap: '4px',
-              padding: '2px 8px', background: '#e8f0fe', borderRadius: '12px',
-              fontSize: '0.85em',
+              padding: '2px 8px', background: 'rgba(56,189,248,0.12)', borderRadius: '12px',
+              fontSize: '0.85em', color: '#93c5fd',
             }}>
               [{code}] {country?.name || code}
               <span
                 onClick={(e) => { e.stopPropagation(); remove(code); }}
-                style={{ cursor: 'pointer', color: '#999', fontWeight: 'bold' }}
+                style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}
               >
                 ×
               </span>
@@ -73,10 +72,10 @@ export default function CountryPicker({ selected = [], onChange }) {
       {open && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
-          background: '#fff', border: '1px solid #ccc', borderTop: 'none',
+          background: '#141c2b', border: '1px solid rgba(255,255,255,0.12)', borderTop: 'none',
           borderRadius: '0 0 4px 4px', maxHeight: '250px', overflow: 'auto',
         }}>
-          <div style={{ padding: '8px', borderBottom: '1px solid #eee' }}>
+          <div style={{ padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             <input
               type="text"
               value={search}
@@ -84,8 +83,9 @@ export default function CountryPicker({ selected = [], onChange }) {
               placeholder="搜尋國家…"
               onClick={(e) => e.stopPropagation()}
               style={{
-                width: '100%', padding: '6px', border: '1px solid #ddd',
+                width: '100%', padding: '6px', border: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: '4px', boxSizing: 'border-box',
+                background: '#1a2433', color: '#e2e8f0',
               }}
             />
           </div>
@@ -97,19 +97,20 @@ export default function CountryPicker({ selected = [], onChange }) {
                 onClick={() => toggle(c.code)}
                 style={{
                   padding: '8px 12px', cursor: 'pointer',
-                  background: isSelected ? '#e8f0fe' : '#fff',
+                  background: isSelected ? 'rgba(56,189,248,0.1)' : 'transparent',
+                  color: '#e2e8f0',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}
-                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = '#f5f5f5'; }}
-                onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = '#fff'; }}
+                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
               >
                 <span>[{c.code}] {c.name}</span>
-                {isSelected && <span style={{ color: '#4a90d9' }}>✓</span>}
+                {isSelected && <span style={{ color: '#38bdf8' }}>✓</span>}
               </div>
             );
           })}
           {filtered.length === 0 && (
-            <div style={{ padding: '12px', color: '#999', textAlign: 'center' }}>
+            <div style={{ padding: '12px', color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>
               找不到符合的國家
             </div>
           )}

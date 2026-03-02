@@ -31,7 +31,7 @@ export default function SearchPage() {
   return (
     <div style={{ maxWidth: '700px', margin: '40px auto', padding: '0 20px' }}>
       <h2>搜尋物種</h2>
-      <p style={{ color: '#666', marginBottom: '24px' }}>
+      <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '24px' }}>
         使用 GBIF 資料庫搜尋現實世界物種。
         {user && '點擊「新增」將物種標記為你的角色特徵。'}
       </p>

@@ -29,8 +29,8 @@ function Toast({ message, type, onClose }) {
     <div style={{
       position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
       padding: '12px 24px', borderRadius: '8px', zIndex: 9999,
-      background: type === 'error' ? '#e74c3c' : type === 'warning' ? '#f39c12' : '#27ae60',
-      color: '#fff', fontSize: '0.95em', boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+      background: type === 'error' ? '#c62828' : type === 'warning' ? '#e65100' : '#2e7d32',
+      color: '#fff', fontSize: '0.95em', boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
       maxWidth: '90vw', textAlign: 'center',
     }}>
       {message}
@@ -38,7 +38,7 @@ function Toast({ message, type, onClose }) {
   );
 }
 
-/** Taxonomy breadcrumb: 中文(Latin) > ... up to genus */
+/** Taxonomy breadcrumb */
 function TraitBreadcrumb({ species }) {
   const ranks = [
     { key: 'kingdom', label: species.kingdom, zh: species.kingdom_zh },
@@ -52,12 +52,12 @@ function TraitBreadcrumb({ species }) {
   if (ranks.length === 0) return null;
 
   return (
-    <div style={{ fontSize: '0.8em', color: '#888', marginTop: '2px', lineHeight: 1.4 }}>
+    <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.35)', marginTop: '2px', lineHeight: 1.4 }}>
       {ranks.map((r, i) => (
         <span key={r.key}>
           {i > 0 && <span style={{ margin: '0 3px' }}>&gt;</span>}
           {r.zh ? (
-            <span>{r.zh}<span style={{ color: '#aaa' }}>({r.label})</span></span>
+            <span>{r.zh}<span style={{ color: 'rgba(255,255,255,0.25)' }}>({r.label})</span></span>
           ) : (
             <span style={{ fontStyle: 'italic' }}>{r.label}</span>
           )}
@@ -67,7 +67,7 @@ function TraitBreadcrumb({ species }) {
   );
 }
 
-/** Inline breed editor — searchable breed picker for SPECIES/SUBSPECIES-rank traits */
+/** Inline breed editor */
 function BreedEditor({ trait, onSave, onSaveManual }) {
   const rank = (trait.species?.taxon_rank || '').toUpperCase();
   if (rank !== 'SPECIES' && rank !== 'SUBSPECIES' && rank !== 'VARIETY') return null;
@@ -76,7 +76,6 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
   const [breeds, setBreeds] = useState([]);
   const [loadingBreeds, setLoadingBreeds] = useState(false);
   const [saving, setSaving] = useState(false);
-  // 'search' = pick from list, 'manual' = free text
   const [mode, setMode] = useState('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBreed, setSelectedBreed] = useState(null);
@@ -85,7 +84,6 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
   const hasBreeds = breeds.length > 0;
   const panelRef = useRef(null);
 
-  // Click outside to close
   useEffect(() => {
     if (!editing) return;
     function onPointerDown(e) {
@@ -109,7 +107,6 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
       setBreeds(list);
       if (list.length > 0) {
         setMode('search');
-        // Pre-select if trait already has a breed_id
         if (trait.breed_id) {
           const existing = list.find(b => b.id === trait.breed_id);
           if (existing) setSelectedBreed(existing);
@@ -140,7 +137,6 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
       } else if (mode === 'manual') {
         await onSaveManual(trait.id, manualName.trim());
       } else if (mode === 'search' && !selectedBreed) {
-        // Clear breed
         await onSave(trait.id, null);
       }
       setEditing(false);
@@ -151,7 +147,6 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
     }
   }
 
-  // Filter breeds by search query (local, no API call)
   const filteredBreeds = (() => {
     if (!hasBreeds) return [];
     const q = searchQuery.trim();
@@ -177,20 +172,20 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
             style={{
               display: 'inline-block', padding: '2px 8px', borderRadius: '4px',
               fontSize: '0.8em', fontWeight: 600, cursor: 'pointer',
-              background: isSystemBreed ? '#fef3e6' : '#f3f4f6',
-              color: isSystemBreed ? '#e67e22' : '#6b7280',
-              border: `1px solid ${isSystemBreed ? '#f5d5a0' : '#d1d5db'}`,
+              background: isSystemBreed ? 'rgba(251,146,60,0.15)' : 'rgba(255,255,255,0.06)',
+              color: isSystemBreed ? '#fb923c' : 'rgba(255,255,255,0.6)',
+              border: `1px solid ${isSystemBreed ? 'rgba(251,146,60,0.3)' : 'rgba(255,255,255,0.12)'}`,
               borderStyle: isSystemBreed ? 'solid' : 'dashed',
             }}
-            onMouseEnter={e => { e.currentTarget.style.outline = '2px solid #4a90d9'; e.currentTarget.style.outlineOffset = '1px'; }}
+            onMouseEnter={e => { e.currentTarget.style.outline = '2px solid #38bdf8'; e.currentTarget.style.outlineOffset = '1px'; }}
             onMouseLeave={e => { e.currentTarget.style.outline = 'none'; }}
           >
             {trait.breed_name} ✎
           </span>
         ) : (
           <button onClick={handleOpen} title="品種是人為培育的分類，如柴犬、布偶貓，不是生物學上的亞種" style={{
-            background: 'none', border: '1px dashed #ccc', borderRadius: '3px',
-            padding: '0 6px', fontSize: '0.8em', color: '#aaa', cursor: 'pointer',
+            background: 'none', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: '3px',
+            padding: '0 6px', fontSize: '0.8em', color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
           }}>
             + 品種
           </button>
@@ -201,10 +196,10 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
 
   if (loadingBreeds) {
     return (
-      <span style={{ fontSize: '0.85em', color: '#999', marginLeft: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+      <span style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.4)', marginLeft: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
         <span style={{
           display: 'inline-block', width: '14px', height: '14px',
-          border: '2px solid #ddd', borderTopColor: '#e67e22',
+          border: '2px solid rgba(255,255,255,0.1)', borderTopColor: '#fb923c',
           borderRadius: '50%',
           animation: 'vtaxonSpin 0.8s linear infinite',
         }} />
@@ -220,13 +215,12 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
   return (
     <div ref={panelRef} style={{
       marginLeft: '4px', marginTop: '6px',
-      border: '1px solid #ddd', borderRadius: '6px',
-      background: '#fff', width: '320px', maxWidth: '90vw',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+      border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px',
+      background: '#141c2b', width: '320px', maxWidth: '90vw',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
     }}>
       {mode === 'search' ? (
         <>
-          {/* Search input */}
           <div style={{ padding: '8px 10px 4px', position: 'relative' }}>
             <input
               type="text"
@@ -243,20 +237,20 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
               placeholder="搜尋品種…"
               autoFocus
               style={{
-                width: '100%', padding: '6px 10px', border: '1px solid #ccc',
+                width: '100%', padding: '6px 10px', border: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: '4px', fontSize: '0.9em', boxSizing: 'border-box',
-                background: selectedBreed ? '#e8f5e9' : '#fff',
+                background: selectedBreed ? 'rgba(52,211,153,0.1)' : '#1a2433',
+                color: '#e2e8f0',
               }}
             />
           </div>
-          {/* Candidate list (hidden when a breed is selected) */}
           {!selectedBreed && (
             <div style={{
               maxHeight: '400px', overflowY: 'auto',
-              borderTop: '1px solid #eee',
+              borderTop: '1px solid rgba(255,255,255,0.06)',
             }}>
               {filteredBreeds.length === 0 ? (
-                <div style={{ padding: '10px', color: '#999', fontSize: '0.85em', textAlign: 'center' }}>
+                <div style={{ padding: '10px', color: 'rgba(255,255,255,0.35)', fontSize: '0.85em', textAlign: 'center' }}>
                   無匹配品種
                 </div>
               ) : (
@@ -266,13 +260,14 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
                     onClick={() => setSelectedBreed(b)}
                     style={{
                       padding: '6px 12px', cursor: 'pointer', fontSize: '0.9em',
-                      borderBottom: '1px solid #f5f5f5',
+                      borderBottom: '1px solid rgba(255,255,255,0.04)',
+                      color: '#e2e8f0',
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#f0f7ff'}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(56,189,248,0.08)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
                     {b.name_zh ? (
-                      <><strong>{b.name_zh}</strong> <span style={{ color: '#888' }}>({b.name_en})</span></>
+                      <><strong>{b.name_zh}</strong> <span style={{ color: 'rgba(255,255,255,0.45)' }}>({b.name_en})</span></>
                     ) : (
                       <span>{b.name_en}</span>
                     )}
@@ -281,24 +276,22 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
               )}
             </div>
           )}
-          {/* Switch to manual */}
           <div style={{
-            padding: '6px 12px', borderTop: '1px solid #eee',
+            padding: '6px 12px', borderTop: '1px solid rgba(255,255,255,0.06)',
             fontSize: '0.8em',
           }}>
             <span
               onClick={() => { setMode('manual'); setManualName(''); }}
-              style={{ color: '#4a90d9', cursor: 'pointer' }}
+              style={{ color: '#38bdf8', cursor: 'pointer' }}
             >
               找不到？手動輸入品種名稱 →
             </span>
           </div>
         </>
       ) : (
-        /* Manual mode */
         <div style={{ padding: '8px 10px' }}>
           {!hasBreeds && (
-            <div style={{ fontSize: '0.8em', color: '#999', marginBottom: '6px' }}>
+            <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.35)', marginBottom: '6px' }}>
               此物種尚無內建品種資料，可手動輸入品種名稱
             </div>
           )}
@@ -309,15 +302,16 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
             placeholder="輸入品種名稱…"
             autoFocus
             style={{
-              width: '100%', padding: '6px 10px', border: '1px solid #ccc',
+              width: '100%', padding: '6px 10px', border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: '4px', fontSize: '0.9em', boxSizing: 'border-box',
+              background: '#1a2433', color: '#e2e8f0',
             }}
           />
           {hasBreeds && (
             <div style={{ marginTop: '6px', fontSize: '0.8em' }}>
               <span
                 onClick={() => { setMode('search'); setSearchQuery(''); setSelectedBreed(null); }}
-                style={{ color: '#4a90d9', cursor: 'pointer' }}
+                style={{ color: '#38bdf8', cursor: 'pointer' }}
               >
                 ← 返回品種清單
               </span>
@@ -325,20 +319,19 @@ function BreedEditor({ trait, onSave, onSaveManual }) {
           )}
         </div>
       )}
-      {/* Action buttons */}
       <div style={{
-        padding: '6px 10px 8px', borderTop: '1px solid #eee',
+        padding: '6px 10px 8px', borderTop: '1px solid rgba(255,255,255,0.06)',
         display: 'flex', gap: '6px', justifyContent: 'flex-end',
       }}>
         <button onClick={handleSave} disabled={saving || !canSave} style={{
-          padding: '4px 12px', background: canSave ? '#27ae60' : '#ccc',
-          color: '#fff', border: 'none', borderRadius: '4px',
-          fontSize: '0.85em', cursor: canSave ? 'pointer' : 'default',
+          padding: '4px 12px', background: canSave ? '#34d399' : 'rgba(255,255,255,0.1)',
+          color: canSave ? '#0d1526' : 'rgba(255,255,255,0.3)', border: 'none', borderRadius: '4px',
+          fontSize: '0.85em', cursor: canSave ? 'pointer' : 'default', fontWeight: 600,
         }}>
           {saving ? '…' : '存'}
         </button>
         <button onClick={handleClose} style={{
-          padding: '4px 12px', background: '#f0f0f0', color: '#333',
+          padding: '4px 12px', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)',
           border: 'none', borderRadius: '4px', fontSize: '0.85em', cursor: 'pointer',
         }}>
           取消
@@ -367,7 +360,7 @@ export default function ProfilePage() {
   }, [user]);
 
   if (!loading && !user) return <Navigate to="/login" replace />;
-  if (loading) return <p style={{ textAlign: 'center', marginTop: '40px' }}>載入中…</p>;
+  if (loading) return <p style={{ textAlign: 'center', marginTop: '40px', color: 'rgba(255,255,255,0.5)' }}>載入中…</p>;
 
   async function loadTraits() {
     try {
@@ -390,7 +383,6 @@ export default function ProfilePage() {
   async function handleAddTrait(species) {
     try {
       const body = { taxon_id: species.taxon_id };
-      // If this is a breed result, include breed_id
       if (species.result_type === 'breed' && species.breed?.id) {
         body.breed_id = species.breed.id;
       }
@@ -464,7 +456,7 @@ export default function ProfilePage() {
         ) : (
           <div style={{
             width: 64, height: 64, borderRadius: '50%',
-            background: '#4a90d9', color: '#fff',
+            background: '#38bdf8', color: '#0d1526',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '1.5em', fontWeight: 'bold',
           }}>
@@ -474,7 +466,7 @@ export default function ProfilePage() {
         <div>
           <h2 style={{ margin: 0 }}>{user.display_name}</h2>
           {user.organization && (
-            <div style={{ color: '#666', marginTop: '4px' }}>{user.organization}</div>
+            <div style={{ color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>{user.organization}</div>
           )}
           {user.country_flags?.length > 0 && (
             <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
@@ -489,7 +481,7 @@ export default function ProfilePage() {
                 <a key={key} href={url} target="_blank" rel="noopener noreferrer"
                   style={{
                     display: 'inline-block', padding: '2px 8px', borderRadius: '4px',
-                    background: '#f0f0f0', color: '#4a90d9', fontSize: '0.85em',
+                    background: 'rgba(255,255,255,0.06)', color: '#38bdf8', fontSize: '0.85em',
                     textDecoration: 'none',
                   }}>
                   {SNS_LABELS[key] || key}
@@ -499,7 +491,7 @@ export default function ProfilePage() {
           )}
           <Link to="/profile/edit" style={{
             ...smallBtnStyle, display: 'inline-block', marginTop: '8px',
-            textDecoration: 'none', color: '#333',
+            textDecoration: 'none',
           }}>
             編輯個人資料
           </Link>
@@ -522,15 +514,15 @@ export default function ProfilePage() {
         <div style={{ display: 'flex', gap: '8px' }}>
           {!showSearch && (
             <button onClick={() => setShowSearch(true)} style={{
-              padding: '6px 14px', background: '#4a90d9', color: '#fff',
-              border: 'none', borderRadius: '4px', cursor: 'pointer',
+              padding: '6px 14px', background: '#38bdf8', color: '#0d1526',
+              border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600,
             }}>
               + 新增特徵
             </button>
           )}
           <Link to={`/kinship/${user.id}`} style={{
-            padding: '6px 14px', background: '#27ae60', color: '#fff',
-            borderRadius: '4px', textDecoration: 'none',
+            padding: '6px 14px', background: '#34d399', color: '#0d1526',
+            borderRadius: '4px', textDecoration: 'none', fontWeight: 600,
           }}>
             查看親緣關係
           </Link>
@@ -538,7 +530,7 @@ export default function ProfilePage() {
       </div>
 
       {traits.length === 0 ? (
-        <p style={{ color: '#999', marginBottom: '16px' }}>尚未新增物種特徵，點擊上方按鈕開始新增！</p>
+        <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '16px' }}>尚未新增物種特徵，點擊上方按鈕開始新增！</p>
       ) : (
         <div style={{ marginBottom: '16px' }}>
           {traits.map((trait) => {
@@ -547,29 +539,29 @@ export default function ProfilePage() {
 
             return (
               <div key={trait.id} style={{
-                padding: '12px 16px', borderBottom: '1px solid #eee',
+                padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
                     {rank && <RankBadge rank={rank} />}
                     {displayName && (
-                      <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#222' }}>
+                      <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#e2e8f0' }}>
                         {displayName}
                       </span>
                     )}
                     {trait.species && (
-                      <span style={{ fontStyle: 'italic', color: '#555' }}>
+                      <span style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.5)' }}>
                         {trait.species.scientific_name}
                       </span>
                     )}
                     {trait.species?.common_name_en && (
-                      <span style={{ color: '#999', fontSize: '0.9em' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9em' }}>
                         ({trait.species.common_name_en})
                       </span>
                     )}
                     {trait.fictional && (
-                      <span style={{ color: '#888' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.45)' }}>
                         [{trait.fictional.origin}]
                       </span>
                     )}
@@ -577,12 +569,12 @@ export default function ProfilePage() {
                   </div>
                   {trait.species && <TraitBreadcrumb species={trait.species} />}
                   {trait.trait_note && (
-                    <div style={{ fontSize: '0.85em', color: '#999', marginTop: '2px' }}>{trait.trait_note}</div>
+                    <div style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.35)', marginTop: '2px' }}>{trait.trait_note}</div>
                   )}
                 </div>
                 <button onClick={() => handleDeleteTrait(trait.id)} style={{
-                  padding: '4px 10px', background: '#e74c3c', color: '#fff',
-                  border: 'none', borderRadius: '4px', cursor: 'pointer',
+                  padding: '4px 10px', background: '#f87171', color: '#0d1526',
+                  border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600,
                 }}>
                   移除
                 </button>
@@ -593,7 +585,7 @@ export default function ProfilePage() {
       )}
 
       {showSearch && (
-        <div style={{ marginBottom: '24px', padding: '16px', background: '#f9f9f9', borderRadius: '8px' }}>
+        <div style={{ marginBottom: '24px', padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
           <SpeciesSearch onSelect={handleAddTrait} onCancel={() => setShowSearch(false)} />
         </div>
       )}
@@ -602,6 +594,7 @@ export default function ProfilePage() {
 }
 
 const smallBtnStyle = {
-  padding: '4px 10px', border: '1px solid #ccc', borderRadius: '4px',
-  background: '#fff', cursor: 'pointer', fontSize: '0.9em',
+  padding: '4px 10px', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '4px',
+  background: 'rgba(255,255,255,0.06)', cursor: 'pointer', fontSize: '0.9em',
+  color: 'rgba(255,255,255,0.7)',
 };

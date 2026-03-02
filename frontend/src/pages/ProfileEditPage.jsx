@@ -20,7 +20,6 @@ const SNS_FIELDS = [
 const PROVIDER_LABELS = { youtube: 'YouTube', twitch: 'Twitch' };
 const PROVIDER_COLORS = { youtube: '#FF0000', twitch: '#9146FF' };
 const SUPABASE_PROVIDER_MAP = { youtube: 'google', twitch: 'twitch' };
-// PROVIDER_LABELS/COLORS kept for unbound provider buttons and handleUnlink
 
 export default function ProfileEditPage() {
   const { user, loading, setUser, session, linkProvider, unlinkProvider } = useAuth();
@@ -35,7 +34,6 @@ export default function ProfileEditPage() {
 
   const [oauthAccounts, setOauthAccounts] = useState([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
-  // Per-account loading states: { [accountId]: 'refreshing' | 'toggling' | 'settingPrimary' }
   const [accountLoading, setAccountLoading] = useState({});
 
   useEffect(() => {
@@ -60,7 +58,7 @@ export default function ProfileEditPage() {
   }
 
   if (!loading && !user) return <Navigate to="/login" replace />;
-  if (loading) return <p style={{ textAlign: 'center', marginTop: '40px' }}>載入中…</p>;
+  if (loading) return <p style={{ textAlign: 'center', marginTop: '40px', color: 'rgba(255,255,255,0.5)' }}>載入中…</p>;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -132,11 +130,8 @@ export default function ProfileEditPage() {
     if (!confirm(`確定要解除 ${PROVIDER_LABELS[account.provider]} 綁定嗎？`)) return;
 
     try {
-      // Skip Supabase unlinkIdentity — Manual linking is disabled on this project.
-      // App-level unlinking is handled entirely by our backend DELETE endpoint.
       const result = await api.deleteOAuthAccount(account.id);
       setOauthAccounts(prev => prev.filter(a => a.id !== account.id));
-      // Update user context if backend returned updated user (primary_platform may have changed)
       if (result.user) {
         setUser(result.user);
       }
@@ -150,13 +145,11 @@ export default function ProfileEditPage() {
     try {
       const updated = await api.refreshOAuthAccount(account.id);
       setOauthAccounts(prev => prev.map(a => a.id === account.id ? updated : a));
-      // Update user avatar if this is the primary platform
       if (user.primary_platform === account.provider && updated.provider_avatar_url) {
         setUser(prev => ({ ...prev, avatar_url: updated.provider_avatar_url }));
       }
       addToast('同步成功', { type: 'success', duration: 3000 });
     } catch (err) {
-      // No token (auto-linked account) or token expired → offer one-time OAuth redirect
       if (err.message.includes('請重新登入') || err.message.includes('授權已過期')) {
         const providerLabel = PROVIDER_LABELS[account.provider];
         if (confirm(`需要授權 ${providerLabel} 以同步資料，是否前往授權？（僅需一次）`)) {
@@ -194,12 +187,12 @@ export default function ProfileEditPage() {
       <h2>編輯個人資料</h2>
 
       <form onSubmit={handleSubmit}>
-        {/* OAuth Accounts Section — at the top */}
+        {/* OAuth Accounts Section */}
         <div style={{ marginBottom: '24px' }}>
           <label style={labelStyle}>已綁定帳號</label>
 
           {loadingAccounts ? (
-            <p style={{ color: '#999' }}>載入中…</p>
+            <p style={{ color: 'rgba(255,255,255,0.4)' }}>載入中…</p>
           ) : (
             <>
               {oauthAccounts.map(account => (
@@ -224,7 +217,7 @@ export default function ProfileEditPage() {
                 <button key={provider} type="button" onClick={() => handleLink(provider)}
                   style={{
                     display: 'block', width: '100%', padding: '10px', marginTop: '8px',
-                    background: '#fff', border: `2px dashed ${PROVIDER_COLORS[provider]}`,
+                    background: 'transparent', border: `2px dashed ${PROVIDER_COLORS[provider]}`,
                     borderRadius: '8px', cursor: 'pointer', fontSize: '0.95em',
                     color: PROVIDER_COLORS[provider], fontWeight: '500',
                   }}>
@@ -267,7 +260,7 @@ export default function ProfileEditPage() {
           <label style={labelStyle}>SNS 連結</label>
           {SNS_FIELDS.map(({ key, label, placeholder }) => (
             <div key={key} style={{ marginBottom: '10px' }}>
-              <label style={{ display: 'block', fontSize: '0.9em', color: '#555', marginBottom: '4px' }}>
+              <label style={{ display: 'block', fontSize: '0.9em', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
                 {label}
               </label>
               <input
@@ -291,14 +284,14 @@ export default function ProfileEditPage() {
 
         <div style={{ display: 'flex', gap: '12px' }}>
           <button type="submit" disabled={saving} style={{
-            padding: '10px 24px', background: '#4a90d9', color: '#fff',
-            border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1em',
+            padding: '10px 24px', background: '#38bdf8', color: '#0d1526',
+            border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1em', fontWeight: 600,
           }}>
             {saving ? '儲存中…' : '儲存'}
           </button>
           <button type="button" onClick={() => navigate('/profile')} style={{
-            padding: '10px 24px', background: '#fff', color: '#333',
-            border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', fontSize: '1em',
+            padding: '10px 24px', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)',
+            border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px', cursor: 'pointer', fontSize: '1em',
           }}>
             取消
           </button>
@@ -309,11 +302,11 @@ export default function ProfileEditPage() {
 }
 
 const labelStyle = {
-  display: 'block', marginBottom: '6px', fontWeight: 'bold', color: '#333',
+  display: 'block', marginBottom: '6px', fontWeight: 'bold', color: '#e2e8f0',
 };
 
 const inputStyle = {
-  width: '100%', padding: '8px', border: '1px solid #ccc',
+  width: '100%', padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: '4px', fontSize: '1em', boxSizing: 'border-box',
+  background: '#1a2433', color: '#e2e8f0',
 };
-

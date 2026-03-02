@@ -43,7 +43,7 @@ function AvatarFallback({ provider, size }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
-      background: colors[provider] || '#999', color: '#fff',
+      background: colors[provider] || 'rgba(255,255,255,0.2)', color: '#fff',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.45, fontWeight: 'bold', flexShrink: 0,
     }}>
@@ -81,7 +81,7 @@ export default function ChannelCard({
   const primaryBadge = isPrimary ? (
     <span style={{
       display: 'inline-block', padding: '1px 6px', borderRadius: '3px',
-      background: '#FFF3CD', color: '#856404', border: '1px solid #FFEEBA',
+      background: 'rgba(212,160,23,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)',
       fontSize: '0.72em', fontWeight: '600', lineHeight: '1.4',
     }}>
       ★ 主要
@@ -91,14 +91,14 @@ export default function ChannelCard({
   if (mode === 'compact') {
     return (
       <div style={{
-        border: isPrimary ? '2px solid #FFEEBA' : '1px solid #e0e0e0',
+        border: isPrimary ? '2px solid rgba(251,191,36,0.3)' : '1px solid rgba(255,255,255,0.1)',
         borderRadius: '8px', padding: '10px 12px',
-        background: isPrimary ? '#FFFDF5' : '#fafafa', display: 'inline-block',
+        background: isPrimary ? 'rgba(212,160,23,0.06)' : '#141c2b', display: 'inline-block',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {avatar}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.95em' }}>{displayName}</span>
+            <span style={{ fontWeight: 600, fontSize: '0.95em', color: '#e2e8f0' }}>{displayName}</span>
             <PlatformIconLink provider={account.provider} channelUrl={account.channel_url} size={16} />
             {primaryBadge}
           </div>
@@ -110,16 +110,16 @@ export default function ChannelCard({
   // full mode
   return (
     <div style={{
-      border: isPrimary ? '2px solid #FFEEBA' : '1px solid #e0e0e0',
+      border: isPrimary ? '2px solid rgba(251,191,36,0.3)' : '1px solid rgba(255,255,255,0.1)',
       borderRadius: '8px', padding: '12px',
-      marginBottom: '8px', background: isPrimary ? '#FFFDF5' : '#fafafa', position: 'relative',
+      marginBottom: '8px', background: isPrimary ? 'rgba(212,160,23,0.06)' : '#141c2b', position: 'relative',
     }}>
       {/* Row 1: avatar + name + icon + badges + actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         {avatar}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 600 }}>{displayName}</span>
+            <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{displayName}</span>
             <PlatformIconLink provider={account.provider} channelUrl={account.channel_url} size={18} />
             {primaryBadge}
             {!isPrimary && onSetPrimary && (
@@ -127,10 +127,10 @@ export default function ChannelCard({
                 disabled={settingPrimary}
                 style={{
                   padding: '1px 8px', borderRadius: '3px',
-                  background: 'none', border: '1px solid #ccc',
+                  background: 'none', border: '1px solid rgba(255,255,255,0.15)',
                   cursor: settingPrimary ? 'not-allowed' : 'pointer',
-                  fontSize: '0.72em', color: '#666',
-                  lineHeight: '1.4', opacity: settingPrimary ? 0.6 : 1,
+                  fontSize: '0.72em', color: 'rgba(255,255,255,0.6)',
+                  lineHeight: '1.4', opacity: settingPrimary ? 0.5 : 1,
                 }}>
                 {settingPrimary ? '設定中…' : '設為主要'}
               </button>
@@ -141,10 +141,10 @@ export default function ChannelCard({
                 title="同步平台資料"
                 style={{
                   padding: '1px 8px', borderRadius: '3px',
-                  background: 'none', border: '1px solid #ccc',
+                  background: 'none', border: '1px solid rgba(255,255,255,0.15)',
                   cursor: refreshing ? 'not-allowed' : 'pointer',
-                  fontSize: '0.72em', color: '#666',
-                  lineHeight: '1.4', opacity: refreshing ? 0.6 : 1,
+                  fontSize: '0.72em', color: 'rgba(255,255,255,0.6)',
+                  lineHeight: '1.4', opacity: refreshing ? 0.5 : 1,
                 }}>
                 {refreshing ? '同步中…' : '同步'}
               </button>
@@ -158,7 +158,7 @@ export default function ChannelCard({
             style={{
               background: 'none', border: 'none',
               cursor: disableUnlink ? 'not-allowed' : 'pointer',
-              color: disableUnlink ? '#ccc' : '#d9534f',
+              color: disableUnlink ? 'rgba(255,255,255,0.2)' : '#f87171',
               fontSize: '1.2em', padding: '4px', lineHeight: 1,
             }}>
             ✕
@@ -175,23 +175,24 @@ export default function ChannelCard({
               onChange={(e) => setDraft(e.target.value)}
               placeholder="https://..."
               style={{
-                flex: 1, padding: '6px 8px', border: '1px solid #ccc',
+                flex: 1, padding: '6px 8px', border: '1px solid rgba(255,255,255,0.15)',
                 borderRadius: '4px', fontSize: '0.9em', boxSizing: 'border-box',
+                background: '#1a2433', color: '#e2e8f0',
               }}
             />
             <button type="button" onClick={() => { onSaveUrl?.(draft); setEditing(false); }}
               style={miniBtn}>儲存</button>
             <button type="button" onClick={() => { setDraft(account.channel_url || ''); setEditing(false); }}
-              style={{ ...miniBtn, background: '#eee', color: '#333' }}>取消</button>
+              style={{ ...miniBtn, background: 'rgba(255,255,255,0.08)', color: '#e2e8f0' }}>取消</button>
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ color: account.channel_url ? '#555' : '#999', fontSize: '0.9em' }}>
+            <span style={{ color: account.channel_url ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.3)', fontSize: '0.9em' }}>
               {account.channel_url ? '已設定頻道連結' : '未設定頻道連結'}
             </span>
             <button type="button" onClick={() => setEditing(true)}
               title="編輯頻道連結"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', fontSize: '1em', color: '#888' }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', fontSize: '1em', color: 'rgba(255,255,255,0.5)' }}>
               ✏️
             </button>
           </div>
@@ -200,11 +201,11 @@ export default function ChannelCard({
         {onToggleShow && (
           <label style={{
             display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px',
-            cursor: toggling ? 'not-allowed' : 'pointer', opacity: toggling ? 0.6 : 1,
+            cursor: toggling ? 'not-allowed' : 'pointer', opacity: toggling ? 0.5 : 1,
           }}>
             <input type="checkbox" checked={account.show_on_profile}
               onChange={onToggleShow} disabled={toggling} />
-            <span style={{ fontSize: '0.9em', color: '#555' }}>
+            <span style={{ fontSize: '0.9em', color: 'rgba(255,255,255,0.6)' }}>
               {toggling ? '更新中…' : '在個人頁顯示'}
             </span>
           </label>
@@ -216,5 +217,5 @@ export default function ChannelCard({
 
 const miniBtn = {
   padding: '4px 10px', border: 'none', borderRadius: '4px',
-  cursor: 'pointer', fontSize: '0.85em', background: '#4a90d9', color: '#fff',
+  cursor: 'pointer', fontSize: '0.85em', background: '#38bdf8', color: '#0d1526',
 };

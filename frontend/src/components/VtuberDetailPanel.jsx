@@ -30,7 +30,7 @@ export default function VtuberDetailPanel({ entry, onClose }) {
       <div
         onClick={onClose}
         style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)',
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
           zIndex: 999,
         }}
       />
@@ -38,20 +38,21 @@ export default function VtuberDetailPanel({ entry, onClose }) {
       <div style={{
         position: 'fixed', top: 0, right: 0, bottom: 0,
         width: '360px', maxWidth: '90vw',
-        background: '#fff', zIndex: 1000,
-        boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
+        background: '#0d1526', zIndex: 1000,
+        boxShadow: '-4px 0 30px rgba(0,0,0,0.4)',
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
+        color: '#e2e8f0',
       }}>
         {/* Header */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '16px 20px', borderBottom: '1px solid #eee',
+          padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}>
           <span style={{ fontWeight: 600, fontSize: '1.1em' }}>Vtuber 詳情</span>
           <button type="button" onClick={onClose} style={{
             background: 'none', border: 'none', fontSize: '1.4em',
-            cursor: 'pointer', color: '#999', padding: '4px',
+            cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: '4px',
           }}>✕</button>
         </div>
 
@@ -68,8 +69,10 @@ export default function VtuberDetailPanel({ entry, onClose }) {
             ) : (
               <div style={{
                 width: 80, height: 80, borderRadius: '50%', margin: '0 auto',
-                background: '#ddd', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', fontSize: '32px', color: '#999',
+                background: 'rgba(255,255,255,0.1)',
+                display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: '32px',
+                color: 'rgba(255,255,255,0.4)',
               }}>?</div>
             )}
             <div style={{ marginTop: '10px', fontSize: '1.2em', fontWeight: 600 }}>
@@ -79,24 +82,33 @@ export default function VtuberDetailPanel({ entry, onClose }) {
 
           {/* Species info */}
           <div style={{
-            background: '#f8f9fa', borderRadius: '8px', padding: '14px',
+            background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '14px',
             marginBottom: '16px',
           }}>
             <div style={{ fontWeight: 600, marginBottom: '8px' }}>物種資訊</div>
             <div style={{ fontSize: '0.9em', lineHeight: '1.8' }}>
-              <div><span style={labelStyle}>學名</span> {entry.scientific_name}</div>
+              <div>
+                <span style={{ ...labelStyle, color: 'rgba(255,255,255,0.45)' }}>學名</span>
+                {entry.scientific_name}
+              </div>
               {entry.common_name_zh && (
-                <div><span style={labelStyle}>中文名</span> {entry.common_name_zh}</div>
+                <div>
+                  <span style={{ ...labelStyle, color: 'rgba(255,255,255,0.45)' }}>中文名</span>
+                  {entry.common_name_zh}
+                </div>
               )}
               {entry.breed_name && (
-                <div><span style={labelStyle}>品種</span> {entry.breed_name}</div>
+                <div>
+                  <span style={{ ...labelStyle, color: 'rgba(255,255,255,0.45)' }}>品種</span>
+                  {entry.breed_name}
+                </div>
               )}
             </div>
           </div>
 
           {/* Taxonomy path */}
           <div style={{
-            background: '#f8f9fa', borderRadius: '8px', padding: '14px',
+            background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '14px',
             marginBottom: '16px',
           }}>
             <div style={{ fontWeight: 600, marginBottom: '8px' }}>分類路徑</div>
@@ -112,7 +124,6 @@ export default function VtuberDetailPanel({ entry, onClose }) {
                   </div>
                 );
               })}
-              {/* Species / subspecies at end */}
               <div style={{ paddingLeft: RANK_ORDER.length * 12, fontWeight: 600 }}>
                 {entry.common_name_zh
                   ? `${entry.common_name_zh} (${entry.scientific_name})`
@@ -123,7 +134,14 @@ export default function VtuberDetailPanel({ entry, onClose }) {
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <Link to={`/kinship/${entry.user_id}`} style={actionBtn}>
+            <Link to={`/kinship/${entry.user_id}`} style={{
+              display: 'inline-block', textDecoration: 'none',
+              padding: '8px 16px', borderRadius: '6px',
+              fontSize: '0.9em', textAlign: 'center',
+              background: 'rgba(56,189,248,0.15)',
+              color: '#38bdf8',
+              border: '1px solid rgba(56,189,248,0.3)',
+            }}>
               查看親緣關係
             </Link>
           </div>
@@ -135,11 +153,5 @@ export default function VtuberDetailPanel({ entry, onClose }) {
 
 const labelStyle = {
   display: 'inline-block', width: '50px',
-  color: '#888', fontWeight: 500,
-};
-
-const actionBtn = {
-  display: 'inline-block', textDecoration: 'none',
-  padding: '8px 16px', background: '#4a90d9', color: '#fff',
-  borderRadius: '6px', fontSize: '0.9em', textAlign: 'center',
+  fontWeight: 500,
 };

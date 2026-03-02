@@ -1,19 +1,19 @@
 /**
- * Unified rank badge component for all interfaces.
- * Each taxonomy rank gets a distinct color.
+ * Unified rank badge component — dark mode.
+ * Each taxonomy rank gets a distinct color optimized for dark backgrounds.
  */
 
 const RANK_CONFIG = {
-  KINGDOM:    { label: '界',   bg: '#f3e8ff', color: '#7c3aed', border: '#ddd6fe' },
-  PHYLUM:     { label: '門',   bg: '#e0e7ff', color: '#4338ca', border: '#c7d2fe' },
-  CLASS:      { label: '綱',   bg: '#e0f2fe', color: '#0369a1', border: '#bae6fd' },
-  ORDER:      { label: '目',   bg: '#d1fae5', color: '#047857', border: '#a7f3d0' },
-  FAMILY:     { label: '科',   bg: '#e8f4fd', color: '#2980b9', border: '#bee0f5' },
-  GENUS:      { label: '屬',   bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
-  SPECIES:    { label: '種',   bg: '#dbeafe', color: '#1d4ed8', border: '#bfdbfe' },
-  SUBSPECIES: { label: '亞種', bg: '#e0e7ff', color: '#4f46e5', border: '#c7d2fe' },
-  VARIETY:    { label: '變種', bg: '#ecfdf5', color: '#059669', border: '#a7f3d0' },
-  BREED:      { label: '品種', bg: '#fef3e6', color: '#e67e22', border: '#f5d5a0' },
+  KINGDOM:    { label: '界',   bg: 'rgba(192,132,252,0.15)', color: '#c084fc', border: 'rgba(192,132,252,0.3)' },
+  PHYLUM:     { label: '門',   bg: 'rgba(129,140,248,0.15)', color: '#818cf8', border: 'rgba(129,140,248,0.3)' },
+  CLASS:      { label: '綱',   bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8', border: 'rgba(56,189,248,0.3)' },
+  ORDER:      { label: '目',   bg: 'rgba(52,211,153,0.15)',  color: '#34d399', border: 'rgba(52,211,153,0.3)' },
+  FAMILY:     { label: '科',   bg: 'rgba(96,165,250,0.15)',  color: '#60a5fa', border: 'rgba(96,165,250,0.3)' },
+  GENUS:      { label: '屬',   bg: 'rgba(251,191,36,0.15)',  color: '#fbbf24', border: 'rgba(251,191,36,0.3)' },
+  SPECIES:    { label: '種',   bg: 'rgba(147,197,253,0.15)', color: '#93c5fd', border: 'rgba(147,197,253,0.3)' },
+  SUBSPECIES: { label: '亞種', bg: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: 'rgba(167,139,250,0.3)' },
+  VARIETY:    { label: '變種', bg: 'rgba(52,211,153,0.12)',  color: '#34d399', border: 'rgba(52,211,153,0.25)' },
+  BREED:      { label: '品種', bg: 'rgba(251,146,60,0.15)',  color: '#fb923c', border: 'rgba(251,146,60,0.3)' },
 };
 
 export function getRankConfig(rank) {
