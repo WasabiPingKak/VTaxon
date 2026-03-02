@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import VtuberCard from './VtuberCard';
+import RankBadge from './RankBadge';
 
 const SHOW_LIMIT = 20;
 
@@ -55,9 +56,7 @@ export default function TreeNode({
         )}
         {!hasChildren && <span style={{ display: 'inline-block', width: '16px' }} />}
 
-        <span style={{ color: '#888', fontSize: '0.8em', minWidth: '28px' }}>
-          {RANK_SHORT[node.rank] || ''}
-        </span>
+        <RankBadge rank={node.rank} style={{ marginRight: '2px' }} />
 
         <span style={{ fontWeight: 500 }}>
           {node.nameZh ? `${node.nameZh}` : ''}
@@ -131,14 +130,3 @@ export default function TreeNode({
   );
 }
 
-const RANK_SHORT = {
-  KINGDOM: '界',
-  PHYLUM: '門',
-  CLASS: '綱',
-  ORDER: '目',
-  FAMILY: '科',
-  GENUS: '屬',
-  SPECIES: '種',
-  SUBSPECIES: '亞種',
-  BREED: '品種',
-};

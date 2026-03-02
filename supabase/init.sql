@@ -88,6 +88,8 @@ CREATE TABLE breeds (
     name_en     TEXT NOT NULL,
     name_zh     TEXT,
     breed_group TEXT,
+    wikidata_id TEXT,
+    source      TEXT DEFAULT 'manual',
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (taxon_id, name_en)
 );
@@ -95,6 +97,8 @@ CREATE TABLE breeds (
 ALTER TABLE breeds ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "breeds_select_all" ON breeds FOR SELECT USING (true);
 CREATE INDEX idx_breeds_taxon_id ON breeds(taxon_id);
+CREATE INDEX idx_breeds_name_zh_pattern ON breeds (name_zh text_pattern_ops);
+CREATE INDEX idx_breeds_name_en_lower ON breeds (lower(name_en) text_pattern_ops);
 
 -- 6. vtuber_traits — 角色與物種的多對多關聯
 CREATE TABLE vtuber_traits (

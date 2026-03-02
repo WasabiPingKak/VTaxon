@@ -2,11 +2,18 @@
 
 Uses GBIF taxon ID (Wikidata property P846) to find matching entities,
 then retrieves zh-tw / zh-hant / zh labels with automatic fallback.
+
+All returned Chinese names are guaranteed to be in Traditional Chinese
+(Taiwan standard) via OpenCC s2twp conversion.
 """
 
 from functools import lru_cache
 
 import requests
+from opencc import OpenCC
+
+# Simplified → Traditional (Taiwan phrases) converter
+_s2twp = OpenCC('s2twp')
 
 WIKIDATA_API = 'https://www.wikidata.org/w/api.php'
 USER_AGENT = 'VTaxon/1.0 (https://github.com/VTaxon)'
@@ -123,10 +130,15 @@ def clear_cache():
 
 
 def _pick_zh_label(labels):
-    """Pick the best Chinese label from zh-tw → zh-hant → zh fallback chain."""
+    """Pick the best Chinese label from zh-tw → zh-hant → zh fallback chain.
+
+    All values are passed through OpenCC s2twp to ensure Traditional Chinese
+    (Taiwan standard), since Wikidata zh-tw labels are sometimes mislabeled
+    simplified Chinese (e.g. 家养豚鼠 instead of 家養豚鼠).
+    """
     for lang in ZH_LANGS:
         label = labels.get(lang, {})
         value = label.get('value')
         if value:
-            return value
+            return _s2twp.convert(value)
     return None

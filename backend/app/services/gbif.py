@@ -16,8 +16,10 @@ from functools import lru_cache
 
 import requests
 
+from sqlalchemy import func
+
 from ..extensions import db
-from ..models import SpeciesCache
+from ..models import Breed, SpeciesCache
 from .taxonomy_zh import get_taxonomy_zh, get_taxonomy_zh_for_ranks
 from .wikidata import get_chinese_name_by_gbif_id
 from .wikidata import clear_cache as wikidata_clear_cache
@@ -117,24 +119,96 @@ def match_species(name):
 def search_species(query, limit=20):
     """Search for species — routes to the appropriate API based on query language.
 
+    Includes local breed results first, then:
     - Latin/English queries → GBIF /species/suggest
     - Chinese queries → TaiCOL taxon_group search → GBIF /species/match for full data
     """
+    breed_results = _search_breeds(query, limit=limit)
     if _has_cjk(query):
-        return _search_via_taicol(query, limit=limit)
-    return suggest_species(query, limit=limit)
+        species_results = _search_via_taicol(query, limit=limit)
+    else:
+        species_results = suggest_species(query, limit=limit)
+    return breed_results + species_results
 
 
 def search_species_stream(query, limit=10):
     """Streaming version of search_species — yields one NDJSON line per result.
 
+    Phase 1: Local breed search (instant, from DB)
+    Phase 2: GBIF/TaiCOL species search (slower, from external APIs)
+
     Each result is enriched with Chinese names one at a time, so the frontend
     can display results incrementally as they arrive.
     """
+    # Phase 1: Local breed search — instant results
+    breed_results = _search_breeds(query, limit=limit)
+    for br in breed_results:
+        yield json.dumps(br, ensure_ascii=False) + '\n'
+
+    # Phase 2: GBIF species search — streaming
     if _has_cjk(query):
         yield from _search_via_taicol_stream(query, limit=limit)
     else:
         yield from _suggest_species_stream(query, limit=limit)
+
+
+def _search_breeds(query, limit=10):
+    """Search breeds by name (zh prefix or en case-insensitive prefix).
+
+    Returns list of dicts with result_type='breed', breed info, and parent species data.
+    """
+    query = query.strip()
+    if not query:
+        return []
+
+    if _has_cjk(query):
+        breeds = (Breed.query
+                  .filter(Breed.name_zh.isnot(None))
+                  .filter(Breed.name_zh.like(f'{query}%'))
+                  .limit(limit)
+                  .all())
+    else:
+        breeds = (Breed.query
+                  .filter(func.lower(Breed.name_en).like(f'{query.lower()}%'))
+                  .limit(limit)
+                  .all())
+
+    results = []
+    for breed in breeds:
+        # Get parent species from species_cache
+        species = db.session.get(SpeciesCache, breed.taxon_id)
+        species_dict = species.to_dict() if species else {}
+
+        # Fill missing rank_zh from static table
+        if species:
+            _fill_missing_rank_zh(species_dict, species)
+
+        result = {
+            'result_type': 'breed',
+            'breed': breed.to_dict(),
+            'taxon_id': breed.taxon_id,
+            'scientific_name': species_dict.get('scientific_name', ''),
+            'canonical_name': species_dict.get('scientific_name', ''),
+            'common_name_en': species_dict.get('common_name_en'),
+            'common_name_zh': species_dict.get('common_name_zh'),
+            'taxon_rank': species_dict.get('taxon_rank'),
+            'taxon_path': species_dict.get('taxon_path'),
+            'kingdom': species_dict.get('kingdom'),
+            'phylum': species_dict.get('phylum'),
+            'class': species_dict.get('class'),
+            'order': species_dict.get('order'),
+            'family': species_dict.get('family'),
+            'genus': species_dict.get('genus'),
+            'kingdom_zh': species_dict.get('kingdom_zh'),
+            'phylum_zh': species_dict.get('phylum_zh'),
+            'class_zh': species_dict.get('class_zh'),
+            'order_zh': species_dict.get('order_zh'),
+            'family_zh': species_dict.get('family_zh'),
+            'genus_zh': species_dict.get('genus_zh'),
+        }
+        results.append(result)
+
+    return results
 
 
 def _suggest_species_stream(query, limit=10):

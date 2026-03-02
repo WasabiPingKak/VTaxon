@@ -169,8 +169,12 @@ class Breed(db.Model):
     name_en = db.Column(db.Text, nullable=False)
     name_zh = db.Column(db.Text)
     breed_group = db.Column(db.Text)
+    wikidata_id = db.Column(db.Text)
+    source = db.Column(db.Text, default='manual')
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
                            default=lambda: datetime.now(timezone.utc))
+
+    species = db.relationship('SpeciesCache', backref='breeds', lazy='joined')
 
     __table_args__ = (
         db.UniqueConstraint('taxon_id', 'name_en', name='uq_breed_taxon_name'),

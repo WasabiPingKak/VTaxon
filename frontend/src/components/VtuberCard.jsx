@@ -1,9 +1,5 @@
 import { useState } from 'react';
-
-const RANK_LABELS = {
-  KINGDOM: '界', PHYLUM: '門', CLASS: '綱', ORDER: '目',
-  FAMILY: '科', GENUS: '屬', SPECIES: '種', SUBSPECIES: '亞種', VARIETY: '變種',
-};
+import RankBadge from './RankBadge';
 
 export default function VtuberCard({ entry, isCurrentUser, onClick }) {
   const [imgError, setImgError] = useState(false);
@@ -16,7 +12,6 @@ export default function VtuberCard({ entry, isCurrentUser, onClick }) {
     })
     .join(' ');
 
-  const rankLabel = RANK_LABELS[entry.taxon_rank] || entry.taxon_rank;
   const speciesLabel = entry.common_name_zh || entry.scientific_name;
 
   return (
@@ -58,7 +53,7 @@ export default function VtuberCard({ entry, isCurrentUser, onClick }) {
         <div style={{ fontSize: '0.78em', color: '#888', marginTop: '1px' }}>
           {entry.breed_name || speciesLabel}
           {entry.breed_name && <span style={{ color: '#aaa' }}> ({speciesLabel})</span>}
-          <span style={{ marginLeft: '4px', color: '#bbb' }}>{rankLabel}</span>
+          <RankBadge rank={entry.breed_name ? 'BREED' : entry.taxon_rank} style={{ marginLeft: '4px', fontSize: '0.7em' }} />
         </div>
       </div>
     </button>

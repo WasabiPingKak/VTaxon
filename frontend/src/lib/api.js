@@ -155,6 +155,7 @@ export const api = {
 
   // Breeds
   getBreeds: (taxonId) => apiFetch(`/breeds?taxon_id=${taxonId}`),
+  searchBreeds: (q) => apiFetch(`/breeds/search?q=${encodeURIComponent(q)}`),
 
   // Traits
   getTraits: (userId) => apiFetch(`/traits?user_id=${userId}`),

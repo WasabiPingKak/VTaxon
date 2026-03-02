@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import RankBadge from './RankBadge';
 
 const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
-const RANK_LABELS = {
-  kingdom: '界', phylum: '門', class: '綱', order: '目',
-  family: '科', genus: '屬',
+const RANK_TO_UPPER = {
+  kingdom: 'KINGDOM', phylum: 'PHYLUM', class: 'CLASS', order: 'ORDER',
+  family: 'FAMILY', genus: 'GENUS',
 };
 
 export default function VtuberDetailPanel({ entry, onClose }) {
@@ -105,9 +106,9 @@ export default function VtuberDetailPanel({ entry, onClose }) {
                 const zh = pathZh[rank];
                 if (!latin) return null;
                 return (
-                  <div key={rank} style={{ paddingLeft: i * 12 }}>
-                    <span style={{ color: '#999', marginRight: '6px' }}>{RANK_LABELS[rank]}</span>
-                    {zh ? `${zh} (${latin})` : latin}
+                  <div key={rank} style={{ paddingLeft: i * 12, display: 'flex', alignItems: 'center' }}>
+                    <RankBadge rank={RANK_TO_UPPER[rank]} style={{ fontSize: '0.7em' }} />
+                    <span>{zh ? `${zh} (${latin})` : latin}</span>
                   </div>
                 );
               })}
