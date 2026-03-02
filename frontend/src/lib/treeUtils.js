@@ -140,10 +140,143 @@ export function collectAllPaths(entries) {
   return all;
 }
 
+const ORDER_IDX = 3;
+
+/**
+ * Find vtubers "close" to the focused user using traceBack ancestor model.
+ *
+ * traceBack = N → 從物種位置往上追溯 N 層，該祖先下所有子節點都算近親。
+ * 上限：祖先不可超過「目」（ORDER，path index 3）。
+ *
+ * traceBack guide (focused at species level, 7 segments):
+ *   0 = 同種 (minCommon=7)
+ *   1 = 同屬 (minCommon=6)
+ *   2 = 同科 (minCommon=5)
+ *   3 = 同目 (minCommon=4, 上限)
+ */
+export function computeCloseVtubers(focusedEntries, allEntries, traceBack = 2) {
+  if (!focusedEntries?.length || !allEntries) return new Map();
+  const focusedUserId = focusedEntries[0].user_id;
+  const closeMap = new Map(); // Map<userId, Set<taxonPath>>
+
+  const focusedPaths = focusedEntries.map(e => e.taxon_path).filter(Boolean);
+  const focusedSegArrays = focusedPaths.map(p => p.split('|'));
+
+  // Pre-compute minCommon for each focused entry
+  const minCommons = focusedSegArrays.map(segs => {
+    const S = segs.length;
+    const maxTrace = Math.max(0, S - 1 - ORDER_IDX);
+    const effectiveTrace = Math.min(traceBack, maxTrace);
+    return S - effectiveTrace;
+  });
+
+  for (const entry of allEntries) {
+    if (entry.user_id === focusedUserId) continue;
+    const ep = entry.taxon_path;
+    if (!ep) continue;
+
+    const epSegs = ep.split('|');
+
+    for (let fi = 0; fi < focusedSegArrays.length; fi++) {
+      const fpSegs = focusedSegArrays[fi];
+      const minCommon = minCommons[fi];
+
+      let common = 0;
+      const minLen = Math.min(epSegs.length, fpSegs.length);
+      for (let i = 0; i < minLen; i++) {
+        if (epSegs[i] === fpSegs[i]) common++;
+        else break;
+      }
+
+      if (common >= minCommon) {
+        if (!closeMap.has(entry.user_id)) closeMap.set(entry.user_id, new Set());
+        closeMap.get(entry.user_id).add(ep);
+        break;
+      }
+    }
+  }
+  return closeMap;
+}
+
 /**
  * Collect pathKeys up to a certain rank depth.
  * depth 0=ROOT, 1=KINGDOM, 2=PHYLUM, 3=CLASS, 4=ORDER, 5=FAMILY, 6=GENUS
  */
+/**
+ * Collect all expandable pathKeys needed to reveal close vtuber nodes.
+ */
+export function collectCloseVtuberPaths(closeVtuberIds, entries) {
+  const paths = new Set();
+  if (!closeVtuberIds || closeVtuberIds.size === 0) return paths;
+
+  for (const entry of entries) {
+    if (!closeVtuberIds.has(entry.user_id)) continue;
+    const parts = (entry.taxon_path || '').split('|');
+    for (let i = 1; i <= parts.length; i++) {
+      paths.add(parts.slice(0, i).join('|'));
+    }
+    if (entry.breed_id) {
+      paths.add(`${parts.join('|')}|__breed__${entry.breed_id}`);
+    }
+  }
+  return paths;
+}
+
+/**
+ * Compute close vtuber counts grouped by taxonomy common depth.
+ * Returns Map<commonDepth, count>. Each vtuber counted only at its highest depth match.
+ * Uses the same traceBack ancestor model as computeCloseVtubers.
+ */
+export function computeCloseVtubersByRank(focusedEntries, allEntries, traceBack = 2) {
+  if (!focusedEntries?.length || !allEntries) return null;
+  const focusedUserId = focusedEntries[0].user_id;
+
+  const focusedPaths = focusedEntries.map(e => e.taxon_path).filter(Boolean);
+  const focusedSegArrays = focusedPaths.map(p => p.split('|'));
+
+  // Pre-compute minCommon for each focused entry
+  const minCommons = focusedSegArrays.map(segs => {
+    const S = segs.length;
+    const maxTrace = Math.max(0, S - 1 - ORDER_IDX);
+    const effectiveTrace = Math.min(traceBack, maxTrace);
+    return S - effectiveTrace;
+  });
+
+  const bestDepth = new Map();
+
+  for (const entry of allEntries) {
+    if (entry.user_id === focusedUserId) continue;
+    const ep = entry.taxon_path;
+    if (!ep) continue;
+
+    const epSegs = ep.split('|');
+
+    for (let fi = 0; fi < focusedSegArrays.length; fi++) {
+      const fpSegs = focusedSegArrays[fi];
+      const minCommon = minCommons[fi];
+
+      let common = 0;
+      const minLen = Math.min(epSegs.length, fpSegs.length);
+      for (let i = 0; i < minLen; i++) {
+        if (epSegs[i] === fpSegs[i]) common++;
+        else break;
+      }
+
+      if (common >= minCommon) {
+        const prev = bestDepth.get(entry.user_id) || 0;
+        if (common > prev) bestDepth.set(entry.user_id, common);
+      }
+    }
+  }
+
+  const byRank = new Map();
+  for (const [, depth] of bestDepth) {
+    byRank.set(depth, (byRank.get(depth) || 0) + 1);
+  }
+
+  return byRank.size > 0 ? byRank : null;
+}
+
 export function collectPathsToDepth(entries, maxDepth) {
   const paths = new Set();
   for (const entry of entries) {

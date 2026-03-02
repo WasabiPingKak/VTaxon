@@ -64,23 +64,6 @@ export default function Navbar() {
 
       {/* Right section */}
       <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-        {/* Search */}
-        <Link to="/search" style={{
-          textDecoration: 'none',
-          color: 'rgba(255,255,255,0.7)',
-          fontSize: '0.9em',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 5,
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          搜尋物種
-        </Link>
-
         {!loading && (
           user ? (
             <div ref={dropdownRef} style={{ position: 'relative' }}>
@@ -100,6 +83,11 @@ export default function Navbar() {
                 ) : (
                   <AvatarFallback name={user.display_name} size={28} />
                 )}
+                <span style={{
+                  fontSize: '0.85em', color: 'rgba(255,255,255,0.85)',
+                  maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>{user.display_name}</span>
               </button>
 
               {dropdownOpen && (

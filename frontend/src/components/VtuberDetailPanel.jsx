@@ -8,7 +8,7 @@ const RANK_TO_UPPER = {
   family: 'FAMILY', genus: 'GENUS',
 };
 
-export default function VtuberDetailPanel({ entry, onClose }) {
+export default function VtuberDetailPanel({ entry, onClose, onFocus }) {
   const [imgError, setImgError] = useState(false);
 
   if (!entry) return null;
@@ -144,6 +144,22 @@ export default function VtuberDetailPanel({ entry, onClose }) {
             }}>
               查看親緣關係
             </Link>
+            {onFocus && (
+              <button type="button" onClick={() => { onFocus(entry.user_id); onClose(); }} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '8px 16px', borderRadius: '6px',
+                fontSize: '0.9em', textAlign: 'center',
+                background: 'rgba(255,107,53,0.15)',
+                color: '#FF6B35',
+                border: '1px solid rgba(255,107,53,0.3)',
+                cursor: 'pointer',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
+                </svg>
+                鎖定追蹤
+              </button>
+            )}
           </div>
         </div>
       </div>

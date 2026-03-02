@@ -194,6 +194,38 @@ const GraphCanvas = forwardRef(function GraphCanvas({
         zoomIdentity.translate(tx, ty).scale(s),
       );
     },
+
+    fitBounds(bMinX, bMinY, bMaxX, bMaxY, padding = 80, leftInset = 0, rightInset = 0) {
+      const canvas = canvasRef.current;
+      if (!canvas || !zoomRef.current) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = sizeRef.current.width / dpr;
+      const h = sizeRef.current.height / dpr;
+
+      // Available area excludes both insets (sidebar, etc.)
+      const availW = w - leftInset - rightInset;
+      const boundsW = (bMaxX - bMinX) + padding * 2;
+      const boundsH = (bMaxY - bMinY) + padding * 2;
+
+      const scaleX = availW / boundsW;
+      const scaleY = h / boundsH;
+      let targetScale = Math.min(scaleX, scaleY);
+      targetScale = Math.max(targetScale, minZoom);
+      targetScale = Math.min(targetScale, 1.5);
+
+      const centerX = (bMinX + bMaxX) / 2;
+      const centerY = (bMinY + bMaxY) / 2;
+
+      // Center content within the available area between left and right insets
+      const availCenterScreenX = leftInset + availW / 2;
+      const tx = availCenterScreenX - centerX * targetScale;
+      const ty = h / 2 - centerY * targetScale;
+
+      select(canvas).transition().duration(800).call(
+        zoomRef.current.transform,
+        zoomIdentity.translate(tx, ty).scale(targetScale),
+      );
+    },
   }), [requestRender]);
 
   return (

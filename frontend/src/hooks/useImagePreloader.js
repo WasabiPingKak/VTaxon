@@ -16,7 +16,14 @@ export default function useImagePreloader(entries) {
       if (!url || cache.has(url)) continue;
 
       const img = new Image();
-      img.crossOrigin = 'anonymous';
+      img.onerror = () => {
+        // Retry once after 2 seconds
+        setTimeout(() => {
+          const retry = new Image();
+          retry.src = url;
+          cache.set(url, retry);
+        }, 2000);
+      };
       img.src = url;
       cache.set(url, img);
     }

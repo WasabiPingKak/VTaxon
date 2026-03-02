@@ -26,7 +26,9 @@ export default function useGraphInteraction(nodes) {
         if (Math.abs(dx) + Math.abs(dy) <= 18) return node;
       } else if (d._rank === 'SPECIES' || d._rank === 'SUBSPECIES') {
         // Rounded rect 70×26 — AABB
-        if (Math.abs(dx) <= 39 && Math.abs(dy) <= 17) return node;
+        const halfW = d._nodeWidth ? d._nodeWidth / 2 + 4 : 39;
+        const halfH = d._nodeHeight ? d._nodeHeight / 2 + 4 : 17;
+        if (Math.abs(dx) <= halfW && Math.abs(dy) <= halfH) return node;
       } else {
         // Circle — radius scales with count
         const count = d._count || 0;
