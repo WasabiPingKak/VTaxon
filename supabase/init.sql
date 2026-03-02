@@ -10,6 +10,7 @@ CREATE TABLE users (
     avatar_url TEXT,
     role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
     organization TEXT,
+    bio TEXT,
     country_flags JSONB DEFAULT '[]'::jsonb,
     social_links JSONB DEFAULT '{}'::jsonb,
     primary_platform TEXT CHECK (primary_platform IN ('youtube', 'twitch')),

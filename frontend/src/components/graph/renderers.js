@@ -39,8 +39,9 @@ function fontStr(basePx, scale, weight = '', style = '') {
   return `${style} ${weight} ${sz}px ${FONT_FAMILY}`.trim();
 }
 
-// ── Label width cap for species rect ──
+// ── Label width cap for species/breed rect ──
 const SPECIES_MAX_RECT_W = 184;  // MAX_LABEL_W.SPECIES(160) + 24 padding
+const BREED_MAX_RECT_W = 140;    // MAX_LABEL_W.BREED(120) + 20 padding
 
 /** Draw multi-line text centered at x, starting from startY (textBaseline='top'). */
 function drawWrappedText(ctx, lines, x, startY, lineHeight) {
@@ -556,56 +557,63 @@ function drawVtuberNode(ctx, node, scale, state) {
   }
 }
 
-// ── Breed node (diamond) ──
+// ── Breed node (rounded rect, like species) ──
 function drawBreedNode(ctx, node, scale, state) {
   const d = node.data;
   const rc = RANK_COLORS.BREED;
   const hovered = state.hoveredNode === node;
-  const s = 14;
+  const lines = d._labelLines || [d._nameZh || d._name];
+  const fs = scaledFontSize(11, scale);
+  const lineHeight = fs * 1.25;
+
+  // Dynamic size: width from widest line (capped), height from line count
+  ctx.font = fontStr(11, scale, 'bold');
+  const widestLine = Math.max(...lines.map(l => ctx.measureText(l).width));
+  const w = Math.min(Math.max(60, widestLine + 20), BREED_MAX_RECT_W);
+  const textBlockH = fs + (lines.length - 1) * lineHeight;
+  const h = Math.max(24, textBlockH + 10);
+  d._nodeWidth = w;   // cache for hit-test
+  d._nodeHeight = h;
+  const r = 5;
+  const x = node.x - w / 2, y = node.y - h / 2;
 
   ctx.beginPath();
-  ctx.moveTo(node.x, node.y - s);
-  ctx.lineTo(node.x + s, node.y);
-  ctx.lineTo(node.x, node.y + s);
-  ctx.lineTo(node.x - s, node.y);
-  ctx.closePath();
-
+  roundedRect(ctx, x, y, w, h, r);
   ctx.fillStyle = '#1a2433';
+
   if (scale > LOD_DOTS_ONLY) {
-    ctx.shadowBlur = hovered ? 18 : 8;
+    ctx.shadowBlur = hovered ? 18 : 6;
     ctx.shadowColor = rc.glow;
   }
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  ctx.strokeStyle = rc.node;
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = hexToRgba(rc.node, 0.3);
+  ctx.lineWidth = 1;
   ctx.stroke();
 
   // Collapsed indicator
   if (d._hasHiddenChildren) {
     const plusSz = scaledFontSize(8, scale);
     ctx.beginPath();
-    ctx.arc(node.x + s + 4, node.y - s + 2, 4, 0, Math.PI * 2);
+    ctx.arc(node.x + w / 2 + 6, node.y - h / 2 + 4, 4, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,0.25)';
     ctx.fill();
     ctx.fillStyle = LABEL_COLOR;
     ctx.font = `${plusSz}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('+', node.x + s + 4, node.y - s + 2);
+    ctx.fillText('+', node.x + w / 2 + 6, node.y - h / 2 + 4);
   }
 
   if (scale > LOD_DOTS_ONLY) {
-    const lines = d._labelLines || [d._nameZh || d._name];
+    // Multi-line main label inside rect
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillStyle = LABEL_COLOR;
     ctx.font = fontStr(11, scale, 'bold');
-    const bFs = scaledFontSize(11, scale);
-    const lineHeight = bFs * 1.25;
-    const startY = node.y + s + bFs * 0.3;
-    drawWrappedText(ctx, lines, node.x, startY, lineHeight);
+    const textStartY = node.y - textBlockH / 2;
+    drawWrappedText(ctx, lines, node.x, textStartY, lineHeight);
   }
 }
 

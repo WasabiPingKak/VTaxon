@@ -2,13 +2,12 @@
 
 ## 專案簡介
 
-VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象特徵對應到現實世界的生物分類學體系（界、門、綱、目、科、屬、種），藉此量化角色之間的「親緣相似度」。
+VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象特徵對應到現實世界的生物分類學體系（界、門、綱、目、科、屬、種），以分類樹的形式呈現角色之間的關聯。
 
 ## 核心功能
 
 - **物種標註**：頻道主透過 OAuth 登入後，標註自己角色的物種特徵（支援複合種，一個角色可有多個物種特徵）。
 - **分類樹瀏覽**：以生物分類階層呈現所有已建檔的角色。
-- **親緣檢索**：給定角色 A，找出資料庫中分類學上最接近的角色。
 
 ## 架構決策
 
@@ -62,25 +61,6 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 - CHECK constraint: `taxon_id IS NOT NULL OR fictional_species_id IS NOT NULL`
 - Partial unique index: (user_id, taxon_id) WHERE taxon_id IS NOT NULL
 - Partial unique index: (user_id, fictional_species_id) WHERE fictional_species_id IS NOT NULL
-
-## 親緣距離計算
-
-現實物種與奇幻生物的距離**分開計算、分開顯示**：
-
-### 現實物種距離
-- 每個現實物種 trait 各自獨立計算，產生一組最近角色排行。
-- 距離 = `taxon_path` 的 LCP 共同層數差（總階層數 - 共同前綴層數）。
-- 複合種角色（n 個現實 trait）→ 產生 n 組獨立結果，UI 分別顯示。
-
-### 奇幻生物距離
-- 每個奇幻生物 trait 各自獨立計算，產生一組最近角色排行。
-- 距離 = `category_path` 的 LCP 共同層數差。
-- 複合種角色（m 個奇幻 trait）→ 產生 m 組獨立結果，UI 分別顯示。
-
-### 共通規則
-- 系統**不在資料層排除**人類 (Homo sapiens)——人類作為有效 trait 可被記錄。
-- UI 預設不顯示含人類 trait 的比較結果，但提供選項讓使用者手動啟用。
-- 若某 trait 類型在雙方之一不存在，則該類不產生結果。
 
 ## 外部 API 參考
 

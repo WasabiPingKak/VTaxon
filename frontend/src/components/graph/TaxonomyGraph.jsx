@@ -426,6 +426,35 @@ export default function TaxonomyGraph({ currentUser }) {
     setFocusedEntryKey(null);
   }, []);
 
+  // Listen for Navbar "refocus self" event
+  const [refocusTick, setRefocusTick] = useState(0);
+  useEffect(() => {
+    if (!currentUser) return;
+    const handler = () => {
+      setFocusedUserId(currentUser.id);
+      setFocusedEntryKey(null);
+      setRefocusTick(t => t + 1);
+    };
+    window.addEventListener('vtaxon:refocus-self', handler);
+    return () => window.removeEventListener('vtaxon:refocus-self', handler);
+  }, [currentUser]);
+
+  // Pan to first species when refocus-self fires
+  useEffect(() => {
+    if (refocusTick === 0) return;
+    setTimeout(() => {
+      const entry = focusedEntries[0];
+      if (!entry) return;
+      let pathKey = entry.taxon_path;
+      if (entry.breed_id) pathKey += `|__breed__${entry.breed_id}`;
+      pathKey += `|__vtuber__${entry.user_id}`;
+      const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
+      if (targetNode) {
+        canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
+      }
+    }, 200);
+  }, [refocusTick]);
+
   // Pan to focused species when user explicitly changes selection
   useEffect(() => {
     const entry = focusedEntries[focusedSpeciesIdx];

@@ -6,7 +6,6 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import SearchPage from './pages/SearchPage';
-import KinshipPage from './pages/KinshipPage';
 import ProfileEditPage from './pages/ProfileEditPage';
 
 function AppContent() {
@@ -27,7 +26,6 @@ function AppContent() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profile/edit" element={<ProfileEditPage />} />
             <Route path="/search" element={<SearchPage />} />
-            <Route path="/kinship/:userId" element={<KinshipPage />} />
           </Routes>
         </main>
       )}

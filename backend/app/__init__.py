@@ -22,7 +22,6 @@ def create_app(config_name=None):
     from .routes.users import users_bp
     from .routes.species import species_bp
     from .routes.traits import traits_bp
-    from .routes.kinship import kinship_bp
     from .routes.taxonomy import taxonomy_bp
     from .routes.breeds import breeds_bp
 
@@ -30,7 +29,6 @@ def create_app(config_name=None):
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(species_bp, url_prefix='/api/species')
     app.register_blueprint(traits_bp, url_prefix='/api/traits')
-    app.register_blueprint(kinship_bp, url_prefix='/api/kinship')
     app.register_blueprint(taxonomy_bp, url_prefix='/api/taxonomy')
     app.register_blueprint(breeds_bp, url_prefix='/api/breeds')
 

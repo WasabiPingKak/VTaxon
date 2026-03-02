@@ -140,7 +140,8 @@ function computeLabelLayout(data) {
     const label = _nameZh || _name;
     const { lines, widest } = computeWrappedLines(ctx, label, MAX_LABEL_W.BREED, 11);
     data._labelLines = lines;
-    data._labelHalfW = Math.max(widest, 28) / 2;
+    const rectW = widest + 20;  // rect padding
+    data._labelHalfW = Math.max(rectW, 60) / 2;
     return;
   }
 

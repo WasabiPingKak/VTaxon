@@ -1,6 +1,6 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 function AvatarFallback({ name, size = 32 }) {
   const initial = (name || '?')[0].toUpperCase();
@@ -20,8 +20,15 @@ function AvatarFallback({ name, size = 32 }) {
 
 export default function Navbar() {
   const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  const handleRefocusSelf = useCallback(() => {
+    if (location.pathname !== '/') navigate('/');
+    window.dispatchEvent(new CustomEvent('vtaxon:refocus-self'));
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -30,8 +37,8 @@ export default function Navbar() {
         setDropdownOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('pointerdown', handler, true);
+    return () => document.removeEventListener('pointerdown', handler, true);
   }, [dropdownOpen]);
 
   return (
@@ -66,7 +73,26 @@ export default function Navbar() {
       <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
         {!loading && (
           user ? (
-            <div ref={dropdownRef} style={{ position: 'relative' }}>
+            <>
+              <button
+                type="button"
+                onClick={handleRefocusSelf}
+                title="在樹狀圖中定位自己"
+                style={{
+                  background: 'none', border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: 6, cursor: 'pointer', padding: '4px 8px',
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  color: 'rgba(255,255,255,0.7)', fontSize: '0.8em',
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,107,53,0.5)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
+                </svg>
+                定位自己
+              </button>
+              <div ref={dropdownRef} style={{ position: 'relative' }}>
               <button
                 type="button"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -145,6 +171,7 @@ export default function Navbar() {
                 </div>
               )}
             </div>
+            </>
           ) : (
             <Link to="/login" style={{
               textDecoration: 'none',

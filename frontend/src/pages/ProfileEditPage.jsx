@@ -28,6 +28,7 @@ export default function ProfileEditPage() {
 
   const [displayName, setDisplayName] = useState('');
   const [organization, setOrganization] = useState('');
+  const [bio, setBio] = useState('');
   const [countryFlags, setCountryFlags] = useState([]);
   const [socialLinks, setSocialLinks] = useState({});
   const [saving, setSaving] = useState(false);
@@ -40,6 +41,7 @@ export default function ProfileEditPage() {
     if (user) {
       setDisplayName(user.display_name || '');
       setOrganization(user.organization || '');
+      setBio(user.bio || '');
       setCountryFlags(user.country_flags || []);
       setSocialLinks(user.social_links || {});
       loadOAuthAccounts();
@@ -71,6 +73,7 @@ export default function ProfileEditPage() {
       const updated = await api.updateMe({
         display_name: displayName.trim(),
         organization: organization.trim() || null,
+        bio: bio.trim() || null,
         country_flags: countryFlags,
         social_links: socialLinks,
       });
@@ -248,6 +251,21 @@ export default function ProfileEditPage() {
             placeholder="例如：Hololive、NIJISANJI…"
             style={inputStyle}
           />
+        </div>
+
+        <div style={{ marginBottom: '20px' }}>
+          <label style={labelStyle}>自我介紹</label>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder="簡單介紹一下你的角色吧！（最多 500 字）"
+            maxLength={500}
+            rows={3}
+            style={{ ...inputStyle, resize: 'vertical', minHeight: '60px' }}
+          />
+          <div style={{ textAlign: 'right', fontSize: '0.8em', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>
+            {bio.length}/500
+          </div>
         </div>
 
         <div style={{ marginBottom: '24px' }}>

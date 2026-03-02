@@ -29,7 +29,7 @@ def update_me():
         return jsonify({'error': 'User not found'}), 404
 
     data = request.get_json() or {}
-    allowed = {'display_name', 'organization', 'country_flags',
+    allowed = {'display_name', 'organization', 'bio', 'country_flags',
                'social_links', 'primary_platform'}
 
     ALLOWED_SNS_KEYS = {
@@ -52,6 +52,15 @@ def update_me():
             if v:
                 cleaned_links[k] = v.strip()
         data['social_links'] = cleaned_links
+
+    if 'bio' in data:
+        bio = data['bio']
+        if bio is not None:
+            if not isinstance(bio, str):
+                return jsonify({'error': 'bio must be a string'}), 400
+            if len(bio) > 500:
+                return jsonify({'error': 'bio must be 500 characters or less'}), 400
+            data['bio'] = bio.strip() or None
 
     if 'country_flags' in data:
         flags = data['country_flags']

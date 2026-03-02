@@ -520,12 +520,6 @@ export default function ProfilePage() {
               + 新增特徵
             </button>
           )}
-          <Link to={`/kinship/${user.id}`} style={{
-            padding: '6px 14px', background: '#34d399', color: '#0d1526',
-            borderRadius: '4px', textDecoration: 'none', fontWeight: 600,
-          }}>
-            查看親緣關係
-          </Link>
         </div>
       </div>
 

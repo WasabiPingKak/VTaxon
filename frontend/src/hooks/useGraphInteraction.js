@@ -22,8 +22,10 @@ export default function useGraphInteraction(nodes) {
         // Hexagon — approximate with circle r=24
         if (dx * dx + dy * dy <= 24 * 24) return node;
       } else if (d._rank === 'BREED') {
-        // Diamond 14px — AABB test
-        if (Math.abs(dx) + Math.abs(dy) <= 18) return node;
+        // Rounded rect — AABB test
+        const bHalfW = d._nodeWidth ? d._nodeWidth / 2 + 4 : 34;
+        const bHalfH = d._nodeHeight ? d._nodeHeight / 2 + 4 : 16;
+        if (Math.abs(dx) <= bHalfW && Math.abs(dy) <= bHalfH) return node;
       } else if (d._rank === 'SPECIES' || d._rank === 'SUBSPECIES') {
         // Rounded rect 70×26 — AABB
         const halfW = d._nodeWidth ? d._nodeWidth / 2 + 4 : 39;

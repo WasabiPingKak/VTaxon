@@ -50,18 +50,9 @@
 
 **檔案**：`backend/app/routes/traits.py`
 
-### Phase 5：親緣距離計算 ✅
+### Phase 5：親緣距離計算（已移除）
 
-| Endpoint | Method | 說明 |
-|----------|--------|------|
-| `/api/kinship/<user_id>` | GET | 回傳每個 trait 的最近角色排行 |
-
-- `?include_human=true` 可包含人類比較結果（預設隱藏）
-- 現實物種與奇幻生物**分開計算、分開回傳**
-- 每個 trait 獨立產生一組排行結果
-- 距離 = `taxon_path` / `category_path` 的 LCP 共同層數差
-
-**檔案**：`backend/app/services/kinship.py`, `backend/app/routes/kinship.py`
+> 此功能已於 2026-03-02 移除。相關檔案（`kinship.py` route/service、`KinshipPage.jsx`）已刪除。
 
 ### Phase 6：前端建設 ✅
 
@@ -74,9 +65,7 @@
 | 登入頁 | `src/pages/LoginPage.jsx` | Google / Twitch 登入按鈕 |
 | 角色檔案 | `src/pages/ProfilePage.jsx` | 顯示 trait 列表、新增/刪除 trait、編輯名稱 |
 | 物種搜尋 | `src/pages/SearchPage.jsx`, `src/components/SpeciesSearch.jsx` | GBIF 物種搜尋 + 一鍵新增 trait |
-| 親緣結果 | `src/pages/KinshipPage.jsx` | 每個 trait 獨立顯示最近角色排行，含人類 toggle |
-
-- 路由：`/`, `/login`, `/profile`, `/search`, `/kinship/:userId`
+- 路由：`/`, `/login`, `/profile`, `/search`
 
 ### Phase 7：部署 + 種子資料 ✅
 
@@ -146,11 +135,9 @@ VTaxon/
 │   │   │   ├── auth.py          # /api/auth/*
 │   │   │   ├── users.py         # /api/users/*
 │   │   │   ├── species.py       # /api/species/*
-│   │   │   ├── traits.py        # /api/traits/*
-│   │   │   └── kinship.py       # /api/kinship/*
+│   │   │   └── traits.py        # /api/traits/*
 │   │   └── services/
-│   │       ├── gbif.py          # GBIF API client + 快取邏輯
-│   │       └── kinship.py       # LCP 距離計算引擎
+│   │       └── gbif.py          # GBIF API client + 快取邏輯
 │   ├── seeds/
 │   │   └── fictional_species.sql  # 奇幻生物種子資料
 │   ├── migrations/              # SQL migrations (先前已有)
@@ -174,8 +161,7 @@ VTaxon/
 │   │   │   ├── LoginPage.jsx
 │   │   │   ├── ProfilePage.jsx
 │   │   │   ├── ProfileEditPage.jsx # 個人資料編輯
-│   │   │   ├── SearchPage.jsx
-│   │   │   └── KinshipPage.jsx
+│   │   │   └── SearchPage.jsx
 │   │   ├── App.jsx              # 路由設定（含 /profile/edit）
 │   │   └── main.jsx             # 入口
 │   ├── vite.config.js           # dev proxy → localhost:5000
@@ -201,4 +187,3 @@ VTaxon/
 | POST | `/api/traits` | JWT | 新增 trait |
 | GET | `/api/traits?user_id=` | - | 查詢角色 traits |
 | DELETE | `/api/traits/<id>` | JWT | 刪除 trait |
-| GET | `/api/kinship/<user_id>` | - | 親緣距離排行 |
