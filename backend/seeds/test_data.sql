@@ -566,3 +566,190 @@ UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=243694
   WHERE id = '00000000-7e57-a090-0000-000000000024';   -- 多國旗 + 品種
 UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Rex rabbit')
   WHERE id = '00000000-7e57-a090-0000-000000000025';   -- breed_id + breed_name 共存（breed_id 優先顯示）
+
+
+-- ============================================================
+-- 6. 齧齒目 Rodentia — 天竺鼠品種 + 倉鼠/龍貓/沙鼠 + 高階分類 + 複合種
+-- 測試情境：
+--   a) 天竺鼠品種多樣性（8 種品種 + 同品種聚合 3x 美國短毛天竺鼠）
+--   b) 無品種天竺鼠（3 人，純 species 無 breed_id）
+--   c) 其他齧齒類（黃金鼠、三線鼠、一線鼠、老公公鼠、龍貓、沙鼠）
+--   d) 高階分類（齧齒目 ORDER、豚鼠科/倉鼠科 FAMILY、豚鼠屬 GENUS）
+--   e) 複合種（天竺鼠+龍貓同目、天竺鼠+家貓跨目）
+--   f) 邊界情境（legacy breed_name、admin 角色）
+-- ============================================================
+
+-- 6a. species_cache — 齧齒目相關分類
+INSERT INTO species_cache (taxon_id, scientific_name, common_name_en, common_name_zh, taxon_rank, taxon_path, kingdom, phylum, class, order_, family, genus, path_zh) VALUES
+-- 天竺鼠（品種掛載點）
+(5219702, 'Cavia porcellus',           'Guinea Pig',              '天竺鼠',     'SPECIES', 'Animalia|Chordata|Mammalia|Rodentia|Caviidae|Cavia|Cavia porcellus',                   'Animalia','Chordata','Mammalia','Rodentia','Caviidae','Cavia',             '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"齧齒目","family":"豚鼠科","genus":"豚鼠屬"}'),
+-- 黃金鼠
+(2438482, 'Mesocricetus auratus',      'Golden Hamster',          '黃金鼠',     'SPECIES', 'Animalia|Chordata|Mammalia|Rodentia|Cricetidae|Mesocricetus|Mesocricetus auratus',       'Animalia','Chordata','Mammalia','Rodentia','Cricetidae','Mesocricetus',   '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"齧齒目","family":"倉鼠科","genus":"黃金鼠屬"}'),
+-- 三線鼠
+(2437847, 'Phodopus campbelli',        'Campbell''s Dwarf Hamster','三線鼠',    'SPECIES', 'Animalia|Chordata|Mammalia|Rodentia|Cricetidae|Phodopus|Phodopus campbelli',              'Animalia','Chordata','Mammalia','Rodentia','Cricetidae','Phodopus',       '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"齧齒目","family":"倉鼠科","genus":"小倉鼠屬"}'),
+-- 一線鼠
+(2437845, 'Phodopus sungorus',         'Winter White Hamster',    '一線鼠',     'SPECIES', 'Animalia|Chordata|Mammalia|Rodentia|Cricetidae|Phodopus|Phodopus sungorus',               'Animalia','Chordata','Mammalia','Rodentia','Cricetidae','Phodopus',       '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"齧齒目","family":"倉鼠科","genus":"小倉鼠屬"}'),
+-- 老公公鼠
+(2437846, 'Phodopus roborovskii',      'Roborovski Hamster',      '老公公鼠',   'SPECIES', 'Animalia|Chordata|Mammalia|Rodentia|Cricetidae|Phodopus|Phodopus roborovskii',            'Animalia','Chordata','Mammalia','Rodentia','Cricetidae','Phodopus',       '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"齧齒目","family":"倉鼠科","genus":"小倉鼠屬"}'),
+-- 龍貓（絨鼠）
+(5219944, 'Chinchilla lanigera',       'Long-tailed Chinchilla',  '龍貓',       'SPECIES', 'Animalia|Chordata|Mammalia|Rodentia|Chinchillidae|Chinchilla|Chinchilla lanigera',        'Animalia','Chordata','Mammalia','Rodentia','Chinchillidae','Chinchilla', '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"齧齒目","family":"龍貓科","genus":"龍貓屬"}'),
+-- 沙鼠
+(5219721, 'Meriones unguiculatus',     'Mongolian Gerbil',        '沙鼠',       'SPECIES', 'Animalia|Chordata|Mammalia|Rodentia|Muridae|Meriones|Meriones unguiculatus',              'Animalia','Chordata','Mammalia','Rodentia','Muridae','Meriones',         '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"齧齒目","family":"鼠科","genus":"沙鼠屬"}'),
+-- 齧齒目 ORDER
+(8820001, 'Rodentia',                  'Rodents',                 '齧齒目',     'ORDER',   'Animalia|Chordata|Mammalia|Rodentia',                                                     'Animalia','Chordata','Mammalia','Rodentia', NULL, NULL,                   '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"齧齒目"}'),
+-- 豚鼠科 FAMILY
+(8820002, 'Caviidae',                  'Cavies',                  '豚鼠科',     'FAMILY',  'Animalia|Chordata|Mammalia|Rodentia|Caviidae',                                            'Animalia','Chordata','Mammalia','Rodentia','Caviidae', NULL,              '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"齧齒目","family":"豚鼠科"}'),
+-- 倉鼠科 FAMILY
+(8820003, 'Cricetidae',                'Hamsters',                '倉鼠科',     'FAMILY',  'Animalia|Chordata|Mammalia|Rodentia|Cricetidae',                                          'Animalia','Chordata','Mammalia','Rodentia','Cricetidae', NULL,            '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"齧齒目","family":"倉鼠科"}'),
+-- 豚鼠屬 GENUS
+(8820004, 'Cavia',                     NULL,                      '豚鼠屬',     'GENUS',   'Animalia|Chordata|Mammalia|Rodentia|Caviidae|Cavia',                                      'Animalia','Chordata','Mammalia','Rodentia','Caviidae','Cavia',            '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"齧齒目","family":"豚鼠科","genus":"豚鼠屬"}')
+ON CONFLICT (taxon_id) DO UPDATE SET
+  common_name_zh = EXCLUDED.common_name_zh,
+  path_zh = EXCLUDED.path_zh;
+
+-- 6b. users — 齧齒目測試使用者
+INSERT INTO users (id, display_name, avatar_url, role, organization, country_flags) VALUES
+-- ── 天竺鼠品種使用者（15 個）──
+-- 美國短毛天竺鼠 x3（同品種聚合測試）
+('00000000-7e57-0009-0000-000000000001', '天竺醬 GuineaChan',      'https://i.pravatar.cc/150?u=gp01', 'user',  '__TEST__', '["tw"]'),
+('00000000-7e57-0009-0000-000000000002', '天竺寶 GuineaBao',       'https://i.pravatar.cc/150?u=gp02', 'user',  '__TEST__', '["jp"]'),
+('00000000-7e57-0009-0000-000000000003', '咕咕 GuGu',              'https://i.pravatar.cc/150?u=gp03', 'user',  '__TEST__', '["us"]'),
+-- 阿比西尼亞天竺鼠 x2
+('00000000-7e57-0009-0000-000000000004', '玫瑰花 Rosette',         'https://i.pravatar.cc/150?u=gp04', 'user',  '__TEST__', '["tw"]'),
+('00000000-7e57-0009-0000-000000000005', '捲毛 CurlyGP',           'https://i.pravatar.cc/150?u=gp05', 'user',  '__TEST__', '["gb"]'),
+-- 各品種各 1 人
+('00000000-7e57-0009-0000-000000000006', '秘魯長毛 PeruLong',      'https://i.pravatar.cc/150?u=gp06', 'user',  '__TEST__', '["pe"]'),   -- 秘魯天竺鼠
+('00000000-7e57-0009-0000-000000000007', '喜樂蒂 SilkieGP',        'https://i.pravatar.cc/150?u=gp07', 'user',  '__TEST__', '["tw"]'),   -- 喜樂蒂天竺鼠
+('00000000-7e57-0009-0000-000000000008', '泰迪熊 TeddyBear',       'https://i.pravatar.cc/150?u=gp08', 'user',  '__TEST__', '["de"]'),   -- 泰迪天竺鼠
+('00000000-7e57-0009-0000-000000000009', '德塞爾 TexelGP',         'https://i.pravatar.cc/150?u=gp09', 'user',  '__TEST__', '["nl"]'),   -- 德塞爾天竺鼠
+('00000000-7e57-0009-0000-000000000010', '冠冠 CrownGP',           'https://i.pravatar.cc/150?u=gp10', 'user',  '__TEST__', '["tw"]'),   -- 冠毛天竺鼠
+('00000000-7e57-0009-0000-000000000011', '無毛鼠 SkinnyGP',        'https://i.pravatar.cc/150?u=gp11', 'user',  '__TEST__', '["ca"]'),   -- 無毛天竺鼠
+('00000000-7e57-0009-0000-000000000012', '緞毛美短 SatinAm',       'https://i.pravatar.cc/150?u=gp12', 'user',  '__TEST__', '["us"]'),   -- 緞毛美國短毛天竺鼠
+('00000000-7e57-0009-0000-000000000013', '雷克斯 RexGP',           'https://i.pravatar.cc/150?u=gp13', 'user',  '__TEST__', '["fr"]'),   -- 雷克斯天竺鼠
+('00000000-7e57-0009-0000-000000000014', '白冠 WhiteCrest',        'https://i.pravatar.cc/150?u=gp14', 'user',  '__TEST__', '["tw"]'),   -- 白冠毛天竺鼠
+('00000000-7e57-0009-0000-000000000015', '羊駝鼠 AlpacaGP',        'https://i.pravatar.cc/150?u=gp15', 'user',  '__TEST__', '["se"]'),   -- 羊駝天竺鼠
+
+-- ── 無品種天竺鼠（3 個，純 species 無 breed_id）──
+('00000000-7e57-0009-0000-000000000016', '圓滾滾 RoundGP',         'https://i.pravatar.cc/150?u=gp16', 'user',  '__TEST__', '["tw"]'),
+('00000000-7e57-0009-0000-000000000017', '嘰嘰 ChiChi',            'https://i.pravatar.cc/150?u=gp17', 'user',  '__TEST__', '["jp"]'),
+('00000000-7e57-0009-0000-000000000018', '胖嘟嘟 Chubbs',          'https://i.pravatar.cc/150?u=gp18', 'user',  '__TEST__', '["kr"]'),
+
+-- ── 其他齧齒類使用者（8 個）──
+('00000000-7e57-0009-0000-000000000019', '黃金球 GoldenBall',      'https://i.pravatar.cc/150?u=gp19', 'user',  '__TEST__', '["tw"]'),   -- 黃金鼠
+('00000000-7e57-0009-0000-000000000020', '金絲熊 GoldenBear',      'https://i.pravatar.cc/150?u=gp20', 'user',  '__TEST__', '["jp"]'),   -- 黃金鼠
+('00000000-7e57-0009-0000-000000000021', '三線 SanXian',            'https://i.pravatar.cc/150?u=gp21', 'user',  '__TEST__', '["tw"]'),   -- 三線鼠
+('00000000-7e57-0009-0000-000000000022', '一線 YiXian',             'https://i.pravatar.cc/150?u=gp22', 'user',  '__TEST__', '["ru"]'),   -- 一線鼠
+('00000000-7e57-0009-0000-000000000023', '老公公 GrandpaHam',       'https://i.pravatar.cc/150?u=gp23', 'user',  '__TEST__', '["tw"]'),   -- 老公公鼠
+('00000000-7e57-0009-0000-000000000024', '龍貓大人 TotoroSama',     'https://i.pravatar.cc/150?u=gp24', 'user',  '__TEST__', '["jp"]'),   -- 龍貓
+('00000000-7e57-0009-0000-000000000025', '絨絨 FluffyChin',         'https://i.pravatar.cc/150?u=gp25', 'user',  '__TEST__', '["cl"]'),   -- 龍貓
+('00000000-7e57-0009-0000-000000000026', '沙沙 SandGerbil',         'https://i.pravatar.cc/150?u=gp26', 'user',  '__TEST__', '["mn"]'),   -- 沙鼠
+
+-- ── 高階分類使用者（3 個）──
+('00000000-7e57-0009-0000-000000000027', '齧齒代表 RodentRep',      'https://i.pravatar.cc/150?u=gp27', 'user',  '__TEST__', '["tw"]'),   -- 齧齒目 ORDER
+('00000000-7e57-0009-0000-000000000028', '豚鼠科代 CaviiFam',       'https://i.pravatar.cc/150?u=gp28', 'user',  '__TEST__', '["tw"]'),   -- 豚鼠科 FAMILY
+('00000000-7e57-0009-0000-000000000029', '倉鼠科代 CricFam',        'https://i.pravatar.cc/150?u=gp29', 'user',  '__TEST__', '["tw"]'),   -- 倉鼠科 FAMILY
+
+-- ── 複合種使用者（2 個）──
+('00000000-7e57-0009-0000-000000000030', '鼠貓 GPCat',              'https://i.pravatar.cc/150?u=gp30', 'user',  '__TEST__', '["tw"]'),   -- 天竺鼠 + 家貓（跨目）
+('00000000-7e57-0009-0000-000000000031', '鼠鼠龍 GPChin',           'https://i.pravatar.cc/150?u=gp31', 'user',  '__TEST__', '["jp"]'),   -- 天竺鼠 + 龍貓（同目）
+
+-- ── 邊界情境使用者（2 個）──
+('00000000-7e57-0009-0000-000000000032', '老品種鼠 OldBreedGP',     'https://i.pravatar.cc/150?u=gp32', 'user',  '__TEST__', '["tw"]'),   -- legacy breed_name only
+('00000000-7e57-0009-0000-000000000033', '鼠管理員 GPAdmin',        'https://i.pravatar.cc/150?u=gp33', 'admin', '__TEST__', '["tw"]')    -- admin 角色 + 品種
+ON CONFLICT (id) DO NOTHING;
+
+-- 6c. vtuber_traits — 天竺鼠品種 traits（15 人）
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+-- 美國短毛天竺鼠 x3（breed_id set below）
+('00000000-7e57-a0a0-0000-000000000001', '00000000-7e57-0009-0000-000000000001', 5219702, NULL, NULL),
+('00000000-7e57-a0a0-0000-000000000002', '00000000-7e57-0009-0000-000000000002', 5219702, NULL, NULL),
+('00000000-7e57-a0a0-0000-000000000003', '00000000-7e57-0009-0000-000000000003', 5219702, NULL, NULL),
+-- 阿比西尼亞天竺鼠 x2（breed_id set below）
+('00000000-7e57-a0a0-0000-000000000004', '00000000-7e57-0009-0000-000000000004', 5219702, NULL, NULL),
+('00000000-7e57-a0a0-0000-000000000005', '00000000-7e57-0009-0000-000000000005', 5219702, NULL, NULL),
+-- 各品種 x1（breed_id set below）
+('00000000-7e57-a0a0-0000-000000000006', '00000000-7e57-0009-0000-000000000006', 5219702, NULL, NULL),       -- 秘魯天竺鼠
+('00000000-7e57-a0a0-0000-000000000007', '00000000-7e57-0009-0000-000000000007', 5219702, NULL, NULL),       -- 喜樂蒂天竺鼠
+('00000000-7e57-a0a0-0000-000000000008', '00000000-7e57-0009-0000-000000000008', 5219702, NULL, NULL),       -- 泰迪天竺鼠
+('00000000-7e57-a0a0-0000-000000000009', '00000000-7e57-0009-0000-000000000009', 5219702, NULL, NULL),       -- 德塞爾天竺鼠
+('00000000-7e57-a0a0-0000-000000000010', '00000000-7e57-0009-0000-000000000010', 5219702, NULL, NULL),       -- 冠毛天竺鼠
+('00000000-7e57-a0a0-0000-000000000011', '00000000-7e57-0009-0000-000000000011', 5219702, NULL, NULL),       -- 無毛天竺鼠
+('00000000-7e57-a0a0-0000-000000000012', '00000000-7e57-0009-0000-000000000012', 5219702, NULL, NULL),       -- 緞毛美國短毛天竺鼠
+('00000000-7e57-a0a0-0000-000000000013', '00000000-7e57-0009-0000-000000000013', 5219702, NULL, NULL),       -- 雷克斯天竺鼠
+('00000000-7e57-a0a0-0000-000000000014', '00000000-7e57-0009-0000-000000000014', 5219702, NULL, NULL),       -- 白冠毛天竺鼠
+('00000000-7e57-a0a0-0000-000000000015', '00000000-7e57-0009-0000-000000000015', 5219702, NULL, NULL)        -- 羊駝天竺鼠
+ON CONFLICT (id) DO NOTHING;
+
+-- 6d. vtuber_traits — 無品種天竺鼠 + 邊界情境 traits
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+-- 無品種天竺鼠 x3（純 species，不設 breed_id）
+('00000000-7e57-a0a0-0000-000000000016', '00000000-7e57-0009-0000-000000000016', 5219702, NULL, NULL),
+('00000000-7e57-a0a0-0000-000000000017', '00000000-7e57-0009-0000-000000000017', 5219702, NULL, NULL),
+('00000000-7e57-a0a0-0000-000000000018', '00000000-7e57-0009-0000-000000000018', 5219702, NULL, NULL),
+-- 邊界情境
+('00000000-7e57-a0a0-0000-000000000032', '00000000-7e57-0009-0000-000000000032', 5219702, '美國短毛天竺鼠', NULL),       -- legacy breed_name only（不設 breed_id）
+('00000000-7e57-a0a0-0000-000000000033', '00000000-7e57-0009-0000-000000000033', 5219702, NULL, NULL)                    -- admin + breed_id（set below）
+ON CONFLICT (id) DO NOTHING;
+
+-- 6e. vtuber_traits — 其他齧齒類 traits（8 人）
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+('00000000-7e57-a0a1-0000-000000000001', '00000000-7e57-0009-0000-000000000019', 2438482, NULL, NULL),       -- 黃金鼠
+('00000000-7e57-a0a1-0000-000000000002', '00000000-7e57-0009-0000-000000000020', 2438482, NULL, '超級愛跑滾輪'),  -- 黃金鼠
+('00000000-7e57-a0a1-0000-000000000003', '00000000-7e57-0009-0000-000000000021', 2437847, NULL, NULL),       -- 三線鼠
+('00000000-7e57-a0a1-0000-000000000004', '00000000-7e57-0009-0000-000000000022', 2437845, NULL, NULL),       -- 一線鼠
+('00000000-7e57-a0a1-0000-000000000005', '00000000-7e57-0009-0000-000000000023', 2437846, NULL, NULL),       -- 老公公鼠
+('00000000-7e57-a0a1-0000-000000000006', '00000000-7e57-0009-0000-000000000024', 5219944, NULL, NULL),       -- 龍貓
+('00000000-7e57-a0a1-0000-000000000007', '00000000-7e57-0009-0000-000000000025', 5219944, NULL, '超級柔軟'),  -- 龍貓
+('00000000-7e57-a0a1-0000-000000000008', '00000000-7e57-0009-0000-000000000026', 5219721, NULL, NULL)        -- 沙鼠
+ON CONFLICT (id) DO NOTHING;
+
+-- 6f. vtuber_traits — 高階分類 traits（3 人）
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+('00000000-7e57-a0a2-0000-000000000001', '00000000-7e57-0009-0000-000000000027', 8820001, NULL, NULL),       -- 齧齒目 ORDER
+('00000000-7e57-a0a2-0000-000000000002', '00000000-7e57-0009-0000-000000000028', 8820002, NULL, NULL),       -- 豚鼠科 FAMILY
+('00000000-7e57-a0a2-0000-000000000003', '00000000-7e57-0009-0000-000000000029', 8820003, NULL, NULL)        -- 倉鼠科 FAMILY
+ON CONFLICT (id) DO NOTHING;
+
+-- 6g. vtuber_traits — 複合種 traits
+-- 鼠貓：天竺鼠 + 家貓（跨目複合）
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+('00000000-7e57-a0a3-0000-000000000001', '00000000-7e57-0009-0000-000000000030', 5219702, NULL, '天竺鼠型態'),
+('00000000-7e57-a0a3-0000-000000000002', '00000000-7e57-0009-0000-000000000030', 2435099, NULL, '貓咪型態')
+ON CONFLICT (id) DO NOTHING;
+-- 鼠鼠龍：天竺鼠 + 龍貓（同目複合）
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+('00000000-7e57-a0a3-0000-000000000003', '00000000-7e57-0009-0000-000000000031', 5219702, NULL, '天竺鼠外觀'),
+('00000000-7e57-a0a3-0000-000000000004', '00000000-7e57-0009-0000-000000000031', 5219944, NULL, '龍貓毛質')
+ON CONFLICT (id) DO NOTHING;
+
+-- 6h. breed_id 關聯更新（需在 breeds 種子之後執行）
+-- 美國短毛天竺鼠 x3
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='American guinea pig')
+  WHERE id IN ('00000000-7e57-a0a0-0000-000000000001', '00000000-7e57-a0a0-0000-000000000002', '00000000-7e57-a0a0-0000-000000000003');
+-- 阿比西尼亞天竺鼠 x2
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='Abyssinian guinea pig')
+  WHERE id IN ('00000000-7e57-a0a0-0000-000000000004', '00000000-7e57-a0a0-0000-000000000005');
+-- 各品種 x1
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='Peruvian guinea pig')
+  WHERE id = '00000000-7e57-a0a0-0000-000000000006';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='Silkie guinea pig')
+  WHERE id = '00000000-7e57-a0a0-0000-000000000007';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='Teddy guinea pig')
+  WHERE id = '00000000-7e57-a0a0-0000-000000000008';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='Texel guinea pig')
+  WHERE id = '00000000-7e57-a0a0-0000-000000000009';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='Coronet guinea pig')
+  WHERE id = '00000000-7e57-a0a0-0000-000000000010';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='Skinny pig')
+  WHERE id = '00000000-7e57-a0a0-0000-000000000011';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='American Satin guinea pig')
+  WHERE id = '00000000-7e57-a0a0-0000-000000000012';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='Rex guinea pig')
+  WHERE id = '00000000-7e57-a0a0-0000-000000000013';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='White Crested guinea pig')
+  WHERE id = '00000000-7e57-a0a0-0000-000000000014';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='Alpaca guinea pig')
+  WHERE id = '00000000-7e57-a0a0-0000-000000000015';
+-- 邊界情境 breed_id
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=5219702 AND name_en='Coronet guinea pig')
+  WHERE id = '00000000-7e57-a0a0-0000-000000000033';   -- admin + 品種

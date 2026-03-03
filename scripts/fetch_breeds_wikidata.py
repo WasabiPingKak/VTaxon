@@ -77,6 +77,17 @@ SPECIES = [
         'kingdom': 'Animalia', 'phylum': 'Chordata', 'class': 'Mammalia',
         'order': 'Lagomorpha', 'family': 'Leporidae', 'genus': 'Oryctolagus',
     },
+    {
+        'label': '天竺鼠',
+        'qid': 'Q110529959',   # cavy breed
+        'taxon_id': 5219702,   # Cavia porcellus
+        'scientific_name': 'Cavia porcellus (Linnaeus, 1758)',
+        'common_name_zh': '天竺鼠',
+        'taxon_rank': 'SPECIES',
+        'taxon_path': 'Animalia|Chordata|Mammalia|Rodentia|Caviidae|Cavia|Cavia porcellus',
+        'kingdom': 'Animalia', 'phylum': 'Chordata', 'class': 'Mammalia',
+        'order': 'Rodentia', 'family': 'Caviidae', 'genus': 'Cavia',
+    },
 ]
 
 # Static Taiwan Traditional Chinese names for rabbit breeds.
@@ -230,6 +241,81 @@ RABBIT_ZH_TW = {
     'Mecklenburger Schecke': '梅克倫堡花斑兔',
 }
 
+# Static Taiwan Traditional Chinese names for guinea pig breeds.
+# Sources: 台灣天竺鼠飼養社群, ARBA 品種標準, zh.wikipedia.
+# Key = English breed name (must match Wikidata label or manual list).
+GUINEA_PIG_ZH_TW = {
+    # --- ARBA 認可品種 (13) ---
+    'Abyssinian guinea pig': '阿比西尼亞天竺鼠',
+    'Abyssinian': '阿比西尼亞天竺鼠',
+    'Abyssinian Satin guinea pig': '緞毛阿比西尼亞天竺鼠',
+    'Abyssinian Satin': '緞毛阿比西尼亞天竺鼠',
+    'American guinea pig': '美國短毛天竺鼠',
+    'American': '美國短毛天竺鼠',
+    'American Satin guinea pig': '緞毛美國短毛天竺鼠',
+    'American Satin': '緞毛美國短毛天竺鼠',
+    'Coronet guinea pig': '冠毛天竺鼠',
+    'Coronet': '冠毛天竺鼠',
+    'Peruvian guinea pig': '秘魯天竺鼠',
+    'Peruvian': '秘魯天竺鼠',
+    'Peruvian Satin guinea pig': '緞毛秘魯天竺鼠',
+    'Peruvian Satin': '緞毛秘魯天竺鼠',
+    'Silkie guinea pig': '喜樂蒂天竺鼠',
+    'Silkie': '喜樂蒂天竺鼠',
+    'Silkie Satin guinea pig': '緞毛喜樂蒂天竺鼠',
+    'Silkie Satin': '緞毛喜樂蒂天竺鼠',
+    'Teddy guinea pig': '泰迪天竺鼠',
+    'Teddy': '泰迪天竺鼠',
+    'Teddy Satin guinea pig': '緞毛泰迪天竺鼠',
+    'Teddy Satin': '緞毛泰迪天竺鼠',
+    'Texel guinea pig': '德塞爾天竺鼠',
+    'Texel': '德塞爾天竺鼠',
+    'White Crested guinea pig': '白冠毛天竺鼠',
+    'White Crested': '白冠毛天竺鼠',
+    # --- 常見非 ARBA 品種 (7) ---
+    'Skinny guinea pig': '無毛天竺鼠',
+    'Skinny pig': '無毛天竺鼠',
+    'Skinny': '無毛天竺鼠',
+    'Baldwin guinea pig': '鮑德溫天竺鼠',
+    'Baldwin': '鮑德溫天竺鼠',
+    'Lunkarya guinea pig': '倫卡瑞亞天竺鼠',
+    'Lunkarya': '倫卡瑞亞天竺鼠',
+    'Sheba guinea pig': '席巴天竺鼠',
+    'Sheba': '席巴天竺鼠',
+    'Sheba Mini Yak': '席巴天竺鼠',
+    'Alpaca guinea pig': '羊駝天竺鼠',
+    'Alpaca': '羊駝天竺鼠',
+    'Merino guinea pig': '美利諾天竺鼠',
+    'Merino': '美利諾天竺鼠',
+    'Rex guinea pig': '雷克斯天竺鼠',
+    'Rex': '雷克斯天竺鼠',
+}
+
+# Manual guinea pig breeds not captured by Wikidata SPARQL.
+# Wikidata coverage for guinea pig breeds is extremely poor.
+GUINEA_PIG_MANUAL_BREEDS = [
+    {'name_en': 'American guinea pig', 'name_zh': '美國短毛天竺鼠', 'wikidata_id': 'Q4744656'},
+    {'name_en': 'Abyssinian guinea pig', 'name_zh': '阿比西尼亞天竺鼠', 'wikidata_id': 'Q4669703'},
+    {'name_en': 'Peruvian guinea pig', 'name_zh': '秘魯天竺鼠', 'wikidata_id': 'Q7170924'},
+    {'name_en': 'Silkie guinea pig', 'name_zh': '喜樂蒂天竺鼠', 'wikidata_id': 'Q7515450'},
+    {'name_en': 'Teddy guinea pig', 'name_zh': '泰迪天竺鼠', 'wikidata_id': 'Q7694658'},
+    {'name_en': 'Texel guinea pig', 'name_zh': '德塞爾天竺鼠', 'wikidata_id': 'Q7707786'},
+    {'name_en': 'Coronet guinea pig', 'name_zh': '冠毛天竺鼠', 'wikidata_id': 'Q5172755'},
+    {'name_en': 'White Crested guinea pig', 'name_zh': '白冠毛天竺鼠', 'wikidata_id': 'Q8003637'},
+    {'name_en': 'American Satin guinea pig', 'name_zh': '緞毛美國短毛天竺鼠', 'wikidata_id': None},
+    {'name_en': 'Abyssinian Satin guinea pig', 'name_zh': '緞毛阿比西尼亞天竺鼠', 'wikidata_id': None},
+    {'name_en': 'Peruvian Satin guinea pig', 'name_zh': '緞毛秘魯天竺鼠', 'wikidata_id': None},
+    {'name_en': 'Silkie Satin guinea pig', 'name_zh': '緞毛喜樂蒂天竺鼠', 'wikidata_id': None},
+    {'name_en': 'Teddy Satin guinea pig', 'name_zh': '緞毛泰迪天竺鼠', 'wikidata_id': None},
+    {'name_en': 'Skinny pig', 'name_zh': '無毛天竺鼠', 'wikidata_id': 'Q2292658'},
+    {'name_en': 'Baldwin guinea pig', 'name_zh': '鮑德溫天竺鼠', 'wikidata_id': None},
+    {'name_en': 'Lunkarya guinea pig', 'name_zh': '倫卡瑞亞天竺鼠', 'wikidata_id': 'Q1876543'},
+    {'name_en': 'Sheba guinea pig', 'name_zh': '席巴天竺鼠', 'wikidata_id': None},
+    {'name_en': 'Alpaca guinea pig', 'name_zh': '羊駝天竺鼠', 'wikidata_id': None},
+    {'name_en': 'Merino guinea pig', 'name_zh': '美利諾天竺鼠', 'wikidata_id': None},
+    {'name_en': 'Rex guinea pig', 'name_zh': '雷克斯天竺鼠', 'wikidata_id': None},
+]
+
 # Manual rabbit breeds not captured by Wikidata SPARQL (P31≠Q12045584).
 # These are important ARBA/BRC breeds that Wikidata classifies differently.
 RABBIT_MANUAL_BREEDS = [
@@ -259,6 +345,18 @@ RABBIT_MANUAL_BREEDS = [
     {'name_en': 'Mini Lion Lop', 'name_zh': '迷你獅子垂耳兔', 'wikidata_id': 'Q6864146'},
     {'name_en': 'Dwarf Lop', 'name_zh': '侏儒垂耳兔', 'wikidata_id': 'Q3040700'},
 ]
+
+# Species-specific static name config: taxon_id → (zh_dict, suffixes_to_strip_or_add)
+_SPECIES_STATIC_CONFIG = {
+    2436940: (RABBIT_ZH_TW, ['rabbit', 'Rabbit']),
+    5219702: (GUINEA_PIG_ZH_TW, ['guinea pig', 'Guinea pig', 'cavy']),
+}
+
+# Manual breeds config: breed class QID → manual breed list
+_MANUAL_BREEDS_MAP = {
+    'Q12045584': RABBIT_MANUAL_BREEDS,
+    'Q110529959': GUINEA_PIG_MANUAL_BREEDS,
+}
 
 # SPARQL query template
 SPARQL_TEMPLATE = """
@@ -326,10 +424,11 @@ def fetch_breeds(species_config):
             'wiki_tw': None,  # will be filled by resolve step
         })
 
-    # Merge manual breeds for rabbit (not found in SPARQL due to P31 mismatch)
-    if species_config['qid'] == 'Q12045584':
+    # Merge manual breeds (not found in SPARQL due to P31 mismatch)
+    manual_list = _MANUAL_BREEDS_MAP.get(qid, [])
+    if manual_list:
         manual_added = 0
-        for mb in RABBIT_MANUAL_BREEDS:
+        for mb in manual_list:
             if mb['name_en'] not in seen:
                 breeds.append({
                     'taxon_id': species_config['taxon_id'],
@@ -488,32 +587,47 @@ def resolve_taiwan_names(breeds):
     print(f"  Applied zh-tw names to {applied} breeds", file=sys.stderr)
 
 
-def _lookup_static_zh(name_en):
+def _match_in_dict(name_en, zh_dict, suffixes):
+    """Try to find name_en in zh_dict with flexible suffix matching.
+
+    Tries: exact match → without suffix → with first suffix appended.
+    """
+    if name_en in zh_dict:
+        return zh_dict[name_en]
+    # Try removing known suffixes
+    for suffix in suffixes:
+        full_suffix = ' ' + suffix
+        if name_en.endswith(full_suffix):
+            base = name_en[:-len(full_suffix)]
+            if base in zh_dict:
+                return zh_dict[base]
+    # Try adding first suffix
+    if suffixes:
+        with_suffix = name_en + ' ' + suffixes[0]
+        if with_suffix in zh_dict:
+            return zh_dict[with_suffix]
+    return None
+
+
+def _lookup_static_zh(name_en, taxon_id=None):
     """Look up static Chinese name with flexible matching.
 
-    Tries: exact match → without ' rabbit'/' Rabbit' suffix → with ' rabbit' suffix.
+    Only searches the species-specific dict for the given taxon_id.
+    Names like 'Abyssinian' or 'Rex' have different meanings across species,
+    so cross-species fallback is intentionally NOT done.
     """
-    if name_en in RABBIT_ZH_TW:
-        return RABBIT_ZH_TW[name_en]
-    # Try removing trailing " rabbit" / " Rabbit"
-    for suffix in (' rabbit', ' Rabbit'):
-        if name_en.endswith(suffix):
-            base = name_en[:-len(suffix)]
-            if base in RABBIT_ZH_TW:
-                return RABBIT_ZH_TW[base]
-    # Try adding " rabbit"
-    with_rabbit = name_en + ' rabbit'
-    if with_rabbit in RABBIT_ZH_TW:
-        return RABBIT_ZH_TW[with_rabbit]
+    if taxon_id and taxon_id in _SPECIES_STATIC_CONFIG:
+        zh_dict, suffixes = _SPECIES_STATIC_CONFIG[taxon_id]
+        return _match_in_dict(name_en, zh_dict, suffixes)
     return None
 
 
 def apply_static_overrides(all_breeds):
-    """Apply static Taiwan Chinese name overrides for rabbit breeds."""
+    """Apply static Taiwan Chinese name overrides for all species with static dicts."""
     applied = 0
     for b in all_breeds:
         name_en = b.get('name_en', '')
-        zh = _lookup_static_zh(name_en)
+        zh = _lookup_static_zh(name_en, b.get('taxon_id'))
         if zh:
             b['static_zh'] = zh
             applied += 1

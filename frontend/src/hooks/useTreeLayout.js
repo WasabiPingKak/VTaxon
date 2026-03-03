@@ -6,7 +6,7 @@ import { buildTree, buildFictionalTree } from '../lib/treeUtils';
 const NODE_DX = 110;   // base horizontal spacing (used as separation denominator)
 const NODE_DY = 180;   // vertical spacing between depth levels
 const GRID_THRESHOLD = 5;  // vtuber count above which grid layout kicks in
-const GRID_COLS = 6;
+const GRID_COLS = 5;
 const GRID_CELL_W = 90;   // minimum grid cell width
 const GRID_CELL_H = 80;
 
