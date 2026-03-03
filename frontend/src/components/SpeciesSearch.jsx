@@ -322,7 +322,7 @@ function SpeciesGroup({ group, onSelect, familyColor }) {
   );
 }
 
-export default function SpeciesSearch({ onSelect, onCancel }) {
+export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -379,6 +379,7 @@ export default function SpeciesSearch({ onSelect, onCancel }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="搜尋物種或品種（例如：柴犬、布偶貓、貓、狼）"
+          autoFocus={autoFocus}
           style={{
             flex: 1, padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '4px', background: '#1a2433', color: '#e2e8f0',

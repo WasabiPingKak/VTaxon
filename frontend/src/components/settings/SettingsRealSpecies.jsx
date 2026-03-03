@@ -276,10 +276,17 @@ export default function SettingsRealSpecies() {
   const { addToast } = useToast();
   const [traits, setTraits] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
+  const searchRef = useRef(null);
 
   useEffect(() => {
     if (user) loadTraits();
   }, [user]);
+
+  useEffect(() => {
+    if (showSearch && searchRef.current) {
+      searchRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showSearch]);
 
   async function loadTraits() {
     try {
@@ -409,8 +416,8 @@ export default function SettingsRealSpecies() {
       )}
 
       {showSearch && (
-        <div style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <SpeciesSearch onSelect={handleAddTrait} onCancel={() => setShowSearch(false)} />
+        <div ref={searchRef} style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <SpeciesSearch onSelect={handleAddTrait} onCancel={() => setShowSearch(false)} autoFocus />
         </div>
       )}
     </div>

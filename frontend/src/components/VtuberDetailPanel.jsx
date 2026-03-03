@@ -285,7 +285,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
           {/* Focus button */}
           {onFocus && (
             <div style={{ marginBottom: '16px' }}>
-              <button type="button" onClick={() => { onFocus(entry.user_id); handleClose(); }} style={{
+              <button type="button" onClick={() => { onFocus(entry); handleClose(); }} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 width: '100%', padding: '8px 16px', borderRadius: '6px',
                 fontSize: '0.9em',

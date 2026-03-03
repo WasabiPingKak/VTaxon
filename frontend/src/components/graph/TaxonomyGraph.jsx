@@ -703,10 +703,37 @@ export default function TaxonomyGraph({ currentUser }) {
     }, 100);
   }, [focusedEntries, focusedSpeciesIdx, entries, fictionalEntries, focusedUserId, entryToPathKey]);
 
-  const handleSetFocus = useCallback((userId) => {
+  const handleSetFocus = useCallback((entry) => {
+    const userId = entry.user_id;
     setFocusedUserId(userId);
-    setFocusedEntryKey(null);
-  }, []);
+    setFocusedEntryKey(entryToKey(entry));
+
+    // Ensure paths are expanded so the node exists in the layout
+    setExpandedSet(prev => {
+      const next = new Set(prev);
+      const userPaths = computeHighlightPaths(entries || [], userId);
+      let changed = false;
+      for (const p of userPaths) {
+        if (!next.has(p)) { next.add(p); changed = true; }
+      }
+      if (fictionalEntries) {
+        const fictPaths = computeFictionalHighlightPaths(fictionalEntries, userId);
+        for (const p of fictPaths) {
+          if (!next.has(p)) { next.add(p); changed = true; }
+        }
+      }
+      return changed ? next : prev;
+    });
+
+    // Pan camera to the entry's node after layout update
+    setTimeout(() => {
+      const pathKey = entryToPathKey(entry);
+      const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
+      if (targetNode) {
+        canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
+      }
+    }, 200);
+  }, [entries, fictionalEntries, entryToPathKey]);
 
   // All entries for the selected vtuber (for trait tabs in detail panel, both real + fictional)
   const selectedVtuberEntries = useMemo(() => {
