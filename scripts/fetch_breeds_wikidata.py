@@ -230,6 +230,36 @@ RABBIT_ZH_TW = {
     'Mecklenburger Schecke': '梅克倫堡花斑兔',
 }
 
+# Manual rabbit breeds not captured by Wikidata SPARQL (P31≠Q12045584).
+# These are important ARBA/BRC breeds that Wikidata classifies differently.
+RABBIT_MANUAL_BREEDS = [
+    {'name_en': 'Netherland Dwarf', 'name_zh': '荷蘭侏儒兔', 'wikidata_id': 'Q9677'},
+    {'name_en': 'English Angora rabbit', 'name_zh': '英國安哥拉兔', 'wikidata_id': 'Q5379044'},
+    {'name_en': 'Giant Angora rabbit', 'name_zh': '巨型安哥拉兔', 'wikidata_id': 'Q5558319'},
+    {'name_en': 'Satin Angora rabbit', 'name_zh': '緞毛安哥拉兔', 'wikidata_id': 'Q7427082'},
+    {'name_en': 'Britannia Petite', 'name_zh': '不列塔尼亞小兔', 'wikidata_id': 'Q4966684'},
+    {'name_en': 'Champagne d\'Argent', 'name_zh': '香檳銀兔', 'wikidata_id': 'Q2957003'},
+    {'name_en': 'Cinnamon rabbit', 'name_zh': '肉桂兔', 'wikidata_id': 'Q5120826'},
+    {'name_en': 'Crème d\'Argent', 'name_zh': '奶油銀兔', 'wikidata_id': 'Q3002879'},
+    {'name_en': 'English Lop', 'name_zh': '英國垂耳兔', 'wikidata_id': 'Q3055775'},
+    {'name_en': 'Florida White rabbit', 'name_zh': '佛羅里達白兔', 'wikidata_id': 'Q5462709'},
+    {'name_en': 'French Lop', 'name_zh': '法國垂耳兔', 'wikidata_id': 'Q3089451'},
+    {'name_en': 'Lilac rabbit', 'name_zh': '丁香兔', 'wikidata_id': 'Q6547912'},
+    {'name_en': 'Mini Satin rabbit', 'name_zh': '迷你緞毛兔', 'wikidata_id': 'Q6864210'},
+    {'name_en': 'Palomino rabbit', 'name_zh': '帕洛米諾兔', 'wikidata_id': 'Q7128584'},
+    {'name_en': 'Silver rabbit', 'name_zh': '銀兔', 'wikidata_id': 'Q7515897'},
+    {'name_en': 'Silver Fox rabbit', 'name_zh': '銀狐兔', 'wikidata_id': 'Q7515868'},
+    {'name_en': 'Silver Marten rabbit', 'name_zh': '銀貂兔', 'wikidata_id': 'Q7515875'},
+    {'name_en': 'Tan rabbit', 'name_zh': '棕褐兔', 'wikidata_id': 'Q3514456'},
+    {'name_en': 'Thrianta rabbit', 'name_zh': '崔安塔兔', 'wikidata_id': 'Q3530698'},
+    {'name_en': 'German Lop', 'name_zh': '德國垂耳兔', 'wikidata_id': 'Q1512483'},
+    {'name_en': 'Cashmere Lop', 'name_zh': '喀什米爾垂耳兔', 'wikidata_id': 'Q5049148'},
+    {'name_en': 'Continental Giant rabbit', 'name_zh': '大陸巨兔', 'wikidata_id': 'Q5164645'},
+    {'name_en': 'Lion Lop', 'name_zh': '獅子垂耳兔', 'wikidata_id': 'Q6554942'},
+    {'name_en': 'Mini Lion Lop', 'name_zh': '迷你獅子垂耳兔', 'wikidata_id': 'Q6864146'},
+    {'name_en': 'Dwarf Lop', 'name_zh': '侏儒垂耳兔', 'wikidata_id': 'Q3040700'},
+]
+
 # SPARQL query template
 SPARQL_TEMPLATE = """
 SELECT ?item ?itemLabel ?itemLabel_zhtw ?itemLabel_zh WHERE {{
@@ -295,6 +325,25 @@ def fetch_breeds(species_config):
             'wikidata_id': wikidata_id,
             'wiki_tw': None,  # will be filled by resolve step
         })
+
+    # Merge manual breeds for rabbit (not found in SPARQL due to P31 mismatch)
+    if species_config['qid'] == 'Q12045584':
+        manual_added = 0
+        for mb in RABBIT_MANUAL_BREEDS:
+            if mb['name_en'] not in seen:
+                breeds.append({
+                    'taxon_id': species_config['taxon_id'],
+                    'name_en': mb['name_en'],
+                    'wikidata_zhtw': None,
+                    'wikidata_zh': None,
+                    'wikidata_id': mb.get('wikidata_id'),
+                    'wiki_tw': None,
+                    'static_zh': mb.get('name_zh'),
+                })
+                seen.add(mb['name_en'])
+                manual_added += 1
+        if manual_added:
+            print(f"  + {manual_added} manual breeds added", file=sys.stderr)
 
     print(f"  Found {len(breeds)} breeds", file=sys.stderr)
     return breeds

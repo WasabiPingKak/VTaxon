@@ -3453,7 +3453,7 @@ ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id
 INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2440886, 'Žemaitukas', NULL, 'Q393792', 'wikidata')
 ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
 
--- 家兔 (taxon_id=2436940): 117 品種, 88 有中文名
+-- 家兔 (taxon_id=2436940): 129 品種, 100 有中文名
 INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Alaska rabbit', '阿拉斯加兔', 'Q1595990', 'wikidata')
 ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
 INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Altex rabbit', NULL, 'Q21500108', 'wikidata')
@@ -3687,4 +3687,28 @@ ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id
 INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Zemmouri', NULL, 'Q56303291', 'wikidata')
 ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
 INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Český luštič', NULL, 'Q1726917', 'wikidata')
+ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
+INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Netherland Dwarf', '荷蘭侏儒兔', 'Q9677', 'wikidata')
+ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
+INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'English Angora rabbit', '英國安哥拉兔', 'Q5379044', 'wikidata')
+ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
+INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Giant Angora rabbit', '巨型安哥拉兔', 'Q5558319', 'wikidata')
+ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
+INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Satin Angora rabbit', '緞毛安哥拉兔', 'Q7427082', 'wikidata')
+ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
+INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Champagne d''Argent', '香檳銀兔', 'Q2957003', 'wikidata')
+ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
+INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Crème d''Argent', '奶油銀兔', 'Q3002879', 'wikidata')
+ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
+INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Florida White rabbit', '佛羅里達白兔', 'Q5462709', 'wikidata')
+ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
+INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Mini Satin rabbit', '迷你緞毛兔', 'Q6864210', 'wikidata')
+ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
+INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Silver Marten rabbit', '銀貂兔', 'Q7515875', 'wikidata')
+ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
+INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Thrianta rabbit', '崔安塔兔', 'Q3530698', 'wikidata')
+ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
+INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Lion Lop', '獅子垂耳兔', 'Q6554942', 'wikidata')
+ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);
+INSERT INTO breeds (taxon_id, name_en, name_zh, wikidata_id, source) VALUES (2436940, 'Dwarf Lop', '侏儒垂耳兔', 'Q3040700', 'wikidata')
 ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id, source = EXCLUDED.source, name_zh = COALESCE(EXCLUDED.name_zh, breeds.name_zh);

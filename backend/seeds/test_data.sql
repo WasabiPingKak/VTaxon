@@ -369,3 +369,200 @@ INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
 ('00000000-7e57-a080-0000-000000000009', '00000000-7e57-0007-0000-000000000009', 8800009, NULL, NULL),  -- 擬態章魚 SPECIES
 ('00000000-7e57-a080-0000-000000000010', '00000000-7e57-0007-0000-000000000010', 8800010, NULL, NULL)   -- 船蛸 SPECIES
 ON CONFLICT (id) DO NOTHING;
+
+
+-- ============================================================
+-- 5. 兔科 Leporidae — 品種兔 + 野兔 + 高階分類 + 複合種
+-- 測試情境：
+--   a) >20 截斷（25 個穴兔使用者）
+--   b) 品種多樣性（15 種品種 + 同品種聚合 3x 荷蘭垂耳兔）
+--   c) 無品種（5 人）、legacy breed_name（1 人）、breed_id+breed_name 共存（1 人）
+--   d) admin 角色、無頭像、多國旗、trait_note
+--   e) 野兔 — 不同屬（兔屬 Lepus、林兔屬 Sylvilagus）
+--   f) 高階分類（兔形目 ORDER、兔科 FAMILY、穴兔屬/兔屬 GENUS）
+--   g) 複合種（兔+貓跨科、兔+月兔虛構、穴兔+雪兔同科異屬）
+-- ============================================================
+
+-- 5a. species_cache — 兔科相關分類
+INSERT INTO species_cache (taxon_id, scientific_name, common_name_en, common_name_zh, taxon_rank, taxon_path, kingdom, phylum, class, order_, family, genus, path_zh) VALUES
+-- 穴兔（家兔母種，品種掛載點）
+(2436940, 'Oryctolagus cuniculus',    'European Rabbit',     '穴兔',       'SPECIES', 'Animalia|Chordata|Mammalia|Lagomorpha|Leporidae|Oryctolagus|Oryctolagus cuniculus', 'Animalia','Chordata','Mammalia','Lagomorpha','Leporidae','Oryctolagus', '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"兔形目","family":"兔科","genus":"穴兔屬"}'),
+-- 兔科 FAMILY
+(8810001, 'Leporidae',                'Hares and Rabbits',   '兔科',       'FAMILY',  'Animalia|Chordata|Mammalia|Lagomorpha|Leporidae',                                    'Animalia','Chordata','Mammalia','Lagomorpha','Leporidae', NULL,           '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"兔形目","family":"兔科"}'),
+-- 兔形目 ORDER
+(8810002, 'Lagomorpha',               'Lagomorphs',          '兔形目',     'ORDER',   'Animalia|Chordata|Mammalia|Lagomorpha',                                               'Animalia','Chordata','Mammalia','Lagomorpha', NULL, NULL,                '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"兔形目"}'),
+-- 穴兔屬 GENUS
+(8810003, 'Oryctolagus',              NULL,                  '穴兔屬',     'GENUS',   'Animalia|Chordata|Mammalia|Lagomorpha|Leporidae|Oryctolagus',                         'Animalia','Chordata','Mammalia','Lagomorpha','Leporidae','Oryctolagus', '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"兔形目","family":"兔科","genus":"穴兔屬"}'),
+-- 兔屬 GENUS（與穴兔屬同科不同屬）
+(8810004, 'Lepus',                    NULL,                  '兔屬',       'GENUS',   'Animalia|Chordata|Mammalia|Lagomorpha|Leporidae|Lepus',                               'Animalia','Chordata','Mammalia','Lagomorpha','Leporidae','Lepus',       '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"兔形目","family":"兔科","genus":"兔屬"}'),
+-- 歐洲野兔 SPECIES（兔屬）
+(8810005, 'Lepus europaeus',          'European Hare',       '歐洲野兔',   'SPECIES', 'Animalia|Chordata|Mammalia|Lagomorpha|Leporidae|Lepus|Lepus europaeus',                'Animalia','Chordata','Mammalia','Lagomorpha','Leporidae','Lepus',       '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"兔形目","family":"兔科","genus":"兔屬"}'),
+-- 雪兔 SPECIES（兔屬，用於複合種測試）
+(8810006, 'Lepus timidus',            'Mountain Hare',       '雪兔',       'SPECIES', 'Animalia|Chordata|Mammalia|Lagomorpha|Leporidae|Lepus|Lepus timidus',                  'Animalia','Chordata','Mammalia','Lagomorpha','Leporidae','Lepus',       '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"兔形目","family":"兔科","genus":"兔屬"}'),
+-- 東部棉尾兔 SPECIES（林兔屬，第三個屬）
+(8810007, 'Sylvilagus floridanus',    'Eastern Cottontail',  '東部棉尾兔', 'SPECIES', 'Animalia|Chordata|Mammalia|Lagomorpha|Leporidae|Sylvilagus|Sylvilagus floridanus',    'Animalia','Chordata','Mammalia','Lagomorpha','Leporidae','Sylvilagus',  '{"kingdom":"動物界","phylum":"脊索動物門","class":"哺乳綱","order":"兔形目","family":"兔科","genus":"林兔屬"}')
+ON CONFLICT (taxon_id) DO UPDATE SET
+  common_name_zh = EXCLUDED.common_name_zh,
+  path_zh = EXCLUDED.path_zh;
+
+-- 5b. fictional_species — 月兔（複合種測試用）
+INSERT INTO fictional_species (id, name, name_zh, origin, sub_origin, category_path, description) VALUES
+(99001, 'Moon Rabbit', '月兔', '東方神話', '中國神話', '東方神話|中國神話|月兔', '傳說居住在月亮上的兔子，中國神話中在月宮搗製不死之藥，日本神話中則搗年糕')
+ON CONFLICT (id) DO NOTHING;
+
+-- 5c. users — 兔科測試使用者
+INSERT INTO users (id, display_name, avatar_url, role, organization, country_flags) VALUES
+-- ── 穴兔品種使用者（25 個，測試 >20 截斷）──
+-- 荷蘭垂耳兔 x3（同品種聚合測試）
+('00000000-7e57-0008-0000-000000000001', '垂耳妹 LopChan',        'https://i.pravatar.cc/150?u=rabbit01', 'user',  '__TEST__', '["tw"]'),
+('00000000-7e57-0008-0000-000000000002', '荷蘭寶 DutchBun',       'https://i.pravatar.cc/150?u=rabbit02', 'user',  '__TEST__', '["nl"]'),
+('00000000-7e57-0008-0000-000000000003', '垂耳萌 LopMoe',         'https://i.pravatar.cc/150?u=rabbit03', 'user',  '__TEST__', '["jp"]'),
+-- 荷蘭侏儒兔 x2
+('00000000-7e57-0008-0000-000000000004', '侏儒兔 DwarfBun',       'https://i.pravatar.cc/150?u=rabbit04', 'user',  '__TEST__', '["tw"]'),
+('00000000-7e57-0008-0000-000000000005', '小小兔 TinyBun',        'https://i.pravatar.cc/150?u=rabbit05', 'user',  '__TEST__', '["jp"]'),
+-- 各品種各 1 人
+('00000000-7e57-0008-0000-000000000006', '獅子丸 LionMaru',       'https://i.pravatar.cc/150?u=rabbit06', 'user',  '__TEST__', '["tw"]'),   -- 獅子兔
+('00000000-7e57-0008-0000-000000000007', '迷你力克 MiniRexChan',  'https://i.pravatar.cc/150?u=rabbit07', 'user',  '__TEST__', '["us"]'),   -- 迷你力克斯兔
+('00000000-7e57-0008-0000-000000000008', '安哥拉毛 AngoraFluff',  'https://i.pravatar.cc/150?u=rabbit08', 'user',  '__TEST__', '["gb"]'),   -- 安哥拉兔
+('00000000-7e57-0008-0000-000000000009', '道奇醬 DodgeChan',      'https://i.pravatar.cc/150?u=rabbit09', 'user',  '__TEST__', '["tw"]'),   -- 道奇兔
+('00000000-7e57-0008-0000-000000000010', '佛萊明 Fleming',        'https://i.pravatar.cc/150?u=rabbit10', 'user',  '__TEST__', '["be"]'),   -- 佛萊明巨兔
+('00000000-7e57-0008-0000-000000000011', '海棠眼 HototEye',       'https://i.pravatar.cc/150?u=rabbit11', 'user',  '__TEST__', '["fr"]'),   -- 海棠兔
+('00000000-7e57-0008-0000-000000000012', '喜馬拉雅 HimaChan',     'https://i.pravatar.cc/150?u=rabbit12', 'user',  '__TEST__', '["in"]'),   -- 喜馬拉雅兔
+('00000000-7e57-0008-0000-000000000013', '波蘭白 PolishWhite',    'https://i.pravatar.cc/150?u=rabbit13', 'user',  '__TEST__', '["pl"]'),   -- 波蘭兔
+('00000000-7e57-0008-0000-000000000014', '加州兔 CaliBun',        'https://i.pravatar.cc/150?u=rabbit14', 'user',  '__TEST__', '["us"]'),   -- 加州兔
+('00000000-7e57-0008-0000-000000000015', '紐西蘭 NZBun',          'https://i.pravatar.cc/150?u=rabbit15', 'user',  '__TEST__', '["nz"]'),   -- 紐西蘭白兔
+-- 無品種穴兔 x5（純 species，無 breed_id）
+('00000000-7e57-0008-0000-000000000016', '白兔先生 MrWhite',      'https://i.pravatar.cc/150?u=rabbit16', 'user',  '__TEST__', '["tw"]'),
+('00000000-7e57-0008-0000-000000000017', '兔兔 BunBun',           'https://i.pravatar.cc/150?u=rabbit17', 'user',  '__TEST__', '["jp"]'),
+('00000000-7e57-0008-0000-000000000018', '蹦蹦 Bounce',           'https://i.pravatar.cc/150?u=rabbit18', 'user',  '__TEST__', '["kr"]'),
+('00000000-7e57-0008-0000-000000000019', '兔耳 LongEar',          'https://i.pravatar.cc/150?u=rabbit19', 'user',  '__TEST__', '["tw"]'),
+('00000000-7e57-0008-0000-000000000020', '胖兔 Chubby',           'https://i.pravatar.cc/150?u=rabbit20', 'user',  '__TEST__', '["us"]'),
+-- 邊界情境使用者
+('00000000-7e57-0008-0000-000000000021', '老品種兔 OldBreed',     'https://i.pravatar.cc/150?u=rabbit21', 'user',  '__TEST__', '["tw"]'),   -- legacy breed_name only（無 breed_id）
+('00000000-7e57-0008-0000-000000000022', '兔管理員 BunAdmin',     'https://i.pravatar.cc/150?u=rabbit22', 'admin', '__TEST__', '["tw"]'),   -- admin 角色 + 品種
+('00000000-7e57-0008-0000-000000000023', '月影兔 MoonBun',        NULL,                                   'user',  '__TEST__', '["tw"]'),   -- NULL 頭像 + 品種
+('00000000-7e57-0008-0000-000000000024', '國際兔 GlobalBun',      'https://i.pravatar.cc/150?u=rabbit24', 'user',  '__TEST__', '["tw","jp","us","nl","de"]'),  -- 多國旗
+('00000000-7e57-0008-0000-000000000025', '兔備注 NoteBun',        'https://i.pravatar.cc/150?u=rabbit25', 'user',  '__TEST__', '["tw"]'),   -- breed_id + breed_name 共存
+
+-- ── 野兔使用者（3 個，不同屬測試） ──
+('00000000-7e57-0008-0000-000000000026', '歐兔 EuroHare',         'https://i.pravatar.cc/150?u=rabbit26', 'user',  '__TEST__', '["de"]'),   -- 歐洲野兔 Lepus
+('00000000-7e57-0008-0000-000000000027', '雪兔兔 SnowHare',       'https://i.pravatar.cc/150?u=rabbit27', 'user',  '__TEST__', '["fi"]'),   -- 雪兔 Lepus
+('00000000-7e57-0008-0000-000000000028', '棉尾 Cottontail',       'https://i.pravatar.cc/150?u=rabbit28', 'user',  '__TEST__', '["us"]'),   -- 東部棉尾兔 Sylvilagus
+
+-- ── 高階分類使用者（4 個，FAMILY/ORDER/GENUS）──
+('00000000-7e57-0008-0000-000000000029', '兔科代表 LepoFam',      'https://i.pravatar.cc/150?u=rabbit29', 'user',  '__TEST__', '["tw"]'),   -- 兔科 FAMILY
+('00000000-7e57-0008-0000-000000000030', '兔目代表 LagoOrder',    'https://i.pravatar.cc/150?u=rabbit30', 'user',  '__TEST__', '["tw"]'),   -- 兔形目 ORDER
+('00000000-7e57-0008-0000-000000000031', '穴兔屬通 OryGeneric',   'https://i.pravatar.cc/150?u=rabbit31', 'user',  '__TEST__', '["tw"]'),   -- 穴兔屬 GENUS
+('00000000-7e57-0008-0000-000000000032', '兔屬通 LepusGeneric',   'https://i.pravatar.cc/150?u=rabbit32', 'user',  '__TEST__', '["tw"]'),   -- 兔屬 GENUS
+
+-- ── 複合種使用者（3 個）──
+('00000000-7e57-0008-0000-000000000033', '貓兔 CatBun',           'https://i.pravatar.cc/150?u=rabbit33', 'user',  '__TEST__', '["tw"]'),   -- 穴兔 + 家貓（跨科）
+('00000000-7e57-0008-0000-000000000034', '月兔精 MoonSpirit',     'https://i.pravatar.cc/150?u=rabbit34', 'user',  '__TEST__', '["jp"]'),   -- 穴兔 + 月兔虛構（real + fictional）
+('00000000-7e57-0008-0000-000000000035', '雙兔 TwinBun',          'https://i.pravatar.cc/150?u=rabbit35', 'user',  '__TEST__', '["tw"]')    -- 穴兔 + 雪兔（同科異屬）
+ON CONFLICT (id) DO NOTHING;
+
+-- 5d. vtuber_traits — 穴兔品種 traits（25 人）
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+-- 荷蘭垂耳兔 x3（breed_id set below）
+('00000000-7e57-a090-0000-000000000001', '00000000-7e57-0008-0000-000000000001', 2436940, NULL, NULL),
+('00000000-7e57-a090-0000-000000000002', '00000000-7e57-0008-0000-000000000002', 2436940, NULL, NULL),
+('00000000-7e57-a090-0000-000000000003', '00000000-7e57-0008-0000-000000000003', 2436940, NULL, NULL),
+-- 荷蘭侏儒兔 x2（breed_id set below）
+('00000000-7e57-a090-0000-000000000004', '00000000-7e57-0008-0000-000000000004', 2436940, NULL, NULL),
+('00000000-7e57-a090-0000-000000000005', '00000000-7e57-0008-0000-000000000005', 2436940, NULL, NULL),
+-- 各品種 x1（breed_id set below）
+('00000000-7e57-a090-0000-000000000006', '00000000-7e57-0008-0000-000000000006', 2436940, NULL, NULL),       -- 獅子兔
+('00000000-7e57-a090-0000-000000000007', '00000000-7e57-0008-0000-000000000007', 2436940, NULL, NULL),       -- 迷你力克斯兔
+('00000000-7e57-a090-0000-000000000008', '00000000-7e57-0008-0000-000000000008', 2436940, NULL, NULL),       -- 安哥拉兔
+('00000000-7e57-a090-0000-000000000009', '00000000-7e57-0008-0000-000000000009', 2436940, NULL, NULL),       -- 道奇兔
+('00000000-7e57-a090-0000-000000000010', '00000000-7e57-0008-0000-000000000010', 2436940, NULL, NULL),       -- 佛萊明巨兔
+('00000000-7e57-a090-0000-000000000011', '00000000-7e57-0008-0000-000000000011', 2436940, NULL, NULL),       -- 海棠兔
+('00000000-7e57-a090-0000-000000000012', '00000000-7e57-0008-0000-000000000012', 2436940, NULL, NULL),       -- 喜馬拉雅兔
+('00000000-7e57-a090-0000-000000000013', '00000000-7e57-0008-0000-000000000013', 2436940, NULL, NULL),       -- 波蘭兔
+('00000000-7e57-a090-0000-000000000014', '00000000-7e57-0008-0000-000000000014', 2436940, NULL, NULL),       -- 加州兔
+('00000000-7e57-a090-0000-000000000015', '00000000-7e57-0008-0000-000000000015', 2436940, NULL, NULL),       -- 紐西蘭白兔
+-- 無品種穴兔 x5（純 species，不設 breed_id）
+('00000000-7e57-a090-0000-000000000016', '00000000-7e57-0008-0000-000000000016', 2436940, NULL, NULL),
+('00000000-7e57-a090-0000-000000000017', '00000000-7e57-0008-0000-000000000017', 2436940, NULL, NULL),
+('00000000-7e57-a090-0000-000000000018', '00000000-7e57-0008-0000-000000000018', 2436940, NULL, NULL),
+('00000000-7e57-a090-0000-000000000019', '00000000-7e57-0008-0000-000000000019', 2436940, NULL, NULL),
+('00000000-7e57-a090-0000-000000000020', '00000000-7e57-0008-0000-000000000020', 2436940, NULL, NULL),
+-- 邊界情境 traits
+('00000000-7e57-a090-0000-000000000021', '00000000-7e57-0008-0000-000000000021', 2436940, '迷你垂耳兔', NULL),       -- legacy breed_name only（不設 breed_id）
+('00000000-7e57-a090-0000-000000000022', '00000000-7e57-0008-0000-000000000022', 2436940, NULL, NULL),               -- admin + breed_id（set below）
+('00000000-7e57-a090-0000-000000000023', '00000000-7e57-0008-0000-000000000023', 2436940, NULL, NULL),               -- NULL avatar + breed_id（set below）
+('00000000-7e57-a090-0000-000000000024', '00000000-7e57-0008-0000-000000000024', 2436940, NULL, NULL),               -- 多國旗 + breed_id（set below）
+('00000000-7e57-a090-0000-000000000025', '00000000-7e57-0008-0000-000000000025', 2436940, '力克斯兔', '毛質如絲絨般柔滑')  -- breed_id + breed_name 共存 + trait_note（set below）
+ON CONFLICT (id) DO NOTHING;
+
+-- 5e. vtuber_traits — 野兔 traits（3 人，不同屬的物種）
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+('00000000-7e57-a090-0000-000000000026', '00000000-7e57-0008-0000-000000000026', 8810005, NULL, NULL),       -- 歐洲野兔 Lepus europaeus
+('00000000-7e57-a090-0000-000000000027', '00000000-7e57-0008-0000-000000000027', 8810006, NULL, NULL),       -- 雪兔 Lepus timidus
+('00000000-7e57-a090-0000-000000000028', '00000000-7e57-0008-0000-000000000028', 8810007, NULL, '北美常見野兔')  -- 東部棉尾兔 Sylvilagus
+ON CONFLICT (id) DO NOTHING;
+
+-- 5f. vtuber_traits — 高階分類 traits（4 人）
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+('00000000-7e57-a091-0000-000000000001', '00000000-7e57-0008-0000-000000000029', 8810001, NULL, NULL),       -- 兔科 FAMILY
+('00000000-7e57-a091-0000-000000000002', '00000000-7e57-0008-0000-000000000030', 8810002, NULL, NULL),       -- 兔形目 ORDER
+('00000000-7e57-a091-0000-000000000003', '00000000-7e57-0008-0000-000000000031', 8810003, NULL, NULL),       -- 穴兔屬 GENUS
+('00000000-7e57-a091-0000-000000000004', '00000000-7e57-0008-0000-000000000032', 8810004, NULL, NULL)        -- 兔屬 GENUS
+ON CONFLICT (id) DO NOTHING;
+
+-- 5g. vtuber_traits — 複合種 traits
+-- 貓兔：穴兔 + 家貓（跨科複合）
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+('00000000-7e57-a092-0000-000000000001', '00000000-7e57-0008-0000-000000000033', 2436940, NULL, '兔子型態'),
+('00000000-7e57-a092-0000-000000000002', '00000000-7e57-0008-0000-000000000033', 2435099, NULL, '貓咪型態')
+ON CONFLICT (id) DO NOTHING;
+-- 月兔精：穴兔（real）+ 月兔（fictional）
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+('00000000-7e57-a092-0000-000000000003', '00000000-7e57-0008-0000-000000000034', 2436940, NULL, '現實兔形態')
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO vtuber_traits (id, user_id, fictional_species_id, trait_note) VALUES
+('00000000-7e57-a092-0000-000000000004', '00000000-7e57-0008-0000-000000000034', 99001,   '月宮兔形態')
+ON CONFLICT (id) DO NOTHING;
+-- 雙兔：穴兔 + 雪兔（同科異屬複合）
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+('00000000-7e57-a092-0000-000000000005', '00000000-7e57-0008-0000-000000000035', 2436940, NULL, '家兔外觀'),
+('00000000-7e57-a092-0000-000000000006', '00000000-7e57-0008-0000-000000000035', 8810006, NULL, '雪兔毛色')
+ON CONFLICT (id) DO NOTHING;
+
+-- 5h. breed_id 關聯更新（需在 breeds 種子之後執行）
+-- 荷蘭垂耳兔 x3
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Holland Lop')
+  WHERE id IN ('00000000-7e57-a090-0000-000000000001', '00000000-7e57-a090-0000-000000000002', '00000000-7e57-a090-0000-000000000003');
+-- 荷蘭侏儒兔 x2
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Netherland Dwarf')
+  WHERE id IN ('00000000-7e57-a090-0000-000000000004', '00000000-7e57-a090-0000-000000000005');
+-- 各品種 x1
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Lionhead rabbit')
+  WHERE id = '00000000-7e57-a090-0000-000000000006';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Mini Rex')
+  WHERE id = '00000000-7e57-a090-0000-000000000007';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Angora rabbit')
+  WHERE id = '00000000-7e57-a090-0000-000000000008';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Dutch rabbit')
+  WHERE id = '00000000-7e57-a090-0000-000000000009';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Flemish Giant')
+  WHERE id = '00000000-7e57-a090-0000-000000000010';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Blanc de Hotot')
+  WHERE id = '00000000-7e57-a090-0000-000000000011';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Himalayan rabbit')
+  WHERE id = '00000000-7e57-a090-0000-000000000012';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Polish rabbit')
+  WHERE id = '00000000-7e57-a090-0000-000000000013';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Californian rabbit')
+  WHERE id = '00000000-7e57-a090-0000-000000000014';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='New Zealand white rabbit')
+  WHERE id = '00000000-7e57-a090-0000-000000000015';
+-- 邊界情境 breed_id
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Jersey Wooly')
+  WHERE id = '00000000-7e57-a090-0000-000000000022';   -- admin + 品種
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Netherland Dwarf')
+  WHERE id = '00000000-7e57-a090-0000-000000000023';   -- NULL avatar + 品種
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Mini Lop')
+  WHERE id = '00000000-7e57-a090-0000-000000000024';   -- 多國旗 + 品種
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2436940 AND name_en='Rex rabbit')
+  WHERE id = '00000000-7e57-a090-0000-000000000025';   -- breed_id + breed_name 共存（breed_id 優先顯示）
