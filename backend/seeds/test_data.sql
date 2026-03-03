@@ -103,7 +103,7 @@ INSERT INTO users (id, display_name, avatar_url, role, organization, country_fla
 ('00000000-7e57-0001-0000-000000000024', '拉不拉多 LabraDog',   'https://i.pravatar.cc/150?u=test24', 'user', '__TEST__', '["us"]'),
 ('00000000-7e57-0001-0000-000000000025', '秋田犬 AkitaInu',     'https://i.pravatar.cc/150?u=test25', 'user', '__TEST__', '["jp"]'),
 
--- 貓科使用者（10 個）
+-- 貓科使用者（22 個，含 12 個品種貓）
 ('00000000-7e57-0002-0000-000000000001', '貓貓 Neko',           'https://i.pravatar.cc/150?u=test26', 'user', '__TEST__', '["tw"]'),
 ('00000000-7e57-0002-0000-000000000002', '獅心 LionHeart',      'https://i.pravatar.cc/150?u=test27', 'user', '__TEST__', '["gb"]'),
 ('00000000-7e57-0002-0000-000000000003', '白虎 WhiteTiger',     'https://i.pravatar.cc/150?u=test28', 'user', '__TEST__', '["cn"]'),
@@ -114,6 +114,19 @@ INSERT INTO users (id, display_name, avatar_url, role, organization, country_fla
 ('00000000-7e57-0002-0000-000000000008', '虎紋 Stripes',        'https://i.pravatar.cc/150?u=test33', 'user', '__TEST__', '["jp"]'),
 ('00000000-7e57-0002-0000-000000000009', '美洲豹 Jaguar',       'https://i.pravatar.cc/150?u=test34', 'user', '__TEST__', '["mx"]'),
 ('00000000-7e57-0002-0000-000000000010', '三花貓 Calico',       'https://i.pravatar.cc/150?u=test35', 'user', '__TEST__', '["tw"]'),
+-- 品種貓使用者（12 個，全部掛家貓 Felis catus，各自指定不同品種）
+('00000000-7e57-0002-0000-000000000011', '藍貓 BlueCat',         'https://i.pravatar.cc/150?u=test60', 'user', '__TEST__', '["gb"]'),   -- 英國短毛貓
+('00000000-7e57-0002-0000-000000000012', '銀漸層 SilverShade',   'https://i.pravatar.cc/150?u=test61', 'user', '__TEST__', '["us"]'),   -- 美國短毛貓
+('00000000-7e57-0002-0000-000000000013', '波波 PersianPuff',     'https://i.pravatar.cc/150?u=test62', 'user', '__TEST__', '["ir"]'),   -- 波斯貓
+('00000000-7e57-0002-0000-000000000014', '暹暹 SiamSiam',        'https://i.pravatar.cc/150?u=test63', 'user', '__TEST__', '["th"]'),   -- 暹羅貓
+('00000000-7e57-0002-0000-000000000015', '布偶公主 RagPrincess',  'https://i.pravatar.cc/150?u=test64', 'user', '__TEST__', '["us"]'),   -- 布偶貓
+('00000000-7e57-0002-0000-000000000016', '摺耳醬 FoldChan',      'https://i.pravatar.cc/150?u=test65', 'user', '__TEST__', '["gb"]'),   -- 蘇格蘭摺耳貓
+('00000000-7e57-0002-0000-000000000017', '藍眼公爵 BlueDuke',    'https://i.pravatar.cc/150?u=test66', 'user', '__TEST__', '["ru"]'),   -- 俄羅斯藍貓
+('00000000-7e57-0002-0000-000000000018', '大毛 BigFluff',        'https://i.pravatar.cc/150?u=test67', 'user', '__TEST__', '["us"]'),   -- 緬因貓
+('00000000-7e57-0002-0000-000000000019', '豹紋 LeopardPrint',    'https://i.pravatar.cc/150?u=test68', 'user', '__TEST__', '["us"]'),   -- 孟加拉貓
+('00000000-7e57-0002-0000-000000000020', '阿比 Abby',            'https://i.pravatar.cc/150?u=test69', 'user', '__TEST__', '["et"]'),   -- 阿比西尼亞貓
+('00000000-7e57-0002-0000-000000000021', '花花 HuaHua',          'https://i.pravatar.cc/150?u=test70', 'user', '__TEST__', '["tw"]'),   -- 狸花貓
+('00000000-7e57-0002-0000-000000000022', '短腿 ShortLegs',       'https://i.pravatar.cc/150?u=test71', 'user', '__TEST__', '["us"]'),   -- 曼赤肯貓
 
 -- 鳥綱使用者（5 個）
 ('00000000-7e57-0003-0000-000000000001', '小雞 Chicky',         'https://i.pravatar.cc/150?u=test36', 'user', '__TEST__', '["tw"]'),
@@ -191,7 +204,7 @@ INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
 -- 非洲野犬 (1 user)
 ('00000000-7e57-a008-0000-000000000002', '00000000-7e57-0001-0000-000000000025', 5219303, NULL, NULL),
 
--- 貓科 traits（10 個使用者）
+-- 貓科 traits（22 個使用者）
 ('00000000-7e57-a010-0000-000000000001', '00000000-7e57-0002-0000-000000000001', 2435099, NULL, NULL),       -- 家貓
 ('00000000-7e57-a010-0000-000000000002', '00000000-7e57-0002-0000-000000000002', 5219436, NULL, NULL),       -- 獅
 ('00000000-7e57-a010-0000-000000000003', '00000000-7e57-0002-0000-000000000003', 5219404, NULL, NULL),       -- 虎
@@ -202,6 +215,19 @@ INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
 ('00000000-7e57-a010-0000-000000000008', '00000000-7e57-0002-0000-000000000008', 5219404, NULL, '白色變種'), -- 虎（第二個）
 ('00000000-7e57-a010-0000-000000000009', '00000000-7e57-0002-0000-000000000009', 5219368, NULL, NULL),       -- 美洲豹
 ('00000000-7e57-a010-0000-000000000010', '00000000-7e57-0002-0000-000000000010', 2435099, NULL, NULL),       -- 家貓（三花貓，breed_id set below）
+-- 品種貓 traits（12 個，全掛家貓 taxon_id=2435099，breed_id 在下方設定）
+('00000000-7e57-a010-0000-000000000011', '00000000-7e57-0002-0000-000000000011', 2435099, NULL, NULL),       -- 英國短毛貓
+('00000000-7e57-a010-0000-000000000012', '00000000-7e57-0002-0000-000000000012', 2435099, NULL, NULL),       -- 美國短毛貓
+('00000000-7e57-a010-0000-000000000013', '00000000-7e57-0002-0000-000000000013', 2435099, NULL, NULL),       -- 波斯貓
+('00000000-7e57-a010-0000-000000000014', '00000000-7e57-0002-0000-000000000014', 2435099, NULL, NULL),       -- 暹羅貓
+('00000000-7e57-a010-0000-000000000015', '00000000-7e57-0002-0000-000000000015', 2435099, NULL, NULL),       -- 布偶貓
+('00000000-7e57-a010-0000-000000000016', '00000000-7e57-0002-0000-000000000016', 2435099, NULL, NULL),       -- 蘇格蘭摺耳貓
+('00000000-7e57-a010-0000-000000000017', '00000000-7e57-0002-0000-000000000017', 2435099, NULL, NULL),       -- 俄羅斯藍貓
+('00000000-7e57-a010-0000-000000000018', '00000000-7e57-0002-0000-000000000018', 2435099, NULL, NULL),       -- 緬因貓
+('00000000-7e57-a010-0000-000000000019', '00000000-7e57-0002-0000-000000000019', 2435099, NULL, NULL),       -- 孟加拉貓
+('00000000-7e57-a010-0000-000000000020', '00000000-7e57-0002-0000-000000000020', 2435099, NULL, NULL),       -- 阿比西尼亞貓
+('00000000-7e57-a010-0000-000000000021', '00000000-7e57-0002-0000-000000000021', 2435099, NULL, NULL),       -- 狸花貓
+('00000000-7e57-a010-0000-000000000022', '00000000-7e57-0002-0000-000000000022', 2435099, NULL, NULL),       -- 曼赤肯貓
 
 -- 鳥綱 traits（5 個使用者）
 ('00000000-7e57-a020-0000-000000000001', '00000000-7e57-0003-0000-000000000001', 9103371, NULL, NULL),       -- 雞
@@ -266,6 +292,31 @@ UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=521917
 -- 家貓品種關聯
 UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='Calico')
   WHERE id = '00000000-7e57-a010-0000-000000000010';
+-- 品種貓 breed_id 關聯
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='British Shorthair')
+  WHERE id = '00000000-7e57-a010-0000-000000000011';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='American Shorthair')
+  WHERE id = '00000000-7e57-a010-0000-000000000012';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='Persian cat')
+  WHERE id = '00000000-7e57-a010-0000-000000000013';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='Siamese')
+  WHERE id = '00000000-7e57-a010-0000-000000000014';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='Ragdoll')
+  WHERE id = '00000000-7e57-a010-0000-000000000015';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='Scottish Fold')
+  WHERE id = '00000000-7e57-a010-0000-000000000016';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='Russian Blue')
+  WHERE id = '00000000-7e57-a010-0000-000000000017';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='Maine coon')
+  WHERE id = '00000000-7e57-a010-0000-000000000018';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='Bengal cat')
+  WHERE id = '00000000-7e57-a010-0000-000000000019';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='Abyssinian')
+  WHERE id = '00000000-7e57-a010-0000-000000000020';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='Dragon Li')
+  WHERE id = '00000000-7e57-a010-0000-000000000021';
+UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='Munchkin cat')
+  WHERE id = '00000000-7e57-a010-0000-000000000022';
 
 
 -- ============================================================

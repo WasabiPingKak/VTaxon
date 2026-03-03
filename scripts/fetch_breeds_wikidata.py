@@ -66,7 +66,169 @@ SPECIES = [
         'kingdom': 'Animalia', 'phylum': 'Chordata', 'class': 'Mammalia',
         'order': 'Perissodactyla', 'family': 'Equidae', 'genus': 'Equus',
     },
+    {
+        'label': '家兔',
+        'qid': 'Q12045584',    # rabbit breed
+        'taxon_id': 2436940,   # Oryctolagus cuniculus
+        'scientific_name': 'Oryctolagus cuniculus (Linnaeus, 1758)',
+        'common_name_zh': '穴兔',
+        'taxon_rank': 'SPECIES',
+        'taxon_path': 'Animalia|Chordata|Mammalia|Lagomorpha|Leporidae|Oryctolagus|Oryctolagus cuniculus',
+        'kingdom': 'Animalia', 'phylum': 'Chordata', 'class': 'Mammalia',
+        'order': 'Lagomorpha', 'family': 'Leporidae', 'genus': 'Oryctolagus',
+    },
 ]
+
+# Static Taiwan Traditional Chinese names for rabbit breeds.
+# Priority: these override Wikidata/Wikipedia names which often use mainland terms.
+# Sources: 台灣愛兔協會, 道格兔, 優荳寵物兔舍, zh.wikipedia zh-tw variant.
+# Key = English breed name (must match Wikidata label exactly).
+RABBIT_ZH_TW = {
+    # --- ARBA 認可品種 (52+) ---
+    'American rabbit': '美國兔',
+    'American Fuzzy Lop': '美國費斯垂耳兔',
+    'American Sable': '美洲黑貂兔',
+    'English Angora': '英國安哥拉兔',
+    'English Angora rabbit': '英國安哥拉兔',
+    'French Angora': '法國安哥拉兔',
+    'French Angora rabbit': '法國安哥拉兔',
+    'Giant Angora': '巨型安哥拉兔',
+    'Giant Angora rabbit': '巨型安哥拉兔',
+    'Satin Angora': '緞毛安哥拉兔',
+    'Satin Angora rabbit': '緞毛安哥拉兔',
+    'Angora rabbit': '安哥拉兔',
+    'Belgian Hare': '比利時野兔',
+    'Beveren': '貝弗倫兔',
+    'Beveren rabbit': '貝弗倫兔',
+    'Blanc de Hotot': '海棠兔',
+    'Britannia Petite': '不列塔尼亞小兔',
+    'Californian rabbit': '加州兔',
+    'Champagne d\'Argent': '香檳銀兔',
+    'Checkered Giant': '格紋巨兔',
+    'Checkered Giant rabbit': '格紋巨兔',
+    'American Chinchilla rabbit': '美國金吉拉兔',
+    'American Chinchilla': '美國金吉拉兔',
+    'Giant Chinchilla rabbit': '巨型金吉拉兔',
+    'Giant Chinchilla': '巨型金吉拉兔',
+    'Standard Chinchilla rabbit': '標準金吉拉兔',
+    'Standard Chinchilla': '標準金吉拉兔',
+    'Chinchilla rabbit': '金吉拉兔',
+    'Cinnamon rabbit': '肉桂兔',
+    'Crème d\'Argent': '奶油銀兔',
+    'Creme d\'Argent': '奶油銀兔',
+    'Dutch rabbit': '道奇兔',
+    'Dwarf Hotot': '侏儒海棠兔',
+    'English Lop': '英國垂耳兔',
+    'English Spot': '英國斑點兔',
+    'English Spot rabbit': '英國斑點兔',
+    'Flemish Giant': '佛萊明巨兔',
+    'Flemish Giant rabbit': '佛萊明巨兔',
+    'Florida White': '佛羅里達白兔',
+    'Florida White rabbit': '佛羅里達白兔',
+    'French Lop': '法國垂耳兔',
+    'Harlequin rabbit': '丑角兔',
+    'Havana rabbit': '哈瓦那兔',
+    'Himalayan rabbit': '喜馬拉雅兔',
+    'Holland Lop': '荷蘭垂耳兔',
+    'Jersey Wooly': '澤西長毛兔',
+    'Lilac rabbit': '丁香兔',
+    'Lionhead rabbit': '獅子兔',
+    'Mini Lop': '迷你垂耳兔',
+    'Mini Rex': '迷你力克斯兔',
+    'Mini Satin': '迷你緞毛兔',
+    'Mini Satin rabbit': '迷你緞毛兔',
+    'Netherland Dwarf': '荷蘭侏儒兔',
+    'Netherland Dwarf rabbit': '荷蘭侏儒兔',
+    'New Zealand rabbit': '紐西蘭兔',
+    'New Zealand white rabbit': '紐西蘭白兔',
+    'Palomino rabbit': '帕洛米諾兔',
+    'Polish rabbit': '波蘭兔',
+    'Rex rabbit': '力克斯兔',
+    'Rhinelander rabbit': '萊茵蘭兔',
+    'Satin rabbit': '緞毛兔',
+    'Silver rabbit': '銀兔',
+    'Silver Fox rabbit': '銀狐兔',
+    'Silver Marten': '銀貂兔',
+    'Silver Marten rabbit': '銀貂兔',
+    'Tan rabbit': '棕褐兔',
+    'Thrianta': '崔安塔兔',
+    'Thrianta rabbit': '崔安塔兔',
+    'Argente Brun': '棕銀兔',
+    'Blue Holicer': '藍色霍利瑟兔',
+    'Czech Frosty': '捷克霜兔',
+    'Dwarf Papillon': '侏儒蝴蝶兔',
+    # --- BRC / 歐洲常見品種 ---
+    'German Lop': '德國垂耳兔',
+    'Cashmere Lop': '喀什米爾垂耳兔',
+    'Continental Giant rabbit': '大陸巨兔',
+    'British Giant': '英國巨兔',
+    'Lion Lop': '獅子垂耳兔',
+    'Mini Lion Lop': '迷你獅子垂耳兔',
+    'Dwarf Lop': '侏儒垂耳兔',
+    'Plush Lop': '絨毛垂耳兔',
+    'Swiss Fox rabbit': '瑞士狐兔',
+    'Vienna rabbit': '維也納兔',
+    'Papillon rabbit': '蝴蝶兔',
+    'Giant Papillon': '巨型蝴蝶兔',
+    # --- 其他常見品種 ---
+    'Lop rabbit': '垂耳兔',
+    'Alaska rabbit': '阿拉斯加兔',
+    'Blanc de Bouscat': '布斯卡白兔',
+    'Blanc de Termonde': '泰爾蒙德白兔',
+    'Argente de Champagne': '香檳銀兔',
+    'Argente Bleu': '藍銀兔',
+    'Argente Crème': '奶油銀兔',
+    'Argente Noir': '黑銀兔',
+    'Argente St Hubert': '聖休伯特銀兔',
+    'Deilenaar': '戴勒納兔',
+    'Enderby Island rabbit': '恩德比島兔',
+    'Fauve de Bourgogne': '勃艮第黃褐兔',
+    'German Angora': '德國安哥拉兔',
+    'German Giant': '德國巨兔',
+    'Gotland rabbit': '哥特蘭兔',
+    'Hulstlander': '胡斯特蘭德兔',
+    'Meissner Lop': '麥森垂耳兔',
+    'New Zealand red rabbit': '紐西蘭紅兔',
+    'New Zealand black rabbit': '紐西蘭黑兔',
+    'Sallander rabbit': '薩蘭德兔',
+    'Smoke Pearl rabbit': '煙珠兔',
+    'Squirrel rabbit': '松鼠兔',
+    'Sussex rabbit': '薩塞克斯兔',
+    'Perlfee': '珍珠灰兔',
+    # --- Wikidata 名稱變體（無 "rabbit" 後綴）---
+    'Havana': '哈瓦那兔',
+    'Sallander': '薩蘭德兔',
+    'Satin': '緞毛兔',
+    'Swiss Fox': '瑞士狐兔',
+    'Dalmatian': '達爾馬提亞兔',
+    'Enderby Island Rabbit': '恩德比島兔',
+    'British Giant rabbit': '英國巨兔',
+    # --- 補充歐洲 / 其他品種 ---
+    'Thuringer': '圖林根兔',
+    'Siamese Sable rabbit': '暹羅貂色兔',
+    'Fox (rabbit)': '狐兔',
+    'Fee de Marbourg': '馬爾堡灰兔',
+    'Dwarf Angora': '侏儒安哥拉兔',
+    'Dwarf checkered rabbit': '侏儒格紋兔',
+    'Miniature Checkered rabbit': '迷你格紋兔',
+    'Czech Red': '捷克紅兔',
+    'Czech Spotted Rabbit': '捷克斑點兔',
+    'Czech Black Guard Haired Rabbit': '捷克黑護毛兔',
+    'Swedish Hare': '瑞典野兔',
+    'Stone rabbit': '石兔',
+    'Carmagnola Grey': '卡馬尼奧拉灰兔',
+    'Sachsengold': '薩克森金兔',
+    'Grey Pearl of Halle': '哈勒灰珍珠兔',
+    'Golden Glavcot': '金色格拉夫科特兔',
+    'Graue Wiener': '灰色維也納兔',
+    'Weisser Wiener': '白色維也納兔',
+    'Brown Chestnut of Lorraine': '洛林棕栗兔',
+    'Bourbonnais Grey': '布邦內灰兔',
+    'Tri Coloured Dutch': '三色道奇兔',
+    'Velveteen Lop': '絲絨垂耳兔',
+    'Rhönkaninchen': '勒恩兔',
+    'Mecklenburger Schecke': '梅克倫堡花斑兔',
+}
 
 # SPARQL query template
 SPARQL_TEMPLATE = """
@@ -277,9 +439,48 @@ def resolve_taiwan_names(breeds):
     print(f"  Applied zh-tw names to {applied} breeds", file=sys.stderr)
 
 
+def _lookup_static_zh(name_en):
+    """Look up static Chinese name with flexible matching.
+
+    Tries: exact match → without ' rabbit'/' Rabbit' suffix → with ' rabbit' suffix.
+    """
+    if name_en in RABBIT_ZH_TW:
+        return RABBIT_ZH_TW[name_en]
+    # Try removing trailing " rabbit" / " Rabbit"
+    for suffix in (' rabbit', ' Rabbit'):
+        if name_en.endswith(suffix):
+            base = name_en[:-len(suffix)]
+            if base in RABBIT_ZH_TW:
+                return RABBIT_ZH_TW[base]
+    # Try adding " rabbit"
+    with_rabbit = name_en + ' rabbit'
+    if with_rabbit in RABBIT_ZH_TW:
+        return RABBIT_ZH_TW[with_rabbit]
+    return None
+
+
+def apply_static_overrides(all_breeds):
+    """Apply static Taiwan Chinese name overrides for rabbit breeds."""
+    applied = 0
+    for b in all_breeds:
+        name_en = b.get('name_en', '')
+        zh = _lookup_static_zh(name_en)
+        if zh:
+            b['static_zh'] = zh
+            applied += 1
+    if applied:
+        print(f"  Applied {applied} static zh-tw overrides", file=sys.stderr)
+
+
 def pick_best_zh(breed):
-    """Pick best Chinese name: Wikipedia zh-tw > Wikidata zh-tw > Wikidata zh."""
-    return breed.get('wiki_tw') or breed.get('wikidata_zhtw') or breed.get('wikidata_zh')
+    """Pick best Chinese name.
+
+    Priority: static override > Wikipedia zh-tw > Wikidata zh-tw > Wikidata zh.
+    """
+    return (breed.get('static_zh')
+            or breed.get('wiki_tw')
+            or breed.get('wikidata_zhtw')
+            or breed.get('wikidata_zh'))
 
 
 def escape_sql(value):
@@ -294,7 +495,7 @@ def generate_sql(all_breeds):
     lines = []
     lines.append('-- ============================================================')
     lines.append('-- VTaxon 品種種子資料（由 scripts/fetch_breeds_wikidata.py 自動生成）')
-    lines.append('-- 中文名優先順序：Wikipedia zh-tw > Wikidata zh-tw > Wikidata zh')
+    lines.append('-- 中文名優先順序：靜態台灣用語 > Wikipedia zh-tw > Wikidata zh-tw > Wikidata zh')
     lines.append('-- ============================================================')
     lines.append('')
 
@@ -359,12 +560,19 @@ def main():
           file=sys.stderr)
     resolve_taiwan_names(all_breeds)
 
+    # Apply static overrides (highest priority, especially for rabbit breeds)
+    print(f"\n--- Applying static Taiwan Chinese overrides ---",
+          file=sys.stderr)
+    apply_static_overrides(all_breeds)
+
     # Stats
+    static_count = sum(1 for b in all_breeds if b.get('static_zh'))
     wiki_tw_count = sum(1 for b in all_breeds if b.get('wiki_tw'))
     wd_zhtw_count = sum(1 for b in all_breeds if b.get('wikidata_zhtw'))
     wd_zh_count = sum(1 for b in all_breeds if b.get('wikidata_zh'))
     best_count = sum(1 for b in all_breeds if pick_best_zh(b))
     print(f"\nName sources:", file=sys.stderr)
+    print(f"  Static zh-tw:     {static_count}", file=sys.stderr)
     print(f"  Wikipedia zh-tw:  {wiki_tw_count}", file=sys.stderr)
     print(f"  Wikidata zh-tw:   {wd_zhtw_count}", file=sys.stderr)
     print(f"  Wikidata zh:      {wd_zh_count}", file=sys.stderr)

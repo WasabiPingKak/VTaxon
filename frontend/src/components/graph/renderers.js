@@ -429,13 +429,12 @@ function drawSpeciesNode(ctx, node, scale, state) {
     const textStartY = node.y - textBlockH / 2;
     drawWrappedText(ctx, lines, node.x, textStartY, lineHeight);
 
-    // Latin name below rect — truncate to rect width
+    // Latin name below rect — show full name
     ctx.fillStyle = LABEL_DIM;
     ctx.font = fontStr(10, scale, '', 'italic');
     const latinFs = scaledFontSize(10, scale);
     const latinY = node.y + h / 2 + latinFs * 0.8;
-    const displayLatin = truncateText(ctx, d._name || '', w);
-    ctx.fillText(displayLatin, node.x, latinY);
+    ctx.fillText(d._name || '', node.x, latinY);
 
     // Rank label + count below Latin name
     const count = d._count || 0;

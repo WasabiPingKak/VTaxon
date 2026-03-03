@@ -2,8 +2,10 @@ import logging
 
 from flask import Blueprint, jsonify
 
-from ..cache import (get_tree_cache, set_tree_cache,
-                     get_fictional_tree_cache, set_fictional_tree_cache)
+from ..auth import admin_required
+from ..cache import (get_tree_cache, set_tree_cache, invalidate_tree_cache,
+                     get_fictional_tree_cache, set_fictional_tree_cache,
+                     invalidate_fictional_tree_cache)
 from ..extensions import db
 from ..models import User, VtuberTrait, SpeciesCache, FictionalSpecies
 from ..services.gbif import _build_path_zh
@@ -101,6 +103,15 @@ def get_taxonomy_tree():
     result = {'entries': entries}
     set_tree_cache(result)
     return jsonify(result)
+
+
+@taxonomy_bp.route('/cache', methods=['DELETE'])
+@admin_required
+def clear_cache():
+    """Clear all in-process taxonomy caches. Admin only."""
+    invalidate_tree_cache()
+    invalidate_fictional_tree_cache()
+    return jsonify({'message': 'Cache cleared'}), 200
 
 
 @taxonomy_bp.route('/fictional-tree', methods=['GET'])
