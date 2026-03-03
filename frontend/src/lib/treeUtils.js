@@ -112,7 +112,14 @@ export function computeHighlightPaths(entries, userId) {
  */
 export function findNode(root, pathKey) {
   if (root.pathKey === pathKey) return root;
-  const parts = pathKey.split('|');
+
+  // Strip root prefix for non-empty roots (e.g., fictional tree root '__F__')
+  let navPath = pathKey;
+  if (root.pathKey && pathKey.startsWith(root.pathKey + '|')) {
+    navPath = pathKey.slice(root.pathKey.length + 1);
+  }
+
+  const parts = navPath.split('|');
   let current = root;
   for (const part of parts) {
     const child = current.children.get(part);
@@ -140,7 +147,7 @@ export function collectAllPaths(entries) {
   return all;
 }
 
-const ORDER_IDX = 3;
+const CLASS_IDX = 2;
 
 /**
  * Find vtubers "close" to the focused user using traceBack ancestor model.
@@ -165,7 +172,7 @@ export function computeCloseVtubers(focusedEntries, allEntries, traceBack = 2) {
   // Pre-compute minCommon for each focused entry
   const minCommons = focusedSegArrays.map(segs => {
     const S = segs.length;
-    const maxTrace = Math.max(0, S - 1 - ORDER_IDX);
+    const maxTrace = Math.max(0, S - 1 - CLASS_IDX);
     const effectiveTrace = Math.min(traceBack, maxTrace);
     return S - effectiveTrace;
   });
@@ -237,7 +244,7 @@ export function computeCloseVtubersByRank(focusedEntries, allEntries, traceBack 
   // Pre-compute minCommon for each focused entry
   const minCommons = focusedSegArrays.map(segs => {
     const S = segs.length;
-    const maxTrace = Math.max(0, S - 1 - ORDER_IDX);
+    const maxTrace = Math.max(0, S - 1 - CLASS_IDX);
     const effectiveTrace = Math.min(traceBack, maxTrace);
     return S - effectiveTrace;
   });
@@ -284,6 +291,303 @@ export function collectPathsToDepth(entries, maxDepth) {
     const limit = Math.min(parts.length, maxDepth);
     for (let i = 1; i <= limit; i++) {
       paths.add(parts.slice(0, i).join('|'));
+    }
+  }
+  return paths;
+}
+
+
+// ─── Fictional species tree utilities ───
+
+const F_ORIGIN_IDX = 0;
+const F_PREFIX = '__F__';
+const F_RANK_NAMES = { 0: 'F_ORIGIN', 1: 'F_SUB_ORIGIN', 2: 'F_SPECIES' };
+
+/**
+ * Build a tree structure from fictional entries based on fictional_path.
+ * fictional_path: "東方神話|日本神話|Kitsune" (origin|sub_origin|name)
+ */
+export function buildFictionalTree(entries) {
+  const root = {
+    name: 'Fictional', nameZh: '虛構生物', rank: 'F_ROOT', pathKey: F_PREFIX,
+    count: 0, children: new Map(), vtubers: [],
+  };
+
+  for (const entry of entries) {
+    const parts = (entry.fictional_path || '').split('|');
+    if (parts.length === 0) continue;
+
+    let current = root;
+    root.count++;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const pathKey = F_PREFIX + '|' + parts.slice(0, i + 1).join('|');
+
+      if (!current.children.has(part)) {
+        let nameZh = '';
+        if (i === 0) nameZh = entry.origin || '';
+        else if (i === 1) nameZh = entry.sub_origin || '';
+        else if (i === 2) nameZh = entry.fictional_name_zh || '';
+
+        current.children.set(part, {
+          name: part,
+          nameZh,
+          rank: F_RANK_NAMES[i] || 'F_SPECIES',
+          pathKey,
+          count: 0,
+          children: new Map(),
+          vtubers: [],
+        });
+      }
+
+      const child = current.children.get(part);
+      child.count++;
+
+      if (i === parts.length - 1) {
+        child.vtubers.push(entry);
+      }
+
+      current = child;
+    }
+  }
+
+  return root;
+}
+
+/**
+ * Collect fictional pathKeys up to a certain depth.
+ * depth 0=F_ROOT, 1=F_ORIGIN, 2=F_SUB_ORIGIN
+ */
+export function collectFictionalPathsToDepth(entries, maxDepth) {
+  const paths = new Set();
+  for (const entry of entries) {
+    const parts = (entry.fictional_path || '').split('|');
+    const limit = Math.min(parts.length, maxDepth);
+    for (let i = 1; i <= limit; i++) {
+      paths.add(F_PREFIX + '|' + parts.slice(0, i).join('|'));
+    }
+  }
+  return paths;
+}
+
+/**
+ * Compute the set of fictional path keys belonging to a specific user.
+ */
+export function computeFictionalHighlightPaths(entries, userId) {
+  const paths = new Set();
+  if (!userId) return paths;
+
+  for (const entry of entries) {
+    if (entry.user_id !== userId) continue;
+    const parts = (entry.fictional_path || '').split('|');
+    for (let i = 1; i <= parts.length; i++) {
+      paths.add(F_PREFIX + '|' + parts.slice(0, i).join('|'));
+    }
+  }
+  return paths;
+}
+
+/**
+ * Collect all expandable fictional pathKeys from entries.
+ */
+export function collectAllFictionalPaths(entries) {
+  const all = new Set();
+  for (const entry of entries) {
+    const parts = (entry.fictional_path || '').split('|');
+    for (let i = 1; i <= parts.length; i++) {
+      all.add(F_PREFIX + '|' + parts.slice(0, i).join('|'));
+    }
+  }
+  return all;
+}
+
+/**
+ * Find fictional vtubers "close" to the focused user using traceBack ancestor model.
+ * Uses fictional_path instead of taxon_path. Upper bound: origin (F_ORIGIN_IDX=0).
+ */
+export function computeCloseFictionalVtubers(focusedEntries, allFictionalEntries, traceBack = 1) {
+  if (!focusedEntries?.length || !allFictionalEntries) return new Map();
+  const focusedUserId = focusedEntries[0].user_id;
+  const closeMap = new Map();
+
+  const focusedPaths = focusedEntries.map(e => e.fictional_path).filter(Boolean);
+  const focusedSegArrays = focusedPaths.map(p => p.split('|'));
+
+  const minCommons = focusedSegArrays.map(segs => {
+    const S = segs.length;
+    const maxTrace = Math.max(0, S - 1 - F_ORIGIN_IDX);
+    const effectiveTrace = Math.min(traceBack, maxTrace);
+    return S - effectiveTrace;
+  });
+
+  for (const entry of allFictionalEntries) {
+    if (entry.user_id === focusedUserId) continue;
+    const ep = entry.fictional_path;
+    if (!ep) continue;
+
+    const epSegs = ep.split('|');
+
+    for (let fi = 0; fi < focusedSegArrays.length; fi++) {
+      const fpSegs = focusedSegArrays[fi];
+      const minCommon = minCommons[fi];
+
+      let common = 0;
+      const minLen = Math.min(epSegs.length, fpSegs.length);
+      for (let i = 0; i < minLen; i++) {
+        if (epSegs[i] === fpSegs[i]) common++;
+        else break;
+      }
+
+      if (common >= minCommon) {
+        if (!closeMap.has(entry.user_id)) closeMap.set(entry.user_id, new Set());
+        closeMap.get(entry.user_id).add(ep);
+        break;
+      }
+    }
+  }
+  return closeMap;
+}
+
+/**
+ * Compute close fictional vtuber counts grouped by path common depth.
+ */
+export function computeCloseFictionalVtubersByRank(focusedEntries, allFictionalEntries, traceBack = 1) {
+  if (!focusedEntries?.length || !allFictionalEntries) return null;
+  const focusedUserId = focusedEntries[0].user_id;
+
+  const focusedPaths = focusedEntries.map(e => e.fictional_path).filter(Boolean);
+  const focusedSegArrays = focusedPaths.map(p => p.split('|'));
+
+  const minCommons = focusedSegArrays.map(segs => {
+    const S = segs.length;
+    const maxTrace = Math.max(0, S - 1 - F_ORIGIN_IDX);
+    const effectiveTrace = Math.min(traceBack, maxTrace);
+    return S - effectiveTrace;
+  });
+
+  const bestDepth = new Map();
+
+  for (const entry of allFictionalEntries) {
+    if (entry.user_id === focusedUserId) continue;
+    const ep = entry.fictional_path;
+    if (!ep) continue;
+
+    const epSegs = ep.split('|');
+
+    for (let fi = 0; fi < focusedSegArrays.length; fi++) {
+      const fpSegs = focusedSegArrays[fi];
+      const minCommon = minCommons[fi];
+
+      let common = 0;
+      const minLen = Math.min(epSegs.length, fpSegs.length);
+      for (let i = 0; i < minLen; i++) {
+        if (epSegs[i] === fpSegs[i]) common++;
+        else break;
+      }
+
+      if (common >= minCommon) {
+        const prev = bestDepth.get(entry.user_id) || 0;
+        if (common > prev) bestDepth.set(entry.user_id, common);
+      }
+    }
+  }
+
+  const byRank = new Map();
+  for (const [, depth] of bestDepth) {
+    byRank.set(depth, (byRank.get(depth) || 0) + 1);
+  }
+
+  return byRank.size > 0 ? byRank : null;
+}
+
+/**
+ * Compute edge pathKeys that should be highlighted during trace-back.
+ * Returns Set<pathKey> covering all intermediate taxonomy edges from the
+ * common ancestor down to close vtuber leaf nodes and the focused user's leaf.
+ */
+export function computeCloseEdgePaths(focusedEntries, allEntries, closeVtuberIds, traceBack) {
+  const edgeKeys = new Set();
+  if (!focusedEntries?.length || !allEntries || !closeVtuberIds || closeVtuberIds.size === 0) return edgeKeys;
+
+  const focusedUserId = focusedEntries[0].user_id;
+  const focusedSegs = (focusedEntries[0].taxon_path || '').split('|');
+  const ancestorDepth = Math.max(0, focusedSegs.length - traceBack);
+  const ancestorPrefix = focusedSegs.slice(0, ancestorDepth).join('|');
+
+  // Collect edges for all relevant entries (close vtubers + focused user)
+  for (const entry of allEntries) {
+    const uid = entry.user_id;
+    const isClose = closeVtuberIds.has(uid);
+    const isFocused = uid === focusedUserId;
+    if (!isClose && !isFocused) continue;
+
+    const ep = entry.taxon_path;
+    if (!ep) continue;
+    if (!ep.startsWith(ancestorPrefix)) continue;
+
+    const parts = ep.split('|');
+    // Add all intermediate pathKeys from ancestorDepth+1 down to leaf
+    for (let i = ancestorDepth + 1; i <= parts.length; i++) {
+      edgeKeys.add(parts.slice(0, i).join('|'));
+    }
+    // Add vtuber leaf node pathKey
+    let leafKey = ep;
+    if (entry.breed_id) leafKey += `|__breed__${entry.breed_id}`;
+    edgeKeys.add(leafKey + `|__vtuber__${entry.user_id}`);
+    // Add breed pathKey if applicable
+    if (entry.breed_id) {
+      edgeKeys.add(`${ep}|__breed__${entry.breed_id}`);
+    }
+  }
+  return edgeKeys;
+}
+
+/**
+ * Fictional version of computeCloseEdgePaths.
+ * Uses fictional_path; pathKeys prefixed with __F__|.
+ */
+export function computeCloseFictionalEdgePaths(focusedEntries, allFictionalEntries, closeVtuberIds, traceBack) {
+  const edgeKeys = new Set();
+  if (!focusedEntries?.length || !allFictionalEntries || !closeVtuberIds || closeVtuberIds.size === 0) return edgeKeys;
+
+  const focusedUserId = focusedEntries[0].user_id;
+  const focusedSegs = (focusedEntries[0].fictional_path || '').split('|');
+  const ancestorDepth = Math.max(0, focusedSegs.length - traceBack);
+  const ancestorPrefix = focusedSegs.slice(0, ancestorDepth).join('|');
+
+  for (const entry of allFictionalEntries) {
+    const uid = entry.user_id;
+    const isClose = closeVtuberIds.has(uid);
+    const isFocused = uid === focusedUserId;
+    if (!isClose && !isFocused) continue;
+
+    const ep = entry.fictional_path;
+    if (!ep) continue;
+    if (!ep.startsWith(ancestorPrefix)) continue;
+
+    const parts = ep.split('|');
+    for (let i = ancestorDepth + 1; i <= parts.length; i++) {
+      edgeKeys.add(F_PREFIX + '|' + parts.slice(0, i).join('|'));
+    }
+    // Add vtuber leaf node pathKey
+    edgeKeys.add(F_PREFIX + '|' + ep + `|__vtuber__${entry.user_id}`);
+  }
+  return edgeKeys;
+}
+
+/**
+ * Collect all expandable fictional pathKeys needed to reveal close vtuber nodes.
+ */
+export function collectCloseFictionalVtuberPaths(closeVtuberIds, fictionalEntries) {
+  const paths = new Set();
+  if (!closeVtuberIds || closeVtuberIds.size === 0) return paths;
+
+  for (const entry of fictionalEntries) {
+    if (!closeVtuberIds.has(entry.user_id)) continue;
+    const parts = (entry.fictional_path || '').split('|');
+    for (let i = 1; i <= parts.length; i++) {
+      paths.add(F_PREFIX + '|' + parts.slice(0, i).join('|'));
     }
   }
   return paths;

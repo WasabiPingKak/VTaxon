@@ -11,7 +11,9 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
 
   const current = focusedEntries[speciesIndex] || focusedEntries[0];
   const total = focusedEntries.length;
-  const speciesLabel = current.breed_name_zh || current.breed_name || current.common_name_zh || current.scientific_name || '?';
+  const speciesLabel = current.fictional_name_zh
+    || current.breed_name_zh || current.breed_name
+    || current.common_name_zh || current.scientific_name || '?';
 
   return (
     <>

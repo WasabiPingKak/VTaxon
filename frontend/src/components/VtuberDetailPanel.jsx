@@ -112,6 +112,29 @@ function TaxonomyPath({ taxonPath, pathZh, commonNameZh, scientificName }) {
   );
 }
 
+/** Indented fictional species path */
+function FictionalPath({ entry }) {
+  const levels = [
+    { rank: 'F_ORIGIN', label: entry.origin },
+    entry.sub_origin ? { rank: 'F_SUB_ORIGIN', label: entry.sub_origin } : null,
+    { rank: 'F_SPECIES', label: entry.fictional_name_zh || entry.fictional_name },
+  ].filter(Boolean);
+
+  return (
+    <div style={{ fontSize: '0.85em', lineHeight: '2' }}>
+      {levels.map((lv, i) => (
+        <div key={lv.rank} style={{
+          paddingLeft: i * 12, display: 'flex', alignItems: 'center',
+          fontWeight: i === levels.length - 1 ? 600 : 400,
+        }}>
+          <RankBadge rank={lv.rank} style={{ fontSize: '0.7em' }} />
+          <span>{lv.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus, onSwitchEntry }) {
   const [imgError, setImgError] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -133,8 +156,13 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
 
   // Derive active tab index from current entry
   const activeIdx = (allEntries && allEntries.length > 1)
-    ? Math.max(0, allEntries.findIndex(e =>
-        e.taxon_path === entry.taxon_path && (e.breed_id || '') === (entry.breed_id || '')))
+    ? Math.max(0, allEntries.findIndex(e => {
+        if (e.fictional_path) {
+          return e.fictional_path === entry.fictional_path
+            && (e.fictional_species_id || '') === (entry.fictional_species_id || '');
+        }
+        return e.taxon_path === entry.taxon_path && (e.breed_id || '') === (entry.breed_id || '');
+      }))
     : 0;
 
   const handleClose = useCallback(() => setClosing(true), []);
@@ -198,10 +226,13 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
             display: 'flex', gap: '6px', padding: '10px 20px 0', flexWrap: 'wrap',
           }}>
             {allEntries.map((e, i) => {
-              const label = e.common_name_zh || e.scientific_name || e.display_name;
+              const label = e.fictional_name_zh || e.common_name_zh || e.scientific_name || e.display_name;
               const active = i === activeIdx;
+              const tabKey = e.fictional_path
+                ? `F\0${e.fictional_path}\0${e.fictional_species_id || ''}`
+                : `${e.taxon_path}\0${e.breed_id || ''}`;
               return (
-                <button key={`${e.taxon_path}\0${e.breed_id || ''}`} type="button"
+                <button key={tabKey} type="button"
                   onClick={() => { if (!active && onSwitchEntry) onSwitchEntry(e); }}
                   style={{
                     padding: '4px 10px', borderRadius: '4px', fontSize: '0.8em',
@@ -283,44 +314,82 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
           )}
 
           {/* Species info card */}
-          <div style={{
-            background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '14px',
-            marginBottom: '16px',
-          }}>
-            <div style={{ fontWeight: 600, marginBottom: '8px' }}>物種資訊</div>
-            <div style={{ fontSize: '0.9em', lineHeight: '1.8' }}>
-              <div>
-                <span style={labelStyle}>學名</span>
-                {entry.scientific_name}
+          {entry.fictional_species_id ? (
+            <div style={{
+              background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '14px',
+              marginBottom: '16px',
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '8px' }}>虛構物種資訊</div>
+              <div style={{ fontSize: '0.9em', lineHeight: '1.8' }}>
+                <div>
+                  <span style={labelStyle}>名稱</span>
+                  {entry.fictional_name_zh || entry.fictional_name}
+                  {entry.fictional_name_zh && entry.fictional_name && entry.fictional_name_zh !== entry.fictional_name && (
+                    <span style={{ color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>({entry.fictional_name})</span>
+                  )}
+                </div>
+                <div>
+                  <span style={labelStyle}>來源</span>
+                  {entry.origin}
+                </div>
+                {entry.sub_origin && (
+                  <div>
+                    <span style={labelStyle}>子來源</span>
+                    {entry.sub_origin}
+                  </div>
+                )}
               </div>
-              {entry.common_name_zh && (
-                <div>
-                  <span style={labelStyle}>中文名</span>
-                  {entry.common_name_zh}
-                </div>
-              )}
-              {entry.breed_name && (
-                <div>
-                  <span style={labelStyle}>品種</span>
-                  {entry.breed_name}
-                </div>
-              )}
             </div>
-          </div>
+          ) : (
+            <div style={{
+              background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '14px',
+              marginBottom: '16px',
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '8px' }}>物種資訊</div>
+              <div style={{ fontSize: '0.9em', lineHeight: '1.8' }}>
+                <div>
+                  <span style={labelStyle}>學名</span>
+                  {entry.scientific_name}
+                </div>
+                {entry.common_name_zh && (
+                  <div>
+                    <span style={labelStyle}>中文名</span>
+                    {entry.common_name_zh}
+                  </div>
+                )}
+                {entry.breed_name && (
+                  <div>
+                    <span style={labelStyle}>品種</span>
+                    {entry.breed_name}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
-          {/* Taxonomy path card */}
-          <div style={{
-            background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '14px',
-            marginBottom: '16px',
-          }}>
-            <div style={{ fontWeight: 600, marginBottom: '8px' }}>分類路徑</div>
-            <TaxonomyPath
-              taxonPath={entry.taxon_path}
-              pathZh={entry.path_zh}
-              commonNameZh={entry.common_name_zh}
-              scientificName={entry.scientific_name}
-            />
-          </div>
+          {/* Taxonomy / Fictional path card */}
+          {entry.fictional_species_id ? (
+            <div style={{
+              background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '14px',
+              marginBottom: '16px',
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '8px' }}>分類路徑</div>
+              <FictionalPath entry={entry} />
+            </div>
+          ) : (
+            <div style={{
+              background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '14px',
+              marginBottom: '16px',
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '8px' }}>分類路徑</div>
+              <TaxonomyPath
+                taxonPath={entry.taxon_path}
+                pathZh={entry.path_zh}
+                commonNameZh={entry.common_name_zh}
+                scientificName={entry.scientific_name}
+              />
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -254,7 +254,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
               background: 'rgba(255,255,255,0.02)', borderRadius: '4px',
             }}>
               如果你發現某個有知名度的物種不在列表中，歡迎告訴我們！
-              我們會定期審核並補上遺漏的種類。送出後管理員會收到通知。
+              我們會定期審核並補上遺漏的種類，也可以補充你希望增加的分類種類或深度。送出後管理員會收到通知。
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <input

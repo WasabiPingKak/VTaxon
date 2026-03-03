@@ -27,7 +27,7 @@ export default function useGraphInteraction(nodes, maxCount) {
         const bHalfW = d._nodeWidth ? d._nodeWidth / 2 + 4 : 34;
         const bHalfH = d._nodeHeight ? d._nodeHeight / 2 + 4 : 16;
         if (Math.abs(dx) <= bHalfW && Math.abs(dy) <= bHalfH) return node;
-      } else if (d._rank === 'SPECIES' || d._rank === 'SUBSPECIES') {
+      } else if (d._rank === 'SPECIES' || d._rank === 'SUBSPECIES' || d._rank === 'F_SPECIES') {
         // Rounded rect 70×26 — AABB
         const halfW = d._nodeWidth ? d._nodeWidth / 2 + 4 : 39;
         const halfH = d._nodeHeight ? d._nodeHeight / 2 + 4 : 17;

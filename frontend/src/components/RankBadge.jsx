@@ -14,6 +14,10 @@ const RANK_CONFIG = {
   SUBSPECIES: { label: '亞種', bg: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: 'rgba(167,139,250,0.3)' },
   VARIETY:    { label: '變種', bg: 'rgba(52,211,153,0.12)',  color: '#34d399', border: 'rgba(52,211,153,0.25)' },
   BREED:      { label: '品種', bg: 'rgba(251,146,60,0.15)',  color: '#fb923c', border: 'rgba(251,146,60,0.3)' },
+  F_ROOT:       { label: '虛構',   bg: 'rgba(240,171,252,0.15)', color: '#f0abfc', border: 'rgba(240,171,252,0.3)' },
+  F_ORIGIN:     { label: '來源',   bg: 'rgba(249,115,22,0.15)',  color: '#f97316', border: 'rgba(249,115,22,0.3)' },
+  F_SUB_ORIGIN: { label: '子來源', bg: 'rgba(234,179,8,0.15)',   color: '#eab308', border: 'rgba(234,179,8,0.3)' },
+  F_SPECIES:    { label: '虛構種', bg: 'rgba(251,113,133,0.15)', color: '#fb7185', border: 'rgba(251,113,133,0.3)' },
 };
 
 export function getRankConfig(rank) {

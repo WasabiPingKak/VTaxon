@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { hierarchy, tree } from 'd3-hierarchy';
-import { buildTree } from '../lib/treeUtils';
+import { buildTree, buildFictionalTree } from '../lib/treeUtils';
 
 // ── Layout constants ──
 const NODE_DX = 110;   // base horizontal spacing (used as separation denominator)
@@ -125,7 +125,7 @@ function computeLabelLayout(data) {
     return;
   }
 
-  if (_rank === 'SPECIES' || _rank === 'SUBSPECIES') {
+  if (_rank === 'SPECIES' || _rank === 'SUBSPECIES' || _rank === 'F_SPECIES') {
     // Species: wrap main label inside rect, cap collision width.
     const mainLabel = _nameZh || _name;
     const { lines, widest } = computeWrappedLines(ctx, mainLabel, MAX_LABEL_W.SPECIES, 12);
@@ -152,85 +152,136 @@ function computeLabelLayout(data) {
   data._labelHalfW = Math.max(widest, 20) / 2;
 }
 
+// Ranks that use rect rendering (not circle)
+const RECT_RANKS = new Set(['SPECIES', 'SUBSPECIES', 'BREED', 'F_SPECIES']);
+
+/** Compute bounds from a list of d3 hierarchy nodes. */
+function computeBounds(nodes) {
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const n of nodes) {
+    if (n.x < minX) minX = n.x;
+    if (n.x > maxX) maxX = n.x;
+    if (n.y < minY) minY = n.y;
+    if (n.y > maxY) maxY = n.y;
+  }
+  return { minX, maxX, minY, maxY };
+}
+
+/** Compute maxCount across taxonomy circle nodes. */
+function computeMaxCount(nodes) {
+  let maxCount = 1;
+  for (const n of nodes) {
+    const d = n.data;
+    if (!d._vtuber && !RECT_RANKS.has(d._rank)) {
+      if ((d._count || 0) > maxCount) maxCount = d._count;
+    }
+  }
+  return maxCount;
+}
+
+/** Merge two bounds objects. */
+function mergeBounds(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return {
+    minX: Math.min(a.minX, b.minX),
+    maxX: Math.max(a.maxX, b.maxX),
+    minY: Math.min(a.minY, b.minY),
+    maxY: Math.max(a.maxY, b.maxY),
+  };
+}
+
+/** Run the full layout pipeline on a d3 hierarchy root. */
+function layoutTree(h) {
+  for (const node of h.descendants()) {
+    computeLabelLayout(node.data);
+  }
+
+  const treeLayout = tree()
+    .nodeSize([NODE_DX, NODE_DY])
+    .separation((a, b) => {
+      const aHalf = a.data._labelHalfW || 40;
+      const bHalf = b.data._labelHalfW || 40;
+      const needed = (aHalf + bHalf + LABEL_PADDING) / NODE_DX;
+
+      const aV = a.data._vtuber;
+      const bV = b.data._vtuber;
+      let minSep;
+      if (aV && bV) minSep = 0.7;
+      else if (aV || bV) minSep = 1.0;
+      else minSep = a.parent === b.parent ? 1 : 1.2;
+
+      return Math.max(needed, minSep);
+    });
+
+  treeLayout(h);
+  applyIntermediateLevel(h);
+  applyGridLayout(h);
+  resolveCollisions(h);
+}
+
+const DUAL_TREE_GAP = 400;
+
 /**
  * Convert flat entries + expandedSet into a d3 tree layout.
- * Returns { nodes, edges, bounds } ready for Canvas rendering.
+ * Supports dual trees: real species (entries) + fictional species (fictionalEntries).
+ * Returns { nodes, edges, bounds, rootData, fictionalRootData, maxCount }.
  */
-export default function useTreeLayout(entries, expandedSet, currentUserId) {
+export default function useTreeLayout(entries, fictionalEntries, expandedSet, currentUserId) {
   return useMemo(() => {
-    if (!entries || entries.length === 0) {
-      return { nodes: [], edges: [], rootData: null, bounds: null };
+    const hasReal = entries && entries.length > 0;
+    const hasFictional = fictionalEntries && fictionalEntries.length > 0;
+
+    if (!hasReal && !hasFictional) {
+      return { nodes: [], edges: [], rootData: null, fictionalRootData: null, bounds: null, maxCount: 1 };
     }
 
-    const root = buildTree(entries);
-    const hierData = mapToHierarchy(root, expandedSet, currentUserId);
-    const h = hierarchy(hierData, d => d.children);
+    let realNodes = [], realEdges = [], realBounds = null, realRoot = null;
+    let fictNodes = [], fictEdges = [], fictBounds = null, fictRoot = null;
 
-    // ── Pre-compute label widths for every node ──
-    for (const node of h.descendants()) {
-      computeLabelLayout(node.data);
+    // ── Real tree ──
+    if (hasReal) {
+      realRoot = buildTree(entries);
+      const hierData = mapToHierarchy(realRoot, expandedSet, currentUserId);
+      const h = hierarchy(hierData, d => d.children);
+      layoutTree(h);
+      realNodes = h.descendants();
+      realEdges = h.links();
+      realBounds = computeBounds(realNodes);
     }
 
-    // ── Tree layout with width-aware separation ──
-    const treeLayout = tree()
-      .nodeSize([NODE_DX, NODE_DY])
-      .separation((a, b) => {
-        // Dynamic separation based on actual label widths
-        const aHalf = a.data._labelHalfW || 40;
-        const bHalf = b.data._labelHalfW || 40;
-        const needed = (aHalf + bHalf + LABEL_PADDING) / NODE_DX;
+    // ── Fictional tree ──
+    if (hasFictional) {
+      fictRoot = buildFictionalTree(fictionalEntries);
+      const hierData = mapToHierarchy(fictRoot, expandedSet, currentUserId);
+      const h = hierarchy(hierData, d => d.children);
+      layoutTree(h);
+      fictNodes = h.descendants();
+      fictEdges = h.links();
+      fictBounds = computeBounds(fictNodes);
 
-        // Minimum separations by node type
-        const aV = a.data._vtuber;
-        const bV = b.data._vtuber;
-        let minSep;
-        if (aV && bV) minSep = 0.7;
-        else if (aV || bV) minSep = 1.0;
-        else minSep = a.parent === b.parent ? 1 : 1.2;
-
-        return Math.max(needed, minSep);
-      });
-
-    treeLayout(h);
-
-    // ── Post-layout: intermediate level for higher-rank vtubers ──
-    applyIntermediateLevel(h);
-
-    // ── Post-layout: grid for dense vtuber groups ──
-    applyGridLayout(h);
-
-    // ── Post-layout: collision sweep to fix remaining overlaps ──
-    resolveCollisions(h);
-
-    const nodes = h.descendants();
-    const edges = h.links();
-
-    // Recalculate bounds after post-processing
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (const n of nodes) {
-      if (n.x < minX) minX = n.x;
-      if (n.x > maxX) maxX = n.x;
-      if (n.y < minY) minY = n.y;
-      if (n.y > maxY) maxY = n.y;
-    }
-
-    // Compute maxCount across all taxonomy circle nodes (for area-proportional sizing)
-    let maxCount = 1;
-    for (const n of nodes) {
-      const d = n.data;
-      if (!d._vtuber && d._rank !== 'SPECIES' && d._rank !== 'SUBSPECIES' && d._rank !== 'BREED') {
-        if ((d._count || 0) > maxCount) maxCount = d._count;
+      // Offset fictional tree to the right of real tree
+      if (realBounds && fictBounds) {
+        const offsetX = realBounds.maxX + DUAL_TREE_GAP - fictBounds.minX;
+        for (const n of fictNodes) n.x += offsetX;
+        fictBounds = { minX: fictBounds.minX + offsetX, maxX: fictBounds.maxX + offsetX, minY: fictBounds.minY, maxY: fictBounds.maxY };
       }
     }
 
+    const allNodes = [...realNodes, ...fictNodes];
+    const allEdges = [...realEdges, ...fictEdges];
+    const allBounds = mergeBounds(realBounds, fictBounds);
+    const maxCount = Math.max(computeMaxCount(realNodes), computeMaxCount(fictNodes));
+
     return {
-      nodes,
-      edges,
-      rootData: root,
-      bounds: { minX, maxX, minY, maxY },
+      nodes: allNodes,
+      edges: allEdges,
+      rootData: realRoot,
+      fictionalRootData: fictRoot,
+      bounds: allBounds,
       maxCount,
     };
-  }, [entries, expandedSet, currentUserId]);
+  }, [entries, fictionalEntries, expandedSet, currentUserId]);
 }
 
 /**

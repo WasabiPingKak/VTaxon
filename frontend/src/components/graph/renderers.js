@@ -71,6 +71,27 @@ function truncateText(ctx, text, maxWidth) {
   return t + '\u2026';
 }
 
+// ── Edge flash alpha (synced with node flash double-pulse) ──
+function edgeFlashAlpha(state) {
+  if (!state.edgeFlashStart) return 0;
+  const elapsed = performance.now() - state.edgeFlashStart;
+  const FLASH_TOTAL = 2800;
+  if (elapsed >= FLASH_TOTAL) return 0;
+  let t, intensity;
+  if (elapsed < 1200) {
+    t = elapsed / 1200;
+    intensity = 1.0;
+  } else if (elapsed >= 1400 && elapsed < 2600) {
+    t = (elapsed - 1400) / 1200;
+    intensity = 0.65;
+  } else {
+    return 0; // gap or end
+  }
+  // Smooth pulse: peak at t=0.3, fade out
+  const pulse = t < 0.3 ? t / 0.3 : Math.max(0, 1 - (t - 0.3) / 0.7);
+  return pulse * intensity;
+}
+
 // ── Main draw ──
 export function drawGraph(ctx, nodes, edges, transform, canvasSize, state) {
   const { scale } = transform;
@@ -129,13 +150,13 @@ export function drawGraph(ctx, nodes, edges, transform, canvasSize, state) {
       if (tp) { edge.target.x = origTx; edge.target.y = origTy; }
       continue;
     }
-    drawEdge(ctx, edge, scale);
+    drawEdge(ctx, edge, scale, state);
     if (sp) { edge.source.x = origSx; edge.source.y = origSy; }
     if (tp) { edge.target.x = origTx; edge.target.y = origTy; }
   }
 
   // ── Grid connectors (stem + bar + columns) ──
-  drawGridConnectors(ctx, nodes, scale, pm, vp, margin);
+  drawGridConnectors(ctx, nodes, scale, pm, vp, margin, state);
 
   // ── Nodes ──
   for (const node of nodes) {
@@ -154,30 +175,39 @@ export function drawGraph(ctx, nodes, edges, transform, canvasSize, state) {
 }
 
 // ── Edge rendering ──
-function drawEdge(ctx, edge, scale) {
+function drawEdge(ctx, edge, scale, state) {
   const s = edge.source;
   const t = edge.target;
   const rc = RANK_COLORS[s.data._rank] || RANK_COLORS.ROOT;
-  const color = hexToRgba(rc.node, EDGE_ALPHA);
+
+  const isHighlighted = state.closeEdgePaths?.has(t.data._pathKey);
+  const flashA = isHighlighted ? edgeFlashAlpha(state) : 0;
 
   ctx.beginPath();
   const midY = (s.y + t.y) / 2;
   ctx.moveTo(s.x, s.y);
   ctx.bezierCurveTo(s.x, midY, t.x, midY, t.x, t.y);
 
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.2 / Math.max(scale, 0.3);
-
-  if (scale > LOD_DOTS_ONLY) {
-    ctx.shadowBlur = EDGE_GLOW_BLUR;
-    ctx.shadowColor = rc.glow;
+  if (flashA > 0) {
+    ctx.strokeStyle = hexToRgba('#FF6B35', 0.3 + 0.45 * flashA);
+    ctx.lineWidth = (1.2 + 1.8 * flashA) / Math.max(scale, 0.3);
+    ctx.shadowBlur = 10 * flashA;
+    ctx.shadowColor = 'rgba(255,107,53,0.7)';
+  } else {
+    const color = hexToRgba(rc.node, EDGE_ALPHA);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.2 / Math.max(scale, 0.3);
+    if (scale > LOD_DOTS_ONLY) {
+      ctx.shadowBlur = EDGE_GLOW_BLUR;
+      ctx.shadowColor = rc.glow;
+    }
   }
   ctx.stroke();
   ctx.shadowBlur = 0;
 }
 
 // ── Grid connectors: stem + horizontal bar + vertical columns ──
-function drawGridConnectors(ctx, nodes, scale, pm, vp, margin) {
+function drawGridConnectors(ctx, nodes, scale, pm, vp, margin, state) {
   // Group grid nodes by parent _pathKey
   const groups = new Map();
   for (const node of nodes) {
@@ -216,14 +246,32 @@ function drawGridConnectors(ctx, nodes, scale, pm, vp, margin) {
     const barMidX = (minColX + maxColX) / 2;
     if (!isInViewport(px, py, vp, margin) && !isInViewport(barMidX, barY, vp, margin * 2)) continue;
 
+    // Check if any child in this group is highlighted (edge flash)
+    let groupHighlighted = false;
+    if (state.closeEdgePaths) {
+      for (const child of children) {
+        if (state.closeEdgePaths.has(child.data._pathKey)) {
+          groupHighlighted = true;
+          break;
+        }
+      }
+    }
+    const flashA = groupHighlighted ? edgeFlashAlpha(state) : 0;
+
     // Color from parent rank
     const rc = RANK_COLORS[parent.data._rank] || RANK_COLORS.ROOT;
-    const lineColor = hexToRgba(rc.node, 0.15);
-    const lw = 1.2 / Math.max(scale, 0.3);
 
-    ctx.strokeStyle = lineColor;
-    ctx.lineWidth = lw;
-    ctx.shadowBlur = 0;
+    if (flashA > 0) {
+      ctx.strokeStyle = hexToRgba('#FF6B35', 0.3 + 0.45 * flashA);
+      ctx.lineWidth = (1.2 + 1.8 * flashA) / Math.max(scale, 0.3);
+      ctx.shadowBlur = 10 * flashA;
+      ctx.shadowColor = 'rgba(255,107,53,0.7)';
+    } else {
+      const lineColor = hexToRgba(rc.node, 0.15);
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 1.2 / Math.max(scale, 0.3);
+      ctx.shadowBlur = 0;
+    }
 
     // 1. Stem: parent center → bar midpoint (bezier)
     const barMidPt = (minColX + maxColX) / 2;
@@ -246,6 +294,8 @@ function drawGridConnectors(ctx, nodes, scale, pm, vp, margin) {
       ctx.lineTo(colX, maxY);
       ctx.stroke();
     }
+
+    ctx.shadowBlur = 0;
   }
 }
 
@@ -257,7 +307,7 @@ function drawNode(ctx, node, scale, state) {
     drawVtuberNode(ctx, node, scale, state);
   } else if (d._rank === 'BREED') {
     drawBreedNode(ctx, node, scale, state);
-  } else if (d._rank === 'SPECIES' || d._rank === 'SUBSPECIES') {
+  } else if (d._rank === 'SPECIES' || d._rank === 'SUBSPECIES' || d._rank === 'F_SPECIES') {
     drawSpeciesNode(ctx, node, scale, state);
   } else {
     drawTaxonomyNode(ctx, node, scale, state);
@@ -382,8 +432,18 @@ function drawSpeciesNode(ctx, node, scale, state) {
     // Latin name below rect — truncate to rect width
     ctx.fillStyle = LABEL_DIM;
     ctx.font = fontStr(10, scale, '', 'italic');
+    const latinFs = scaledFontSize(10, scale);
+    const latinY = node.y + h / 2 + latinFs * 0.8;
     const displayLatin = truncateText(ctx, d._name || '', w);
-    ctx.fillText(displayLatin, node.x, node.y + h / 2 + scaledFontSize(10, scale) * 0.8);
+    ctx.fillText(displayLatin, node.x, latinY);
+
+    // Rank label + count below Latin name
+    const count = d._count || 0;
+    const rankLabel = RANK_LABELS[d._rank] || '';
+    if (rankLabel) {
+      ctx.font = fontStr(10, scale);
+      ctx.fillText(`${rankLabel} · ${count}`, node.x, latinY + latinFs + 2);
+    }
   }
 }
 
@@ -392,7 +452,7 @@ function drawVtuberNode(ctx, node, scale, state) {
   const d = node.data;
   const isCurrentUser = d._isCurrentUser;
   const isFocused = state.focusedUserId && d._userId === state.focusedUserId;
-  const isClose = state.closeVtuberIds && state.closeVtuberIds.get(d._userId)?.has(d._entry?.taxon_path);
+  const isClose = state.closeVtuberIds && state.closeVtuberIds.get(d._userId)?.has(d._entry?.fictional_path || d._entry?.taxon_path);
   const hovered = state.hoveredNode === node;
   const hexR = 21;
 
@@ -457,7 +517,7 @@ function drawVtuberNode(ctx, node, scale, state) {
 
   // ── Flash: dramatic double-pulse burst for close nodes on traceBack change ──
   if (isClose && state.flashMap) {
-    const flashKey = d._userId + '\0' + d._entry?.taxon_path;
+    const flashKey = d._userId + '\0' + (d._entry?.fictional_path || d._entry?.taxon_path);
     const flashStart = state.flashMap.get(flashKey);
     if (flashStart) {
       const elapsed = performance.now() - flashStart;

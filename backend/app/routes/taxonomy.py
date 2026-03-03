@@ -2,9 +2,10 @@ import logging
 
 from flask import Blueprint, jsonify
 
-from ..cache import get_tree_cache, set_tree_cache
+from ..cache import (get_tree_cache, set_tree_cache,
+                     get_fictional_tree_cache, set_fictional_tree_cache)
 from ..extensions import db
-from ..models import User, VtuberTrait, SpeciesCache
+from ..models import User, VtuberTrait, SpeciesCache, FictionalSpecies
 from ..services.gbif import _build_path_zh
 
 log = logging.getLogger(__name__)
@@ -99,4 +100,46 @@ def get_taxonomy_tree():
 
     result = {'entries': entries}
     set_tree_cache(result)
+    return jsonify(result)
+
+
+@taxonomy_bp.route('/fictional-tree', methods=['GET'])
+def get_fictional_tree():
+    """Return all vtuber traits with fictional species, joined with user and fictional_species data."""
+    cached = get_fictional_tree_cache()
+    if cached:
+        return jsonify(cached)
+
+    rows = (
+        db.session.query(VtuberTrait, FictionalSpecies, User)
+        .join(FictionalSpecies, VtuberTrait.fictional_species_id == FictionalSpecies.id)
+        .join(User, VtuberTrait.user_id == User.id)
+        .filter(VtuberTrait.fictional_species_id.isnot(None))
+        .all()
+    )
+
+    entries = []
+    for trait, fictional, user in rows:
+        # Build fictional_path: origin|sub_origin|name
+        path_parts = [fictional.origin]
+        if fictional.sub_origin:
+            path_parts.append(fictional.sub_origin)
+        path_parts.append(fictional.name)
+        fictional_path = '|'.join(path_parts)
+
+        entries.append({
+            'user_id': user.id,
+            'display_name': user.display_name,
+            'avatar_url': user.avatar_url,
+            'country_flags': user.country_flags or [],
+            'fictional_species_id': fictional.id,
+            'fictional_path': fictional_path,
+            'fictional_name': fictional.name,
+            'fictional_name_zh': fictional.name_zh or fictional.name,
+            'origin': fictional.origin,
+            'sub_origin': fictional.sub_origin,
+        })
+
+    result = {'entries': entries}
+    set_fictional_tree_cache(result)
     return jsonify(result)

@@ -266,3 +266,55 @@ UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=521917
 -- 家貓品種關聯
 UPDATE vtuber_traits SET breed_id = (SELECT id FROM breeds WHERE taxon_id=2435099 AND name_en='Calico')
   WHERE id = '00000000-7e57-a010-0000-000000000010';
+
+
+-- ============================================================
+-- 4. 章魚目 Octopoda — 測試科/屬/種混合
+-- ============================================================
+
+-- 4a. species_cache — 章魚目相關分類
+INSERT INTO species_cache (taxon_id, scientific_name, common_name_en, common_name_zh, taxon_rank, taxon_path, kingdom, phylum, class, order_, family, genus, path_zh) VALUES
+-- 科級
+(8800001, 'Octopodidae',             'Octopuses',               '章魚科',       'FAMILY',  'Animalia|Mollusca|Cephalopoda|Octopoda|Octopodidae',                                           'Animalia','Mollusca','Cephalopoda','Octopoda','Octopodidae', NULL,              '{"kingdom":"動物界","phylum":"軟體動物門","class":"頭足綱","order":"章魚目","family":"章魚科"}'),
+(8800002, 'Argonautidae',            'Paper Nautiluses',        '船蛸科',       'FAMILY',  'Animalia|Mollusca|Cephalopoda|Octopoda|Argonautidae',                                          'Animalia','Mollusca','Cephalopoda','Octopoda','Argonautidae', NULL,             '{"kingdom":"動物界","phylum":"軟體動物門","class":"頭足綱","order":"章魚目","family":"船蛸科"}'),
+-- 屬級
+(8800003, 'Octopus',                 NULL,                      '章魚屬',       'GENUS',   'Animalia|Mollusca|Cephalopoda|Octopoda|Octopodidae|Octopus',                                   'Animalia','Mollusca','Cephalopoda','Octopoda','Octopodidae','Octopus',          '{"kingdom":"動物界","phylum":"軟體動物門","class":"頭足綱","order":"章魚目","family":"章魚科","genus":"章魚屬"}'),
+(8800004, 'Hapalochlaena',           NULL,                      '藍圈章魚屬',   'GENUS',   'Animalia|Mollusca|Cephalopoda|Octopoda|Octopodidae|Hapalochlaena',                             'Animalia','Mollusca','Cephalopoda','Octopoda','Octopodidae','Hapalochlaena',    '{"kingdom":"動物界","phylum":"軟體動物門","class":"頭足綱","order":"章魚目","family":"章魚科","genus":"藍圈章魚屬"}'),
+-- 種級
+(8800005, 'Octopus vulgaris',        'Common Octopus',          '真蛸',         'SPECIES', 'Animalia|Mollusca|Cephalopoda|Octopoda|Octopodidae|Octopus|Octopus vulgaris',                  'Animalia','Mollusca','Cephalopoda','Octopoda','Octopodidae','Octopus',          '{"kingdom":"動物界","phylum":"軟體動物門","class":"頭足綱","order":"章魚目","family":"章魚科","genus":"章魚屬"}'),
+(8800006, 'Octopus cyanea',          'Day Octopus',             '白斑章魚',     'SPECIES', 'Animalia|Mollusca|Cephalopoda|Octopoda|Octopodidae|Octopus|Octopus cyanea',                    'Animalia','Mollusca','Cephalopoda','Octopoda','Octopodidae','Octopus',          '{"kingdom":"動物界","phylum":"軟體動物門","class":"頭足綱","order":"章魚目","family":"章魚科","genus":"章魚屬"}'),
+(8800007, 'Enteroctopus dofleini',   'Giant Pacific Octopus',   '北太平洋巨型章魚','SPECIES','Animalia|Mollusca|Cephalopoda|Octopoda|Octopodidae|Enteroctopus|Enteroctopus dofleini',      'Animalia','Mollusca','Cephalopoda','Octopoda','Octopodidae','Enteroctopus',     '{"kingdom":"動物界","phylum":"軟體動物門","class":"頭足綱","order":"章魚目","family":"章魚科","genus":"巨型章魚屬"}'),
+(8800008, 'Hapalochlaena lunulata',  'Greater Blue-ringed Octopus','大藍圈章魚', 'SPECIES', 'Animalia|Mollusca|Cephalopoda|Octopoda|Octopodidae|Hapalochlaena|Hapalochlaena lunulata',     'Animalia','Mollusca','Cephalopoda','Octopoda','Octopodidae','Hapalochlaena',    '{"kingdom":"動物界","phylum":"軟體動物門","class":"頭足綱","order":"章魚目","family":"章魚科","genus":"藍圈章魚屬"}'),
+(8800009, 'Thaumoctopus mimicus',    'Mimic Octopus',           '擬態章魚',     'SPECIES', 'Animalia|Mollusca|Cephalopoda|Octopoda|Octopodidae|Thaumoctopus|Thaumoctopus mimicus',         'Animalia','Mollusca','Cephalopoda','Octopoda','Octopodidae','Thaumoctopus',     '{"kingdom":"動物界","phylum":"軟體動物門","class":"頭足綱","order":"章魚目","family":"章魚科","genus":"擬態章魚屬"}'),
+(8800010, 'Argonauta argo',          'Greater Argonaut',        '船蛸',         'SPECIES', 'Animalia|Mollusca|Cephalopoda|Octopoda|Argonautidae|Argonauta|Argonauta argo',                 'Animalia','Mollusca','Cephalopoda','Octopoda','Argonautidae','Argonauta',       '{"kingdom":"動物界","phylum":"軟體動物門","class":"頭足綱","order":"章魚目","family":"船蛸科","genus":"船蛸屬"}')
+ON CONFLICT (taxon_id) DO UPDATE SET
+  common_name_zh = EXCLUDED.common_name_zh,
+  path_zh = EXCLUDED.path_zh;
+
+-- 4b. users — 章魚目測試使用者
+INSERT INTO users (id, display_name, avatar_url, role, organization, country_flags) VALUES
+('00000000-7e57-0007-0000-000000000001', '章魚燒 Takoyaki',       'https://i.pravatar.cc/150?u=octo01', 'user', '__TEST__', '["jp"]'),   -- 章魚科 FAMILY
+('00000000-7e57-0007-0000-000000000002', '船蛸姬 PaperNaut',      'https://i.pravatar.cc/150?u=octo02', 'user', '__TEST__', '["tw"]'),   -- 船蛸科 FAMILY
+('00000000-7e57-0007-0000-000000000003', '八爪大王 OctoKing',     'https://i.pravatar.cc/150?u=octo03', 'user', '__TEST__', '["kr"]'),   -- 章魚屬 GENUS
+('00000000-7e57-0007-0000-000000000004', '藍環毒姬 BlueRing',     'https://i.pravatar.cc/150?u=octo04', 'user', '__TEST__', '["au"]'),   -- 藍圈章魚屬 GENUS
+('00000000-7e57-0007-0000-000000000005', '墨墨 InkInk',           'https://i.pravatar.cc/150?u=octo05', 'user', '__TEST__', '["tw"]'),   -- 真蛸 SPECIES
+('00000000-7e57-0007-0000-000000000006', '蛸壺 TakoPot',          'https://i.pravatar.cc/150?u=octo06', 'user', '__TEST__', '["jp"]'),   -- 真蛸 SPECIES
+('00000000-7e57-0007-0000-000000000007', '晝行者 DayWalker',      'https://i.pravatar.cc/150?u=octo07', 'user', '__TEST__', '["ph"]'),   -- 白斑章魚 SPECIES
+('00000000-7e57-0007-0000-000000000008', '巨腕 GiantArm',         'https://i.pravatar.cc/150?u=octo08', 'user', '__TEST__', '["us"]'),   -- 北太平洋巨型章魚 SPECIES
+('00000000-7e57-0007-0000-000000000009', '擬態師 Mimic',          'https://i.pravatar.cc/150?u=octo09', 'user', '__TEST__', '["id"]'),   -- 擬態章魚 SPECIES
+('00000000-7e57-0007-0000-000000000010', '漂流者 Drifter',        'https://i.pravatar.cc/150?u=octo10', 'user', '__TEST__', '["tw"]')    -- 船蛸 SPECIES
+ON CONFLICT (id) DO NOTHING;
+
+-- 4c. vtuber_traits — 章魚目角色物種關聯
+INSERT INTO vtuber_traits (id, user_id, taxon_id, breed_name, trait_note) VALUES
+('00000000-7e57-a080-0000-000000000001', '00000000-7e57-0007-0000-000000000001', 8800001, NULL, NULL),  -- 章魚科 FAMILY
+('00000000-7e57-a080-0000-000000000002', '00000000-7e57-0007-0000-000000000002', 8800002, NULL, NULL),  -- 船蛸科 FAMILY
+('00000000-7e57-a080-0000-000000000003', '00000000-7e57-0007-0000-000000000003', 8800003, NULL, NULL),  -- 章魚屬 GENUS
+('00000000-7e57-a080-0000-000000000004', '00000000-7e57-0007-0000-000000000004', 8800004, NULL, NULL),  -- 藍圈章魚屬 GENUS
+('00000000-7e57-a080-0000-000000000005', '00000000-7e57-0007-0000-000000000005', 8800005, NULL, NULL),  -- 真蛸 SPECIES
+('00000000-7e57-a080-0000-000000000006', '00000000-7e57-0007-0000-000000000006', 8800005, NULL, NULL),  -- 真蛸 SPECIES
+('00000000-7e57-a080-0000-000000000007', '00000000-7e57-0007-0000-000000000007', 8800006, NULL, NULL),  -- 白斑章魚 SPECIES
+('00000000-7e57-a080-0000-000000000008', '00000000-7e57-0007-0000-000000000008', 8800007, NULL, NULL),  -- 北太平洋巨型章魚 SPECIES
+('00000000-7e57-a080-0000-000000000009', '00000000-7e57-0007-0000-000000000009', 8800009, NULL, NULL),  -- 擬態章魚 SPECIES
+('00000000-7e57-a080-0000-000000000010', '00000000-7e57-0007-0000-000000000010', 8800010, NULL, NULL)   -- 船蛸 SPECIES
+ON CONFLICT (id) DO NOTHING;

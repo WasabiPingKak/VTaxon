@@ -169,6 +169,7 @@ export const api = {
 
   // Taxonomy
   getTaxonomyTree: () => apiFetch('/taxonomy/tree'),
+  getFictionalTree: () => apiFetch('/taxonomy/fictional-tree'),
 
   // Fictional Species
   getFictionalSpecies: () => apiFetch('/fictional-species'),

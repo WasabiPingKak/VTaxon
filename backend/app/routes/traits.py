@@ -1,7 +1,7 @@
 from flask import Blueprint, g, jsonify, request
 
 from ..auth import login_required
-from ..cache import invalidate_tree_cache
+from ..cache import invalidate_tree_cache, invalidate_fictional_tree_cache
 from ..extensions import db
 from ..models import Breed, FictionalSpecies, SpeciesCache, VtuberTrait
 from ..services.gbif import get_species
@@ -135,6 +135,8 @@ def create_trait():
     db.session.add(trait)
     db.session.commit()
     invalidate_tree_cache()
+    if fictional_species_id:
+        invalidate_fictional_tree_cache()
 
     result = trait.to_dict()
     if replaced_info:
@@ -181,6 +183,8 @@ def update_trait(trait_id):
 
     db.session.commit()
     invalidate_tree_cache()
+    if trait.fictional_species_id:
+        invalidate_fictional_tree_cache()
     return jsonify(trait.to_dict())
 
 
@@ -193,7 +197,10 @@ def delete_trait(trait_id):
     if str(trait.user_id) != str(g.current_user_id):
         return jsonify({'error': 'Not authorized to delete this trait'}), 403
 
+    had_fictional = trait.fictional_species_id is not None
     db.session.delete(trait)
     db.session.commit()
     invalidate_tree_cache()
+    if had_fictional:
+        invalidate_fictional_tree_cache()
     return jsonify({'message': 'Trait deleted'}), 200

@@ -12,11 +12,14 @@ export default function FloatingToolbar({
   entryCount,
   onExpandAll,
   onCollapseAll,
-  onExpandClose,
+  onExpandBothTrees,
   closeByRank,
   traceBack,
   traceBackLevels,
   onTraceBackChange,
+  depthLabels,
+  activeTree,
+  onSelectTree,
 }) {
   const [hovered, setHovered] = useState(null);
 
@@ -70,16 +73,9 @@ export default function FloatingToolbar({
     );
   };
 
-  const buttons = [
-    { id: 'zoomIn', label: '+', title: '放大', action: () => canvasRef.current?.zoomIn() },
-    { id: 'zoomOut', label: '\u2212', title: '縮小', action: () => canvasRef.current?.zoomOut() },
-    { id: 'fitView', label: '\u2299', title: '重置視圖', action: () => canvasRef.current?.fitView(0, 0, 0.5) },
-    { id: 'sep1', sep: true },
-  ];
-
-  if (onExpandClose) {
-    buttons.push({
-      id: 'expandClose',
+  const zoomButtons = [
+    {
+      id: 'expandBothTrees',
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />
@@ -87,13 +83,15 @@ export default function FloatingToolbar({
           <circle cx="12" cy="12" r="2" />
         </svg>
       ),
-      title: '展開相近',
-      action: onExpandClose,
+      title: '完整展開',
+      action: onExpandBothTrees,
       tint: '#FF6B35',
-    });
-  }
+    },
+    { id: 'zoomIn', label: '+', title: '放大', action: () => canvasRef.current?.zoomIn() },
+    { id: 'zoomOut', label: '\u2212', title: '縮小', action: () => canvasRef.current?.zoomOut() },
+  ];
 
-  buttons.push(
+  const actionButtons = [
     {
       id: 'expandAll',
       icon: (
@@ -116,14 +114,15 @@ export default function FloatingToolbar({
       title: '全部收合',
       action: onCollapseAll,
     },
-  );
+  ];
 
   // Close vtuber rank stats
   const rankEntries = [];
   if (closeByRank) {
+    const labels = depthLabels || DEPTH_LABELS;
     const sorted = [...closeByRank.entries()].sort((a, b) => a[0] - b[0]);
     for (const [depth, count] of sorted) {
-      const label = DEPTH_LABELS[depth];
+      const label = labels[depth];
       if (label) {
         rankEntries.push({ label, count });
       }
@@ -145,7 +144,58 @@ export default function FloatingToolbar({
       gap: '2px',
       pointerEvents: 'auto',
     }}>
-      {buttons.map(renderBtn)}
+      {zoomButtons.map(renderBtn)}
+
+      {/* Tree selector — indicator style, right after zoom buttons */}
+      {onSelectTree && (
+        <div style={{
+          paddingTop: 2,
+          paddingBottom: 2,
+        }}>
+          {[
+            { key: 'real', label: '現實生物' },
+            { key: 'fictional', label: '虛構生物' },
+          ].map(item => {
+            const isActive = activeTree === item.key;
+            const isItemHovered = hovered === `tree-${item.key}`;
+
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => onSelectTree(item.key)}
+                onMouseEnter={() => setHovered(`tree-${item.key}`)}
+                onMouseLeave={() => setHovered(null)}
+                style={{
+                  width: '100%',
+                  height: 24,
+                  padding: '0 6px 0 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0,
+                  background: isActive
+                    ? 'rgba(255,107,53,0.12)'
+                    : isItemHovered ? 'rgba(255,255,255,0.06)' : 'transparent',
+                  border: 'none',
+                  borderLeft: isActive ? '2px solid #FF6B35' : '2px solid transparent',
+                  borderRadius: 0,
+                  color: isActive ? '#FF6B35' : 'rgba(255,255,255,0.55)',
+                  fontSize: '0.7em',
+                  fontWeight: isActive ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Separator + action buttons */}
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '4px 2px' }} />
+      {actionButtons.map(renderBtn)}
 
       {/* Trace back range — vertical level list */}
       {showTraceBack && (

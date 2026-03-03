@@ -195,20 +195,21 @@ const GraphCanvas = forwardRef(function GraphCanvas({
       );
     },
 
-    fitBounds(bMinX, bMinY, bMaxX, bMaxY, padding = 80, leftInset = 0, rightInset = 0) {
+    fitBounds(bMinX, bMinY, bMaxX, bMaxY, padding = 80, leftInset = 0, rightInset = 0, bottomInset = 0) {
       const canvas = canvasRef.current;
       if (!canvas || !zoomRef.current) return;
       const dpr = window.devicePixelRatio || 1;
       const w = sizeRef.current.width / dpr;
       const h = sizeRef.current.height / dpr;
 
-      // Available area excludes both insets (sidebar, etc.)
+      // Available area excludes insets
       const availW = w - leftInset - rightInset;
+      const availH = h - bottomInset;
       const boundsW = (bMaxX - bMinX) + padding * 2;
       const boundsH = (bMaxY - bMinY) + padding * 2;
 
       const scaleX = availW / boundsW;
-      const scaleY = h / boundsH;
+      const scaleY = availH / boundsH;
       let targetScale = Math.min(scaleX, scaleY);
       targetScale = Math.max(targetScale, minZoom);
       targetScale = Math.min(targetScale, 1.5);
@@ -216,10 +217,11 @@ const GraphCanvas = forwardRef(function GraphCanvas({
       const centerX = (bMinX + bMaxX) / 2;
       const centerY = (bMinY + bMaxY) / 2;
 
-      // Center content within the available area between left and right insets
+      // Center content within the available area
       const availCenterScreenX = leftInset + availW / 2;
+      const availCenterScreenY = availH / 2;
       const tx = availCenterScreenX - centerX * targetScale;
-      const ty = h / 2 - centerY * targetScale;
+      const ty = availCenterScreenY - centerY * targetScale;
 
       select(canvas).transition().duration(800).call(
         zoomRef.current.transform,
