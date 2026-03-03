@@ -230,7 +230,7 @@ export default function TaxonomyGraph({ currentUser }) {
 
   // Close edge paths for highlight rendering
   const closeEdgePaths = useMemo(() => {
-    if (!focusedUserId || closeVtuberIds.size === 0) return new Set();
+    if (!focusedUserId) return new Set();
     if (activeFocusedIsFictional)
       return computeCloseFictionalEdgePaths(activeFocusedEntries, fictionalEntries, closeVtuberIds, traceBack);
     return computeCloseEdgePaths(activeFocusedEntries, entries, closeVtuberIds, traceBack);
@@ -268,7 +268,7 @@ export default function TaxonomyGraph({ currentUser }) {
         return scopeTree === 'fictional' ? isFict : !isFict;
       };
 
-      // Try active focused entry + close vtuber nodes (unless fitAll)
+      // Try active focused entry + close vtuber nodes + shared ancestor edges (unless fitAll)
       if (!fitAll && focusedUserId && closeVtuberIds.size > 0) {
         // Build pathKey for the ACTIVE focused entry only (not all user species)
         const activeEntry = activeFocusedEntries[0];
@@ -283,17 +283,42 @@ export default function TaxonomyGraph({ currentUser }) {
           }
         }
 
+        const edgePaths = closeEdgePaths;
         for (const n of currentNodes) {
-          if (!n.data._vtuber || !inScope(n)) continue;
-          const uid = n.data._userId;
-          const isFocusedActive = activePathKey && n.data._pathKey === activePathKey;
-          const isClose = closeVtuberIds.get(uid)?.has(n.data._entry?.fictional_path || n.data._entry?.taxon_path);
-          if (!isFocusedActive && !isClose) continue;
+          if (!inScope(n)) continue;
+          const pk = n.data._pathKey;
+          // Include: focused vtuber, close vtubers, AND shared ancestor nodes on edge paths
+          const isVtuberMatch = n.data._vtuber && (
+            (activePathKey && pk === activePathKey) ||
+            closeVtuberIds.get(n.data._userId)?.has(n.data._entry?.fictional_path || n.data._entry?.taxon_path)
+          );
+          const isEdgeNode = edgePaths.size > 0 && edgePaths.has(pk);
+          if (!isVtuberMatch && !isEdgeNode) continue;
           if (n.x < minX) minX = n.x;
           if (n.y < minY) minY = n.y;
           if (n.x > maxX) maxX = n.x;
           if (n.y > maxY) maxY = n.y;
           count++;
+        }
+      }
+
+      // No close vtubers but focused — panTo focused node instead of fitting whole tree
+      if (count === 0 && !fitAll && focusedUserId) {
+        const activeEntry = activeFocusedEntries[0];
+        if (activeEntry) {
+          let activePathKey;
+          if (activeEntry.fictional_path) {
+            activePathKey = `__F__|${activeEntry.fictional_path}|__vtuber__${activeEntry.user_id}`;
+          } else {
+            activePathKey = activeEntry.taxon_path;
+            if (activeEntry.breed_id) activePathKey += `|__breed__${activeEntry.breed_id}`;
+            activePathKey += `|__vtuber__${activeEntry.user_id}`;
+          }
+          const focusedNode = currentNodes.find(n => n.data._pathKey === activePathKey);
+          if (focusedNode) {
+            canvasRef.current?.panTo(focusedNode.x, focusedNode.y);
+            return;
+          }
         }
       }
 
@@ -310,9 +335,9 @@ export default function TaxonomyGraph({ currentUser }) {
       }
 
       if (count === 0) return;
-      canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80);
+      canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80, 100);
     }, 300);
-  }, [focusedUserId, closeVtuberIds, activeFocusedEntries]);
+  }, [focusedUserId, closeVtuberIds, closeEdgePaths, activeFocusedEntries]);
 
   useEffect(() => {
     if (prevTickRef.current === traceBackTick) return;
@@ -433,10 +458,12 @@ export default function TaxonomyGraph({ currentUser }) {
   }, [bounds, nodes, currentUser, entries, fictionalEntries]);
 
   // Toggle expand/collapse
+  const toggleActionRef = useRef(null);
   const handleToggle = useCallback((pathKey) => {
     setExpandedSet(prev => {
       const next = new Set(prev);
       if (next.has(pathKey)) {
+        toggleActionRef.current = 'collapse';
         // Collapse — also collapse all descendants
         for (const key of prev) {
           if (key.startsWith(pathKey + '|') || key === pathKey) {
@@ -444,6 +471,7 @@ export default function TaxonomyGraph({ currentUser }) {
           }
         }
       } else {
+        toggleActionRef.current = 'expand';
         next.add(pathKey);
         // Auto-expand: single-child → always drill; count===1 → drill to bottom
         const treeRoot = pathKey.startsWith('__F__') ? fictionalRootData : rootData;
@@ -469,11 +497,38 @@ export default function TaxonomyGraph({ currentUser }) {
       return next;
     });
 
-    // Camera follow: pan to the toggled node after layout settles
+    // Camera follow after layout settles
     setTimeout(() => {
-      const targetNode = nodesRef.current?.find(n => n.data._pathKey === pathKey);
-      if (targetNode) {
-        canvasRef.current?.panTo(targetNode.x, targetNode.y);
+      const currentNodes = nodesRef.current;
+      if (!currentNodes?.length) return;
+
+      if (toggleActionRef.current === 'expand') {
+        // Fit bounds to include the clicked node + all expanded descendants
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        let count = 0;
+        const isFictional = pathKey.startsWith('__F__');
+        for (const n of currentNodes) {
+          const pk = n.data._pathKey;
+          // Match the node itself + all descendants
+          const isMatch = pathKey === ''
+            ? !pk.startsWith('__F__')                          // root '' → all real nodes
+            : (pk === pathKey || pk.startsWith(pathKey + '|'));
+          if (!isMatch) continue;
+          if (n.x < minX) minX = n.x;
+          if (n.y < minY) minY = n.y;
+          if (n.x > maxX) maxX = n.x;
+          if (n.y > maxY) maxY = n.y;
+          count++;
+        }
+        if (count > 0) {
+          canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80, 100);
+        }
+      } else {
+        // Collapse — pan to the node
+        const targetNode = currentNodes.find(n => n.data._pathKey === pathKey);
+        if (targetNode) {
+          canvasRef.current?.panTo(targetNode.x, targetNode.y);
+        }
       }
     }, 300);
   }, [rootData, fictionalRootData]);
@@ -529,7 +584,7 @@ export default function TaxonomyGraph({ currentUser }) {
       if (n.x > maxX) maxX = n.x;
       if (n.y > maxY) maxY = n.y;
     }
-    canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80);
+    canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80, 100);
   }, []);
 
   // Fit to fictional tree only
@@ -543,7 +598,7 @@ export default function TaxonomyGraph({ currentUser }) {
       if (n.x > maxX) maxX = n.x;
       if (n.y > maxY) maxY = n.y;
     }
-    canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80);
+    canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80, 100);
   }, []);
 
   // Select tree: set activeTree + camera fit
@@ -564,7 +619,7 @@ export default function TaxonomyGraph({ currentUser }) {
       if (n.x > maxX) maxX = n.x;
       if (n.y > maxY) maxY = n.y;
     }
-    canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80);
+    canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80, 100);
   }, []);
 
   // Canvas click handler
@@ -572,9 +627,12 @@ export default function TaxonomyGraph({ currentUser }) {
     const hit = hitTestClick(worldX, worldY);
     if (!hit) return;
 
+    // Sync tree indicator to the clicked node's tree
+    setActiveTree(hit.data._pathKey?.startsWith('__F__') ? 'fictional' : 'real');
+
     if (hit.data._vtuber) {
       setSelectedVtuber(hit.data._entry);
-    } else if (hit.data._pathKey) {
+    } else if (hit.data._pathKey != null) {
       handleToggle(hit.data._pathKey);
     }
   }, [hitTestClick, handleToggle]);

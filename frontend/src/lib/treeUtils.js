@@ -508,7 +508,7 @@ export function computeCloseFictionalVtubersByRank(focusedEntries, allFictionalE
  */
 export function computeCloseEdgePaths(focusedEntries, allEntries, closeVtuberIds, traceBack) {
   const edgeKeys = new Set();
-  if (!focusedEntries?.length || !allEntries || !closeVtuberIds || closeVtuberIds.size === 0) return edgeKeys;
+  if (!focusedEntries?.length || !allEntries) return edgeKeys;
 
   const focusedUserId = focusedEntries[0].user_id;
   const focusedSegs = (focusedEntries[0].taxon_path || '').split('|');
@@ -518,7 +518,7 @@ export function computeCloseEdgePaths(focusedEntries, allEntries, closeVtuberIds
   // Collect edges for all relevant entries (close vtubers + focused user)
   for (const entry of allEntries) {
     const uid = entry.user_id;
-    const isClose = closeVtuberIds.has(uid);
+    const isClose = closeVtuberIds?.has(uid);
     const isFocused = uid === focusedUserId;
     if (!isClose && !isFocused) continue;
 
@@ -549,7 +549,7 @@ export function computeCloseEdgePaths(focusedEntries, allEntries, closeVtuberIds
  */
 export function computeCloseFictionalEdgePaths(focusedEntries, allFictionalEntries, closeVtuberIds, traceBack) {
   const edgeKeys = new Set();
-  if (!focusedEntries?.length || !allFictionalEntries || !closeVtuberIds || closeVtuberIds.size === 0) return edgeKeys;
+  if (!focusedEntries?.length || !allFictionalEntries) return edgeKeys;
 
   const focusedUserId = focusedEntries[0].user_id;
   const focusedSegs = (focusedEntries[0].fictional_path || '').split('|');
@@ -558,7 +558,7 @@ export function computeCloseFictionalEdgePaths(focusedEntries, allFictionalEntri
 
   for (const entry of allFictionalEntries) {
     const uid = entry.user_id;
-    const isClose = closeVtuberIds.has(uid);
+    const isClose = closeVtuberIds?.has(uid);
     const isFocused = uid === focusedUserId;
     if (!isClose && !isFocused) continue;
 

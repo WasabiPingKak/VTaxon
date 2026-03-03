@@ -195,7 +195,7 @@ const GraphCanvas = forwardRef(function GraphCanvas({
       );
     },
 
-    fitBounds(bMinX, bMinY, bMaxX, bMaxY, padding = 80, leftInset = 0, rightInset = 0, bottomInset = 0) {
+    fitBounds(bMinX, bMinY, bMaxX, bMaxY, padding = 80, leftInset = 0, rightInset = 0, bottomInset = 0, topInset = 0) {
       const canvas = canvasRef.current;
       if (!canvas || !zoomRef.current) return;
       const dpr = window.devicePixelRatio || 1;
@@ -204,7 +204,7 @@ const GraphCanvas = forwardRef(function GraphCanvas({
 
       // Available area excludes insets
       const availW = w - leftInset - rightInset;
-      const availH = h - bottomInset;
+      const availH = h - topInset - bottomInset;
       const boundsW = (bMaxX - bMinX) + padding * 2;
       const boundsH = (bMaxY - bMinY) + padding * 2;
 
@@ -219,7 +219,7 @@ const GraphCanvas = forwardRef(function GraphCanvas({
 
       // Center content within the available area
       const availCenterScreenX = leftInset + availW / 2;
-      const availCenterScreenY = availH / 2;
+      const availCenterScreenY = topInset + availH / 2;
       const tx = availCenterScreenX - centerX * targetScale;
       const ty = availCenterScreenY - centerY * targetScale;
 
