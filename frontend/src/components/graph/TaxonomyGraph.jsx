@@ -632,10 +632,14 @@ export default function TaxonomyGraph({ currentUser }) {
 
     if (hit.data._vtuber) {
       setSelectedVtuber(hit.data._entry);
+      // If clicking own species node, sync HUD to that species
+      if (hit.data._userId === focusedUserId) {
+        setFocusedEntryKey(entryToKey(hit.data._entry));
+      }
     } else if (hit.data._pathKey != null) {
       handleToggle(hit.data._pathKey);
     }
-  }, [hitTestClick, handleToggle]);
+  }, [hitTestClick, handleToggle, focusedUserId]);
 
   // Focus navigation — set entry key so index is derived stably
   const entryToKey = (e) => {
