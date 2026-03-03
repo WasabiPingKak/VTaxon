@@ -258,7 +258,13 @@ def sync_oauth_accounts():
             # Only update if this account belongs to the current user
             if str(account.user_id) != str(g.current_user_id):
                 continue
-            if display_name:
+            # For YouTube accounts, only update display name when the
+            # frontend explicitly provides a channel_display_name (which
+            # requires a valid provider_token from a fresh OAuth redirect).
+            # Without it, display_name falls back to the Google account
+            # nickname from identity_data, which would incorrectly
+            # overwrite the YouTube channel name on every page refresh.
+            if display_name and (db_provider != 'youtube' or channel_display_name):
                 account.provider_display_name = display_name
             if avatar_url:
                 account.provider_avatar_url = avatar_url
