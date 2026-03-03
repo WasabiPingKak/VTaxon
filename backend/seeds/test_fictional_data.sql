@@ -88,12 +88,9 @@ INSERT INTO users (id, display_name, avatar_url, role, organization, country_fla
 ('00000000-7e57-f008-0000-000000000006', '夢魘使 NightmareX',       'https://i.pravatar.cc/150?u=ftest95', 'user', '__TEST__', '["de"]'),
 ('00000000-7e57-f008-0000-000000000007', '思念 ThoughtEcho',         'https://i.pravatar.cc/150?u=ftest96', 'user', '__TEST__', '["tw"]'),
 
--- ── 非物質生命 — 資訊態生命（5 種全覆蓋）──
+-- ── 非物質生命 — 資訊態生命（2 種）──
 ('00000000-7e57-f009-0000-000000000001', '小智 AIChan',              'https://i.pravatar.cc/150?u=ftest97', 'user', '__TEST__', '["jp"]'),
 ('00000000-7e57-f009-0000-000000000002', '病毒醬 VirusChan',         'https://i.pravatar.cc/150?u=ftest98', 'user', '__TEST__', '["tw"]'),
-('00000000-7e57-f009-0000-000000000003', '數據精靈 DataSprite',      'https://i.pravatar.cc/150?u=ftest99', 'user', '__TEST__', '["sg"]'),
-('00000000-7e57-f009-0000-000000000004', '虛擬偶像 VirtualIdol',     'https://i.pravatar.cc/150?u=ftesta0', 'user', '__TEST__', '["jp"]'),
-('00000000-7e57-f009-0000-000000000005', '量子貓 QuantumCat',        'https://i.pravatar.cc/150?u=ftesta1', 'user', '__TEST__', '["de"]'),
 
 -- ── 邊界測試使用者 ──
 ('00000000-7e57-f005-0000-000000000001', '超級無敵霹靂長名稱の虛構物種使用者テスト LongNameFictional', NULL, 'user', '__TEST__', '["tw"]'),  -- 超長名稱 + 無頭像
@@ -298,13 +295,10 @@ INSERT INTO vtuber_traits (id, user_id, fictional_species_id, trait_note) VALUES
 ('00000000-7e57-f1a2-0000-000000000007', '00000000-7e57-f008-0000-000000000007', (SELECT id FROM fictional_species WHERE name='Thought Form'), NULL)
 ON CONFLICT (id) DO NOTHING;
 
--- ── 資訊態生命（5 種）──
+-- ── 資訊態生命（2 種）──
 INSERT INTO vtuber_traits (id, user_id, fictional_species_id, trait_note) VALUES
 ('00000000-7e57-f1a3-0000-000000000001', '00000000-7e57-f009-0000-000000000001', (SELECT id FROM fictional_species WHERE name='AI'), NULL),
-('00000000-7e57-f1a3-0000-000000000002', '00000000-7e57-f009-0000-000000000002', (SELECT id FROM fictional_species WHERE name='Computer Virus'), NULL),
-('00000000-7e57-f1a3-0000-000000000003', '00000000-7e57-f009-0000-000000000003', (SELECT id FROM fictional_species WHERE name='Digital Life'), NULL),
-('00000000-7e57-f1a3-0000-000000000004', '00000000-7e57-f009-0000-000000000004', (SELECT id FROM fictional_species WHERE name='Virtual Being'), NULL),
-('00000000-7e57-f1a3-0000-000000000005', '00000000-7e57-f009-0000-000000000005', (SELECT id FROM fictional_species WHERE name='Quantum Entity'), NULL)
+('00000000-7e57-f1a3-0000-000000000002', '00000000-7e57-f009-0000-000000000002', (SELECT id FROM fictional_species WHERE name='Computer Virus'), NULL)
 ON CONFLICT (id) DO NOTHING;
 
 

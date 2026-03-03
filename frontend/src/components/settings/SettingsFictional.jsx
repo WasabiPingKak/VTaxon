@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../lib/ToastContext';
 import { api } from '../../lib/api';
@@ -8,6 +8,8 @@ export default function SettingsFictional() {
   const { user } = useAuth();
   const { addToast } = useToast();
   const [traits, setTraits] = useState([]);
+  const [showPicker, setShowPicker] = useState(false);
+  const pickerRef = useRef(null);
 
   useEffect(() => {
     if (user) loadTraits();
@@ -28,10 +30,17 @@ export default function SettingsFictional() {
     [traits],
   );
 
+  useEffect(() => {
+    if (showPicker && pickerRef.current) {
+      pickerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showPicker]);
+
   async function handleAdd(species) {
     try {
       await api.createTrait({ fictional_species_id: species.id });
       addToast(`已新增虛構物種特徵：${species.name_zh || species.name}`, { type: 'success' });
+      setShowPicker(false);
       loadTraits();
     } catch (err) {
       if (err.status === 409) {
@@ -54,13 +63,21 @@ export default function SettingsFictional() {
 
   return (
     <div>
-      {/* Existing fictional traits */}
       <h3 style={{ margin: '0 0 12px', fontSize: '1em', color: '#e2e8f0' }}>虛構物種特徵</h3>
 
-      {traits.length === 0 ? (
-        <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '16px' }}>
-          尚未新增虛構物種特徵，從下方選擇或搜尋
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        {!showPicker && (
+          <button onClick={() => setShowPicker(true)} style={{
+            padding: '6px 14px', background: '#38bdf8', color: '#0d1526',
+            border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9em',
+          }}>
+            + 新增
+          </button>
+        )}
+      </div>
+
+      {traits.length === 0 && !showPicker ? (
+        <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '16px' }}>尚未新增虛構物種特徵</p>
       ) : (
         <div style={{ marginBottom: '16px' }}>
           {traits.map(trait => (
@@ -106,16 +123,26 @@ export default function SettingsFictional() {
         </div>
       )}
 
-      {/* Picker */}
-      <div style={{
-        padding: '16px', background: 'rgba(255,255,255,0.03)',
-        borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)',
-      }}>
-        <FictionalSpeciesPicker
-          existingTraitIds={existingFictionalIds}
-          onAdd={handleAdd}
-        />
-      </div>
+      {showPicker && (
+        <div ref={pickerRef} style={{
+          padding: '16px', background: 'rgba(255,255,255,0.03)',
+          borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <FictionalSpeciesPicker
+            existingTraitIds={existingFictionalIds}
+            onAdd={handleAdd}
+          />
+          <div style={{ marginTop: '12px', textAlign: 'right' }}>
+            <button onClick={() => setShowPicker(false)} style={{
+              padding: '6px 14px', background: 'rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.6)', border: 'none',
+              borderRadius: '4px', cursor: 'pointer', fontSize: '0.85em',
+            }}>
+              收起
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -13,6 +13,7 @@ const SNS_FIELDS = [
   { key: 'discord', label: 'Discord', placeholder: 'https://discord.gg/invite-code' },
   { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/page' },
   { key: 'marshmallow', label: '棉花糖', placeholder: 'https://marshmallow-qa.com/username' },
+  { key: 'email', label: 'Email', placeholder: 'you@example.com', type: 'email' },
 ];
 
 const PROVIDER_LABELS = { youtube: 'YouTube', twitch: 'Twitch' };
@@ -112,13 +113,13 @@ export default function SettingsAccounts() {
     } catch (err) {
       if (err.message.includes('請重新登入') || err.message.includes('授權已過期')) {
         const providerLabel = PROVIDER_LABELS[account.provider];
-        if (confirm(`需要授權 ${providerLabel} 以同步資料，是否前往授權？（僅需一次）`)) {
+        if (confirm(`${providerLabel} 的驗證已過期，需要重新授權才能同步資料。是否前往重新授權？`)) {
           const supabaseProvider = SUPABASE_PROVIDER_MAP[account.provider];
           sessionStorage.setItem('vtaxon_login_provider', supabaseProvider);
           await supabase.auth.signInWithOAuth({
             provider: supabaseProvider,
             options: {
-              redirectTo: window.location.origin + '/settings',
+              redirectTo: window.location.origin + '/account',
               ...(supabaseProvider === 'google'
                 ? { scopes: 'https://www.googleapis.com/auth/youtube.readonly' }
                 : {}),
@@ -201,13 +202,13 @@ export default function SettingsAccounts() {
         <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#e2e8f0' }}>
           SNS 連結
         </label>
-        {SNS_FIELDS.map(({ key, label, placeholder }) => (
+        {SNS_FIELDS.map(({ key, label, placeholder, type }) => (
           <div key={key} style={{ marginBottom: '10px' }}>
             <label style={{ display: 'block', fontSize: '0.9em', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
               {label}
             </label>
             <input
-              type="url"
+              type={type || 'url'}
               value={socialLinks[key] || ''}
               onChange={(e) => setSocialLinks(prev => {
                 const next = { ...prev };

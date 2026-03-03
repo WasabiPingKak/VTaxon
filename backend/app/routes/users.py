@@ -30,11 +30,11 @@ def update_me():
 
     data = request.get_json() or {}
     allowed = {'display_name', 'organization', 'bio', 'country_flags',
-               'social_links', 'primary_platform'}
+               'social_links', 'primary_platform', 'profile_data'}
 
     ALLOWED_SNS_KEYS = {
         'twitter', 'threads', 'instagram', 'bluesky',
-        'discord', 'facebook', 'marshmallow',
+        'discord', 'facebook', 'marshmallow', 'email',
     }
 
     if 'social_links' in data:
@@ -72,6 +72,69 @@ def update_me():
                 return jsonify({'error': 'Each flag must be a 2-character country code'}), 400
             cleaned.append(f.upper())
         data['country_flags'] = cleaned
+
+    if 'profile_data' in data:
+        pd = data['profile_data']
+        if not isinstance(pd, dict):
+            return jsonify({'error': 'profile_data must be an object'}), 400
+
+        ALLOWED_PD_KEYS = {
+            'debut_date', 'birthday_month', 'birthday_day', 'blood_type',
+            'mbti', 'gender', 'representative_emoji', 'fan_name',
+            'activity_status', 'illustrators', 'riggers', 'modelers_3d',
+            'hashtags', 'debut_video_url',
+        }
+        for key in pd:
+            if key not in ALLOWED_PD_KEYS:
+                return jsonify({'error': f'Unknown profile_data key: {key}'}), 400
+
+        # Validate string fields
+        for str_key in ('debut_date', 'blood_type', 'mbti', 'gender',
+                        'representative_emoji', 'fan_name', 'activity_status',
+                        'debut_video_url'):
+            if str_key in pd and pd[str_key] is not None:
+                if not isinstance(pd[str_key], str):
+                    return jsonify({'error': f'{str_key} must be a string'}), 400
+
+        # Validate integer fields
+        for int_key in ('birthday_month', 'birthday_day'):
+            if int_key in pd and pd[int_key] is not None:
+                if not isinstance(pd[int_key], int):
+                    return jsonify({'error': f'{int_key} must be an integer'}), 400
+
+        # Validate creator fields — list of {name, url?} objects
+        for creator_key in ('illustrators', 'riggers', 'modelers_3d'):
+            if creator_key in pd and pd[creator_key] is not None:
+                if not isinstance(pd[creator_key], list):
+                    return jsonify({'error': f'{creator_key} must be a list'}), 400
+                for item in pd[creator_key]:
+                    if not isinstance(item, dict) or 'name' not in item:
+                        return jsonify({'error': f'{creator_key} items must have a name'}), 400
+                    if not isinstance(item['name'], str):
+                        return jsonify({'error': f'{creator_key} name must be a string'}), 400
+                    if 'url' in item and item['url'] is not None and not isinstance(item['url'], str):
+                        return jsonify({'error': f'{creator_key} url must be a string'}), 400
+
+        # Validate hashtags — array of strings
+        if 'hashtags' in pd and pd['hashtags'] is not None:
+            if not isinstance(pd['hashtags'], list):
+                return jsonify({'error': 'hashtags must be a list'}), 400
+            if any(not isinstance(item, str) for item in pd['hashtags']):
+                return jsonify({'error': 'hashtags items must be strings'}), 400
+
+        # Validate specific values
+        if pd.get('blood_type') and pd['blood_type'] not in ('A', 'B', 'O', 'AB'):
+            return jsonify({'error': 'Invalid blood_type'}), 400
+        if pd.get('activity_status') and pd['activity_status'] not in (
+            'active', 'hiatus', 'preparing',
+        ):
+            return jsonify({'error': 'Invalid activity_status'}), 400
+        if pd.get('birthday_month') and not (1 <= pd['birthday_month'] <= 12):
+            return jsonify({'error': 'birthday_month must be 1-12'}), 400
+        if pd.get('birthday_day') and not (1 <= pd['birthday_day'] <= 31):
+            return jsonify({'error': 'birthday_day must be 1-31'}), 400
+
+        data['profile_data'] = pd
 
     if 'primary_platform' in data:
         pp = data['primary_platform']

@@ -56,7 +56,8 @@ export default function CountryPicker({ selected = [], onChange }) {
               padding: '2px 8px', background: 'rgba(56,189,248,0.12)', borderRadius: '12px',
               fontSize: '0.85em', color: '#93c5fd',
             }}>
-              [{code}] {country?.name || code}
+              <span className={`fi fi-${code.toLowerCase()}`} style={{ width: 16, display: 'inline-block', borderRadius: 2 }} />
+              {country?.name || code}
               <span
                 onClick={(e) => { e.stopPropagation(); remove(code); }}
                 style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}
@@ -104,7 +105,10 @@ export default function CountryPicker({ selected = [], onChange }) {
                 onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                 onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
               >
-                <span>[{c.code}] {c.name}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className={`fi fi-${c.code.toLowerCase()}`} style={{ width: 20, display: 'inline-block', borderRadius: 2 }} />
+                  {c.name}
+                </span>
                 {isSelected && <span style={{ color: '#38bdf8' }}>✓</span>}
               </div>
             );

@@ -14,6 +14,7 @@ CREATE TABLE users (
     country_flags JSONB DEFAULT '[]'::jsonb,
     social_links JSONB DEFAULT '{}'::jsonb,
     primary_platform TEXT CHECK (primary_platform IN ('youtube', 'twitch')),
+    profile_data JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

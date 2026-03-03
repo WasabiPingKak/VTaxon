@@ -197,7 +197,7 @@ export function AuthProvider({ children }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: window.location.origin + '/profile/edit',
+        redirectTo: window.location.origin + '/account',
         ...(provider === 'google'
           ? { scopes: 'https://www.googleapis.com/auth/youtube.readonly' }
           : {}),

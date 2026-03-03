@@ -17,6 +17,7 @@ class User(db.Model):
     country_flags = db.Column(db.JSON, default=list)
     social_links = db.Column(db.JSON, default=dict)
     primary_platform = db.Column(db.Text)
+    profile_data = db.Column(db.JSON, default=dict)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
                            default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False,
@@ -27,6 +28,19 @@ class User(db.Model):
                                      lazy='dynamic', cascade='all, delete-orphan')
     traits = db.relationship('VtuberTrait', backref='user',
                              lazy='dynamic', cascade='all, delete-orphan')
+
+    def _computed_profile_data(self):
+        """Return profile_data with computed fields (auto-switch preparing→active)."""
+        from datetime import date as _date
+        pd = dict(self.profile_data or {})
+        if pd.get('activity_status') == 'preparing' and pd.get('debut_date'):
+            try:
+                debut = _date.fromisoformat(pd['debut_date'])
+                if debut <= _date.today():
+                    pd['activity_status'] = 'active'
+            except (ValueError, TypeError):
+                pass
+        return pd
 
     def to_dict(self):
         return {
@@ -39,6 +53,7 @@ class User(db.Model):
             'country_flags': self.country_flags or [],
             'social_links': self.social_links or {},
             'primary_platform': self.primary_platform,
+            'profile_data': self._computed_profile_data(),
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
         }

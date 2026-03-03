@@ -36,10 +36,7 @@ ON CONFLICT(name) DO NOTHING;
 -- === 資訊態生命 (Information-based Life) ===
 INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
 ('AI',             '人工智慧',   '非物質生命', '資訊態生命', '非物質生命|資訊態生命|AI',             '人造的數位智慧體'),
-('Computer Virus', '電腦病毒',   '非物質生命', '資訊態生命', '非物質生命|資訊態生命|Computer Virus', '自我複製的惡意程式生命'),
-('Digital Life',   '數據生命',   '非物質生命', '資訊態生命', '非物質生命|資訊態生命|Digital Life',   '在網路中自然演化的資訊體'),
-('Virtual Being',  '虛擬存在',   '非物質生命', '資訊態生命', '非物質生命|資訊態生命|Virtual Being',  '存在於虛擬空間的生命'),
-('Quantum Entity', '量子生命',   '非物質生命', '資訊態生命', '非物質生命|資訊態生命|Quantum Entity', '以量子位元為載體的生命')
+('Computer Virus', '電腦病毒',   '非物質生命', '資訊態生命', '非物質生命|資訊態生命|Computer Virus', '自我複製的惡意程式生命')
 ON CONFLICT(name) DO NOTHING;
 
 -- ============================================================
@@ -59,8 +56,7 @@ ON CONFLICT(name) DO NOTHING;
 INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
 ('Homunculus',            '人造人',     '人造生命', '生物合成', '人造生命|生物合成|Homunculus',            '鍊金術創造的人工生命'),
 ('Clone',                 '複製人',     '人造生命', '生物合成', '人造生命|生物合成|Clone',                 '以生物技術複製的生命'),
-('Chimera (Artificial)',  '人造嵌合體', '人造生命', '生物合成', '人造生命|生物合成|Chimera (Artificial)',   '人工拼合多種生物的造物'),
-('Mutant',                '突變體',     '人造生命', '生物合成', '人造生命|生物合成|Mutant',                '因人為因素產生的變異生命')
+('Chimera (Artificial)',  '人造嵌合體', '人造生命', '生物合成', '人造生命|生物合成|Chimera (Artificial)',   '人工拼合多種生物的造物')
 ON CONFLICT(name) DO NOTHING;
 
 -- ============================================================

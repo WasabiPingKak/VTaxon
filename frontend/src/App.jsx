@@ -4,9 +4,9 @@ import { ToastProvider } from './lib/ToastContext';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
-import ProfilePage from './pages/ProfilePage';
+import CharacterPage from './pages/CharacterPage';
+import AccountPage from './pages/AccountPage';
 import SearchPage from './pages/SearchPage';
-import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 
 function AppContent() {
@@ -24,9 +24,10 @@ function AppContent() {
         <main style={{ paddingTop: 44 }}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/profile/edit" element={<Navigate to="/settings" replace />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/profile" element={<CharacterPage />} />
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="/settings" element={<Navigate to="/profile" replace />} />
+            <Route path="/profile/edit" element={<Navigate to="/profile" replace />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/admin" element={<AdminPage />} />
           </Routes>

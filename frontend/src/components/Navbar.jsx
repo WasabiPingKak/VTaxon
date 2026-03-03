@@ -151,10 +151,10 @@ export default function Navbar() {
                       fontSize: '0.85em',
                     }}
                   >
-                    我的檔案
+                    我的角色
                   </Link>
                   <Link
-                    to="/settings"
+                    to="/account"
                     onClick={() => setDropdownOpen(false)}
                     style={{
                       display: 'block',
@@ -164,8 +164,9 @@ export default function Navbar() {
                       fontSize: '0.85em',
                     }}
                   >
-                    設定
+                    帳號設定
                   </Link>
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
                   {user.role === 'admin' && (
                     <Link
                       to="/admin"

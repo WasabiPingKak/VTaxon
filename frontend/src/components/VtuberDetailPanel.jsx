@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import RankBadge from './RankBadge';
 import { YouTubeIcon, TwitchIcon, SNS_ICON_MAP, SNS_LABELS } from './SnsIcons';
+import ProfileInfoCard from './ProfileInfoCard';
 import { api } from '../lib/api';
 
 const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
@@ -12,19 +13,12 @@ const RANK_TO_UPPER = {
 const ANIM_DURATION_IN = 300;
 const ANIM_DURATION_OUT = 250;
 
-/** Convert country code to flag emoji */
-function flagEmoji(code) {
-  const upper = code.toUpperCase();
-  const cp = [...upper].map(ch => 0x1F1E6 - 65 + ch.charCodeAt(0));
-  return String.fromCodePoint(...cp);
-}
-
-/** Links row: OAuth icons + SNS icons + flag emojis + optional loading spinner */
+/** Links row: OAuth icons + SNS icons + flag icons + optional loading spinner */
 function LinksRow({ oauthAccounts, socialLinks, countryFlags, loading }) {
-  const flagEmojis = (countryFlags || []).map(flagEmoji);
+  const flags = (countryFlags || []);
   const hasLinks = oauthAccounts.length > 0 || Object.keys(socialLinks || {}).length > 0;
 
-  if (!hasLinks && flagEmojis.length === 0 && !loading) return null;
+  if (!hasLinks && flags.length === 0 && !loading) return null;
 
   return (
     <div style={{
@@ -49,11 +43,15 @@ function LinksRow({ oauthAccounts, socialLinks, countryFlags, loading }) {
         );
       })}
 
-      {Object.entries(socialLinks || {}).map(([key, url]) => {
+      {Object.entries(socialLinks || {})
+        .sort(([a], [b]) => (a === 'email') - (b === 'email'))
+        .map(([key, url]) => {
         const Icon = SNS_ICON_MAP[key];
         if (!Icon || !url) return null;
+        const isEmail = key === 'email';
+        const href = isEmail && !url.startsWith('mailto:') ? `mailto:${url}` : url;
         return (
-          <a key={key} href={url} target="_blank" rel="noopener noreferrer"
+          <a key={key} href={href} target={isEmail ? undefined : '_blank'} rel={isEmail ? undefined : 'noopener noreferrer'}
             title={SNS_LABELS[key] || key}
             style={{ display: 'inline-flex', lineHeight: 0 }}>
             <Icon size={18} />
@@ -61,13 +59,18 @@ function LinksRow({ oauthAccounts, socialLinks, countryFlags, loading }) {
         );
       })}
 
-      {flagEmojis.length > 0 && (
+      {flags.length > 0 && (
         <>
           {hasLinks && (
             <span style={{ color: 'rgba(255,255,255,0.15)', margin: '0 2px' }}>|</span>
           )}
-          {flagEmojis.map((flag, i) => (
-            <span key={i} style={{ fontSize: '1.1em' }}>{flag}</span>
+          {flags.map((code, i) => (
+            <span
+              key={i}
+              className={`fi fi-${code.toLowerCase()}`}
+              title={code.toUpperCase()}
+              style={{ width: 20, display: 'inline-block', borderRadius: 2 }}
+            />
           ))}
         </>
       )}
@@ -312,6 +315,9 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
               {bio}
             </div>
           )}
+
+          {/* Profile data */}
+          <ProfileInfoCard profileData={userDetail?.profile_data} />
 
           {/* Species info card */}
           {entry.fictional_species_id ? (
