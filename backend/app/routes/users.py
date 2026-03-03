@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from ..auth import login_required
 from ..cache import invalidate_tree_cache
 from ..extensions import db
-from ..models import OAuthAccount, User
+from ..models import Blacklist, OAuthAccount, User
 
 users_bp = Blueprint('users', __name__)
 
@@ -274,6 +274,18 @@ def sync_oauth_accounts():
             # actually authenticated with (skip auto-linked providers).
             if token_provider and token_provider != db_provider:
                 continue
+
+            # Check blacklist before creating account
+            blocked = Blacklist.query.filter_by(
+                identifier_type=db_provider,
+                identifier_value=provider_id,
+            ).first()
+            if blocked:
+                return jsonify({
+                    'error': 'account_banned',
+                    'message': '此帳號已被停用，如有疑問請聯繫管理員',
+                }), 403
+
             account = OAuthAccount(
                 user_id=g.current_user_id,
                 provider=db_provider,

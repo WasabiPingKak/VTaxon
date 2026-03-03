@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import RankBadge from './RankBadge';
 import { YouTubeIcon, TwitchIcon, SNS_ICON_MAP, SNS_LABELS } from './SnsIcons';
 import ProfileInfoCard from './ProfileInfoCard';
+import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 
 const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
@@ -137,6 +138,138 @@ function FictionalPath({ entry }) {
     </div>
   );
 }
+
+/** Inline impersonation report form */
+function ReportSection({ entry }) {
+  const { user: currentUser } = useAuth();
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportEvidence, setReportEvidence] = useState('');
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportDone, setReportDone] = useState(false);
+
+  // Reset when entry changes
+  useEffect(() => {
+    setReportOpen(false);
+    setReportReason('');
+    setReportEvidence('');
+    setReportLoading(false);
+    setReportDone(false);
+  }, [entry?.user_id]);
+
+  // Hide if viewing own profile
+  if (currentUser && str(currentUser.id) === str(entry?.user_id)) return null;
+
+  const handleSubmit = async () => {
+    if (!reportReason.trim()) return;
+    setReportLoading(true);
+    try {
+      await api.createReport({
+        reported_user_id: entry.user_id,
+        reason: reportReason.trim(),
+        evidence_url: reportEvidence.trim() || undefined,
+      });
+      setReportDone(true);
+    } catch (err) {
+      alert(err.message || '提交失敗');
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  if (reportDone) {
+    return (
+      <div style={{
+        marginBottom: 16, padding: '10px 14px', borderRadius: 8,
+        background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)',
+        fontSize: '0.85em', color: '#4ade80', textAlign: 'center',
+      }}>
+        檢舉已送出，感謝您的回報
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      {!reportOpen ? (
+        <button type="button" onClick={() => setReportOpen(true)} style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          width: '100%', padding: '7px 16px', borderRadius: 6, fontSize: '0.82em',
+          background: 'rgba(239,68,68,0.06)', color: 'rgba(239,68,68,0.6)',
+          border: '1px solid rgba(239,68,68,0.15)', cursor: 'pointer',
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+            <line x1="4" y1="22" x2="4" y2="15" />
+          </svg>
+          檢舉偽冒帳號
+        </button>
+      ) : (
+        <div style={{
+          padding: '12px 14px', borderRadius: 8,
+          background: 'rgba(239,68,68,0.05)',
+          border: '1px solid rgba(239,68,68,0.15)',
+        }}>
+          <div style={{ fontSize: '0.85em', fontWeight: 500, marginBottom: 8, color: '#f87171' }}>
+            檢舉偽冒帳號
+          </div>
+          <textarea
+            value={reportReason}
+            onChange={e => setReportReason(e.target.value)}
+            placeholder="請說明為何認為此帳號為偽冒（必填）"
+            rows={3}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 6, padding: '8px 10px',
+              color: '#fff', fontSize: '0.85em', resize: 'vertical',
+              marginBottom: 6,
+            }}
+          />
+          <input
+            type="text"
+            value={reportEvidence}
+            onChange={e => setReportEvidence(e.target.value)}
+            placeholder="證據連結（選填）"
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 6, padding: '7px 10px',
+              color: '#fff', fontSize: '0.85em',
+              marginBottom: 8,
+            }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button type="button" onClick={() => setReportOpen(false)} style={{
+              padding: '5px 12px', borderRadius: 5, fontSize: '0.82em',
+              background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)',
+              border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer',
+            }}>
+              取消
+            </button>
+            <button
+              type="button"
+              disabled={reportLoading || !reportReason.trim()}
+              onClick={handleSubmit}
+              style={{
+                padding: '5px 12px', borderRadius: 5, fontSize: '0.82em',
+                background: 'rgba(239,68,68,0.15)', color: '#f87171',
+                border: '1px solid rgba(239,68,68,0.25)', cursor: 'pointer',
+                opacity: (reportLoading || !reportReason.trim()) ? 0.5 : 1,
+              }}
+            >
+              {reportLoading ? '送出中…' : '送出檢舉'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function str(v) { return v == null ? '' : String(v); }
 
 export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus, onSwitchEntry }) {
   const [imgError, setImgError] = useState(false);
@@ -304,6 +437,9 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
               </button>
             </div>
           )}
+
+          {/* Report button */}
+          <ReportSection entry={entry} />
 
           {/* Bio */}
           {bio && (

@@ -203,4 +203,25 @@ export const api = {
     method: 'PATCH', body: JSON.stringify(body),
   }),
 
+  // Reports (public / anonymous)
+  createReport: (body) => apiFetch('/reports', {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+
+  // Reports (admin)
+  getReports: (status = 'pending') =>
+    apiFetch(`/reports?status=${encodeURIComponent(status)}`),
+  updateReport: (id, body) => apiFetch(`/reports/${id}`, {
+    method: 'PATCH', body: JSON.stringify(body),
+  }),
+  getBlacklistPreview: (reportId) =>
+    apiFetch(`/reports/${reportId}/blacklist-preview`),
+  banUser: (reportId, body) => apiFetch(`/reports/${reportId}/ban`, {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+  getBlacklist: () => apiFetch('/reports/blacklist'),
+  deleteBlacklistEntry: (id) => apiFetch(`/reports/blacklist/${id}`, {
+    method: 'DELETE',
+  }),
+
 };

@@ -81,13 +81,24 @@ export function AuthProvider({ children }) {
       const avatarUrl = ytChannel?.channelAvatar
         || meta.avatar_url || meta.picture;
 
-      await api.authCallback({
-        display_name: displayName,
-        avatar_url: avatarUrl,
-        ...(pendingLink ? { link_to_user_id: pendingLink } : {}),
-        ...(loginProvider ? { login_provider: loginProvider } : {}),
-        ...(ytChannel?.channelAvatar ? { yt_avatar: true } : {}),
-      });
+      try {
+        await api.authCallback({
+          display_name: displayName,
+          avatar_url: avatarUrl,
+          ...(pendingLink ? { link_to_user_id: pendingLink } : {}),
+          ...(loginProvider ? { login_provider: loginProvider } : {}),
+          ...(ytChannel?.channelAvatar ? { yt_avatar: true } : {}),
+        });
+      } catch (err) {
+        if (err.data?.error === 'account_banned') {
+          addToast('此帳號已被停用，如有疑問請聯繫管理員', { duration: 8000 });
+          await supabase.auth.signOut();
+          setUser(null);
+          setSession(null);
+          return;
+        }
+        throw err;
+      }
 
       // Clear pending link regardless of outcome
       if (pendingLink) {
@@ -122,6 +133,13 @@ export function AuthProvider({ children }) {
         try {
           await api.syncOAuthAccounts(syncBody);
         } catch (err) {
+          if (err.data?.error === 'account_banned') {
+            addToast('此帳號已被停用，如有疑問請聯繫管理員', { duration: 8000 });
+            await supabase.auth.signOut();
+            setUser(null);
+            setSession(null);
+            return;
+          }
           console.error('Failed to sync OAuth accounts:', err);
         }
       }

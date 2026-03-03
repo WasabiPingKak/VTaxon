@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from ..auth import login_required
 from ..cache import invalidate_tree_cache
 from ..extensions import db
-from ..models import AuthIdAlias, User
+from ..models import AuthIdAlias, Blacklist, User
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -43,6 +43,23 @@ def auth_callback():
             return jsonify(target.to_dict()), 200
 
     if user is None:
+        # Check blacklist before creating a new user — prevents banned users
+        # from re-registering with the same Supabase account.
+        blocked = Blacklist.query.filter_by(
+            identifier_type='supabase_uid',
+            identifier_value=str(user_id),
+        ).first()
+        if not blocked and raw_auth_id != user_id:
+            blocked = Blacklist.query.filter_by(
+                identifier_type='supabase_uid',
+                identifier_value=str(raw_auth_id),
+            ).first()
+        if blocked:
+            return jsonify({
+                'error': 'account_banned',
+                'message': '此帳號已被停用，如有疑問請聯繫管理員',
+            }), 403
+
         # Derive primary_platform from login provider
         login_provider = data.get('login_provider', '')
         platform_map = {'google': 'youtube', 'twitch': 'twitch'}

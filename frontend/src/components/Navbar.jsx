@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
+import { api } from '../lib/api';
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 function AvatarFallback({ name, size = 32 }) {
@@ -24,6 +25,7 @@ export default function Navbar() {
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const [adminPendingTotal, setAdminPendingTotal] = useState(0);
 
   const handleRefocusSelf = useCallback(() => {
     if (location.pathname !== '/') navigate('/');
@@ -40,6 +42,24 @@ export default function Navbar() {
     document.addEventListener('pointerdown', handler, true);
     return () => document.removeEventListener('pointerdown', handler, true);
   }, [dropdownOpen]);
+
+  // Fetch admin pending counts on mount + periodically
+  useEffect(() => {
+    if (user?.role !== 'admin') return;
+    let cancelled = false;
+    const fetchCounts = () => {
+      const fns = [api.getRequests('pending'), api.getBreedRequests('pending'), api.getReports('pending')];
+      Promise.all(fns.map(p => p.catch(() => ({ requests: [], reports: [] }))))
+        .then(([f, b, r]) => {
+          if (cancelled) return;
+          const total = (f.requests?.length ?? 0) + (b.requests?.length ?? 0) + (r.reports?.length ?? 0);
+          setAdminPendingTotal(total);
+        });
+    };
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [user?.role]);
 
   return (
     <nav style={{
@@ -172,7 +192,9 @@ export default function Navbar() {
                       to="/admin"
                       onClick={() => setDropdownOpen(false)}
                       style={{
-                        display: 'block',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
                         padding: '10px 14px',
                         textDecoration: 'none',
                         color: 'rgba(255,255,255,0.8)',
@@ -180,6 +202,17 @@ export default function Navbar() {
                       }}
                     >
                       管理後台
+                      {adminPendingTotal > 0 && (
+                        <span style={{
+                          fontSize: '0.75em', fontWeight: 600,
+                          padding: '1px 7px', borderRadius: 8,
+                          background: 'rgba(239,68,68,0.2)',
+                          color: '#f87171',
+                          minWidth: 16, textAlign: 'center',
+                        }}>
+                          {adminPendingTotal}
+                        </span>
+                      )}
                     </Link>
                   )}
                   <button

@@ -9,9 +9,16 @@ const STATUS_TABS = [
   { key: 'rejected', label: '已駁回' },
 ];
 
+const REPORT_STATUS_TABS = [
+  { key: 'pending', label: '待審核' },
+  { key: 'confirmed', label: '已確認' },
+  { key: 'dismissed', label: '已駁回' },
+];
+
 const SECTION_TABS = [
   { key: 'fictional', label: '虛構物種回報' },
   { key: 'breed', label: '品種回報' },
+  { key: 'report', label: '帳號檢舉' },
 ];
 
 // ── Fictional Species Request Card ──────────────────
@@ -186,6 +193,440 @@ function BreedRequestCard({ req, onUpdate }) {
   );
 }
 
+// ── Report Card ──────────────────
+
+function ReportCard({ req, onUpdate }) {
+  const [note, setNote] = useState(req.admin_note || '');
+  const [loading, setLoading] = useState(false);
+  const [previewItems, setPreviewItems] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [userDetail, setUserDetail] = useState(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const isPending = req.status === 'pending';
+
+  // Fetch reported user detail (OAuth accounts, bio, traits, etc.)
+  useEffect(() => {
+    if (!req.reported_user_id) return;
+    let cancelled = false;
+    setDetailLoading(true);
+    api.getUser(req.reported_user_id)
+      .then(data => { if (!cancelled) setUserDetail(data); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setDetailLoading(false); });
+    return () => { cancelled = true; };
+  }, [req.reported_user_id]);
+
+  const handlePreview = async () => {
+    setPreviewLoading(true);
+    try {
+      const data = await api.getBlacklistPreview(req.id);
+      setPreviewItems(data.identifiers);
+      const sel = new Set();
+      for (const it of data.identifiers) {
+        if (!it.already_banned) sel.add(`${it.provider}:${it.provider_account_id}`);
+      }
+      setSelectedIds(sel);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const toggleId = (key) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const handleBan = async () => {
+    if (selectedIds.size === 0) return;
+    setLoading(true);
+    try {
+      const identifiers = [...selectedIds].map(k => {
+        const [type, ...rest] = k.split(':');
+        return { identifier_type: type, identifier_value: rest.join(':') };
+      });
+      await api.banUser(req.id, {
+        identifiers,
+        admin_note: note || undefined,
+        reason: req.reason,
+      });
+      onUpdate();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDismiss = async () => {
+    setLoading(true);
+    try {
+      await api.updateReport(req.id, { status: 'dismissed', admin_note: note || undefined });
+      onUpdate();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 10, padding: '16px 20px', marginBottom: 14,
+    }}>
+      {/* Header: reporter info */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        marginBottom: 12, fontSize: '0.85em', color: 'rgba(255,255,255,0.5)',
+      }}>
+        {req.reporter?.avatar_url ? (
+          <img src={req.reporter.avatar_url} alt="" style={{
+            width: 24, height: 24, borderRadius: '50%', objectFit: 'cover',
+          }} />
+        ) : (
+          <div style={{
+            width: 24, height: 24, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 12, color: 'rgba(255,255,255,0.4)',
+          }}>?</div>
+        )}
+        <span style={{ color: 'rgba(255,255,255,0.6)' }}>
+          舉報人：{req.reporter?.display_name || '匿名'}
+        </span>
+        <span>·</span>
+        <span>{new Date(req.created_at).toLocaleDateString('zh-TW')}</span>
+        {!isPending && (
+          <span style={{
+            marginLeft: 'auto', padding: '2px 8px', borderRadius: 4,
+            fontSize: '0.8em', fontWeight: 600,
+            background: req.status === 'confirmed'
+              ? 'rgba(239,68,68,0.15)' : 'rgba(100,100,100,0.15)',
+            color: req.status === 'confirmed' ? '#f87171' : '#999',
+          }}>
+            {req.status === 'confirmed' ? '已確認' : '已駁回'}
+          </span>
+        )}
+      </div>
+
+      {/* Reported user (highlighted) */}
+      <div style={{
+        borderRadius: 6,
+        background: 'rgba(234,179,8,0.08)',
+        border: '1px solid rgba(234,179,8,0.15)',
+        marginBottom: 10, overflow: 'hidden',
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '8px 10px',
+        }}>
+          {req.reported_user?.avatar_url ? (
+            <img src={req.reported_user.avatar_url} alt="" style={{
+              width: 28, height: 28, borderRadius: '50%', objectFit: 'cover',
+            }} />
+          ) : (
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14, color: 'rgba(255,255,255,0.4)',
+            }}>?</div>
+          )}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.9em', fontWeight: 600, color: '#eab308' }}>
+              {req.reported_user?.display_name || '已刪除使用者'}
+            </div>
+            <div style={{ fontSize: '0.75em', color: 'rgba(255,255,255,0.4)' }}>被舉報者</div>
+          </div>
+
+          {/* OAuth account badges */}
+          {(userDetail?.oauth_accounts || []).map(a => (
+            <a key={a.id || `${a.provider}-${a.provider_display_name}`}
+              href={a.channel_url || '#'} target="_blank" rel="noopener noreferrer"
+              title={`${a.provider === 'youtube' ? 'YouTube' : 'Twitch'}: ${a.provider_display_name || ''}`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '2px 8px', borderRadius: 4, fontSize: '0.75em', fontWeight: 500,
+                textDecoration: 'none',
+                background: a.provider === 'youtube' ? 'rgba(255,0,0,0.12)' : 'rgba(145,70,255,0.12)',
+                color: a.provider === 'youtube' ? '#f87171' : '#a78bfa',
+                border: `1px solid ${a.provider === 'youtube' ? 'rgba(255,0,0,0.2)' : 'rgba(145,70,255,0.2)'}`,
+              }}>
+              {a.provider === 'youtube' ? 'YT' : 'TW'}
+              {a.provider_display_name && (
+                <span style={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {a.provider_display_name}
+                </span>
+              )}
+            </a>
+          ))}
+          {detailLoading && (
+            <span style={{
+              display: 'inline-block', width: 12, height: 12,
+              border: '2px solid rgba(255,255,255,0.1)', borderTopColor: '#eab308',
+              borderRadius: '50%', animation: 'spin 0.8s linear infinite',
+            }} />
+          )}
+
+          {/* Detail toggle */}
+          {req.reported_user && (
+            <button type="button" onClick={() => setDetailOpen(v => !v)} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'rgba(255,255,255,0.4)', fontSize: '0.8em', padding: '2px 4px',
+            }} title="展開詳細資訊">
+              {detailOpen ? '▲' : '▼'}
+            </button>
+          )}
+        </div>
+
+        {/* Expandable detail panel */}
+        {detailOpen && userDetail && (
+          <div style={{
+            padding: '0 12px 10px', fontSize: '0.83em',
+            borderTop: '1px solid rgba(234,179,8,0.1)',
+          }}>
+            {/* Bio */}
+            {userDetail.bio && (
+              <div style={{
+                marginTop: 8, padding: '6px 10px', borderRadius: 4,
+                background: 'rgba(255,255,255,0.03)',
+                color: 'rgba(255,255,255,0.7)', whiteSpace: 'pre-wrap', lineHeight: 1.5,
+              }}>
+                {userDetail.bio}
+              </div>
+            )}
+
+            {/* OAuth accounts detail */}
+            {(userDetail.oauth_accounts || []).length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>綁定帳號：</div>
+                {userDetail.oauth_accounts.map(a => (
+                  <div key={a.id || `${a.provider}-${a.provider_display_name}`} style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '4px 8px', marginBottom: 3, borderRadius: 4,
+                    background: 'rgba(255,255,255,0.03)',
+                  }}>
+                    <span style={{
+                      fontWeight: 600, fontSize: '0.9em', minWidth: 56,
+                      color: a.provider === 'youtube' ? '#f87171' : '#a78bfa',
+                    }}>
+                      {a.provider === 'youtube' ? 'YouTube' : 'Twitch'}
+                    </span>
+                    <span style={{ color: 'rgba(255,255,255,0.8)' }}>
+                      {a.provider_display_name || '(unknown)'}
+                    </span>
+                    {a.channel_url && (
+                      <a href={a.channel_url} target="_blank" rel="noopener noreferrer"
+                        style={{ marginLeft: 'auto', color: '#38bdf8', fontSize: '0.9em' }}>
+                        開啟頻道
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Social links */}
+            {userDetail.social_links && Object.keys(userDetail.social_links).length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>社群連結：</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {Object.entries(userDetail.social_links).map(([key, url]) => (
+                    <a key={key} href={key === 'email' ? `mailto:${url}` : url}
+                      target={key === 'email' ? undefined : '_blank'} rel="noopener noreferrer"
+                      style={{
+                        padding: '2px 8px', borderRadius: 4, fontSize: '0.85em',
+                        background: 'rgba(255,255,255,0.05)', color: '#38bdf8',
+                        textDecoration: 'none',
+                      }}>
+                      {key}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Profile data summary */}
+            {userDetail.profile_data && Object.keys(userDetail.profile_data).length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>角色資料：</div>
+                <div style={{
+                  display: 'grid', gap: 2, padding: '4px 8px',
+                  background: 'rgba(255,255,255,0.03)', borderRadius: 4,
+                }}>
+                  {userDetail.profile_data.activity_status && (
+                    <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>狀態：</span>{
+                      ({ active: '活動中', hiatus: '休止', preparing: '準備中' })[userDetail.profile_data.activity_status] || userDetail.profile_data.activity_status
+                    }</div>
+                  )}
+                  {userDetail.profile_data.debut_date && (
+                    <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>出道日期：</span>{userDetail.profile_data.debut_date}</div>
+                  )}
+                  {userDetail.profile_data.gender && (
+                    <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>性別：</span>{userDetail.profile_data.gender}</div>
+                  )}
+                  {userDetail.profile_data.fan_name && (
+                    <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>粉絲名：</span>{userDetail.profile_data.fan_name}</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Registration date */}
+            <div style={{ marginTop: 8, color: 'rgba(255,255,255,0.35)' }}>
+              註冊於 {new Date(userDetail.created_at).toLocaleDateString('zh-TW')}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Reason */}
+      <div style={{ fontSize: '0.9em', marginBottom: 6 }}>
+        <span style={{ color: 'rgba(255,255,255,0.4)' }}>理由：</span>
+        <span style={{ color: 'rgba(255,255,255,0.8)' }}>{req.reason}</span>
+      </div>
+
+      {/* Evidence URL */}
+      {req.evidence_url && (
+        <div style={{ fontSize: '0.85em', marginBottom: 6 }}>
+          <span style={{ color: 'rgba(255,255,255,0.4)' }}>證據：</span>
+          <a href={req.evidence_url} target="_blank" rel="noopener noreferrer"
+            style={{ color: '#38bdf8', wordBreak: 'break-all' }}>
+            {req.evidence_url}
+          </a>
+        </div>
+      )}
+
+      {/* Admin actions for pending reports */}
+      {isPending && (
+        <div style={{ marginTop: 14 }}>
+          <textarea
+            value={note} onChange={e => setNote(e.target.value)}
+            placeholder="管理員備註（選填）" rows={2}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 6, padding: '8px 10px',
+              color: '#fff', fontSize: '0.85em', resize: 'vertical',
+            }}
+          />
+
+          {/* Blacklist preview */}
+          {!previewItems && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
+              <button type="button" disabled={loading} onClick={handleDismiss} style={{
+                padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
+                background: 'rgba(100,100,100,0.12)', color: '#999',
+                border: '1px solid rgba(100,100,100,0.25)', fontSize: '0.85em',
+                opacity: loading ? 0.5 : 1,
+              }}>
+                駁回
+              </button>
+              <button type="button" disabled={previewLoading || !req.reported_user} onClick={handlePreview} style={{
+                padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
+                background: 'rgba(239,68,68,0.12)', color: '#f87171',
+                border: '1px solid rgba(239,68,68,0.25)', fontSize: '0.85em',
+                opacity: (previewLoading || !req.reported_user) ? 0.5 : 1,
+              }}>
+                {previewLoading ? '載入中…' : '確認偽冒並預覽可封鎖項目'}
+              </button>
+            </div>
+          )}
+
+          {previewItems && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>
+                選擇要封鎖的帳號識別碼：
+              </div>
+              {previewItems.map(it => {
+                const key = `${it.provider}:${it.provider_account_id}`;
+                const checked = selectedIds.has(key);
+                return (
+                  <label key={key} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '6px 8px', borderRadius: 4, marginBottom: 4,
+                    background: it.already_banned
+                      ? 'rgba(100,100,100,0.08)' : 'rgba(255,255,255,0.03)',
+                    opacity: it.already_banned ? 0.5 : 1,
+                    cursor: it.already_banned ? 'default' : 'pointer',
+                    fontSize: '0.85em',
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={it.already_banned || checked}
+                      disabled={it.already_banned}
+                      onChange={() => toggleId(key)}
+                    />
+                    <span style={{
+                      fontWeight: 500,
+                      color: it.provider === 'youtube' ? '#f87171' : '#a78bfa',
+                    }}>
+                      {it.provider === 'youtube' ? 'YouTube' : 'Twitch'}
+                    </span>
+                    <span style={{ color: 'rgba(255,255,255,0.7)' }}>
+                      {it.provider_display_name || it.provider_account_id}
+                    </span>
+                    {it.already_banned && (
+                      <span style={{ fontSize: '0.8em', color: '#999' }}>（已封鎖）</span>
+                    )}
+                  </label>
+                );
+              })}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
+                <button type="button" disabled={loading} onClick={handleDismiss} style={{
+                  padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
+                  background: 'rgba(100,100,100,0.12)', color: '#999',
+                  border: '1px solid rgba(100,100,100,0.25)', fontSize: '0.85em',
+                  opacity: loading ? 0.5 : 1,
+                }}>
+                  駁回
+                </button>
+                <button
+                  type="button"
+                  disabled={loading || selectedIds.size === 0}
+                  onClick={handleBan}
+                  style={{
+                    padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
+                    background: 'rgba(239,68,68,0.15)', color: '#f87171',
+                    border: '1px solid rgba(239,68,68,0.3)', fontSize: '0.85em',
+                    fontWeight: 600,
+                    opacity: (loading || selectedIds.size === 0) ? 0.5 : 1,
+                  }}
+                >
+                  {loading ? '處理中…' : `確認偽冒並封鎖 (${selectedIds.size})`}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Admin note for resolved reports */}
+      {!isPending && req.admin_note && (
+        <div style={{
+          marginTop: 10, padding: '8px 10px',
+          background: 'rgba(255,255,255,0.03)',
+          borderRadius: 6, fontSize: '0.85em',
+          color: 'rgba(255,255,255,0.6)',
+          borderLeft: '3px solid rgba(255,255,255,0.1)',
+        }}>
+          <span style={{ color: 'rgba(255,255,255,0.4)' }}>管理員備註：</span>
+          {req.admin_note}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Shared components ──────────────────
 
 function RequestCardShell({ req, isPending, children }) {
@@ -314,14 +755,19 @@ export default function AdminPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [counts, setCounts] = useState({});
+  // Pending counts per section (for section tabs + title badge)
+  const [pendingCounts, setPendingCounts] = useState({});
 
   const fetchRequests = useCallback(async (status) => {
     setLoading(true);
     try {
-      const fn = section === 'fictional' ? api.getRequests : api.getBreedRequests;
+      const fn = section === 'fictional' ? api.getRequests
+        : section === 'breed' ? api.getBreedRequests
+        : api.getReports;
       const data = await fn(status);
-      setRequests(data.requests);
-      setCounts(prev => ({ ...prev, [`${section}_${status}`]: data.requests.length }));
+      const items = data.requests ?? data.reports ?? [];
+      setRequests(items);
+      setCounts(prev => ({ ...prev, [`${section}_${status}`]: items.length }));
     } catch (err) {
       console.error('Failed to fetch requests:', err);
       setRequests([]);
@@ -336,14 +782,38 @@ export default function AdminPage() {
     }
   }, [activeTab, user, fetchRequests]);
 
+  const currentStatusTabs = section === 'report' ? REPORT_STATUS_TABS : STATUS_TABS;
+
+  // Fetch pending counts for ALL sections (for section tab badges + title)
+  const fetchAllPendingCounts = useCallback(() => {
+    if (user?.role !== 'admin') return;
+    const fns = { fictional: api.getRequests, breed: api.getBreedRequests, report: api.getReports };
+    for (const [key, fn] of Object.entries(fns)) {
+      fn('pending')
+        .then(data => {
+          const items = data.requests ?? data.reports ?? [];
+          setPendingCounts(prev => ({ ...prev, [key]: items.length }));
+        })
+        .catch(() => {});
+    }
+  }, [user]);
+
+  useEffect(() => { fetchAllPendingCounts(); }, [fetchAllPendingCounts]);
+
   // Fetch counts for all status tabs
   useEffect(() => {
     if (user?.role !== 'admin') return;
-    const fn = section === 'fictional' ? api.getRequests : api.getBreedRequests;
-    for (const tab of STATUS_TABS) {
+    const fn = section === 'fictional' ? api.getRequests
+      : section === 'breed' ? api.getBreedRequests
+      : api.getReports;
+    const tabs = section === 'report' ? REPORT_STATUS_TABS : STATUS_TABS;
+    for (const tab of tabs) {
       if (tab.key !== activeTab) {
         fn(tab.key)
-          .then(data => setCounts(prev => ({ ...prev, [`${section}_${tab.key}`]: data.requests.length })))
+          .then(data => {
+            const items = data.requests ?? data.reports ?? [];
+            setCounts(prev => ({ ...prev, [`${section}_${tab.key}`]: items.length }));
+          })
           .catch(() => {});
       }
     }
@@ -366,11 +836,18 @@ export default function AdminPage() {
 
   const handleUpdate = () => {
     fetchRequests(activeTab);
-    const fn = section === 'fictional' ? api.getRequests : api.getBreedRequests;
-    for (const tab of STATUS_TABS) {
+    fetchAllPendingCounts();
+    const fn = section === 'fictional' ? api.getRequests
+      : section === 'breed' ? api.getBreedRequests
+      : api.getReports;
+    const tabs = section === 'report' ? REPORT_STATUS_TABS : STATUS_TABS;
+    for (const tab of tabs) {
       if (tab.key !== activeTab) {
         fn(tab.key)
-          .then(data => setCounts(prev => ({ ...prev, [`${section}_${tab.key}`]: data.requests.length })))
+          .then(data => {
+            const items = data.requests ?? data.reports ?? [];
+            setCounts(prev => ({ ...prev, [`${section}_${tab.key}`]: items.length }));
+          })
           .catch(() => {});
       }
     }
@@ -383,7 +860,9 @@ export default function AdminPage() {
     setCounts({});
   }
 
-  const CardComponent = section === 'fictional' ? FictionalRequestCard : BreedRequestCard;
+  const CardComponent = section === 'fictional' ? FictionalRequestCard
+    : section === 'breed' ? BreedRequestCard
+    : ReportCard;
 
   return (
     <div style={{ maxWidth: 700, margin: '40px auto', padding: '0 20px' }}>
@@ -393,25 +872,41 @@ export default function AdminPage() {
       <div style={{
         display: 'flex', gap: 8, marginBottom: 16,
       }}>
-        {SECTION_TABS.map(tab => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => handleSectionChange(tab.key)}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 6,
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '0.9em',
-              fontWeight: section === tab.key ? 600 : 400,
-              background: section === tab.key ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
-              color: section === tab.key ? '#38bdf8' : 'rgba(255,255,255,0.6)',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {SECTION_TABS.map(tab => {
+          const pc = pendingCounts[tab.key];
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => handleSectionChange(tab.key)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 6,
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.9em',
+                fontWeight: section === tab.key ? 600 : 400,
+                background: section === tab.key ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
+                color: section === tab.key ? '#38bdf8' : 'rgba(255,255,255,0.6)',
+              }}
+            >
+              {tab.label}
+              {pc > 0 && (
+                <span style={{
+                  marginLeft: 6,
+                  fontSize: '0.8em',
+                  padding: '1px 6px',
+                  borderRadius: 8,
+                  background: 'rgba(239,68,68,0.2)',
+                  color: '#f87171',
+                  fontWeight: 600,
+                }}>
+                  {pc}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Status tabs */}
@@ -419,7 +914,7 @@ export default function AdminPage() {
         display: 'flex', gap: 0, borderBottom: '1px solid rgba(255,255,255,0.1)',
         marginBottom: 24, overflowX: 'auto',
       }}>
-        {STATUS_TABS.map(tab => {
+        {currentStatusTabs.map(tab => {
           const countKey = `${section}_${tab.key}`;
           return (
             <button
@@ -460,7 +955,7 @@ export default function AdminPage() {
         </p>
       ) : requests.length === 0 ? (
         <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', marginTop: 30 }}>
-          沒有{STATUS_TABS.find(t => t.key === activeTab)?.label}的回報
+          沒有{currentStatusTabs.find(t => t.key === activeTab)?.label}的{section === 'report' ? '檢舉' : '回報'}
         </p>
       ) : (
         requests.map(req => (

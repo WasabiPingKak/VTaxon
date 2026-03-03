@@ -291,6 +291,100 @@ class BreedRequest(db.Model):
         return result
 
 
+class UserReport(db.Model):
+    __tablename__ = 'user_reports'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    reporter_id = db.Column(db.String(36), db.ForeignKey('users.id',
+                            ondelete='SET NULL'))
+    reported_user_id = db.Column(db.String(36), db.ForeignKey('users.id',
+                                 ondelete='SET NULL'))
+    reason = db.Column(db.Text, nullable=False)
+    evidence_url = db.Column(db.Text)
+    status = db.Column(db.Text, nullable=False, default='pending')
+    admin_note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
+
+    reporter = db.relationship('User', foreign_keys=[reporter_id],
+                               backref='submitted_reports', lazy='joined')
+    reported_user = db.relationship('User', foreign_keys=[reported_user_id],
+                                    backref='received_reports', lazy='joined')
+
+    def to_dict(self):
+        result = {
+            'id': self.id,
+            'reporter_id': self.reporter_id,
+            'reported_user_id': self.reported_user_id,
+            'reason': self.reason,
+            'evidence_url': self.evidence_url,
+            'status': self.status,
+            'admin_note': self.admin_note,
+            'created_at': self.created_at.isoformat(),
+        }
+        if self.reporter:
+            result['reporter'] = {
+                'id': self.reporter.id,
+                'display_name': self.reporter.display_name,
+                'avatar_url': self.reporter.avatar_url,
+            }
+        if self.reported_user:
+            result['reported_user'] = {
+                'id': self.reported_user.id,
+                'display_name': self.reported_user.display_name,
+                'avatar_url': self.reported_user.avatar_url,
+            }
+        return result
+
+
+class Blacklist(db.Model):
+    __tablename__ = 'blacklist'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    identifier_type = db.Column(db.Text, nullable=False)
+    identifier_value = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id',
+                         ondelete='SET NULL'))
+    reason = db.Column(db.Text)
+    banned_by = db.Column(db.String(36), db.ForeignKey('users.id',
+                          ondelete='SET NULL'))
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
+
+    original_user = db.relationship('User', foreign_keys=[user_id],
+                                    backref='blacklist_entries', lazy='joined')
+    banned_by_user = db.relationship('User', foreign_keys=[banned_by],
+                                     backref='bans_issued', lazy='joined')
+
+    __table_args__ = (
+        db.UniqueConstraint('identifier_type', 'identifier_value',
+                            name='uq_blacklist_identifier'),
+    )
+
+    def to_dict(self):
+        result = {
+            'id': self.id,
+            'identifier_type': self.identifier_type,
+            'identifier_value': self.identifier_value,
+            'user_id': self.user_id,
+            'reason': self.reason,
+            'banned_by': self.banned_by,
+            'created_at': self.created_at.isoformat(),
+        }
+        if self.original_user:
+            result['original_user'] = {
+                'id': self.original_user.id,
+                'display_name': self.original_user.display_name,
+                'avatar_url': self.original_user.avatar_url,
+            }
+        if self.banned_by_user:
+            result['banned_by_user'] = {
+                'id': self.banned_by_user.id,
+                'display_name': self.banned_by_user.display_name,
+            }
+        return result
+
+
 class VtuberTrait(db.Model):
     __tablename__ = 'vtuber_traits'
 
