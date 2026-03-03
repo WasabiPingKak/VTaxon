@@ -1,12 +1,36 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 from sqlalchemy import func
 
-from ..auth import admin_required
+from ..auth import admin_required, login_required
 from ..cache import invalidate_tree_cache
 from ..extensions import db
-from ..models import Breed, SpeciesCache
+from ..models import Breed, BreedRequest, SpeciesCache
 
 breeds_bp = Blueprint('breeds', __name__)
+
+
+@breeds_bp.route('/categories', methods=['GET'])
+def list_breed_categories():
+    """Return species that have breeds, with breed count and species info."""
+    rows = (
+        db.session.query(Breed.taxon_id, func.count(Breed.id).label('breed_count'))
+        .group_by(Breed.taxon_id)
+        .all()
+    )
+    categories = []
+    for taxon_id, breed_count in rows:
+        sp = SpeciesCache.query.get(taxon_id)
+        entry = {
+            'taxon_id': taxon_id,
+            'breed_count': breed_count,
+        }
+        if sp:
+            entry.update(sp.to_dict())
+        categories.append(entry)
+
+    # Sort by breed_count descending
+    categories.sort(key=lambda c: c['breed_count'], reverse=True)
+    return jsonify({'categories': categories})
 
 
 @breeds_bp.route('', methods=['GET'])
@@ -16,6 +40,7 @@ def list_breeds():
         return jsonify({'error': 'taxon_id query parameter required'}), 400
 
     breeds = Breed.query.filter_by(taxon_id=taxon_id).order_by(Breed.name_zh).all()
+    actual_taxon_id = taxon_id
 
     # Fallback: GBIF keys can change over time — if no breeds found for this
     # exact taxon_id, look for breeds under other taxon_ids that share the
@@ -43,14 +68,19 @@ def list_breeds():
                 breeds = Breed.query.filter_by(taxon_id=alt_id) \
                     .order_by(Breed.name_zh).all()
                 if breeds:
+                    actual_taxon_id = alt_id
                     break
 
-    return jsonify({'breeds': [b.to_dict() for b in breeds]})
+    # Include parent species info so frontend can construct full onSelect payload
+    sp = SpeciesCache.query.get(actual_taxon_id)
+    species_info = sp.to_dict() if sp else None
+
+    return jsonify({'breeds': [b.to_dict() for b in breeds], 'species': species_info})
 
 
 @breeds_bp.route('/search', methods=['GET'])
 def search_breeds():
-    """Search breeds by name (Chinese prefix or English case-insensitive prefix)."""
+    """Search breeds by name (Chinese substring or English case-insensitive substring)."""
     q = request.args.get('q', '').strip()
     if not q:
         return jsonify({'error': 'Query parameter q is required'}), 400
@@ -65,16 +95,25 @@ def search_breeds():
     if has_cjk:
         breeds = (Breed.query
                   .filter(Breed.name_zh.isnot(None))
-                  .filter(Breed.name_zh.like(f'{q}%'))
+                  .filter(Breed.name_zh.like(f'%{q}%'))
                   .limit(limit)
                   .all())
     else:
         breeds = (Breed.query
-                  .filter(func.lower(Breed.name_en).like(f'{q.lower()}%'))
+                  .filter(func.lower(Breed.name_en).like(f'%{q.lower()}%'))
                   .limit(limit)
                   .all())
 
-    return jsonify({'breeds': [b.to_dict() for b in breeds]})
+    # Enrich each breed with parent species info
+    results = []
+    for b in breeds:
+        d = b.to_dict()
+        if b.species:
+            d['species_name_zh'] = b.species.common_name_zh
+            d['species_scientific_name'] = b.species.scientific_name
+        results.append(d)
+
+    return jsonify({'breeds': results})
 
 
 @breeds_bp.route('', methods=['POST'])
@@ -102,3 +141,94 @@ def create_breed():
         return jsonify({'error': 'Breed already exists for this species'}), 409
 
     return jsonify(breed.to_dict()), 201
+
+
+# ── Breed Requests ──────────────────────────────────
+
+
+@breeds_bp.route('/requests', methods=['POST'])
+@login_required
+def create_breed_request():
+    data = request.get_json() or {}
+
+    name_zh = (data.get('name_zh') or '').strip()
+    name_en = (data.get('name_en') or '').strip()
+    if not name_zh and not name_en:
+        return jsonify({'error': '請至少填寫中文或英文品種名稱'}), 400
+
+    req = BreedRequest(
+        user_id=g.current_user_id,
+        taxon_id=data.get('taxon_id'),
+        name_zh=name_zh or None,
+        name_en=name_en or None,
+        description=(data.get('description') or '').strip() or None,
+    )
+    db.session.add(req)
+    db.session.commit()
+
+    return jsonify(req.to_dict()), 201
+
+
+@breeds_bp.route('/requests', methods=['GET'])
+@admin_required
+def list_breed_requests():
+    status = request.args.get('status', 'pending')
+    if status not in ('pending', 'approved', 'rejected'):
+        return jsonify({'error': 'Invalid status filter'}), 400
+
+    reqs = (BreedRequest.query
+            .filter_by(status=status)
+            .order_by(BreedRequest.created_at.desc())
+            .all())
+
+    return jsonify({'requests': [r.to_dict() for r in reqs]})
+
+
+@breeds_bp.route('/requests/<int:req_id>', methods=['PATCH'])
+@admin_required
+def update_breed_request(req_id):
+    req = db.session.get(BreedRequest, req_id)
+    if not req:
+        return jsonify({'error': 'Request not found'}), 404
+
+    data = request.get_json() or {}
+    new_status = data.get('status')
+    if new_status not in ('approved', 'rejected'):
+        return jsonify({'error': 'status must be approved or rejected'}), 400
+
+    req.status = new_status
+    req.admin_note = data.get('admin_note') or req.admin_note
+
+    # Auto-create breed on approval
+    created_breed = None
+    if new_status == 'approved':
+        breed_data = data.get('breed') or {}
+        taxon_id = breed_data.get('taxon_id') or req.taxon_id
+        name_en = breed_data.get('name_en') or req.name_en
+        name_zh = breed_data.get('name_zh') or req.name_zh
+
+        if not taxon_id or not name_en:
+            return jsonify({'error': 'taxon_id and name_en required for approval'}), 400
+
+        created_breed = Breed(
+            taxon_id=taxon_id,
+            name_en=name_en,
+            name_zh=name_zh or None,
+            breed_group=(breed_data.get('breed_group') or '').strip() or None,
+            source='user_request',
+        )
+        db.session.add(created_breed)
+
+    try:
+        db.session.commit()
+        if created_breed:
+            invalidate_tree_cache()
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': '品種已存在或資料衝突'}), 409
+
+    result = req.to_dict()
+    if created_breed:
+        result['created_breed'] = created_breed.to_dict()
+
+    return jsonify(result)

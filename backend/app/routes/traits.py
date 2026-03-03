@@ -79,7 +79,7 @@ def create_trait():
             for et in existing_traits:
                 if et.taxon_id == taxon_id:
                     # Exact duplicate
-                    return jsonify({'error': 'You already have this species trait'}), 409
+                    return jsonify({'error': '你已經有這個物種的特徵了'}), 409
 
                 existing_sp = et.species
                 if not existing_sp or not existing_sp.taxon_path:

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import RankBadge from './RankBadge';
 
@@ -32,6 +32,16 @@ const FAMILY_COLORS = [
   '#38bdf8', '#34d399', '#fb923c', '#a78bfa',
   '#f87171', '#22d3ee', '#fbbf24', '#60a5fa',
   '#c084fc', '#2dd4bf', '#f97316', '#ef4444',
+];
+
+// Quick breed entry: hardcoded common pet species with taxon_ids
+// taxon_ids must match breeds seed data (species/subspecies level, not genus)
+const BREED_QUICK_ENTRIES = [
+  { emoji: '\uD83D\uDC15', label: '狗品種', taxon_id: 5219174 },   // Canis lupus familiaris
+  { emoji: '\uD83D\uDC08', label: '貓品種', taxon_id: 2435099 },   // Felis catus
+  { emoji: '\uD83D\uDC34', label: '馬品種', taxon_id: 2440886 },   // Equus caballus
+  { emoji: '\uD83D\uDC30', label: '兔品種', taxon_id: 2436940 },   // Oryctolagus cuniculus
+  { emoji: '\uD83D\uDC39', label: '天竺鼠品種', taxon_id: 5219702 }, // Cavia porcellus
 ];
 
 /** Loading skeleton — dark pulsing bars */
@@ -322,12 +332,192 @@ function SpeciesGroup({ group, onSelect, familyColor }) {
   );
 }
 
+/** Quick breed entry buttons */
+function BreedQuickButtons({ onPickCategory }) {
+  const [counts, setCounts] = useState({});
+
+  useEffect(() => {
+    api.getBreedCategories().then(data => {
+      const map = {};
+      for (const c of data.categories) map[c.taxon_id] = c.breed_count;
+      setCounts(map);
+    }).catch(() => {});
+  }, []);
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+      {BREED_QUICK_ENTRIES.map(entry => (
+        <button
+          key={entry.taxon_id}
+          onClick={() => onPickCategory(entry)}
+          style={{
+            padding: '6px 12px',
+            background: 'rgba(251,146,60,0.1)',
+            color: BREED_COLOR,
+            border: `1px solid rgba(251,146,60,0.25)`,
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '0.9em',
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {entry.emoji} {entry.label}{counts[entry.taxon_id] ? `(${counts[entry.taxon_id]})` : ''}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Breed category list view — shows all breeds for a species */
+function BreedCategoryList({ category, onSelect, onBack }) {
+  const [breeds, setBreeds] = useState([]);
+  const [species, setSpecies] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    api.getBreeds(category.taxon_id).then(data => {
+      setBreeds(data.breeds || []);
+      setSpecies(data.species || null);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [category.taxon_id]);
+
+  const filtered = useMemo(() => {
+    const q = filter.trim();
+    if (!q) return breeds;
+    const isCJK = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(q);
+    return breeds.filter(b => {
+      if (isCJK) return b.name_zh && b.name_zh.includes(q);
+      return b.name_en && b.name_en.toLowerCase().includes(q.toLowerCase());
+    });
+  }, [breeds, filter]);
+
+  function handleSelectBreed(breed) {
+    if (!species || !onSelect) return;
+    // Construct payload matching existing breed search result format
+    const payload = {
+      result_type: 'breed',
+      taxon_id: species.taxon_id,
+      scientific_name: species.scientific_name,
+      common_name_zh: species.common_name_zh,
+      common_name_en: species.common_name_en,
+      taxon_rank: species.taxon_rank,
+      taxon_path: species.taxon_path,
+      kingdom: species.kingdom,
+      phylum: species.phylum,
+      class: species.class,
+      order: species.order,
+      family: species.family,
+      genus: species.genus,
+      kingdom_zh: species.kingdom_zh,
+      phylum_zh: species.phylum_zh,
+      class_zh: species.class_zh,
+      order_zh: species.order_zh,
+      family_zh: species.family_zh,
+      genus_zh: species.genus_zh,
+      breed: breed,
+    };
+    onSelect(payload);
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+        <button onClick={onBack} style={{
+          background: 'none', border: 'none', color: '#38bdf8',
+          cursor: 'pointer', fontSize: '0.95em', padding: '4px 0',
+        }}>
+          &larr; 返回
+        </button>
+        <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '1em' }}>
+          {category.emoji} {category.label}
+        </span>
+        {breeds.length > 0 && (
+          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85em' }}>
+            ({breeds.length})
+          </span>
+        )}
+      </div>
+
+      <input
+        type="text"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="過濾品種名稱…"
+        autoFocus
+        style={{
+          width: '100%', padding: '8px', marginBottom: '8px', boxSizing: 'border-box',
+          border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px',
+          background: '#1a2433', color: '#e2e8f0',
+        }}
+      />
+
+      {loading ? (
+        <LoadingSkeleton />
+      ) : filtered.length === 0 ? (
+        <p style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', fontSize: '0.9em' }}>
+          {filter ? '無匹配品種' : '此物種尚無品種資料'}
+        </p>
+      ) : (
+        <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', maxHeight: '420px', overflow: 'auto' }}>
+          {filtered.map(breed => (
+              <div
+                key={breed.id}
+                style={{
+                  padding: '8px 14px',
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  borderLeft: `3px solid ${BREED_COLOR}`,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                    <RankBadge rank="BREED" />
+                    {breed.name_zh ? (
+                      <>
+                        <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{breed.name_zh}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9em' }}>{breed.name_en}</span>
+                      </>
+                    ) : (
+                      <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{breed.name_en}</span>
+                    )}
+                  </div>
+                  {breed.breed_group && (
+                    <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.35)', marginTop: '1px' }}>
+                      {breed.breed_group}
+                    </div>
+                  )}
+                </div>
+                {onSelect && (
+                  <button onClick={() => handleSelectBreed(breed)} style={{
+                    padding: '4px 12px', background: '#34d399', color: '#0d1526',
+                    border: 'none', borderRadius: '4px', cursor: 'pointer',
+                    marginLeft: '8px', flexShrink: 0, fontWeight: 600,
+                  }}>
+                    新增
+                  </button>
+                )}
+              </div>
+          ))}
+        </div>
+      )}
+
+    </div>
+  );
+}
+
 export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [showSourceInfo, setShowSourceInfo] = useState(false);
+  const [view, setView] = useState('default'); // 'default' | 'breedList'
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   const { breedResults, groups, familyColorMap } = useMemo(() => {
     const { breeds, speciesGroups } = groupBySpecies(results);
@@ -353,6 +543,26 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
     return { breedResults: breeds, groups: speciesGroups, familyColorMap: colorMap };
   }, [results]);
 
+  function handlePickCategory(entry) {
+    setSelectedCategory(entry);
+    setView('breedList');
+  }
+
+  function handleBackFromBreedList() {
+    setView('default');
+    setSelectedCategory(null);
+  }
+
+  function handleQueryChange(e) {
+    const val = e.target.value;
+    setQuery(val);
+    // Typing in search box while in breedList → switch back to default
+    if (view === 'breedList' && val.trim()) {
+      setView('default');
+      setSelectedCategory(null);
+    }
+  }
+
   async function handleSearch(e) {
     e.preventDefault();
     if (!query.trim()) return;
@@ -371,13 +581,55 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
     }
   }
 
+  // Show breed list view
+  if (view === 'breedList' && selectedCategory) {
+    return (
+      <div>
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+          <input
+            type="text"
+            value={query}
+            onChange={handleQueryChange}
+            placeholder="搜尋物種或品種（例如：柴犬、布偶貓、貓、狼）"
+            style={{
+              flex: 1, padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: '4px', background: '#1a2433', color: '#e2e8f0',
+            }}
+          />
+          <button type="submit" disabled={searching} style={{
+            padding: '8px 16px', background: '#38bdf8', color: '#0d1526',
+            border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600,
+          }}>
+            搜尋
+          </button>
+          {onCancel && (
+            <button type="button" onClick={onCancel} style={{
+              padding: '8px 16px', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)',
+              border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px', cursor: 'pointer',
+            }}>
+              取消
+            </button>
+          )}
+        </form>
+        <BreedCategoryList
+          category={selectedCategory}
+          onSelect={onSelect}
+          onBack={handleBackFromBreedList}
+        />
+      </div>
+    );
+  }
+
+  // Default search view
+  const showQuickButtons = !query.trim() && !searched && results.length === 0 && !searching;
+
   return (
     <div>
       <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={handleQueryChange}
           placeholder="搜尋物種或品種（例如：柴犬、布偶貓、貓、狼）"
           autoFocus={autoFocus}
           style={{
@@ -401,9 +653,14 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
         )}
       </form>
 
+      {showQuickButtons && (
+        <BreedQuickButtons onPickCategory={handlePickCategory} />
+      )}
+
       <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.4)', marginBottom: '16px', lineHeight: 1.7 }}>
-        可直接搜尋品種名（如柴犬、布偶貓），系統會自動對應到正確物種。
-        也可搜尋科、屬、種等分類層級，或直接輸入學名。
+        上方按鈕為已收錄的品種（如柴犬、布偶貓），若沒有列出你要的品種，代表系統尚未收錄，建議先選好物種後再回報想要的品種。
+        <br />
+        搜尋框可輸入中文名、英文俗名或學名。<strong style={{ color: 'rgba(255,255,255,0.55)' }}>學名的搜尋結果最精確</strong>，中文名有時會找不到或不完整。
         <div style={{ marginTop: '6px' }}>
           <span
             onClick={() => setShowSourceInfo(!showSourceInfo)}
@@ -417,11 +674,10 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
               background: 'rgba(255,255,255,0.04)', borderRadius: '4px',
               border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)',
             }}>
-              物種與品種資料來自 <a href="https://www.gbif.org" target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8' }}>GBIF</a>、
-              <a href="https://www.wikidata.org" target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8' }}>Wikidata</a> 及
-              <a href="https://zh.wikipedia.org" target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8' }}>維基百科</a>，
-              數量龐大，中文名稱由程式自動處理。
-              系統以台灣慣用名稱為優先，若無對應則使用其他中文來源，剩餘則顯示原文。
+              物種資料來自 <a href="https://www.gbif.org" target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8' }}>GBIF</a> 全球資料庫，涵蓋所有已知物種。
+              中文名稱取自 <a href="https://www.wikidata.org" target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8' }}>Wikidata</a>、
+              <a href="https://taicol.tw" target="_blank" rel="noopener noreferrer" style={{ color: '#38bdf8' }}>TaiCOL 臺灣物種名錄</a>及靜態對照表，
+              以台灣慣用名稱為優先，若無對應則顯示原文。
               <br />
               如發現名稱有誤或有更合適的台灣用語，歡迎聯繫我們修正。
             </div>
@@ -463,7 +719,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
 
       {!searching && searched && results.length === 0 && query.trim() && (
         <p style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-          找不到具體物種？請嘗試輸入學名搜尋
+          找不到結果？試試輸入學名（如 <i>Canis lupus</i>），學名搜尋最精確
         </p>
       )}
     </div>

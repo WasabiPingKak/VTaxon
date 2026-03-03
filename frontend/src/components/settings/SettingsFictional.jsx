@@ -4,6 +4,32 @@ import { useToast } from '../../lib/ToastContext';
 import { api } from '../../lib/api';
 import FictionalSpeciesPicker from '../FictionalSpeciesPicker';
 
+/** Subtle remove button with hover effect */
+function RemoveButton({ onClick }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '4px 10px',
+        background: 'transparent',
+        color: hovered ? '#f87171' : 'rgba(255,255,255,0.3)',
+        border: `1px solid ${hovered ? 'rgba(248,113,113,0.3)' : 'rgba(255,255,255,0.1)'}`,
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontWeight: 600,
+        fontSize: '0.8em',
+        flexShrink: 0,
+        transition: 'color 0.15s, border-color 0.15s',
+      }}
+    >
+      移除
+    </button>
+  );
+}
+
 export default function SettingsFictional() {
   const { user } = useAuth();
   const { addToast } = useToast();
@@ -63,11 +89,12 @@ export default function SettingsFictional() {
 
   return (
     <div>
-      <h3 style={{ margin: '0 0 12px', fontSize: '1em', color: '#e2e8f0' }}>虛構物種特徵</h3>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+      {/* Title row: heading + add button */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+        <h3 style={{ margin: 0, fontSize: '1em', color: '#e2e8f0' }}>虛構物種特徵</h3>
         {!showPicker && (
           <button onClick={() => setShowPicker(true)} style={{
+            marginLeft: 'auto',
             padding: '6px 14px', background: '#38bdf8', color: '#0d1526',
             border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9em',
           }}>
@@ -83,7 +110,11 @@ export default function SettingsFictional() {
           {traits.map(trait => (
             <div key={trait.id} style={{
               display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-              padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'rgba(255,255,255,0.02)',
+              marginBottom: '8px',
             }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ fontWeight: 700, color: '#e2e8f0' }}>
@@ -111,13 +142,7 @@ export default function SettingsFictional() {
                   </div>
                 )}
               </div>
-              <button onClick={() => handleDelete(trait.id)} style={{
-                padding: '4px 10px', background: '#f87171', color: '#0d1526',
-                border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600,
-                flexShrink: 0,
-              }}>
-                移除
-              </button>
+              <RemoveButton onClick={() => handleDelete(trait.id)} />
             </div>
           ))}
         </div>

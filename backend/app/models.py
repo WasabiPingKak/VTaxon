@@ -249,6 +249,48 @@ class Breed(db.Model):
         }
 
 
+class BreedRequest(db.Model):
+    __tablename__ = 'breed_requests'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id',
+                        ondelete='SET NULL'))
+    taxon_id = db.Column(db.Integer, db.ForeignKey('species_cache.taxon_id'))
+    name_zh = db.Column(db.Text)
+    name_en = db.Column(db.Text)
+    description = db.Column(db.Text)
+    status = db.Column(db.Text, nullable=False, default='pending')
+    admin_note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref='breed_requests', lazy='joined')
+    species = db.relationship('SpeciesCache', lazy='joined')
+
+    def to_dict(self):
+        result = {
+            'id': self.id,
+            'user_id': self.user_id,
+            'taxon_id': self.taxon_id,
+            'name_zh': self.name_zh,
+            'name_en': self.name_en,
+            'description': self.description,
+            'status': self.status,
+            'admin_note': self.admin_note,
+            'created_at': self.created_at.isoformat(),
+        }
+        if self.user:
+            result['user'] = {
+                'id': self.user.id,
+                'display_name': self.user.display_name,
+                'avatar_url': self.user.avatar_url,
+            }
+        if self.species:
+            result['species_name'] = (self.species.common_name_zh
+                                      or self.species.scientific_name)
+        return result
+
+
 class VtuberTrait(db.Model):
     __tablename__ = 'vtuber_traits'
 

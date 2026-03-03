@@ -154,8 +154,27 @@ export const api = {
   },
 
   // Breeds
+  getBreedCategories: (() => {
+    let cached = null;
+    return async () => {
+      if (cached) return cached;
+      const data = await apiFetch('/breeds/categories');
+      cached = data;
+      return data;
+    };
+  })(),
   getBreeds: (taxonId) => apiFetch(`/breeds?taxon_id=${taxonId}`),
   searchBreeds: (q) => apiFetch(`/breeds/search?q=${encodeURIComponent(q)}`),
+  createBreedRequest: (body) => apiFetch('/breeds/requests', {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+
+  // Admin: Breed Requests
+  getBreedRequests: (status = 'pending') =>
+    apiFetch(`/breeds/requests?status=${encodeURIComponent(status)}`),
+  updateBreedRequest: (id, body) => apiFetch(`/breeds/requests/${id}`, {
+    method: 'PATCH', body: JSON.stringify(body),
+  }),
 
   // Traits
   getTraits: (userId) => apiFetch(`/traits?user_id=${userId}`),

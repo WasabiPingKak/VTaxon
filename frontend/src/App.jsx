@@ -8,6 +8,7 @@ import CharacterPage from './pages/CharacterPage';
 import AccountPage from './pages/AccountPage';
 import SearchPage from './pages/SearchPage';
 import AdminPage from './pages/AdminPage';
+import BreedsPage from './pages/BreedsPage';
 
 function AppContent() {
   const location = useLocation();
@@ -29,6 +30,7 @@ function AppContent() {
             <Route path="/settings" element={<Navigate to="/profile" replace />} />
             <Route path="/profile/edit" element={<Navigate to="/profile" replace />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/breeds" element={<BreedsPage />} />
             <Route path="/admin" element={<AdminPage />} />
           </Routes>
         </main>
