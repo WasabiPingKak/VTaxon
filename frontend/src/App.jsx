@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { AuthProvider } from './lib/AuthContext';
 import { ToastProvider } from './lib/ToastContext';
 import Navbar from './components/Navbar';
@@ -10,6 +10,7 @@ import SearchPage from './pages/SearchPage';
 import AdminPage from './pages/AdminPage';
 import BreedsPage from './pages/BreedsPage';
 import DirectoryPage from './pages/DirectoryPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 
 function AppContent() {
   const location = useLocation();
@@ -34,7 +35,32 @@ function AppContent() {
             <Route path="/directory" element={<DirectoryPage />} />
             <Route path="/breeds" element={<BreedsPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
           </Routes>
+
+          <footer style={{
+            textAlign: 'center',
+            padding: '32px 20px 24px',
+            fontSize: '0.78em',
+            color: 'rgba(255,255,255,0.25)',
+          }}>
+            <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+            >隱私權政策</Link>
+            {' · '}
+            <a href="https://discord.gg/ABpdGBbDe4" target="_blank" rel="noopener noreferrer"
+              style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+            >Discord</a>
+            {' · '}
+            <a href="https://github.com/WasabiPingKak/VTaxon" target="_blank" rel="noopener noreferrer"
+              style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+            >GitHub</a>
+          </footer>
         </main>
       )}
     </>
