@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import FilterDropdown from './FilterDropdown';
 import COUNTRIES, { getCountryName } from '../../lib/countries';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const SORT_OPTIONS = [
   { value: 'created_at', label: '最近建檔' },
@@ -15,6 +16,7 @@ export default function DirectoryFilters({
   onViewModeChange,
   facets,       // from API: { country, country_none, gender, status, org_type, platform, has_traits }
 }) {
+  const isMobile = useIsMobile();
   const [searchInput, setSearchInput] = useState(filters.q || '');
   const debounceRef = useRef(null);
 
@@ -70,14 +72,14 @@ export default function DirectoryFilters({
   const genderOptions = [
     { value: '男', label: '男', count: genderFacets['男'] ?? 0 },
     { value: '女', label: '女', count: genderFacets['女'] ?? 0 },
-    { value: 'other', label: '非二元性別', count: genderFacets['other'] ?? 0 },
+    { value: 'other', label: '自訂', count: genderFacets['other'] ?? 0 },
     { value: 'unset', label: '未設定', count: genderFacets['unset'] ?? 0 },
   ];
 
   const statusFacets = f.status || {};
   const statusOptions = [
     { value: 'active', label: '活動中', count: statusFacets['active'] ?? 0 },
-    { value: 'hiatus', label: '休止中', count: statusFacets['hiatus'] ?? 0 },
+    { value: 'hiatus', label: '活動休止', count: statusFacets['hiatus'] ?? 0 },
     { value: 'preparing', label: '準備中', count: statusFacets['preparing'] ?? 0 },
   ];
 
@@ -179,7 +181,7 @@ export default function DirectoryFilters({
         />
       </div>
 
-      {/* Row 2: Filters + sort + view toggle */}
+      {/* Row 2: Filter buttons */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6,
         flexWrap: 'wrap',
@@ -189,18 +191,21 @@ export default function DirectoryFilters({
           options={countryOptions}
           selected={toSet(filters.country)}
           onChange={(s) => updateSetFilter('country', s)}
+          isMobile={isMobile}
         />
         <FilterDropdown
           label="性別"
           options={genderOptions}
           selected={toSet(filters.gender)}
           onChange={(s) => updateSetFilter('gender', s)}
+          isMobile={isMobile}
         />
         <FilterDropdown
           label="狀態"
           options={statusOptions}
           selected={toSet(filters.status)}
           onChange={(s) => updateSetFilter('status', s)}
+          isMobile={isMobile}
         />
         <FilterDropdown
           label="組織"
@@ -208,12 +213,14 @@ export default function DirectoryFilters({
           selected={toSet(filters.org_type)}
           onChange={(s) => updateSetFilter('org_type', s)}
           multi={false}
+          isMobile={isMobile}
         />
         <FilterDropdown
           label="平台"
           options={platformOptions}
           selected={toSet(filters.platform)}
           onChange={(s) => updateSetFilter('platform', s)}
+          isMobile={isMobile}
         />
         <FilterDropdown
           label="標註"
@@ -221,73 +228,23 @@ export default function DirectoryFilters({
           selected={toSet(filters.has_traits)}
           onChange={(s) => updateSetFilter('has_traits', s)}
           multi={false}
+          isMobile={isMobile}
         />
 
-        <div style={{ flex: 1 }} />
-
-        {/* Sort */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8em' }}>
-          <span style={{ color: 'rgba(255,255,255,0.4)' }}>排序:</span>
-          <select
-            value={filters.sort || 'created_at'}
-            onChange={(e) => updateFilter('sort', e.target.value)}
-            style={{
-              background: '#1a2236',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 5, padding: '4px 6px',
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: '1em', cursor: 'pointer',
-            }}
-          >
-            {SORT_OPTIONS.map(o => (
-              <option key={o.value} value={o.value} style={{ background: '#1a2236', color: 'rgba(255,255,255,0.85)' }}>{o.label}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => updateFilter('order', filters.order === 'asc' ? 'desc' : 'asc')}
-            title={filters.order === 'asc' ? '升序' : '降序'}
-            style={{
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 5, padding: '4px 6px',
-              color: 'rgba(255,255,255,0.7)',
-              cursor: 'pointer', fontSize: '0.9em',
-            }}
-          >
-            {filters.order === 'asc' ? '↑' : '↓'}
-          </button>
-        </div>
-
-        {/* View mode toggle */}
-        <div style={{ display: 'flex', gap: 2 }}>
-          <button
-            type="button"
-            onClick={() => onViewModeChange('grid')}
-            title="格狀檢視"
-            style={viewBtnStyle(viewMode === 'grid')}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-              <rect x="0" y="0" width="6" height="6" rx="1" />
-              <rect x="8" y="0" width="6" height="6" rx="1" />
-              <rect x="0" y="8" width="6" height="6" rx="1" />
-              <rect x="8" y="8" width="6" height="6" rx="1" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => onViewModeChange('list')}
-            title="列表檢視"
-            style={viewBtnStyle(viewMode === 'list')}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-              <rect x="0" y="1" width="14" height="2.5" rx="1" />
-              <rect x="0" y="5.75" width="14" height="2.5" rx="1" />
-              <rect x="0" y="10.5" width="14" height="2.5" rx="1" />
-            </svg>
-          </button>
-        </div>
+        {/* Desktop: spacer + sort + view toggle inline */}
+        {!isMobile && <>
+          <div style={{ flex: 1 }} />
+          <SortControls filters={filters} updateFilter={updateFilter} />
+          <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
+        </>}
       </div>
+
+      {/* Row 2b (mobile only): sort */}
+      {isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <SortControls filters={filters} updateFilter={updateFilter} />
+        </div>
+      )}
 
       {/* Row 3: Active chips */}
       {chips.length > 0 && (
@@ -335,6 +292,77 @@ export default function DirectoryFilters({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function SortControls({ filters, updateFilter }) {
+  const currentSort = filters.sort || 'created_at';
+  const isAsc = filters.order === 'asc';
+
+  const handleClick = (value) => {
+    if (value === currentSort) {
+      updateFilter('order', isAsc ? 'desc' : 'asc');
+    } else {
+      updateFilter('sort', value);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.8em' }}>
+      <span style={{ color: 'rgba(255,255,255,0.4)' }}>排序:</span>
+      {SORT_OPTIONS.map(o => {
+        const active = o.value === currentSort;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => handleClick(o.value)}
+            style={{
+              background: active ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${active ? 'rgba(56,189,248,0.4)' : 'rgba(255,255,255,0.1)'}`,
+              borderRadius: 5, padding: '4px 8px',
+              color: active ? '#38bdf8' : 'rgba(255,255,255,0.5)',
+              cursor: 'pointer', fontSize: '1em',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {o.label}{active ? (isAsc ? ' ↑' : ' ↓') : ''}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ViewToggle({ viewMode, onViewModeChange }) {
+  return (
+    <div style={{ display: 'flex', gap: 2 }}>
+      <button
+        type="button"
+        onClick={() => onViewModeChange('grid')}
+        title="格狀檢視"
+        style={viewBtnStyle(viewMode === 'grid')}
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+          <rect x="0" y="0" width="6" height="6" rx="1" />
+          <rect x="8" y="0" width="6" height="6" rx="1" />
+          <rect x="0" y="8" width="6" height="6" rx="1" />
+          <rect x="8" y="8" width="6" height="6" rx="1" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={() => onViewModeChange('list')}
+        title="列表檢視"
+        style={viewBtnStyle(viewMode === 'list')}
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+          <rect x="0" y="1" width="14" height="2.5" rx="1" />
+          <rect x="0" y="5.75" width="14" height="2.5" rx="1" />
+          <rect x="0" y="10.5" width="14" height="2.5" rx="1" />
+        </svg>
+      </button>
     </div>
   );
 }

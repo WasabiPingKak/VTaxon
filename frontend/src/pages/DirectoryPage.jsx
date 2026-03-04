@@ -8,6 +8,7 @@ import DirectoryListItem, { LIST_GRID } from '../components/directory/DirectoryL
 import Pagination from '../components/Pagination';
 import VtuberDetailPanel from '../components/VtuberDetailPanel';
 import SEOHead, { SITE_URL } from '../components/SEOHead';
+import useIsMobile from '../hooks/useIsMobile';
 
 const DEFAULT_FILTERS = {
   q: '', country: '', gender: '', status: '',
@@ -16,11 +17,17 @@ const DEFAULT_FILTERS = {
 };
 
 export default function DirectoryPage() {
+  const isMobile = useIsMobile();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
   const [selectedItem, setSelectedItem] = useState(null);
+
+  // Force grid view on mobile
+  useEffect(() => {
+    if (isMobile && viewMode !== 'grid') setViewMode('grid');
+  }, [isMobile]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -66,7 +73,7 @@ export default function DirectoryPage() {
   const totalPages = data?.total_pages || 1;
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 20px' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: isMobile ? '16px 12px' : '24px 20px' }}>
       <SEOHead
         title={currentPage > 1 ? `VTuber 圖鑑 — 第 ${currentPage} 頁` : 'VTuber 圖鑑'}
         description="探索所有已建檔的 VTuber 角色與物種分類"
@@ -122,7 +129,7 @@ export default function DirectoryPage() {
         ) : viewMode === 'grid' ? (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
             gap: 12,
           }}>
             {items.map(item => (
@@ -210,7 +217,7 @@ function LoadingSkeleton({ viewMode }) {
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
       gap: 12,
     }}>
       {skeletons.map((_, i) => (

@@ -7,7 +7,7 @@ from ..cache import (get_tree_cache, set_tree_cache, invalidate_tree_cache,
                      get_fictional_tree_cache, set_fictional_tree_cache,
                      invalidate_fictional_tree_cache)
 from ..extensions import db
-from ..models import User, VtuberTrait, SpeciesCache, FictionalSpecies
+from ..models import User, VtuberTrait, SpeciesCache, FictionalSpecies, OAuthAccount
 from ..services.gbif import _build_path_zh
 
 log = logging.getLogger(__name__)
@@ -55,6 +55,18 @@ def get_taxonomy_tree():
         .all()
     )
 
+    # Batch query platforms to avoid N+1 (deduplicate providers per user)
+    user_ids = list({user.id for _, _, user in rows})
+    platform_rows = (
+        db.session.query(OAuthAccount.user_id, OAuthAccount.provider)
+        .filter(OAuthAccount.user_id.in_(user_ids))
+        .distinct()
+        .all()
+    ) if user_ids else []
+    user_platforms = {}
+    for uid, provider in platform_rows:
+        user_platforms.setdefault(uid, []).append(provider)
+
     needs_commit = False
     entries = []
     for trait, species, user in rows:
@@ -77,11 +89,18 @@ def get_taxonomy_tree():
             breed_name_en = trait.breed.name_en
             breed_name = breed_name_zh or breed_name_en
 
+        pd = user._computed_profile_data()
         entries.append({
             'user_id': user.id,
             'display_name': user.display_name,
             'avatar_url': user.avatar_url,
             'country_flags': user.country_flags or [],
+            'created_at': user.created_at.isoformat() if user.created_at else None,
+            'organization': user.organization,
+            'gender': pd.get('gender'),
+            'activity_status': pd.get('activity_status'),
+            'debut_date': pd.get('debut_date'),
+            'platforms': user_platforms.get(user.id, []),
             'taxon_id': species.taxon_id,
             'taxon_rank': species.taxon_rank,
             'taxon_path': species.taxon_path,
@@ -131,6 +150,18 @@ def get_fictional_tree():
         .all()
     )
 
+    # Batch query platforms to avoid N+1 (deduplicate providers per user)
+    user_ids = list({user.id for _, _, user in rows})
+    platform_rows = (
+        db.session.query(OAuthAccount.user_id, OAuthAccount.provider)
+        .filter(OAuthAccount.user_id.in_(user_ids))
+        .distinct()
+        .all()
+    ) if user_ids else []
+    user_platforms = {}
+    for uid, provider in platform_rows:
+        user_platforms.setdefault(uid, []).append(provider)
+
     entries = []
     for trait, fictional, user in rows:
         # Build fictional_path: origin|sub_origin|name
@@ -140,11 +171,18 @@ def get_fictional_tree():
         path_parts.append(fictional.name)
         fictional_path = '|'.join(path_parts)
 
+        pd = user._computed_profile_data()
         entries.append({
             'user_id': user.id,
             'display_name': user.display_name,
             'avatar_url': user.avatar_url,
             'country_flags': user.country_flags or [],
+            'created_at': user.created_at.isoformat() if user.created_at else None,
+            'organization': user.organization,
+            'gender': pd.get('gender'),
+            'activity_status': pd.get('activity_status'),
+            'debut_date': pd.get('debut_date'),
+            'platforms': user_platforms.get(user.id, []),
             'fictional_species_id': fictional.id,
             'fictional_path': fictional_path,
             'fictional_name': fictional.name,

@@ -184,7 +184,7 @@ const GraphCanvas = forwardRef(function GraphCanvas({
       );
     },
 
-    panTo(worldX, worldY, scale) {
+    panTo(worldX, worldY, scale, leftInset = 0, rightInset = 0, bottomInset = 0, topInset = 0) {
       const canvas = canvasRef.current;
       if (!canvas || !zoomRef.current) return;
       const dpr = window.devicePixelRatio || 1;
@@ -192,8 +192,11 @@ const GraphCanvas = forwardRef(function GraphCanvas({
       const h = sizeRef.current.height / dpr;
       const s = scale || transformRef.current.scale;
 
-      const tx = w / 2 - worldX * s;
-      const ty = h / 2 - worldY * s;
+      // Center within available area (excluding insets)
+      const cx = leftInset + (w - leftInset - rightInset) / 2;
+      const cy = topInset + (h - topInset - bottomInset) / 2;
+      const tx = cx - worldX * s;
+      const ty = cy - worldY * s;
 
       const sel = select(canvas);
       sel.interrupt();

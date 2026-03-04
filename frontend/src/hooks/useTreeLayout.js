@@ -227,7 +227,79 @@ const DUAL_TREE_GAP = 400;
  * Supports dual trees: real species (entries) + fictional species (fictionalEntries).
  * Returns { nodes, edges, bounds, rootData, fictionalRootData, maxCount }.
  */
-export default function useTreeLayout(entries, fictionalEntries, expandedSet, currentUserId) {
+// ── Seeded PRNG (xorshift32) + Fisher-Yates shuffle ──
+function xorshift32(seed) {
+  let s = seed | 0 || 1;
+  return () => {
+    s ^= s << 13;
+    s ^= s >> 17;
+    s ^= s << 5;
+    return (s >>> 0) / 4294967296;
+  };
+}
+
+function shuffleArray(arr, seed) {
+  const a = [...arr];
+  const rng = xorshift32(seed);
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * Sort vtuber entries within a node according to sortConfig.
+ * @param {Array} vtubers - node.vtubers array
+ * @param {Object} sortConfig - { key, order, shuffleSeed }
+ * @returns {Array} sorted copy
+ */
+function sortVtubers(vtubers, sortConfig) {
+  if (!sortConfig || !vtubers || vtubers.length <= 1) return vtubers;
+
+  const { key, order = 'asc', shuffleSeed } = sortConfig;
+
+  if (key === 'shuffle' && shuffleSeed != null) {
+    return shuffleArray(vtubers, shuffleSeed);
+  }
+
+  const sorted = [...vtubers].sort((a, b) => {
+    let cmp = 0;
+    switch (key) {
+      case 'created_at':
+        cmp = (a.created_at || '').localeCompare(b.created_at || '');
+        break;
+      case 'debut_date': {
+        const ad = a.debut_date || '\uffff';
+        const bd = b.debut_date || '\uffff';
+        cmp = ad.localeCompare(bd);
+        break;
+      }
+      case 'display_name':
+        cmp = (a.display_name || '').localeCompare(b.display_name || '', 'zh-TW');
+        break;
+      case 'country': {
+        const af = (a.country_flags || [])[0] || '\uffff';
+        const bf = (b.country_flags || [])[0] || '\uffff';
+        cmp = af.localeCompare(bf);
+        break;
+      }
+      case 'organization': {
+        const ao = a.organization || '\uffff';
+        const bo = b.organization || '\uffff';
+        cmp = ao.localeCompare(bo, 'zh-TW');
+        break;
+      }
+      default:
+        break;
+    }
+    return order === 'desc' ? -cmp : cmp;
+  });
+
+  return sorted;
+}
+
+export default function useTreeLayout(entries, fictionalEntries, expandedSet, currentUserId, sortConfig) {
   return useMemo(() => {
     const hasReal = entries && entries.length > 0;
     const hasFictional = fictionalEntries && fictionalEntries.length > 0;
@@ -242,7 +314,7 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
     // ── Real tree ──
     if (hasReal) {
       realRoot = buildTree(entries);
-      const hierData = mapToHierarchy(realRoot, expandedSet, currentUserId);
+      const hierData = mapToHierarchy(realRoot, expandedSet, currentUserId, 0, sortConfig);
       const h = hierarchy(hierData, d => d.children);
       layoutTree(h);
       realNodes = h.descendants();
@@ -253,7 +325,7 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
     // ── Fictional tree ──
     if (hasFictional) {
       fictRoot = buildFictionalTree(fictionalEntries);
-      const hierData = mapToHierarchy(fictRoot, expandedSet, currentUserId);
+      const hierData = mapToHierarchy(fictRoot, expandedSet, currentUserId, 0, sortConfig);
       const h = hierarchy(hierData, d => d.children);
       layoutTree(h);
       fictNodes = h.descendants();
@@ -281,7 +353,7 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
       bounds: allBounds,
       maxCount,
     };
-  }, [entries, fictionalEntries, expandedSet, currentUserId]);
+  }, [entries, fictionalEntries, expandedSet, currentUserId, sortConfig]);
 }
 
 /**
@@ -414,14 +486,15 @@ function shiftSubtree(node, dx) {
  * Recursively convert Map-based tree node → plain object for d3.hierarchy.
  * Only includes children that are expanded. Also creates vtuber leaf nodes.
  */
-function mapToHierarchy(node, expandedSet, currentUserId, depth = 0) {
+function mapToHierarchy(node, expandedSet, currentUserId, depth = 0, sortConfig = null) {
   const isExpanded = depth === 0 || expandedSet.has(node.pathKey);
   const children = [];
 
   if (isExpanded) {
     // Vtubers FIRST (so they appear before taxonomy children when
     // at intermediate levels — see applyIntermediateLevel)
-    for (const v of node.vtubers) {
+    const sortedVtubers = sortVtubers(node.vtubers, sortConfig);
+    for (const v of sortedVtubers) {
       children.push({
         _name: v.display_name,
         _displayName: v.display_name,
@@ -436,9 +509,15 @@ function mapToHierarchy(node, expandedSet, currentUserId, depth = 0) {
       });
     }
 
-    const sorted = [...node.children.values()].sort((a, b) => b.count - a.count);
-    for (const child of sorted) {
-      children.push(mapToHierarchy(child, expandedSet, currentUserId, depth + 1));
+    let taxonomyChildren = [...node.children.values()];
+    if (sortConfig?.key === 'shuffle' && sortConfig.shuffleSeed != null) {
+      // Shuffle taxonomy nodes too so the entire tree layout changes
+      taxonomyChildren = shuffleArray(taxonomyChildren, sortConfig.shuffleSeed + depth);
+    } else {
+      taxonomyChildren.sort((a, b) => b.count - a.count);
+    }
+    for (const child of taxonomyChildren) {
+      children.push(mapToHierarchy(child, expandedSet, currentUserId, depth + 1, sortConfig));
     }
   }
 

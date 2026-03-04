@@ -514,8 +514,8 @@ function drawVtuberNode(ctx, node, scale, state) {
     drawHexRing(ctx, node.x, node.y, hexR + 5, 'rgba(255,107,53,0.5)', 1.5);
   }
 
-  // ── Flash: dramatic double-pulse burst for close nodes on traceBack change ──
-  if (isClose && state.flashMap) {
+  // ── Flash: dramatic double-pulse burst (traceBack change or filter match) ──
+  if (state.flashMap) {
     const flashKey = d._userId + '\0' + (d._entry?.fictional_path || d._entry?.taxon_path);
     const flashStart = state.flashMap.get(flashKey);
     if (flashStart) {

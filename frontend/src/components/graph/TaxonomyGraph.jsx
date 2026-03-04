@@ -10,7 +10,10 @@ import useImagePreloader from '../../hooks/useImagePreloader';
 import useNodeAnimation from '../../hooks/useNodeAnimation';
 import VtuberDetailPanel from '../VtuberDetailPanel';
 import FloatingToolbar from './FloatingToolbar';
+import FilterPanel from './FilterPanel';
 import FocusHUD from './FocusHUD';
+import { filterEntries, computeFacets, countActiveFilters, emptyFilters } from '../../lib/treeFilters';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
   const canvasRef = useRef(null);
@@ -35,6 +38,32 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
 
   // Active tree selector ('real' | 'fictional')
   const [activeTree, setActiveTree] = useState('real');
+
+  // Sort state
+  const [sortKey, setSortKey] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [shuffleSeed, setShuffleSeed] = useState(null);
+
+  // Filter state
+  const [filters, setFilters] = useState(() => emptyFilters());
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [toolbarExpanded, setToolbarExpanded] = useState(false);
+  const isMobile = useIsMobile();
+
+  // Camera insets: [padding, leftInset, rightInset, bottomInset, topInset]
+  // Desktop: left toolbar ~200px wide; Mobile: mini bar ~50px, HUD at bottom ~60px
+  const cameraInsetsRef = useRef([80, 220, 100, 80, 100]);
+  useEffect(() => {
+    cameraInsetsRef.current = isMobile
+      ? [40, 56, 16, 70, 56]
+      : [80, 220, 100, 80, 100];
+  }, [isMobile]);
+
+  // Helper: panTo with current insets (skips padding, uses inset indices 1-4)
+  const panToWithInsets = useCallback((x, y, scale) => {
+    const [, l, r, b, t] = cameraInsetsRef.current;
+    canvasRef.current?.panTo(x, y, scale, l, r, b, t);
+  }, []);
 
   // Fetch tree data (real + fictional in parallel).
   // When refresh=true, bypasses backend cache to get fresh data.
@@ -152,7 +181,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
         : (entry.taxon_path + (entry.breed_id ? `|__breed__${entry.breed_id}` : '') + `|__vtuber__${locateId}`);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
-        canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
+        panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 400);
   }, [locateId, entries, fictionalEntries, setSearchParams, scheduleCamera]);
@@ -170,9 +199,41 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
     return rawFocusedEntries.filter(e => e.taxon_path);
   }, [rawFocusedEntries]);
 
+  // ── Filtering ──
+  const filteredEntries = useMemo(() =>
+    filterEntries(entries, filters), [entries, filters]);
+  const filteredFictionalEntries = useMemo(() =>
+    filterEntries(fictionalEntries, filters), [fictionalEntries, filters]);
+
+  // Facets from raw (unfiltered) entries — combined and deduplicated
+  const facets = useMemo(() => {
+    const all = [...(entries || []), ...(fictionalEntries || [])];
+    return computeFacets(all);
+  }, [entries, fictionalEntries]);
+
+  // ── Sort config (stable reference via useMemo) ──
+  const sortConfig = useMemo(() => {
+    if (shuffleSeed != null) {
+      return { key: 'shuffle', order: sortOrder, shuffleSeed };
+    }
+    return { key: sortKey, order: sortOrder, shuffleSeed: null };
+  }, [sortKey, sortOrder, shuffleSeed]);
+
+  // Sort/filter handlers
+  const handleSortChange = useCallback((key, order) => {
+    setSortKey(key);
+    setSortOrder(order);
+    setShuffleSeed(null); // clear shuffle when selecting a sort
+  }, []);
+
+  const handleShuffle = useCallback(() => {
+    setShuffleSeed(Date.now());
+  }, []);
+
+
   // d3 layout (before traceBack computations so focusedEntries can sort by X)
   const { nodes, edges, bounds, rootData, fictionalRootData, maxCount } = useTreeLayout(
-    entries, fictionalEntries, expandedSet, currentUser?.id,
+    filteredEntries, filteredFictionalEntries, expandedSet, currentUser?.id, sortConfig,
   );
   nodesRef.current = nodes;
 
@@ -392,7 +453,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
           }
           const focusedNode = currentNodes.find(n => n.data._pathKey === activePathKey);
           if (focusedNode) {
-            canvasRef.current?.panTo(focusedNode.x, focusedNode.y);
+            panToWithInsets(focusedNode.x, focusedNode.y);
             return;
           }
         }
@@ -411,9 +472,50 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
       }
 
       if (count === 0) return;
-      canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80, 100);
+      canvasRef.current?.fitBounds(minX, minY, maxX, maxY, ...cameraInsetsRef.current);
     }, 300);
   }, [focusedUserId, closeVtuberIds, closeEdgePaths, activeFocusedEntries, scheduleCamera]);
+
+  // When filters change, auto-expand all paths that contain matching entries + fit camera + flash
+  const handleFiltersChange = useCallback((newFilters) => {
+    setFilters(newFilters);
+
+    const fr = filterEntries(entries, newFilters);
+    const ff = filterEntries(fictionalEntries, newFilters);
+    const hasAny = countActiveFilters(newFilters) > 0;
+
+    if (hasAny) {
+      const realPaths = fr && fr.length > 0 ? collectAllPaths(fr) : new Set();
+      const fictPaths = ff && ff.length > 0 ? collectAllFictionalPaths(ff) : new Set();
+      setExpandedSet(new Set([...realPaths, ...fictPaths]));
+    }
+
+    // Clear previous flash
+    flashMapRef.current.clear();
+    setFlashTick(t => t + 1);
+
+    scheduleCameraFit(true, null);
+
+    // Flash filtered nodes after camera settles (nodes only, no edge flash)
+    if (hasAny) {
+      const capturedReal = fr || [];
+      const capturedFict = ff || [];
+      setTimeout(() => {
+        const now = performance.now();
+        flashMapRef.current.clear();
+        // Do NOT set edgeFlashStartRef — edges should not flash for filters
+        for (const e of capturedReal) {
+          const path = e.taxon_path;
+          if (path) flashMapRef.current.set(e.user_id + '\0' + path, now);
+        }
+        for (const e of capturedFict) {
+          const path = e.fictional_path;
+          if (path) flashMapRef.current.set(e.user_id + '\0' + path, now);
+        }
+        setFlashTick(t => t + 1);
+      }, 1100);
+    }
+  }, [entries, fictionalEntries, scheduleCameraFit]);
 
   useEffect(() => {
     if (prevTickRef.current === traceBackTick) return;
@@ -525,7 +627,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
           const userNode = nodes.find(n => n.data._pathKey === userPathKey);
           if (userNode) {
             setTimeout(() => {
-              canvasRef.current?.panTo(userNode.x, userNode.y, 0.8);
+              panToWithInsets(userNode.x, userNode.y, 0.8);
             }, 800);
           }
         }
@@ -597,21 +699,22 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
           count++;
         }
         if (count > 0) {
-          canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80, 100);
+          canvasRef.current?.fitBounds(minX, minY, maxX, maxY, ...cameraInsetsRef.current);
         }
       } else {
         // Collapse — pan to the node
         const targetNode = currentNodes.find(n => n.data._pathKey === pathKey);
         if (targetNode) {
-          canvasRef.current?.panTo(targetNode.x, targetNode.y);
+          panToWithInsets(targetNode.x, targetNode.y);
         }
       }
     }, 300);
   }, [rootData, fictionalRootData, scheduleCamera]);
 
   // Expand all / collapse all — scoped to activeTree
-  const handleExpandAll = useCallback(() => {
-    const treePaths = activeTree === 'real'
+  const handleExpandAll = useCallback((treeKey) => {
+    const target = treeKey || activeTree;
+    const treePaths = target === 'real'
       ? (entries ? collectAllPaths(entries) : new Set())
       : (fictionalEntries ? collectAllFictionalPaths(fictionalEntries) : new Set());
     setExpandedSet(prev => {
@@ -619,24 +722,23 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
       for (const p of treePaths) next.add(p);
       return next;
     });
-    scheduleCameraFit(true, activeTree);
+    scheduleCameraFit(true, target);
   }, [entries, fictionalEntries, activeTree, scheduleCameraFit]);
 
-  const handleCollapseAll = useCallback(() => {
+  const handleCollapseAll = useCallback((treeKey) => {
+    const target = treeKey || activeTree;
     setExpandedSet(prev => {
       const next = new Set();
       for (const p of prev) {
-        if (activeTree === 'real') {
-          // Keep fictional paths only
+        if (target === 'real') {
           if (p.startsWith('__F__')) next.add(p);
         } else {
-          // Keep real paths only
           if (!p.startsWith('__F__')) next.add(p);
         }
       }
       return next;
     });
-    scheduleCameraFit(true, activeTree);
+    scheduleCameraFit(true, target);
   }, [activeTree, scheduleCameraFit]);
 
   // Expand both trees completely
@@ -660,7 +762,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
       if (n.x > maxX) maxX = n.x;
       if (n.y > maxY) maxY = n.y;
     }
-    canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80, 100);
+    canvasRef.current?.fitBounds(minX, minY, maxX, maxY, ...cameraInsetsRef.current);
   }, []);
 
   // Fit to fictional tree only
@@ -674,7 +776,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
       if (n.x > maxX) maxX = n.x;
       if (n.y > maxY) maxY = n.y;
     }
-    canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80, 100);
+    canvasRef.current?.fitBounds(minX, minY, maxX, maxY, ...cameraInsetsRef.current);
   }, []);
 
   // Select tree: set activeTree + camera fit
@@ -695,7 +797,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
       if (n.x > maxX) maxX = n.x;
       if (n.y > maxY) maxY = n.y;
     }
-    canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80, 100);
+    canvasRef.current?.fitBounds(minX, minY, maxX, maxY, ...cameraInsetsRef.current);
   }, []);
 
   // Canvas click handler
@@ -778,7 +880,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
       const pathKey = entryToPathKey(entry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
-        canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
+        panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
   }, [focusedEntries, focusedSpeciesIdx, entries, fictionalEntries, focusedUserId, entryToPathKey, scheduleCamera]);
@@ -810,7 +912,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
       const pathKey = entryToPathKey(entry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
-        canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
+        panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 200);
   }, [entries, fictionalEntries, entryToPathKey, scheduleCamera]);
@@ -851,7 +953,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
       const pathKey = entryToPathKey(newEntry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
-        canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
+        panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
   }, [entries, fictionalEntries, entryToPathKey, scheduleCamera]);
@@ -878,7 +980,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
       const pathKey = entryToPathKey(entry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
-        canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
+        panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 200);
   }, [refocusTick, entryToPathKey, scheduleCamera]);
@@ -910,7 +1012,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
       const pathKey = entryToPathKey(entry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
-        canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
+        panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
   }, [focusedEntryKey, focusedUserId, entryToPathKey, scheduleCamera]);
@@ -1002,8 +1104,8 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
     );
   }
 
-  const nodeCount = nodes.length;
-  const entryCount = (entries?.length || 0) + (fictionalEntries?.length || 0);
+  const totalCount = (entries?.length || 0) + (fictionalEntries?.length || 0);
+  const filteredCount = (filteredEntries?.length || 0) + (filteredFictionalEntries?.length || 0);
 
   return (
     <>
@@ -1016,12 +1118,12 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
         />
       </div>
 
-      <div style={{ position: 'absolute', left: 16, top: 60, display: 'flex',
-        flexDirection: 'column', gap: 8, zIndex: 50, pointerEvents: 'none' }}>
+      <div style={{ position: 'absolute', left: isMobile ? 8 : 16, top: isMobile ? 52 : 60, display: 'flex',
+        flexDirection: 'row', alignItems: 'flex-start', gap: 8, zIndex: 50, pointerEvents: 'none' }}>
         <FloatingToolbar
           canvasRef={canvasRef}
-          nodeCount={nodeCount}
-          entryCount={entryCount}
+          filteredCount={filteredCount}
+          totalCount={totalCount}
           onExpandAll={handleExpandAll}
           onCollapseAll={handleCollapseAll}
           onExpandBothTrees={handleExpandBothTrees}
@@ -1032,16 +1134,47 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
           depthLabels={depthLabels}
           activeTree={activeTree}
           onSelectTree={handleSelectTree}
+          sortKey={sortKey}
+          sortOrder={sortOrder}
+          onSortChange={handleSortChange}
+          onShuffle={handleShuffle}
+          isShuffled={shuffleSeed != null}
+          filters={filters}
+          filterPanelOpen={filterPanelOpen}
+          onFilterToggle={() => setFilterPanelOpen(p => !p)}
+          isMobile={isMobile}
+          expanded={toolbarExpanded}
+          onExpandedChange={setToolbarExpanded}
         />
+        {filterPanelOpen && !isMobile && (
+          <FilterPanel
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            facets={facets}
+            onClose={() => setFilterPanelOpen(false)}
+          />
+        )}
       </div>
 
-      {focusedUserId && focusedEntries.length > 0 && (
+      {/* Mobile: FilterPanel as bottom sheet */}
+      {filterPanelOpen && isMobile && (
+        <FilterPanel
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          facets={facets}
+          onClose={() => setFilterPanelOpen(false)}
+          isMobile
+        />
+      )}
+
+      {focusedUserId && focusedEntries.length > 0 && !(isMobile && toolbarExpanded) && (
         <FocusHUD
           focusedEntries={focusedEntries}
           speciesIndex={focusedSpeciesIdx}
           onPrev={handleFocusPrev}
           onNext={handleFocusNext}
           onLocate={handleLocateFocused}
+          isMobile={isMobile}
         />
       )}
 

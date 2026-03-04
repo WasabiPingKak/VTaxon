@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import useIsMobile from '../hooks/useIsMobile';
 
 function AvatarFallback({ name, size = 32 }) {
   const initial = (name || '?')[0].toUpperCase();
@@ -23,6 +24,7 @@ export default function Navbar() {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const [adminPendingTotal, setAdminPendingTotal] = useState(0);
@@ -72,7 +74,7 @@ export default function Navbar() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 20px',
+      padding: isMobile ? '0 10px' : '0 20px',
       background: 'rgba(8,13,21,0.85)',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
@@ -92,11 +94,11 @@ export default function Navbar() {
       </Link>
 
       {/* Right section */}
-      <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-        <Link to="/directory" style={{
+      <div style={{ display: 'flex', gap: isMobile ? '8px' : '14px', alignItems: 'center' }}>
+        <Link to="/directory" title="圖鑑" style={{
           textDecoration: 'none',
           fontSize: '0.8em',
-          padding: '4px 10px',
+          padding: isMobile ? '5px 7px' : '4px 10px',
           borderRadius: 6,
           color: location.pathname === '/directory' ? '#38bdf8' : 'rgba(255,255,255,0.65)',
           border: `1px solid ${location.pathname === '/directory' ? 'rgba(56,189,248,0.3)' : 'rgba(255,255,255,0.12)'}`,
@@ -109,7 +111,7 @@ export default function Navbar() {
             <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
             <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
-          圖鑑
+          {!isMobile && '圖鑑'}
         </Link>
         {!loading && (
           user ? (
@@ -120,7 +122,7 @@ export default function Navbar() {
                 title="在樹狀圖中定位自己"
                 style={{
                   background: 'rgba(233,30,140,0.1)', border: '1px solid rgba(233,30,140,0.3)',
-                  borderRadius: 6, cursor: 'pointer', padding: '4px 8px',
+                  borderRadius: 6, cursor: 'pointer', padding: isMobile ? '5px 7px' : '4px 8px',
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   color: '#E91E8C', fontSize: '0.8em',
                 }}
@@ -130,7 +132,7 @@ export default function Navbar() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
                 </svg>
-                定位自己
+                {!isMobile && '定位自己'}
               </button>
               <div ref={dropdownRef} style={{ position: 'relative' }}>
               <button
@@ -149,11 +151,13 @@ export default function Navbar() {
                 ) : (
                   <AvatarFallback name={user.display_name} size={28} />
                 )}
-                <span style={{
-                  fontSize: '0.85em', color: 'rgba(255,255,255,0.85)',
-                  maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>{user.display_name}</span>
+                {!isMobile && (
+                  <span style={{
+                    fontSize: '0.85em', color: 'rgba(255,255,255,0.85)',
+                    maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>{user.display_name}</span>
+                )}
               </button>
 
               {dropdownOpen && (
@@ -258,13 +262,13 @@ export default function Navbar() {
             <Link to="/login" style={{
               textDecoration: 'none',
               fontSize: '0.85em',
-              padding: '5px 14px',
+              padding: isMobile ? '5px 10px' : '5px 14px',
               borderRadius: 5,
               color: '#38bdf8',
               border: '1px solid rgba(56,189,248,0.3)',
               background: 'rgba(56,189,248,0.08)',
             }}>
-              VTuber 登入
+              {isMobile ? '登入' : 'VTuber 登入'}
             </Link>
           )
         )}

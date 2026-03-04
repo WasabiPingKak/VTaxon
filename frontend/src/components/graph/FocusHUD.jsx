@@ -4,7 +4,7 @@ import { useState } from 'react';
  * Bottom HUD showing focused Vtuber info with multi-species navigation.
  * Uses CSS grid for fixed arrow positions.
  */
-export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext, onLocate }) {
+export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext, onLocate, isMobile }) {
   const [imgError, setImgError] = useState(false);
 
   if (!focusedEntries || focusedEntries.length === 0) return null;
@@ -15,6 +15,82 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
     || current.breed_name_zh || current.breed_name
     || current.common_name_zh || current.scientific_name || '?';
 
+  if (isMobile) {
+    return (
+      <div style={{
+        position: 'absolute',
+        bottom: 8,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: 'calc(100% - 64px)',
+        maxWidth: 360,
+        boxSizing: 'border-box',
+        background: 'rgba(8,13,21,0.9)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255,107,53,0.3)',
+        borderRadius: 10,
+        padding: '6px 10px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        zIndex: 60,
+        color: '#e2e8f0',
+        userSelect: 'none',
+      }}>
+        {/* Avatar */}
+        {current.avatar_url && !imgError ? (
+          <img
+            src={current.avatar_url} alt=""
+            style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div style={{
+            width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+            background: 'rgba(255,255,255,0.1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 13, color: 'rgba(255,255,255,0.4)',
+          }}>?</div>
+        )}
+
+        {/* Name + species stacked */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <span style={{ fontWeight: 600, fontSize: '0.82em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {current.display_name}
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {total > 1 && (
+              <button type="button" onClick={onPrev} style={navBtnStyleMobile} title="上一個物種">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>
+              </button>
+            )}
+            <span style={{ fontSize: '0.75em', color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {speciesLabel}
+              {total > 1 && <span style={{ color: 'rgba(255,255,255,0.35)', marginLeft: 3 }}>({speciesIndex + 1}/{total})</span>}
+            </span>
+            {total > 1 && (
+              <button type="button" onClick={onNext} style={navBtnStyleMobile} title="下一個物種">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Locate button */}
+        <button type="button" onClick={onLocate} style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'rgba(255,255,255,0.6)', fontSize: '0.72em',
+          whiteSpace: 'nowrap', borderRadius: 4, padding: '3px 4px',
+          flexShrink: 0,
+        }} title="定位回自己">
+          定位
+        </button>
+      </div>
+    );
+  }
+
+  // Desktop layout
   return (
     <>
       <div style={{
@@ -132,4 +208,19 @@ const navBtnStyle = {
   display: 'flex',
   alignItems: 'center',
   borderRadius: 4,
+};
+
+const navBtnStyleMobile = {
+  background: 'rgba(255,255,255,0.08)',
+  border: 'none',
+  cursor: 'pointer',
+  color: 'rgba(255,255,255,0.65)',
+  width: 28,
+  height: 28,
+  padding: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: 6,
+  flexShrink: 0,
 };
