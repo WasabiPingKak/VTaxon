@@ -317,6 +317,21 @@ function ReportCard({ req, onUpdate }) {
         )}
       </div>
 
+      {/* Report type badge */}
+      <div style={{ marginBottom: 8 }}>
+        <span style={{
+          display: 'inline-block', padding: '2px 10px', borderRadius: 4,
+          fontSize: '0.8em', fontWeight: 600,
+          background: req.report_type === 'not_vtuber'
+            ? 'rgba(251,146,60,0.15)' : 'rgba(239,68,68,0.15)',
+          color: req.report_type === 'not_vtuber' ? '#fb923c' : '#f87171',
+          border: `1px solid ${req.report_type === 'not_vtuber'
+            ? 'rgba(251,146,60,0.25)' : 'rgba(239,68,68,0.25)'}`,
+        }}>
+          {req.report_type === 'not_vtuber' ? '非VTuber/ACG' : '偽冒帳號'}
+        </span>
+      </div>
+
       {/* Reported user (highlighted) */}
       <div style={{
         borderRadius: 6,
@@ -537,7 +552,8 @@ function ReportCard({ req, onUpdate }) {
                 border: '1px solid rgba(239,68,68,0.25)', fontSize: '0.85em',
                 opacity: (previewLoading || !req.reported_user) ? 0.5 : 1,
               }}>
-                {previewLoading ? '載入中…' : '確認偽冒並預覽可封鎖項目'}
+                {previewLoading ? '載入中…' : req.report_type === 'not_vtuber'
+                  ? '確認非VTuber並預覽可封鎖項目' : '確認偽冒並預覽可封鎖項目'}
               </button>
             </div>
           )}
@@ -602,7 +618,9 @@ function ReportCard({ req, onUpdate }) {
                     opacity: (loading || selectedIds.size === 0) ? 0.5 : 1,
                   }}
                 >
-                  {loading ? '處理中…' : `確認偽冒並封鎖 (${selectedIds.size})`}
+                  {loading ? '處理中…' : req.report_type === 'not_vtuber'
+                    ? `確認非VTuber並封鎖 (${selectedIds.size})`
+                    : `確認偽冒並封鎖 (${selectedIds.size})`}
                 </button>
               </div>
             </div>

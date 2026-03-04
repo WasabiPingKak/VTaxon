@@ -299,6 +299,7 @@ class UserReport(db.Model):
                             ondelete='SET NULL'))
     reported_user_id = db.Column(db.String(36), db.ForeignKey('users.id',
                                  ondelete='SET NULL'))
+    report_type = db.Column(db.Text, nullable=False, default='impersonation')
     reason = db.Column(db.Text, nullable=False)
     evidence_url = db.Column(db.Text)
     status = db.Column(db.Text, nullable=False, default='pending')
@@ -316,6 +317,7 @@ class UserReport(db.Model):
             'id': self.id,
             'reporter_id': self.reporter_id,
             'reported_user_id': self.reported_user_id,
+            'report_type': self.report_type,
             'reason': self.reason,
             'evidence_url': self.evidence_url,
             'status': self.status,

@@ -16,9 +16,12 @@ def create_report():
 
     data = request.get_json() or {}
     reported_user_id = data.get('reported_user_id')
+    report_type = data.get('report_type', 'impersonation')
     reason = (data.get('reason') or '').strip()
     evidence_url = (data.get('evidence_url') or '').strip() or None
 
+    if report_type not in ('impersonation', 'not_vtuber'):
+        return jsonify({'error': '無效的檢舉類型'}), 400
     if not reported_user_id:
         return jsonify({'error': '缺少被舉報使用者 ID'}), 400
     if not reason:
@@ -38,6 +41,7 @@ def create_report():
     report = UserReport(
         reporter_id=reporter_id,
         reported_user_id=reported_user_id,
+        report_type=report_type,
         reason=reason,
         evidence_url=evidence_url,
     )

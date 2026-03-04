@@ -143,6 +143,7 @@ function FictionalPath({ entry }) {
 function ReportSection({ entry }) {
   const { user: currentUser } = useAuth();
   const [reportOpen, setReportOpen] = useState(false);
+  const [reportType, setReportType] = useState('impersonation');
   const [reportReason, setReportReason] = useState('');
   const [reportEvidence, setReportEvidence] = useState('');
   const [reportLoading, setReportLoading] = useState(false);
@@ -151,6 +152,7 @@ function ReportSection({ entry }) {
   // Reset when entry changes
   useEffect(() => {
     setReportOpen(false);
+    setReportType('impersonation');
     setReportReason('');
     setReportEvidence('');
     setReportLoading(false);
@@ -166,6 +168,7 @@ function ReportSection({ entry }) {
     try {
       await api.createReport({
         reported_user_id: entry.user_id,
+        report_type: reportType,
         reason: reportReason.trim(),
         evidence_url: reportEvidence.trim() || undefined,
       });
@@ -202,7 +205,7 @@ function ReportSection({ entry }) {
             <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
             <line x1="4" y1="22" x2="4" y2="15" />
           </svg>
-          檢舉偽冒帳號
+          檢舉此帳號
         </button>
       ) : (
         <div style={{
@@ -211,12 +214,27 @@ function ReportSection({ entry }) {
           border: '1px solid rgba(239,68,68,0.15)',
         }}>
           <div style={{ fontSize: '0.85em', fontWeight: 500, marginBottom: 8, color: '#f87171' }}>
-            檢舉偽冒帳號
+            檢舉此帳號
+          </div>
+          {/* Report type radio buttons */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 10, fontSize: '0.85em' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', color: 'rgba(255,255,255,0.8)' }}>
+              <input type="radio" name="reportType" value="impersonation"
+                checked={reportType === 'impersonation'} onChange={() => setReportType('impersonation')} />
+              偽冒帳號
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', color: 'rgba(255,255,255,0.8)' }}>
+              <input type="radio" name="reportType" value="not_vtuber"
+                checked={reportType === 'not_vtuber'} onChange={() => setReportType('not_vtuber')} />
+              非 VTuber / ACG 相關
+            </label>
           </div>
           <textarea
             value={reportReason}
             onChange={e => setReportReason(e.target.value)}
-            placeholder="請說明為何認為此帳號為偽冒（必填）"
+            placeholder={reportType === 'impersonation'
+              ? '請說明為何認為此帳號為偽冒（必填）'
+              : '請說明為何認為此帳號不屬於 VTuber 或 ACG 領域（必填）'}
             rows={3}
             style={{
               width: '100%', boxSizing: 'border-box',
