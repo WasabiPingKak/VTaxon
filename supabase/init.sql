@@ -117,7 +117,47 @@ CREATE TABLE fictional_species_requests (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 7. vtuber_traits — 角色與物種的多對多關聯
+-- 7. breed_requests — 使用者建議新增的品種
+CREATE TABLE breed_requests (
+    id SERIAL PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    taxon_id INTEGER REFERENCES species_cache(taxon_id),
+    name_zh TEXT,
+    name_en TEXT,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    admin_note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 8. user_reports — 使用者檢舉
+CREATE TABLE user_reports (
+    id SERIAL PRIMARY KEY,
+    reporter_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    reported_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    reason TEXT NOT NULL,
+    evidence_url TEXT,
+    report_type TEXT NOT NULL DEFAULT 'impersonation',
+    status TEXT NOT NULL DEFAULT 'pending',
+    admin_note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_user_reports_status ON user_reports(status);
+
+-- 9. blacklist — 黑名單
+CREATE TABLE blacklist (
+    id SERIAL PRIMARY KEY,
+    identifier_type TEXT NOT NULL,
+    identifier_value TEXT NOT NULL,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    reason TEXT,
+    banned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(identifier_type, identifier_value)
+);
+
+-- 10. vtuber_traits — 角色與物種的多對多關聯
 CREATE TABLE vtuber_traits (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -157,6 +197,9 @@ ALTER TABLE oauth_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE species_cache ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fictional_species ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fictional_species_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE breed_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE blacklist ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vtuber_traits ENABLE ROW LEVEL SECURITY;
 
 -- users: 所有人可讀，本人可改自己的資料
@@ -194,6 +237,27 @@ CREATE POLICY "fictional_requests_insert_own" ON fictional_species_requests
 
 CREATE POLICY "fictional_requests_select_own" ON fictional_species_requests
     FOR SELECT USING (auth.uid() = user_id);
+
+-- breed_requests: 本人可新增和查看自己的建議
+CREATE POLICY "breed_requests_insert_own" ON breed_requests
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "breed_requests_select_own" ON breed_requests
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "breed_requests_select_admin" ON breed_requests
+    FOR SELECT USING (
+        EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+    );
+
+-- user_reports: 任何人可新增，本人可查看自己的檢舉
+CREATE POLICY "user_reports_insert_anon" ON user_reports
+    FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "user_reports_select_own" ON user_reports
+    FOR SELECT USING (reporter_id = auth.uid());
+
+-- blacklist: 僅 service_role 可存取（不需 user-facing policy）
 
 -- vtuber_traits: 所有人可讀，本人可增刪改自己的 trait
 CREATE POLICY "traits_select_all" ON vtuber_traits
