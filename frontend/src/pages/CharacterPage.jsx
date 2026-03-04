@@ -7,6 +7,7 @@ import PreviewPanel from '../components/PreviewPanel';
 import SettingsProfile from '../components/settings/SettingsProfile';
 import SettingsRealSpecies from '../components/settings/SettingsRealSpecies';
 import SettingsFictional from '../components/settings/SettingsFictional';
+import SEOHead from '../components/SEOHead';
 
 export default function CharacterPage() {
   const { user, loading } = useAuth();
@@ -43,6 +44,7 @@ export default function CharacterPage() {
 
   return (
     <div style={{ maxWidth: '700px', margin: '40px auto', padding: '0 20px' }}>
+      <SEOHead title="我的角色" noindex />
       {/* === Header === */}
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         {/* Avatar */}

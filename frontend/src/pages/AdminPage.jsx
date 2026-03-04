@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
+import SEOHead from '../components/SEOHead';
 
 const STATUS_TABS = [
   { key: 'pending', label: '待審核' },
@@ -884,6 +885,7 @@ export default function AdminPage() {
 
   return (
     <div style={{ maxWidth: 700, margin: '40px auto', padding: '0 20px' }}>
+      <SEOHead title="管理後台" noindex />
       <h2 style={{ marginBottom: 20 }}>管理後台</h2>
 
       {/* Section tabs */}

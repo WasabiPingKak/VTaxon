@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
+import SEOHead from '../components/SEOHead';
 
 /* ── SVG Brand Icons (local, not exported) ── */
 
@@ -97,6 +98,7 @@ export default function LoginPage() {
       justifyContent: 'center',
       padding: '40px 16px',
     }}>
+      <SEOHead title="登入" noindex />
       <div style={cardStyle}>
 
         {/* Section 1: Title */}

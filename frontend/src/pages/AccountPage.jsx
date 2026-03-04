@@ -1,6 +1,7 @@
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import SettingsAccounts from '../components/settings/SettingsAccounts';
+import SEOHead from '../components/SEOHead';
 
 export default function AccountPage() {
   const { user, loading } = useAuth();
@@ -10,6 +11,7 @@ export default function AccountPage() {
 
   return (
     <div style={{ maxWidth: '700px', margin: '40px auto', padding: '0 20px' }}>
+      <SEOHead title="帳號設定" noindex />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>帳號設定</h2>
         <Link to="/profile" style={{

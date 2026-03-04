@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { api } from '../lib/api';
 import DirectoryFilters from '../components/directory/DirectoryFilters';
 import DirectoryCard from '../components/directory/DirectoryCard';
 import DirectoryListItem, { LIST_GRID } from '../components/directory/DirectoryListItem';
 import Pagination from '../components/Pagination';
 import VtuberDetailPanel from '../components/VtuberDetailPanel';
+import SEOHead, { SITE_URL } from '../components/SEOHead';
 
 const DEFAULT_FILTERS = {
   q: '', country: '', gender: '', status: '',
@@ -60,8 +62,30 @@ export default function DirectoryPage() {
     });
   };
 
+  const currentPage = data?.page || 1;
+  const totalPages = data?.total_pages || 1;
+
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 20px' }}>
+      <SEOHead
+        title={currentPage > 1 ? `VTuber 圖鑑 — 第 ${currentPage} 頁` : 'VTuber 圖鑑'}
+        description="探索所有已建檔的 VTuber 角色與物種分類"
+        url={currentPage > 1 ? `/directory?page=${currentPage}` : '/directory'}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: 'VTuber 圖鑑',
+          description: '探索所有已建檔的 VTuber 角色與物種分類',
+          url: 'https://vtaxon.com/directory',
+        }}
+      >
+        {currentPage > 1 && (
+          <link rel="prev" href={`${SITE_URL}/directory${currentPage > 2 ? `?page=${currentPage - 1}` : ''}`} />
+        )}
+        {currentPage < totalPages && (
+          <link rel="next" href={`${SITE_URL}/directory?page=${currentPage + 1}`} />
+        )}
+      </SEOHead>
       <h2 style={{ marginBottom: 4 }}>圖鑑</h2>
       <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.9em', marginBottom: 20 }}>
         探索所有已建檔的角色與物種分類

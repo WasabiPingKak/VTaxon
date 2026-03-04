@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import RankBadge from './RankBadge';
 import { YouTubeIcon, TwitchIcon, SNS_ICON_MAP, SNS_LABELS } from './SnsIcons';
 import ProfileInfoCard from './ProfileInfoCard';
@@ -434,6 +435,25 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
               countryFlags={entry.country_flags}
               loading={detailLoading}
             />
+          </div>
+
+          {/* Public profile link */}
+          <div style={{ marginBottom: 12 }}>
+            <Link to={`/vtuber/${entry.user_id}`} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              width: '100%', padding: '8px 16px', borderRadius: 6,
+              fontSize: '0.9em', textDecoration: 'none',
+              background: 'rgba(56,189,248,0.1)',
+              color: '#38bdf8',
+              border: '1px solid rgba(56,189,248,0.25)',
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+              查看公開頁面
+            </Link>
           </div>
 
           {/* Focus button */}

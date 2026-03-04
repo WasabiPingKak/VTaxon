@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const STATUS_STYLES = {
   active: { label: '活動中', color: '#4ade80', bg: 'rgba(74,222,128,0.12)' },
@@ -98,7 +98,12 @@ export default function DirectoryCard({ item, onClick }) {
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             display: 'flex', alignItems: 'center', gap: 4,
           }}>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.display_name}</span>
+            <Link to={`/vtuber/${item.id}`}
+              onClick={e => e.stopPropagation()}
+              style={{ overflow: 'hidden', textOverflow: 'ellipsis', color: 'inherit', textDecoration: 'none' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#38bdf8'}
+              onMouseLeave={e => e.currentTarget.style.color = 'inherit'}
+            >{item.display_name}</Link>
           </div>
           {countryFlags.length > 0 && (
             <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>

@@ -4,6 +4,7 @@ import { useAuth } from '../lib/AuthContext';
 import { useToast } from '../lib/ToastContext';
 import { api } from '../lib/api';
 import RankBadge from '../components/RankBadge';
+import SEOHead from '../components/SEOHead';
 
 const BREED_COLOR = '#fb923c';
 
@@ -491,6 +492,11 @@ export default function BreedsPage() {
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 16px' }}>
+      <SEOHead
+        title="品種目錄"
+        description="已收錄的寵物品種目錄"
+        url="/breeds"
+      />
       <button
         onClick={() => navigate(-1)}
         style={{

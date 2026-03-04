@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { formatDuration } from './DirectoryCard';
 
 const STATUS_STYLES = {
@@ -76,12 +76,17 @@ export default function DirectoryListItem({ item, onClick }) {
 
       {/* Name + flags */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-        <span style={{
-          fontWeight: 600, color: '#fff',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
+        <Link to={`/vtuber/${item.id}`}
+          onClick={e => e.stopPropagation()}
+          style={{
+            fontWeight: 600, color: '#fff', textDecoration: 'none',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = '#38bdf8'}
+          onMouseLeave={e => e.currentTarget.style.color = '#fff'}
+        >
           {item.display_name}
-        </span>
+        </Link>
         {countryFlags.length > 0 && (
           <span style={{ display: 'inline-flex', gap: 3, flexShrink: 0 }}>
             {countryFlags.map(c => (

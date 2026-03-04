@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import SEOHead from '../components/SEOHead';
 
 const heading = {
   color: '#fff',
@@ -35,6 +36,11 @@ const LAST_UPDATED = '2026-03-04';
 export default function PrivacyPolicyPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 20px 80px' }}>
+      <SEOHead
+        title="隱私權政策"
+        description="VTaxon 的隱私權政策與資料保護說明"
+        url="/privacy"
+      />
 
       {/* ═══════════════════════ 中文版 ═══════════════════════ */}
 

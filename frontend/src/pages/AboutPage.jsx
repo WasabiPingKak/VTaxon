@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import SEOHead from '../components/SEOHead';
 
 const heading = {
   color: '#fff',
@@ -43,6 +44,18 @@ const pillBtn = {
 export default function AboutPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 20px 80px' }}>
+      <SEOHead
+        title="關於 VTaxon"
+        description="VTaxon 專案介紹與開發者資訊"
+        url="/about"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'AboutPage',
+          name: '關於 VTaxon',
+          description: 'VTaxon 專案介紹與開發者資訊',
+          url: 'https://vtaxon.com/about',
+        }}
+      />
 
       {/* ── 標題 ── */}
       <h1 style={{ color: '#fff', fontSize: '1.5em', marginBottom: 4 }}>關於 VTaxon</h1>

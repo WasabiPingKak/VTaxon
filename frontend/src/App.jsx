@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './lib/AuthContext';
 import { ToastProvider } from './lib/ToastContext';
 import Navbar from './components/Navbar';
@@ -12,6 +13,7 @@ import BreedsPage from './pages/BreedsPage';
 import DirectoryPage from './pages/DirectoryPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import AboutPage from './pages/AboutPage';
+import VTuberProfilePage from './pages/VTuberProfilePage';
 
 function AppContent() {
   const location = useLocation();
@@ -38,6 +40,7 @@ function AppContent() {
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/vtuber/:userId" element={<VTuberProfilePage />} />
           </Routes>
 
           <footer style={{
@@ -76,13 +79,15 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <ToastProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </ToastProvider>
-    </BrowserRouter>
+    <HelmetProvider>
+      <BrowserRouter>
+        <ToastProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </ToastProvider>
+      </BrowserRouter>
+    </HelmetProvider>
   );
 }
 
