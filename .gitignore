@@ -25,5 +25,12 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Firebase
+.firebase/
+firebase-debug.log
+
+# Flask instance folder
+instance/
+
 .claude*
 backend.log

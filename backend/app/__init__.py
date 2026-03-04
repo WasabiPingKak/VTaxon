@@ -14,7 +14,23 @@ def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
 
-    CORS(app)
+    # CORS: restrict origins based on ALLOWED_ORIGINS config
+    allowed = app.config.get('ALLOWED_ORIGINS', '*')
+    if allowed and allowed != '*':
+        origins = [o.strip() for o in allowed.split(',')]
+        CORS(app, origins=origins)
+    else:
+        CORS(app)
+
+    # DB Schema isolation: set PostgreSQL search_path for staging
+    db_schema = app.config.get('DB_SCHEMA', '')
+    if db_schema:
+        engine_opts = app.config.get('SQLALCHEMY_ENGINE_OPTIONS', {})
+        connect_args = engine_opts.get('connect_args', {})
+        connect_args['options'] = f'-c search_path={db_schema}'
+        engine_opts['connect_args'] = connect_args
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_opts
+
     db.init_app(app)
 
     # Register blueprints
@@ -45,6 +61,10 @@ def create_app(config_name=None):
             db_status = 'connected'
         except Exception as e:
             db_status = f'error: {e}'
-        return jsonify({'status': 'ok', 'database': db_status})
+        return jsonify({
+            'status': 'ok',
+            'database': db_status,
+            'environment': config_name,
+        })
 
     return app
