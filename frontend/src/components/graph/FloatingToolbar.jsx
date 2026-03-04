@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { countActiveFilters } from '../../lib/treeFilters';
+import BottomSheet from '../BottomSheet';
 
 const DEPTH_LABELS = { 8: '同亞種', 7: '同種', 6: '同屬', 5: '同科', 4: '同目', 3: '同綱', 2: '同門', 1: '同界' };
 
@@ -56,12 +57,7 @@ export default function FloatingToolbar({
     if (!isMobile) setExpanded(false);
   }, [isMobile]);
 
-  // Lock body scroll when expanded on mobile
-  useEffect(() => {
-    if (!isMobile || !expanded) return;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, [isMobile, expanded]);
+  // Body scroll lock is handled by BottomSheet component
 
   // Close vtuber rank stats
   const rankEntries = [];
@@ -400,38 +396,19 @@ export default function FloatingToolbar({
         </div>
 
         {/* Expanded bottom sheet */}
-        {expanded && (
-          <div
-            style={{
-              position: 'fixed', inset: 0, zIndex: 1000,
-              background: 'rgba(0,0,0,0.5)',
-              display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-            }}
-            onClick={() => setExpanded(false)}
-          >
-            <div onClick={(e) => e.stopPropagation()} style={{
-              background: '#0d1526',
-              borderTop: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: '16px 16px 0 0',
-              maxHeight: '70vh',
-              overflowY: 'auto',
-              padding: '8px 12px env(safe-area-inset-bottom, 12px)',
-              pointerEvents: 'auto',
-            }}>
-              {/* Handle bar + close */}
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 2px' }}>
-                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 4px 8px' }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>工具列</span>
-                <button type="button" onClick={() => setExpanded(false)}
-                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 18, cursor: 'pointer', padding: '0 4px' }}
-                >&times;</button>
-              </div>
-              {toolbarContent}
-            </div>
+        <BottomSheet open={expanded} onClose={() => setExpanded(false)} maxHeight="70vh">
+          {/* Handle bar + close */}
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 2px' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
           </div>
-        )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 4px 8px' }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>工具列</span>
+            <button type="button" onClick={() => setExpanded(false)}
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 18, cursor: 'pointer', padding: '0 4px' }}
+            >&times;</button>
+          </div>
+          {toolbarContent}
+        </BottomSheet>
       </>
     );
   }

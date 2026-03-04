@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { getCountryName } from '../../lib/countries';
 import { countActiveFilters } from '../../lib/treeFilters';
+import BottomSheet from '../BottomSheet';
 
 const GENDER_LABELS = { '男': '男', '女': '女', 'other': '自訂', unset: '未設定' };
 const STATUS_LABELS = { active: '活動中', hiatus: '活動休止', preparing: '準備中', unset: '未設定' };
@@ -10,7 +11,7 @@ const PLATFORM_LABELS = { youtube: 'YouTube', twitch: 'Twitch' };
 /**
  * Floating filter panel — appears to the right of the toolbar.
  */
-export default function FilterPanel({ filters, onFiltersChange, facets, onClose, isMobile }) {
+export default function FilterPanel({ filters, onFiltersChange, facets, onClose, isMobile, open: openProp }) {
   const panelRef = useRef(null);
   const [collapsed, setCollapsed] = useState({});
 
@@ -25,12 +26,7 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
     return () => document.removeEventListener('pointerdown', handler, true);
   }, [onClose, isMobile]);
 
-  // Lock body scroll on mobile
-  useEffect(() => {
-    if (!isMobile) return;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, [isMobile]);
+  // Body scroll lock is handled by BottomSheet component on mobile
 
   const toggle = (dim, val) => {
     const set = new Set(filters[dim]);
@@ -234,36 +230,16 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
     </>
   );
 
-  // Mobile: bottom sheet with backdrop
+  // Mobile: animated bottom sheet with backdrop
   if (isMobile) {
     return (
-      <div
-        style={{
-          position: 'fixed', inset: 0, zIndex: 1000,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-        }}
-        onClick={() => onClose()}
-      >
-        <div
-          ref={panelRef}
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            background: '#0d1526',
-            borderTop: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: '16px 16px 0 0',
-            maxHeight: '65vh',
-            overflowY: 'auto',
-            padding: '8px 8px env(safe-area-inset-bottom, 12px)',
-          }}
-        >
-          {/* Handle bar */}
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 4px' }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
-          </div>
-          {panelBody}
+      <BottomSheet open={openProp !== undefined ? openProp : true} onClose={onClose} maxHeight="65vh" padding="8px 8px env(safe-area-inset-bottom, 12px)">
+        {/* Handle bar */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 4px' }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
         </div>
-      </div>
+        {panelBody}
+      </BottomSheet>
     );
   }
 

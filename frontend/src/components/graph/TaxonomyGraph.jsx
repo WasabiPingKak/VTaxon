@@ -1156,14 +1156,15 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
         )}
       </div>
 
-      {/* Mobile: FilterPanel as bottom sheet */}
-      {filterPanelOpen && isMobile && (
+      {/* Mobile: FilterPanel as animated bottom sheet (always mounted) */}
+      {isMobile && (
         <FilterPanel
           filters={filters}
           onFiltersChange={handleFiltersChange}
           facets={facets}
           onClose={() => setFilterPanelOpen(false)}
           isMobile
+          open={filterPanelOpen}
         />
       )}
 

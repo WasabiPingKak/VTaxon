@@ -77,13 +77,23 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
           </div>
         </div>
 
-        {/* Locate button */}
+        {/* Locate button — styled like Navbar, stretches to fill HUD height */}
         <button type="button" onClick={onLocate} style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          color: 'rgba(255,255,255,0.6)', fontSize: '0.72em',
-          whiteSpace: 'nowrap', borderRadius: 4, padding: '3px 4px',
-          flexShrink: 0,
-        }} title="定位回自己">
+          background: 'rgba(233,30,140,0.1)',
+          border: '1px solid rgba(233,30,140,0.3)',
+          borderRadius: 8, cursor: 'pointer',
+          padding: '6px 12px',
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          color: '#E91E8C', fontSize: 13, fontWeight: 500,
+          whiteSpace: 'nowrap', flexShrink: 0,
+          alignSelf: 'stretch',
+        }} title="定位回自己"
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.5)'; e.currentTarget.style.background = 'rgba(233,30,140,0.18)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.3)'; e.currentTarget.style.background = 'rgba(233,30,140,0.1)'; }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
+          </svg>
           定位
         </button>
       </div>
@@ -168,20 +178,23 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
           </div>
         </div>
 
-        {/* Locate button — pan back to focused node */}
+        {/* Locate button — styled like Navbar */}
         <button type="button" onClick={onLocate} style={{
           marginLeft: 4,
-          borderLeft: '1px solid rgba(255,255,255,0.1)',
-          paddingLeft: 10,
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          color: 'rgba(255,255,255,0.6)',
-          fontSize: '0.78em',
-          whiteSpace: 'nowrap',
-          borderRadius: 4,
-          padding: '4px 6px 4px 10px',
-        }} title="定位回自己">
+          background: 'rgba(233,30,140,0.1)',
+          border: '1px solid rgba(233,30,140,0.3)',
+          borderRadius: 6, cursor: 'pointer',
+          padding: '5px 10px',
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          color: '#E91E8C', fontSize: '0.8em',
+          whiteSpace: 'nowrap', flexShrink: 0,
+        }} title="定位回自己"
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.5)'; e.currentTarget.style.background = 'rgba(233,30,140,0.18)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.3)'; e.currentTarget.style.background = 'rgba(233,30,140,0.1)'; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
+          </svg>
           定位
         </button>
       </div>

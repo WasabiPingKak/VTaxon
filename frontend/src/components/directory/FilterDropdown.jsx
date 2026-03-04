@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import BottomSheet from '../BottomSheet';
 
 export default function FilterDropdown({
   label,
@@ -25,12 +26,7 @@ export default function FilterDropdown({
     }
   }, [open, isMobile]);
 
-  // Prevent body scroll when mobile bottom sheet is open
-  useEffect(() => {
-    if (!isMobile || !open) return;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, [isMobile, open]);
+  // Body scroll lock is handled by BottomSheet component on mobile
 
   const count = selectedSet.size;
 
@@ -120,38 +116,25 @@ export default function FilterDropdown({
         </svg>
       </button>
 
-      {open && isMobile && (
-        /* Mobile: bottom sheet with backdrop */
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 1000,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-          }}
-          onClick={() => setOpen(false)}
+      {/* Mobile: animated bottom sheet */}
+      {isMobile && (
+        <BottomSheet open={open} onClose={() => setOpen(false)} maxHeight="60vh"
+          background="#141c2b" padding="8px 0 env(safe-area-inset-bottom, 16px)"
         >
-          <div onClick={(e) => e.stopPropagation()} style={{
-            background: '#141c2b',
-            borderTop: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '16px 16px 0 0',
-            maxHeight: '60vh', overflowY: 'auto',
-            padding: '8px 0 env(safe-area-inset-bottom, 16px)',
-          }}>
-            {/* Handle bar */}
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 4px' }}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
-            </div>
-            {/* Title */}
-            <div style={{
-              padding: '8px 16px 12px', fontWeight: 600,
-              fontSize: '0.9em', color: 'rgba(255,255,255,0.7)',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
-            }}>
-              {label}
-            </div>
-            {options.map(optionRow)}
+          {/* Handle bar */}
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 4px' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
           </div>
-        </div>
+          {/* Title */}
+          <div style={{
+            padding: '8px 16px 12px', fontWeight: 600,
+            fontSize: '0.9em', color: 'rgba(255,255,255,0.7)',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+          }}>
+            {label}
+          </div>
+          {options.map(optionRow)}
+        </BottomSheet>
       )}
 
       {open && !isMobile && (
