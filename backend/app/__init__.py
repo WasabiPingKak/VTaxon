@@ -54,6 +54,7 @@ def create_app(config_name=None):
     app.register_blueprint(reports_bp, url_prefix='/api/reports')
     app.register_blueprint(seo_bp, url_prefix='/api')
 
+    @app.route('/api/health')
     @app.route('/health')
     def health():
         try:
