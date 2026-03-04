@@ -1,0 +1,206 @@
+import { useState, useEffect, useCallback } from 'react';
+import { api } from '../lib/api';
+import DirectoryFilters from '../components/directory/DirectoryFilters';
+import DirectoryCard from '../components/directory/DirectoryCard';
+import DirectoryListItem, { LIST_GRID } from '../components/directory/DirectoryListItem';
+import Pagination from '../components/Pagination';
+import VtuberDetailPanel from '../components/VtuberDetailPanel';
+
+const DEFAULT_FILTERS = {
+  q: '', country: '', gender: '', status: '',
+  org_type: '', platform: '', has_traits: '',
+  sort: 'created_at', order: 'desc', page: 1, per_page: 24,
+};
+
+export default function DirectoryPage() {
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState('grid');
+  const [selectedItem, setSelectedItem] = useState(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = {};
+      for (const [k, v] of Object.entries(filters)) {
+        if (v !== '' && v !== undefined && v !== null) params[k] = v;
+      }
+      const result = await api.getDirectory(params);
+      setData(result);
+    } catch (err) {
+      console.error('Directory fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleFiltersChange = (newFilters) => {
+    setFilters({ ...newFilters, per_page: filters.per_page });
+  };
+
+  const handlePageChange = (page) => {
+    setFilters(prev => ({ ...prev, page }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const items = data?.items || [];
+
+  const handleItemClick = (item) => {
+    setSelectedItem({
+      user_id: item.id,
+      display_name: item.display_name,
+      avatar_url: item.avatar_url,
+      country_flags: item.country_flags,
+    });
+  };
+
+  return (
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 20px' }}>
+      <h2 style={{ marginBottom: 4 }}>圖鑑</h2>
+      <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.9em', marginBottom: 20 }}>
+        探索所有已建檔的角色與物種分類
+      </p>
+
+      <DirectoryFilters
+        filters={filters}
+        onChange={handleFiltersChange}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        facets={data?.facets}
+      />
+
+      {/* Content */}
+      <div style={{ marginTop: 16 }}>
+        {loading ? (
+          <LoadingSkeleton viewMode={viewMode} />
+        ) : items.length === 0 ? (
+          <div style={{
+            textAlign: 'center', padding: '60px 20px',
+            color: 'rgba(255,255,255,0.3)',
+          }}>
+            <div style={{ fontSize: '2em', marginBottom: 12 }}>🔍</div>
+            <div>沒有找到符合條件的實況主</div>
+            <div style={{ fontSize: '0.85em', marginTop: 8 }}>
+              試試調整篩選條件或搜尋關鍵字
+            </div>
+          </div>
+        ) : viewMode === 'grid' ? (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: 12,
+          }}>
+            {items.map(item => (
+              <DirectoryCard key={item.id} item={item} onClick={handleItemClick} />
+            ))}
+          </div>
+        ) : (
+          <div style={{
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 8, overflow: 'hidden',
+          }}>
+            {/* List header */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: LIST_GRID,
+              alignItems: 'center',
+              gap: 10,
+              padding: '6px 12px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              fontSize: '0.75em', color: 'rgba(255,255,255,0.35)',
+              fontWeight: 600,
+            }}>
+              <div />
+              <div>名稱</div>
+              <div>平台</div>
+              <div>組織</div>
+              <div>物種</div>
+              <div>出道日期</div>
+              <div>狀態</div>
+              <div>建檔日期</div>
+              <div />
+            </div>
+            {items.map(item => (
+              <DirectoryListItem key={item.id} item={item} onClick={handleItemClick} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {data && (
+        <Pagination
+          page={data.page}
+          totalPages={data.total_pages}
+          total={data.total}
+          onPageChange={handlePageChange}
+        />
+      )}
+
+      {selectedItem && (
+        <VtuberDetailPanel
+          entry={selectedItem}
+          onClose={() => setSelectedItem(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function LoadingSkeleton({ viewMode }) {
+  const skeletons = Array.from({ length: 6 });
+
+  if (viewMode === 'list') {
+    return (
+      <div style={{
+        background: 'rgba(255,255,255,0.02)',
+        border: '1px solid rgba(255,255,255,0.06)',
+        borderRadius: 8, overflow: 'hidden',
+      }}>
+        {skeletons.map((_, i) => (
+          <div key={i} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.04)',
+          }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <div style={{ width: 120, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.06)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <div style={{ width: 60, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <div style={{ flex: 1, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+      gap: 12,
+    }}>
+      {skeletons.map((_, i) => (
+        <div key={i} style={{
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 10, padding: 16,
+          height: 160,
+        }}>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <div>
+              <div style={{ width: 100, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.06)', marginBottom: 8, animation: 'pulse 1.5s ease-in-out infinite' }} />
+              <div style={{ width: 60, height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            </div>
+          </div>
+          <div style={{ width: '70%', height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)', marginBottom: 8, animation: 'pulse 1.5s ease-in-out infinite' }} />
+          <div style={{ width: '50%', height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+        </div>
+      ))}
+    </div>
+  );
+}

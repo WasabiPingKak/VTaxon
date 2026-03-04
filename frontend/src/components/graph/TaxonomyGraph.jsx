@@ -81,6 +81,59 @@ export default function TaxonomyGraph({ currentUser }) {
     if (currentUser && !focusedUserId) setFocusedUserId(currentUser.id);
   }, [currentUser, focusedUserId]);
 
+  // Handle ?locate=userId from directory page
+  const locateHandled = useRef(false);
+  useEffect(() => {
+    if (locateHandled.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const locateId = params.get('locate');
+    if (!locateId) return;
+    if (!entries || !fictionalEntries) return;
+
+    locateHandled.current = true;
+    // Clear URL parameter
+    window.history.replaceState({}, '', '/');
+
+    // Find the first entry for this user
+    const entry = entries.find(e => e.user_id === locateId)
+      || (fictionalEntries || []).find(e => e.user_id === locateId);
+    if (!entry) return;
+
+    // Focus the user (replicates handleSetFocus logic)
+    setFocusedUserId(locateId);
+    setFocusedEntryKey(
+      entry.fictional_path
+        ? 'F\0' + (entry.fictional_path || '') + '\0' + (entry.fictional_species_id || '')
+        : (entry.taxon_path || '') + '\0' + (entry.breed_id || '')
+    );
+
+    // Expand paths
+    setExpandedSet(prev => {
+      const next = new Set(prev);
+      const userPaths = computeHighlightPaths(entries || [], locateId);
+      for (const p of userPaths) next.add(p);
+      const fictPaths = computeFictionalHighlightPaths(fictionalEntries || [], locateId);
+      for (const p of fictPaths) next.add(p);
+      return next;
+    });
+
+    // Switch active tree if entry is fictional
+    if (entry.fictional_path) {
+      setActiveTree('fictional');
+    }
+
+    // Pan to node after layout settles
+    setTimeout(() => {
+      const pathKey = entry.fictional_path
+        ? `__F__|${entry.fictional_path}|__vtuber__${locateId}`
+        : (entry.taxon_path + (entry.breed_id ? `|__breed__${entry.breed_id}` : '') + `|__vtuber__${locateId}`);
+      const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
+      if (targetNode) {
+        canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
+      }
+    }, 400);
+  }, [entries, fictionalEntries]);
+
   // Focused entries for this user (raw: real + fictional, then sorted by X position)
   const rawFocusedEntries = useMemo(() => {
     if (!focusedUserId) return [];

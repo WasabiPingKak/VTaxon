@@ -456,7 +456,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
           <ProfileInfoCard profileData={userDetail?.profile_data} />
 
           {/* Species info card */}
-          {entry.fictional_species_id ? (
+          {!entry.fictional_species_id && !entry.taxon_path ? null : entry.fictional_species_id ? (
             <div style={{
               background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '14px',
               marginBottom: '16px',
@@ -510,7 +510,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
           )}
 
           {/* Taxonomy / Fictional path card */}
-          {entry.fictional_species_id ? (
+          {!entry.fictional_species_id && !entry.taxon_path ? null : entry.fictional_species_id ? (
             <div style={{
               background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '14px',
               marginBottom: '16px',

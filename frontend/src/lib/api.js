@@ -203,6 +203,16 @@ export const api = {
     method: 'PATCH', body: JSON.stringify(body),
   }),
 
+  // Directory
+  getDirectory: (params = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, v);
+    }
+    const q = qs.toString();
+    return apiFetch(`/users/directory${q ? '?' + q : ''}`);
+  },
+
   // Reports (public / anonymous)
   createReport: (body) => apiFetch('/reports', {
     method: 'POST', body: JSON.stringify(body),
