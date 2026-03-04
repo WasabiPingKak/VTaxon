@@ -165,6 +165,10 @@ export default function LoginPage() {
           </span>
         </label>
 
+        <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.3)', fontSize: '0.72em', lineHeight: 1.5, textAlign: 'center' }}>
+          登入時會跳轉至認證平台 <span style={{ color: 'rgba(255,255,255,0.45)' }}>Supabase</span>，因免費方案限制，網址會顯示一串隨機字元的 supabase.co 網域，此為正常現象，並非可疑連結。
+        </p>
+
         {/* Section 5: OAuth buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, ...sectionGap }}>
           <button
@@ -203,9 +207,6 @@ export default function LoginPage() {
             使用 Twitch 帳號登入
           </button>
 
-          <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.3)', fontSize: '0.72em', lineHeight: 1.5, textAlign: 'center' }}>
-            登入時頁面會經由認證服務 <span style={{ color: 'rgba(255,255,255,0.45)' }}>supabase.co</span> 跳轉，這是 VTaxon 使用的安全認證平台，非釣魚網站。
-          </p>
         </div>
 
       </div>
