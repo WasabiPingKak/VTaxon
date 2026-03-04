@@ -86,12 +86,12 @@ export default function CharacterPage() {
 
         {/* Action buttons */}
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+          <Link to="/account" style={{ ...smallBtnStyle, textDecoration: 'none' }}>
+            帳號設定
+          </Link>
           <button type="button" onClick={openPreview} style={smallBtnStyle}>
             預覽側邊欄
           </button>
-          <Link to="/account" style={{ ...smallBtnStyle, textDecoration: 'none' }}>
-            帳號設定 →
-          </Link>
         </div>
       </div>
 

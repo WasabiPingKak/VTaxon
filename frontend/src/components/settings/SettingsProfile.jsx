@@ -45,6 +45,7 @@ export default function SettingsProfile() {
 
   // Existing fields
   const [displayName, setDisplayName] = useState('');
+  const [orgType, setOrgType] = useState('indie'); // 'indie' | 'corporate'
   const [organization, setOrganization] = useState('');
   const [bio, setBio] = useState('');
   const [countryFlags, setCountryFlags] = useState([]);
@@ -71,7 +72,9 @@ export default function SettingsProfile() {
   useEffect(() => {
     if (!user) return;
     setDisplayName(user.display_name || '');
-    setOrganization(user.organization || '');
+    const org = user.organization || '';
+    setOrgType(org ? 'corporate' : 'indie');
+    setOrganization(org);
     setBio(user.bio || '');
     setCountryFlags(user.country_flags || []);
 
@@ -106,7 +109,8 @@ export default function SettingsProfile() {
     if (!user) return false;
     const pd = user.profile_data || {};
     if (displayName !== (user.display_name || '')) return true;
-    if (organization !== (user.organization || '')) return true;
+    const currentOrg = orgType === 'corporate' ? organization : '';
+    if (currentOrg !== (user.organization || '')) return true;
     if (bio !== (user.bio || '')) return true;
     if (JSON.stringify(countryFlags) !== JSON.stringify(user.country_flags || [])) return true;
     if (debutDate !== (pd.debut_date || '')) return true;
@@ -127,7 +131,7 @@ export default function SettingsProfile() {
     if (debutVideoUrl !== (pd.debut_video_url || '')) return true;
     return false;
   }, [
-    user, displayName, organization, bio, countryFlags,
+    user, displayName, orgType, organization, bio, countryFlags,
     debutDate, birthdayMonth, birthdayDay, bloodType, mbti,
     gender, genderCustom, representativeEmoji, fanName,
     activityStatus, illustrators, riggers, modelers3d,
@@ -156,6 +160,10 @@ export default function SettingsProfile() {
     e.preventDefault();
     if (!displayName.trim()) {
       addToast('名稱為必填欄位', { type: 'error' });
+      return;
+    }
+    if (orgType === 'corporate' && !organization.trim()) {
+      addToast('請輸入組織名稱', { type: 'error' });
       return;
     }
 
@@ -187,7 +195,7 @@ export default function SettingsProfile() {
     try {
       const updated = await api.updateMe({
         display_name: displayName.trim(),
-        organization: organization.trim() || null,
+        organization: orgType === 'corporate' ? (organization.trim() || null) : null,
         bio: bio.trim() || null,
         country_flags: countryFlags,
         profile_data,
@@ -210,10 +218,35 @@ export default function SettingsProfile() {
           required style={inputStyle} />
       </div>
 
+      {/* === 選填欄位提示 === */}
+      <div style={{
+        padding: '10px 14px', marginBottom: '24px', borderRadius: '6px',
+        background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)',
+        fontSize: '0.85em', color: 'rgba(255,255,255,0.5)', lineHeight: '1.5',
+      }}>
+
+        以下為選填欄位，填入的資料將顯示在側邊資訊欄中。
+      </div>
       <div style={{ marginBottom: '20px' }}>
         <label style={labelStyle}>所屬組織</label>
-        <input type="text" value={organization} onChange={(e) => setOrganization(e.target.value)}
-          placeholder="例如：Hololive、NIJISANJI…" style={inputStyle} />
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <label style={radioLabelStyle}>
+            <input type="radio" name="orgType" value="indie"
+              checked={orgType === 'indie'} onChange={() => setOrgType('indie')}
+              style={{ accentColor: '#38bdf8' }} />
+            個人勢
+          </label>
+          <label style={radioLabelStyle}>
+            <input type="radio" name="orgType" value="corporate"
+              checked={orgType === 'corporate'} onChange={() => setOrgType('corporate')}
+              style={{ accentColor: '#38bdf8' }} />
+            企業勢
+          </label>
+        </div>
+        {orgType === 'corporate' && (
+          <input type="text" value={organization} onChange={(e) => setOrganization(e.target.value)}
+            placeholder="組織名稱" style={{ ...inputStyle, marginTop: '8px' }} />
+        )}
       </div>
 
       <div style={{ marginBottom: '20px' }}>
@@ -231,14 +264,7 @@ export default function SettingsProfile() {
         <CountryPicker selected={countryFlags} onChange={setCountryFlags} />
       </div>
 
-      {/* === 選填欄位提示 === */}
-      <div style={{
-        padding: '10px 14px', marginBottom: '24px', borderRadius: '6px',
-        background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)',
-        fontSize: '0.85em', color: 'rgba(255,255,255,0.5)', lineHeight: '1.5',
-      }}>
-        以下為選填欄位，填入的資料將顯示在側邊資訊欄中。
-      </div>
+
 
       {/* === 初配信日期 === */}
       <div style={{ marginBottom: '20px' }}>
@@ -440,6 +466,11 @@ const selectStyle = {
   padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: '4px', fontSize: '1em', boxSizing: 'border-box',
   background: '#1a2433', color: '#e2e8f0', colorScheme: 'dark',
+};
+
+const radioLabelStyle = {
+  display: 'inline-flex', alignItems: 'center', gap: '4px',
+  color: '#e2e8f0', fontSize: '0.95em', cursor: 'pointer',
 };
 
 const hintStyle = {
