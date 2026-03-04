@@ -1,6 +1,6 @@
 # VTaxon MVP 開發進度
 
-> 最後更新：2026-02-26
+> 最後更新：2026-03-04
 
 ## 已完成的階段
 
@@ -9,11 +9,11 @@
 | 項目 | 檔案 | 說明 |
 |------|------|------|
 | 環境變數 | `backend/.env.example` | Supabase URL/Key/JWT Secret + DB URL |
-| Config | `backend/app/config.py` | 讀取所有 Supabase 相關環境變數 |
-| ORM Models | `backend/app/models.py` | 5 張表的 SQLAlchemy model（User, OAuthAccount, SpeciesCache, FictionalSpecies, VtuberTrait），含 `to_dict()` 序列化 |
+| Config | `backend/app/config.py` | 環境設定（dev/staging/prod/test），含 DB_SCHEMA 支援 |
+| ORM Models | `backend/app/models.py` | 10 張表的 SQLAlchemy model |
 | JWT 驗證 | `backend/app/auth.py` | `login_required` 裝飾器（JWKS ES256 驗證 + HS256 fallback）、`admin_required` 裝飾器 |
-| App Factory | `backend/app/__init__.py` | 整合 CORS、Blueprint 註冊、`/health` 含 DB 連線檢查 |
-| 依賴 | `backend/requirements.txt` | 新增 flask-cors, PyJWT, cryptography, requests |
+| App Factory | `backend/app/__init__.py` | 整合 CORS、Blueprint 註冊、`/health` + `/api/health` |
+| 依賴 | `backend/requirements.txt` | flask-cors, PyJWT, cryptography, requests, opencc 等 |
 
 ### Phase 2：使用者 API ✅
 
@@ -21,8 +21,13 @@
 |----------|--------|------|
 | `/api/auth/callback` | POST | Supabase OAuth 完成後建立/更新使用者 |
 | `/api/users/me` | GET | 取得當前登入者資料 |
-| `/api/users/me` | PATCH | 更新 display_name / avatar_url |
+| `/api/users/me` | PATCH | 更新個人資料（display_name, avatar_url, bio, country_flags, social_links 等） |
 | `/api/users/<id>` | GET | 公開查看任一角色 |
+| `/api/users/directory` | GET | VTuber 目錄列表（含篩選、facets） |
+| `/api/users/me/oauth-accounts` | GET | 列出已綁定 OAuth 帳號 |
+| `/api/users/me/oauth-accounts/sync` | POST | 同步 Supabase identities |
+| `/api/users/me/oauth-accounts/<id>/refresh` | POST | 重新整理 OAuth token |
+| `/api/users/me/oauth-accounts/<id>` | PATCH/DELETE | 更新/解除 OAuth 帳號 |
 
 **檔案**：`backend/app/routes/auth.py`, `backend/app/routes/users.py`
 
@@ -30,13 +35,19 @@
 
 | Endpoint | Method | 說明 |
 |----------|--------|------|
-| `/api/species/search?q=cat` | GET | 模糊搜尋物種（呼叫 GBIF API） |
+| `/api/species/search?q=` | GET | 模糊搜尋物種（呼叫 GBIF suggest API） |
+| `/api/species/search/stream?q=` | GET | NDJSON 串流搜尋（逐筆回傳 + 即時中文名enrichment） |
+| `/api/species/match?q=` | GET | 精確匹配物種名稱（GBIF match API） |
 | `/api/species/<taxon_id>` | GET | 取得單一物種（先查快取，miss 再查 GBIF） |
+| `/api/species/<taxon_id>/children` | GET | 亞種查詢 |
+| `/api/species/<taxon_id>/children/stream` | GET | NDJSON 串流亞種查詢 |
+| `/api/species/cache/clear` | POST | 清除中文名快取（Admin） |
 
 - GBIF client 自動組裝 `taxon_path`（`Animalia|Chordata|Mammalia|...`）
+- 中文名三層 fallback：Wikidata（P846 → zh-tw label）→ TaiCOL → 靜態表（taxonomy_zh.py）
 - 查詢結果自動快取到 `species_cache` 表
 
-**檔案**：`backend/app/services/gbif.py`, `backend/app/routes/species.py`
+**檔案**：`backend/app/services/gbif.py`, `backend/app/services/wikidata.py`, `backend/app/services/taicol.py`, `backend/app/services/taxonomy_zh.py`, `backend/app/routes/species.py`
 
 ### Phase 4：Trait 標註 API ✅
 
@@ -44,6 +55,7 @@
 |----------|--------|------|
 | `/api/traits` | POST | 新增 trait（需登入，支援現實物種 & 奇幻生物） |
 | `/api/traits?user_id=xxx` | GET | 查詢某角色的所有 trait |
+| `/api/traits/<id>` | PATCH | 更新 trait（breed_id, breed_name, trait_note） |
 | `/api/traits/<id>` | DELETE | 刪除自己的 trait（需登入 + 權限檢查） |
 
 - 重複標註同一物種會回傳 409 Conflict
@@ -56,134 +68,96 @@
 
 ### Phase 6：前端建設 ✅
 
-| 頁面/元件 | 檔案 | 說明 |
-|-----------|------|------|
+| 頁面 | 檔案 | 說明 |
+|------|------|------|
 | Supabase Auth | `src/lib/supabase.js`, `src/lib/AuthContext.jsx` | Google / Twitch OAuth 登入，JWT session 管理 |
-| API Client | `src/lib/api.js` | 自動帶 JWT 的 fetch wrapper |
-| Navbar | `src/components/Navbar.jsx` | 導覽列（登入/登出狀態） |
+| API Client | `src/lib/api.js` | 自動帶 JWT 的 fetch wrapper，含 NDJSON 串流支援 |
+| Navbar | `src/components/Navbar.jsx` | 導覽列（登入/登出狀態、頭像） |
 | 首頁 | `src/pages/HomePage.jsx` | 歡迎頁面 + CTA |
 | 登入頁 | `src/pages/LoginPage.jsx` | Google / Twitch 登入按鈕 |
-| 角色檔案 | `src/pages/ProfilePage.jsx` | 顯示 trait 列表、新增/刪除 trait、編輯名稱 |
+| 角色檔案 | `src/pages/CharacterPage.jsx` | trait 管理、個人資料編輯（含 bio、社群連結、影片嵌入） |
+| 帳號設定 | `src/pages/AccountPage.jsx` | OAuth 帳號管理（綁定/解綁/重新整理） |
 | 物種搜尋 | `src/pages/SearchPage.jsx`, `src/components/SpeciesSearch.jsx` | GBIF 物種搜尋 + 一鍵新增 trait |
-- 路由：`/`, `/login`, `/profile`, `/search`
+| VTuber 目錄 | `src/pages/DirectoryPage.jsx` | 角色列表（篩選、搜尋、分頁） |
+| 品種瀏覽 | `src/pages/BreedsPage.jsx` | 品種分類瀏覽 + 搜尋 |
+| 管理後台 | `src/pages/AdminPage.jsx` | 使用者管理、檢舉處理、建議審核 |
+| 公開角色頁 | `src/pages/VTuberProfilePage.jsx` | SEO 友善的公開角色個人頁 |
+| 隱私權政策 | `src/pages/PrivacyPolicyPage.jsx` | 中英文隱私權政策 |
+| 服務條款 | `src/pages/TermsOfServicePage.jsx` | 中英文服務條款 |
+| 關於 | `src/pages/AboutPage.jsx` | 關於本服務 |
 
-### Phase 7：部署 + 種子資料 ✅
+### Phase 7：部署 ✅
 
 | 項目 | 檔案 | 說明 |
 |------|------|------|
-| Dockerfile | `backend/Dockerfile` | Python 3.12 slim + gunicorn，port 8080（Cloud Run） |
-| Docker 忽略 | `backend/.dockerignore` | 排除 .env, __pycache__, .git |
-| 奇幻生物種子 | `backend/seeds/fictional_species.sql` | 38 筆預建資料（東方神話 13、西方神話 12、奇幻 8 等） |
+| Dockerfile | `backend/Dockerfile` | Python 3.12 slim + gunicorn，port 8080 |
+| CI/CD Staging | `.github/workflows/deploy-staging.yml` | develop push → Cloud Run + Firebase Hosting |
+| CI/CD Prod | `.github/workflows/deploy-prod.yml` | main push → Cloud Run + Firebase Hosting |
+| Firebase 設定 | `firebase.json`, `.firebaserc` | prod + staging 兩個 hosting target |
+| DB 初始化 | `scripts/init_db.py` | 支援 `--target staging/prod`、`--schema-only`、`--seed-only` |
+| Staging Schema | `supabase/init_staging.sql` | staging schema 所有表 |
 | DB Schema | `supabase/init.sql` | 完整建表 SQL（含 RLS、索引、觸發器） |
-| 前端環境 | `frontend/.env.example` | `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` |
+| 奇幻生物種子 | `backend/seeds/fictional_species*.sql` | 107+ 筆奇幻生物（東方、西方、埃及、台灣、現代虛構等） |
+| 品種種子 | `backend/seeds/breeds.sql` | 犬貓馬兔天竺鼠品種（由 Wikidata 抓取） |
 
-### Phase 8：個人資料編輯 + 中文 UI ✅
+### Phase 8：進階功能 ✅
 
-| 項目 | 檔案 | 說明 |
-|------|------|------|
-| DB 欄位 | `supabase/init.sql` | users 表新增 `organization`, `country_flags` |
-| Model 更新 | `backend/app/models.py` | User model + to_dict() 新增兩欄位 |
-| API 更新 | `backend/app/routes/users.py` | PATCH /me 支援 organization, country_flags（含驗證） |
-| JWT 驗證修正 | `backend/app/auth.py` | 改用 JWKS（ES256）驗證，支援新版 Supabase signing keys |
-| GBIF 中文名 | `backend/app/services/gbif.py` | CJK 查詢時自動取得中文俗名（vernacularNames API） |
-| 國家工具 | `frontend/src/lib/countries.js` | ~100 國中文名靜態資料 + getCountryName() |
-| 國旗元件 | `frontend/src/components/CountryFlag.jsx` | [TW] 台灣 badge 顯示 |
-| 國家選擇器 | `frontend/src/components/CountryPicker.jsx` | 可搜尋多選（支援中文搜尋） |
-| 個人資料編輯頁 | `frontend/src/pages/ProfileEditPage.jsx` | /profile/edit：名稱、組織、國旗表單 |
-| Navbar 改版 | `frontend/src/components/Navbar.jsx` | 登入後顯示圓形頭像 + 名字，文字中文化 |
-| 全站中文化 | 所有 pages + components | 所有 UI 文字改為繁體中文 |
-
-- 新路由：`/profile/edit` → `ProfileEditPage`
-- 搜尋結果顯示順序：學名 + 中文名（如有）+ 英文名
-- 新增 trait 時 display_name 優先使用中文名
+| 項目 | 說明 |
+|------|------|
+| 奇幻生物 API | CRUD + 建議審核（`/api/fictional-species`） |
+| 品種 API | 查詢、搜尋、建議審核（`/api/breeds`） |
+| 分類樹 API | 現實物種 + 奇幻生物分類樹（`/api/taxonomy/tree`, `/api/taxonomy/fictional-tree`） |
+| 檢舉系統 | 檢舉、審核、封禁、黑名單（`/api/reports`） |
+| SEO | sitemap.xml、meta tags（react-helmet-async）、公開角色頁 |
+| 中文名三層 fallback | Wikidata → TaiCOL → 靜態表，含串流 NDJSON 即時回傳 |
+| 品種資料抓取 | `scripts/fetch_breeds_wikidata.py`（Wikidata SPARQL → zh-tw Wikipedia 轉換） |
+| 全站中文化 | 所有 UI 文字為繁體中文 |
 
 ---
 
-## 下一步待做事項
+## 目前狀態
 
-以下是 MVP 已完成但仍需要在後續會話中處理的事項：
+- **Staging** 和 **Production** 環境皆已部署並運行
+- Staging：https://vtaxon-staging.web.app
+- Production：https://vtaxon.web.app
+- Google OAuth 驗證申請進行中
 
-### 高優先
-1. **奇幻生物 seed 匯入**：在 Supabase SQL Editor 執行 `seeds/fictional_species.sql`
-2. **前端奇幻生物搜尋**：目前前端只有現實物種搜尋，需新增奇幻生物的瀏覽/選擇 UI
-3. **Cloud Run 部署**：設定 GCP 專案 + 環境變數 + 部署
-
-### 中優先
-4. **分類樹瀏覽頁面**：以樹狀結構呈現所有已建檔角色
-5. **錯誤處理優化**：統一的 error handler + 前端 loading/error 狀態
-6. **CSS/UI 美化**：目前用 inline style，可考慮 Tailwind 或 CSS modules
-
-### 低優先
-7. **OAuth 帳號表管理**：`oauth_accounts` 表的 CRUD（記錄 YouTube/Twitch 帳號連結）
-8. **分頁**：traits 和 kinship 結果的分頁機制
-9. **效能優化**：kinship 計算可改用 SQL 前綴查詢加速
-
----
-
-## 專案結構總覽
+## 專案結構
 
 ```
 VTaxon/
+├── .github/workflows/          # CI/CD
+│   ├── deploy-staging.yml      # develop → staging
+│   └── deploy-prod.yml         # main → production
 ├── backend/
 │   ├── app/
-│   │   ├── __init__.py          # App factory + blueprint 註冊
-│   │   ├── config.py            # 環境設定（dev/prod/test）
-│   │   ├── extensions.py        # SQLAlchemy instance
-│   │   ├── auth.py              # JWT 驗證 + 權限裝飾器
-│   │   ├── models.py            # 5 張表的 ORM model
-│   │   ├── routes/
-│   │   │   ├── auth.py          # /api/auth/*
-│   │   │   ├── users.py         # /api/users/*
-│   │   │   ├── species.py       # /api/species/*
-│   │   │   └── traits.py        # /api/traits/*
-│   │   └── services/
-│   │       └── gbif.py          # GBIF API client + 快取邏輯
-│   ├── seeds/
-│   │   └── fictional_species.sql  # 奇幻生物種子資料
-│   ├── migrations/              # SQL migrations (先前已有)
-│   ├── Dockerfile               # Cloud Run 部署用
-│   ├── requirements.txt
-│   └── run.py                   # 入口點
+│   │   ├── __init__.py         # App factory
+│   │   ├── config.py           # 環境設定
+│   │   ├── extensions.py       # SQLAlchemy
+│   │   ├── auth.py             # JWT 驗證
+│   │   ├── models.py           # ORM models
+│   │   ├── routes/             # auth, users, species, traits, fictional, taxonomy, breeds, reports, seo
+│   │   └── services/           # gbif, wikidata, taicol, taxonomy_zh
+│   ├── seeds/                  # SQL 種子資料
+│   ├── Dockerfile
+│   └── run.py
 ├── frontend/
 │   ├── src/
-│   │   ├── lib/
-│   │   │   ├── supabase.js      # Supabase client
-│   │   │   ├── api.js           # API fetch wrapper
-│   │   │   ├── AuthContext.jsx  # 認證 context + hooks
-│   │   │   └── countries.js     # 國家代碼 + 中文名
-│   │   ├── components/
-│   │   │   ├── Navbar.jsx       # 含頭像 + 中文 UI
-│   │   │   ├── SpeciesSearch.jsx # 含中文名顯示
-│   │   │   ├── CountryFlag.jsx  # 國旗 badge
-│   │   │   └── CountryPicker.jsx # 多選國家選擇器
-│   │   ├── pages/
-│   │   │   ├── HomePage.jsx
-│   │   │   ├── LoginPage.jsx
-│   │   │   ├── ProfilePage.jsx
-│   │   │   ├── ProfileEditPage.jsx # 個人資料編輯
-│   │   │   └── SearchPage.jsx
-│   │   ├── App.jsx              # 路由設定（含 /profile/edit）
-│   │   └── main.jsx             # 入口
-│   ├── vite.config.js           # dev proxy → localhost:5000
-│   └── package.json
+│   │   ├── lib/                # supabase, api, AuthContext, ToastContext, countries
+│   │   ├── components/         # Navbar, SpeciesSearch, ChannelCard, CountryPicker 等
+│   │   ├── pages/              # 12 個頁面
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   └── vite.config.js
+├── scripts/
+│   ├── init_db.py              # DB 初始化
+│   └── fetch_breeds_wikidata.py
 ├── supabase/
-│   └── init.sql                 # 完整 DB schema
-└── CLAUDE.md                    # 專案規格書
+│   ├── init.sql                # DB schema (public)
+│   └── init_staging.sql        # DB schema (staging)
+├── docs/
+│   └── chinese-names-strategy.md
+├── firebase.json
+├── CLAUDE.md
+└── PROGRESS.md
 ```
-
-## API 端點一覽
-
-| Method | Path | 認證 | 說明 |
-|--------|------|------|------|
-| GET | `/health` | - | 健康檢查 + DB 連線狀態 |
-| POST | `/api/auth/callback` | JWT | 建立/更新使用者 |
-| GET | `/api/users/me` | JWT | 取得自己的資料 |
-| PATCH | `/api/users/me` | JWT | 更新自己的資料（display_name, avatar_url, organization, country_flags） |
-| GET | `/api/users/<id>` | - | 公開查看角色 |
-| GET | `/api/species/search?q=` | - | GBIF 物種搜尋 |
-| GET | `/api/species/search/stream?q=` | - | NDJSON 串流物種搜尋（逐筆回傳） |
-| GET | `/api/species/<taxon_id>` | - | 取得單一物種 |
-| GET | `/api/species/<taxon_id>/children/stream` | - | NDJSON 串流亞種查詢（逐筆回傳） |
-| POST | `/api/traits` | JWT | 新增 trait |
-| GET | `/api/traits?user_id=` | - | 查詢角色 traits |
-| DELETE | `/api/traits/<id>` | JWT | 刪除 trait |

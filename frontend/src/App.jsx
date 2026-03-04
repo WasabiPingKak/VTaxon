@@ -12,6 +12,7 @@ import AdminPage from './pages/AdminPage';
 import BreedsPage from './pages/BreedsPage';
 import DirectoryPage from './pages/DirectoryPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/TermsOfServicePage';
 import AboutPage from './pages/AboutPage';
 import VTuberProfilePage from './pages/VTuberProfilePage';
 
@@ -39,6 +40,7 @@ function AppContent() {
             <Route path="/breeds" element={<BreedsPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms" element={<TermsOfServicePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/vtuber/:userId" element={<VTuberProfilePage />} />
           </Routes>
@@ -58,6 +60,11 @@ function AppContent() {
               onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
             >隱私權政策</Link>
+            {' · '}
+            <Link to="/terms" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+            >服務條款</Link>
             {' · '}
             <a href="https://discord.gg/ABpdGBbDe4" target="_blank" rel="noopener noreferrer"
               style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}

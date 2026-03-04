@@ -65,7 +65,9 @@ export default function PrivacyPolicyPage() {
         <li><strong>角色設定資料</strong>：你在本服務中自行填寫的物種標註、角色描述等資訊。</li>
       </ul>
       <p style={para}>
-        我們<strong>不會</strong>收集你的電子郵件地址、真實姓名、影片內容、觀眾資料或任何其他平台私人資訊。
+        我們的應用程式<strong>不會主動儲存</strong>你的電子郵件地址。但認證服務（Supabase Auth）在 OAuth
+        登入過程中會記錄你的電子郵件，僅用於帳號識別，我們不會將其用於其他用途。
+        我們<strong>不會</strong>收集你的真實姓名、影片內容、觀眾資料或任何其他平台私人資訊。
       </p>
 
       {/* 3. OAuth 存取範圍 */}
@@ -101,7 +103,9 @@ export default function PrivacyPolicyPage() {
         <li><strong>sessionStorage</strong>：快取物種搜尋結果，提升使用體驗。</li>
       </ul>
       <p style={para}>
-        我們不使用任何第三方追蹤 Cookie 或分析工具。
+        我們可能使用第三方分析工具（如 Google Analytics）來了解網站使用狀況，以改善服務品質。
+        這些工具可能會使用 Cookie 收集匿名的瀏覽資料（如頁面瀏覽次數、停留時間），但不會用於識別你的個人身份。
+        我們不會使用任何追蹤 Cookie 向你投放廣告。
       </p>
 
       {/* 7. 帳號刪除 */}
@@ -182,7 +186,10 @@ export default function PrivacyPolicyPage() {
         <li><strong>Character profile data</strong>: Species annotations and character descriptions that you voluntarily provide within the Service.</li>
       </ul>
       <p style={paraEn}>
-        We do <strong>not</strong> collect your email address, real name, video content, viewer data,
+        Our application does <strong>not</strong> actively store your email address. However, the
+        authentication service (Supabase Auth) records your email during the OAuth sign-in process
+        solely for account identification purposes; we do not use it for any other purpose.
+        We do <strong>not</strong> collect your real name, video content, viewer data,
         or any other private platform information.
       </p>
 
@@ -220,7 +227,10 @@ export default function PrivacyPolicyPage() {
         <li><strong>sessionStorage</strong>: Caches species search results to improve user experience.</li>
       </ul>
       <p style={paraEn}>
-        We do not use any third-party tracking cookies or analytics tools.
+        We may use third-party analytics tools (such as Google Analytics) to understand website usage
+        and improve service quality. These tools may use cookies to collect anonymous browsing data
+        (such as page views and session duration), but they are not used to identify you personally.
+        We do not use any tracking cookies to serve advertisements.
       </p>
 
       {/* 7 */}

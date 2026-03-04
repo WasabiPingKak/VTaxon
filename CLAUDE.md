@@ -20,7 +20,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 | 權限 | 頻道主編輯自己的資料 + 管理者（admin）全域權限 |
 | 複合種 | 只記錄包含哪些物種，不記錄比例，所有 trait 等權 |
 | 認證方式 | Supabase Auth（OAuth → JWT） |
-| 部署方案 | Flask on Google Cloud Run；前端待定（Vercel / Cloudflare Pages） |
+| 部署方案 | Flask on Google Cloud Run；前端 Firebase Hosting |
 
 ## 技術棧
 
@@ -28,8 +28,10 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 - **後端**：Python Flask
 - **資料庫**：PostgreSQL（Supabase）
 - **認證**：Supabase Auth（OAuth → JWT）
-- **後端部署**：Google Cloud Run
-- **外部 API**：GBIF Species API（生物分類查詢）
+- **後端部署**：Google Cloud Run（asia-east1）
+- **前端部署**：Firebase Hosting
+- **CI/CD**：GitHub Actions（develop → staging，main → production）
+- **外部 API**：GBIF Species API（生物分類查詢）、Wikidata / TaiCOL（中文名稱）
 
 ## 認證流程
 
@@ -37,7 +39,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 2. **API 驗證**：前端在每次 API 請求的 `Authorization: Bearer <JWT>` 標頭帶上 JWT。Flask 後端優先使用 Supabase JWKS（ES256 公鑰）驗證簽章，fallback 到 legacy HS256 secret。
 3. **權限檢查**：從 JWT 中取得 `user_id`，查詢 `users` 表的 `role` 欄位判斷權限（`admin` 或 `user`）。
 
-## 資料模型（5 張表）
+## 資料模型（10 張表）
 
 ### users
 角色主體。一筆 user = 一個 Vtuber 角色。
@@ -55,9 +57,33 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 奇幻生物獨立分類表，以文化來源為主軸的分類體系。
 - `id` (serial, PK), `name`, `origin` (Level 1：東方神話、西方神話...), `sub_origin` (Level 2：日本神話、北歐神話..., nullable), `category_path` (Materialized Path, 用 `|` 分隔), `description`, `created_at`
 
+### auth_id_aliases
+跨 email OAuth 帳號綁定別名。Supabase 用不同 email OAuth 綁定第二個平台時會建立新的 auth.users，此表映射回原 VTaxon user。
+- `auth_id` (uuid, PK), `user_id` (FK → users), `created_at`
+
+### breeds
+品種（物種的子層級）。
+- `id` (serial, PK), `taxon_id` (FK → species_cache), `name_en`, `name_zh`, `breed_group`, `wikidata_id`, `source`, `created_at`
+
+### fictional_species_requests
+使用者建議新增的虛構物種。
+- `id` (serial, PK), `user_id` (FK → users), `name_zh`, `name_en`, `suggested_origin`, `suggested_sub_origin`, `description`, `status`, `admin_note`, `created_at`
+
+### breed_requests
+使用者建議新增的品種。
+- `id` (serial, PK), `user_id` (FK → users), `taxon_id` (FK → species_cache), `name_zh`, `name_en`, `description`, `status`, `admin_note`, `created_at`
+
+### user_reports
+使用者檢舉。
+- `id` (serial, PK), `reporter_id` (FK → users), `reported_user_id` (FK → users), `reason`, `evidence_url`, `report_type`, `status`, `admin_note`, `created_at`
+
+### blacklist
+黑名單。
+- `id` (serial, PK), `identifier_type`, `identifier_value`, `user_id` (FK → users), `reason`, `banned_by` (FK → users), `created_at`
+
 ### vtuber_traits
 角色與物種的多對多關聯。一筆 trait 可關聯現實物種或奇幻生物（至少一個）。
-- `id` (uuid, PK), `user_id` (FK → users), `taxon_id` (FK → species_cache, nullable), `fictional_species_id` (FK → fictional_species, nullable), `display_name` (使用者看到的名稱，如「龍」), `trait_note`, `created_at`, `updated_at`
+- `id` (uuid, PK), `user_id` (FK → users), `taxon_id` (FK → species_cache, nullable), `fictional_species_id` (FK → fictional_species, nullable), `breed_id` (FK → breeds, nullable), `breed_name`, `trait_note`, `created_at`, `updated_at`
 - CHECK constraint: `taxon_id IS NOT NULL OR fictional_species_id IS NOT NULL`
 - Partial unique index: (user_id, taxon_id) WHERE taxon_id IS NOT NULL
 - Partial unique index: (user_id, fictional_species_id) WHERE fictional_species_id IS NOT NULL
@@ -67,6 +93,19 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 - **GBIF Species API**: https://www.gbif.org/developer/species — 生物分類查詢、模糊匹配
 - **TaiCOL**: https://taicol.tw/ — 繁體中文名稱與台灣本土物種（備用）
 - **TimeTree**: http://timetree.org/ — 演化分歧時間（未來進階用）
+
+## 部署架構
+
+| 環境 | Git 分支 | 後端 Cloud Run | 前端 Firebase Hosting |
+|------|---------|---------------|----------------------|
+| Staging | `develop` | vtaxon-api-staging | vtaxon-staging.web.app |
+| Production | `main` | vtaxon-api-prod | vtaxon.web.app |
+
+- **所有開發都在 `develop` 分支進行**，push 後自動部署到 staging
+- Merge `develop` → `main` 後自動部署到 production
+- Staging 使用 DB 的 `staging` schema，Production 使用 `public` schema（同一個 Supabase 專案）
+- CI/CD：`.github/workflows/deploy-staging.yml` / `deploy-prod.yml`
+- DB 初始化腳本：`scripts/init_db.py`（支援 `--target staging/prod`）
 
 ## 開發注意事項
 
