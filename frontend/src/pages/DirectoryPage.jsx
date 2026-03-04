@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import DirectoryFilters from '../components/directory/DirectoryFilters';
 import DirectoryCard from '../components/directory/DirectoryCard';
@@ -64,6 +65,11 @@ export default function DirectoryPage() {
       <h2 style={{ marginBottom: 4 }}>圖鑑</h2>
       <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.9em', marginBottom: 20 }}>
         探索所有已建檔的角色與物種分類
+        <span style={{ margin: '0 6px', opacity: 0.5 }}>·</span>
+        <Link to="/about" style={{ color: '#38bdf8', textDecoration: 'none' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#7dd3fc'}
+          onMouseLeave={e => e.currentTarget.style.color = '#38bdf8'}
+        >關於本站</Link>
       </p>
 
       <DirectoryFilters

@@ -11,6 +11,7 @@ import AdminPage from './pages/AdminPage';
 import BreedsPage from './pages/BreedsPage';
 import DirectoryPage from './pages/DirectoryPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import AboutPage from './pages/AboutPage';
 
 function AppContent() {
   const location = useLocation();
@@ -36,6 +37,7 @@ function AppContent() {
             <Route path="/breeds" element={<BreedsPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/about" element={<AboutPage />} />
           </Routes>
 
           <footer style={{
@@ -44,6 +46,11 @@ function AppContent() {
             fontSize: '0.78em',
             color: 'rgba(255,255,255,0.25)',
           }}>
+            <Link to="/about" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+            >關於</Link>
+            {' · '}
             <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}
               onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}

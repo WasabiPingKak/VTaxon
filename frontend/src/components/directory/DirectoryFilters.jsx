@@ -70,7 +70,7 @@ export default function DirectoryFilters({
   const genderOptions = [
     { value: '男', label: '男', count: genderFacets['男'] ?? 0 },
     { value: '女', label: '女', count: genderFacets['女'] ?? 0 },
-    { value: 'other', label: '其他', count: genderFacets['other'] ?? 0 },
+    { value: 'other', label: '非二元性別', count: genderFacets['other'] ?? 0 },
     { value: 'unset', label: '未設定', count: genderFacets['unset'] ?? 0 },
   ];
 
