@@ -187,8 +187,8 @@ export const api = {
   deleteTrait: (id) => apiFetch(`/traits/${id}`, { method: 'DELETE' }),
 
   // Taxonomy
-  getTaxonomyTree: () => apiFetch('/taxonomy/tree'),
-  getFictionalTree: () => apiFetch('/taxonomy/fictional-tree'),
+  getTaxonomyTree: (qs = '') => apiFetch(`/taxonomy/tree${qs}`),
+  getFictionalTree: (qs = '') => apiFetch(`/taxonomy/fictional-tree${qs}`),
 
   // Fictional Species
   getFictionalSpecies: () => apiFetch('/fictional-species'),
@@ -202,6 +202,12 @@ export const api = {
   updateRequest: (id, body) => apiFetch(`/fictional-species/requests/${id}`, {
     method: 'PATCH', body: JSON.stringify(body),
   }),
+
+  // Recent users (for welcome toast)
+  getRecentUsers: (since) => {
+    const qs = since ? `?since=${encodeURIComponent(since)}&limit=10` : '';
+    return apiFetch(`/users/recent${qs}`);
+  },
 
   // Directory
   getDirectory: (params = {}) => {

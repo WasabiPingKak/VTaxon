@@ -76,6 +76,7 @@ def auth_callback():
             )
             db.session.add(user)
             db.session.commit()
+            invalidate_tree_cache()
         except IntegrityError:
             db.session.rollback()
             user = db.session.get(User, user_id)

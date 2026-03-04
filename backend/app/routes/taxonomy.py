@@ -1,6 +1,6 @@
 import logging
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 from ..auth import admin_required
 from ..cache import (get_tree_cache, set_tree_cache, invalidate_tree_cache,
@@ -42,9 +42,10 @@ def get_taxonomy_tree():
     Frontend builds the tree structure from the flat list using taxon_path.
     Uses in-process cache (TTL 5 min) to avoid repeated DB queries.
     """
-    cached = get_tree_cache()
-    if cached:
-        return jsonify(cached)
+    if not request.args.get('refresh'):
+        cached = get_tree_cache()
+        if cached:
+            return jsonify(cached)
 
     rows = (
         db.session.query(VtuberTrait, SpeciesCache, User)
@@ -117,9 +118,10 @@ def clear_cache():
 @taxonomy_bp.route('/fictional-tree', methods=['GET'])
 def get_fictional_tree():
     """Return all vtuber traits with fictional species, joined with user and fictional_species data."""
-    cached = get_fictional_tree_cache()
-    if cached:
-        return jsonify(cached)
+    if not request.args.get('refresh'):
+        cached = get_fictional_tree_cache()
+        if cached:
+            return jsonify(cached)
 
     rows = (
         db.session.query(VtuberTrait, FictionalSpecies, User)

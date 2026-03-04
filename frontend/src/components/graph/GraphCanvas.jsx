@@ -149,7 +149,9 @@ const GraphCanvas = forwardRef(function GraphCanvas({
     zoomIn() {
       const canvas = canvasRef.current;
       if (!canvas || !zoomRef.current) return;
-      select(canvas).transition().duration(300).call(
+      const sel = select(canvas);
+      sel.interrupt();
+      sel.transition().duration(300).call(
         zoomRef.current.scaleBy, 1.4,
       );
     },
@@ -157,7 +159,9 @@ const GraphCanvas = forwardRef(function GraphCanvas({
     zoomOut() {
       const canvas = canvasRef.current;
       if (!canvas || !zoomRef.current) return;
-      select(canvas).transition().duration(300).call(
+      const sel = select(canvas);
+      sel.interrupt();
+      sel.transition().duration(300).call(
         zoomRef.current.scaleBy, 1 / 1.4,
       );
     },
@@ -172,7 +176,9 @@ const GraphCanvas = forwardRef(function GraphCanvas({
       const tx = w / 2 - centerX * targetScale;
       const ty = h / 2 - centerY * targetScale;
 
-      select(canvas).transition().duration(600).call(
+      const sel = select(canvas);
+      sel.interrupt();
+      sel.transition().duration(600).call(
         zoomRef.current.transform,
         zoomIdentity.translate(tx, ty).scale(targetScale),
       );
@@ -189,7 +195,9 @@ const GraphCanvas = forwardRef(function GraphCanvas({
       const tx = w / 2 - worldX * s;
       const ty = h / 2 - worldY * s;
 
-      select(canvas).transition().duration(600).call(
+      const sel = select(canvas);
+      sel.interrupt();
+      sel.transition().duration(600).call(
         zoomRef.current.transform,
         zoomIdentity.translate(tx, ty).scale(s),
       );
@@ -223,7 +231,9 @@ const GraphCanvas = forwardRef(function GraphCanvas({
       const tx = availCenterScreenX - centerX * targetScale;
       const ty = availCenterScreenY - centerY * targetScale;
 
-      select(canvas).transition().duration(800).call(
+      const sel = select(canvas);
+      sel.interrupt();
+      sel.transition().duration(800).call(
         zoomRef.current.transform,
         zoomIdentity.translate(tx, ty).scale(targetScale),
       );

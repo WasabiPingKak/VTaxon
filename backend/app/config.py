@@ -21,6 +21,7 @@ class Config:
 class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///dev.db')
+    DB_SCHEMA = os.environ.get('DB_SCHEMA', 'staging')
 
 
 class ProductionConfig(Config):

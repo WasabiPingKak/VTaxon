@@ -1,6 +1,6 @@
 import math
 import os
-from datetime import date as _date
+from datetime import date as _date, datetime, timezone
 
 import requests
 from flask import Blueprint, g, jsonify, request
@@ -13,6 +13,45 @@ from ..extensions import db
 from ..models import Blacklist, OAuthAccount, User, VtuberTrait
 
 users_bp = Blueprint('users', __name__)
+
+
+@users_bp.route('/recent', methods=['GET'])
+def recent_users():
+    since_str = request.args.get('since', '').strip()
+    if not since_str:
+        return jsonify([])
+
+    try:
+        since = datetime.fromisoformat(since_str.replace('Z', '+00:00'))
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid since timestamp'}), 400
+
+    limit = request.args.get('limit', 5, type=int)
+    limit = min(max(limit, 1), 10)
+
+    # Only return users who have at least one trait (= visible on tree).
+    # Use the trait's created_at as the timestamp so the toast timeline
+    # aligns with when the user actually appears on the tree.
+    latest_trait = func.max(VtuberTrait.created_at).label('latest_trait_at')
+    rows = (
+        db.session.query(User, latest_trait)
+        .join(VtuberTrait, User.id == VtuberTrait.user_id)
+        .group_by(User.id)
+        .having(latest_trait > since)
+        .order_by(latest_trait.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return jsonify([
+        {
+            'id': u.id,
+            'display_name': u.display_name,
+            'avatar_url': u.avatar_url,
+            'created_at': trait_at.isoformat(),
+        }
+        for u, trait_at in rows
+    ])
 
 
 @users_bp.route('/directory', methods=['GET'])

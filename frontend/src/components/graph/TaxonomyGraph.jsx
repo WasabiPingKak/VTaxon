@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths } from '../../lib/treeUtils';
 import GraphCanvas from './GraphCanvas';
@@ -11,11 +12,12 @@ import VtuberDetailPanel from '../VtuberDetailPanel';
 import FloatingToolbar from './FloatingToolbar';
 import FocusHUD from './FocusHUD';
 
-export default function TaxonomyGraph({ currentUser }) {
+const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
   const canvasRef = useRef(null);
   const starFieldRef = useRef(null);
   const initialFitDone = useRef(false);
   const nodesRef = useRef([]);
+  const cameraTimerRef = useRef(null);
 
   const [entries, setEntries] = useState(null);
   const [fictionalEntries, setFictionalEntries] = useState(null);
@@ -34,18 +36,32 @@ export default function TaxonomyGraph({ currentUser }) {
   // Active tree selector ('real' | 'fictional')
   const [activeTree, setActiveTree] = useState('real');
 
-  // Fetch data (real + fictional in parallel)
+  // Fetch tree data (real + fictional in parallel).
+  // When refresh=true, bypasses backend cache to get fresh data.
+  const fetchTreeData = useCallback(async ({ refresh = false } = {}) => {
+    const qs = refresh ? '?refresh=1' : '';
+    const [realData, fictData] = await Promise.all([
+      api.getTaxonomyTree(qs).catch(() => ({ entries: [] })),
+      api.getFictionalTree(qs).catch(() => ({ entries: [] })),
+    ]);
+    const e = realData.entries || [];
+    const fe = fictData.entries || [];
+    setEntries(e);
+    setFictionalEntries(fe);
+    return { entries: e, fictionalEntries: fe };
+  }, []);
+
+  // Expose refetch to parent — only updates entries, does NOT reset expandedSet
+  useImperativeHandle(ref, () => ({
+    refetch: () => fetchTreeData({ refresh: true }),
+  }), [fetchTreeData]);
+
+  // Initial load
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
-      api.getTaxonomyTree().catch(() => ({ entries: [] })),
-      api.getFictionalTree().catch(() => ({ entries: [] })),
-    ]).then(([realData, fictData]) => {
+    fetchTreeData()
+      .then(({ entries: e, fictionalEntries: fe }) => {
         if (cancelled) return;
-        const e = realData.entries || [];
-        const fe = fictData.entries || [];
-        setEntries(e);
-        setFictionalEntries(fe);
 
         // Default expand: real depth=4, fictional depth=2
         const defaultExpanded = collectPathsToDepth(e, 4);
@@ -74,25 +90,32 @@ export default function TaxonomyGraph({ currentUser }) {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [currentUser]);
+  }, [currentUser, fetchTreeData]);
 
   // Auto-focus logged-in user
   useEffect(() => {
     if (currentUser && !focusedUserId) setFocusedUserId(currentUser.id);
   }, [currentUser, focusedUserId]);
 
-  // Handle ?locate=userId from directory page
-  const locateHandled = useRef(false);
+  // Centralized camera scheduling — cancels any pending camera move before scheduling a new one
+  const scheduleCamera = useCallback((fn, delay) => {
+    if (cameraTimerRef.current) clearTimeout(cameraTimerRef.current);
+    cameraTimerRef.current = setTimeout(() => {
+      cameraTimerRef.current = null;
+      fn();
+    }, delay);
+  }, []);
+
+  // Handle ?locate=userId from toast / directory page
+  const [searchParams, setSearchParams] = useSearchParams();
+  const locateId = searchParams.get('locate');
+
   useEffect(() => {
-    if (locateHandled.current) return;
-    const params = new URLSearchParams(window.location.search);
-    const locateId = params.get('locate');
     if (!locateId) return;
     if (!entries || !fictionalEntries) return;
 
-    locateHandled.current = true;
-    // Clear URL parameter
-    window.history.replaceState({}, '', '/');
+    // Clear URL parameter (won't re-trigger because locateId becomes null)
+    setSearchParams({}, { replace: true });
 
     // Find the first entry for this user
     const entry = entries.find(e => e.user_id === locateId)
@@ -123,7 +146,7 @@ export default function TaxonomyGraph({ currentUser }) {
     }
 
     // Pan to node after layout settles
-    setTimeout(() => {
+    scheduleCamera(() => {
       const pathKey = entry.fictional_path
         ? `__F__|${entry.fictional_path}|__vtuber__${locateId}`
         : (entry.taxon_path + (entry.breed_id ? `|__breed__${entry.breed_id}` : '') + `|__vtuber__${locateId}`);
@@ -132,7 +155,7 @@ export default function TaxonomyGraph({ currentUser }) {
         canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
       }
     }, 400);
-  }, [entries, fictionalEntries]);
+  }, [locateId, entries, fictionalEntries, setSearchParams, scheduleCamera]);
 
   // Focused entries for this user (raw: real + fictional, then sorted by X position)
   const rawFocusedEntries = useMemo(() => {
@@ -307,7 +330,7 @@ export default function TaxonomyGraph({ currentUser }) {
   // fitAll=true → fit to entire tree; false → try focused+close first, fallback to all.
   // scopeTree: 'real' | 'fictional' | null — filter nodes for bounds calculation.
   const scheduleCameraFit = useCallback((fitAll = false, scopeTree = null) => {
-    setTimeout(() => {
+    scheduleCamera(() => {
       const currentNodes = nodesRef.current;
       if (!currentNodes?.length) return;
 
@@ -390,7 +413,7 @@ export default function TaxonomyGraph({ currentUser }) {
       if (count === 0) return;
       canvasRef.current?.fitBounds(minX, minY, maxX, maxY, 80, 220, 100, 80, 100);
     }, 300);
-  }, [focusedUserId, closeVtuberIds, closeEdgePaths, activeFocusedEntries]);
+  }, [focusedUserId, closeVtuberIds, closeEdgePaths, activeFocusedEntries, scheduleCamera]);
 
   useEffect(() => {
     if (prevTickRef.current === traceBackTick) return;
@@ -551,7 +574,7 @@ export default function TaxonomyGraph({ currentUser }) {
     });
 
     // Camera follow after layout settles
-    setTimeout(() => {
+    scheduleCamera(() => {
       const currentNodes = nodesRef.current;
       if (!currentNodes?.length) return;
 
@@ -584,7 +607,7 @@ export default function TaxonomyGraph({ currentUser }) {
         }
       }
     }, 300);
-  }, [rootData, fictionalRootData]);
+  }, [rootData, fictionalRootData, scheduleCamera]);
 
   // Expand all / collapse all — scoped to activeTree
   const handleExpandAll = useCallback(() => {
@@ -751,14 +774,14 @@ export default function TaxonomyGraph({ currentUser }) {
     });
 
     // Delay to let layout update with expanded paths, then pan
-    setTimeout(() => {
+    scheduleCamera(() => {
       const pathKey = entryToPathKey(entry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
         canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
-  }, [focusedEntries, focusedSpeciesIdx, entries, fictionalEntries, focusedUserId, entryToPathKey]);
+  }, [focusedEntries, focusedSpeciesIdx, entries, fictionalEntries, focusedUserId, entryToPathKey, scheduleCamera]);
 
   const handleSetFocus = useCallback((entry) => {
     const userId = entry.user_id;
@@ -783,14 +806,14 @@ export default function TaxonomyGraph({ currentUser }) {
     });
 
     // Pan camera to the entry's node after layout update
-    setTimeout(() => {
+    scheduleCamera(() => {
       const pathKey = entryToPathKey(entry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
         canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
       }
     }, 200);
-  }, [entries, fictionalEntries, entryToPathKey]);
+  }, [entries, fictionalEntries, entryToPathKey, scheduleCamera]);
 
   // All entries for the selected vtuber (for trait tabs in detail panel, both real + fictional)
   const selectedVtuberEntries = useMemo(() => {
@@ -824,14 +847,14 @@ export default function TaxonomyGraph({ currentUser }) {
     });
 
     // Pan camera to the new entry's node after layout update
-    setTimeout(() => {
+    scheduleCamera(() => {
       const pathKey = entryToPathKey(newEntry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
         canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
-  }, [entries, fictionalEntries, entryToPathKey]);
+  }, [entries, fictionalEntries, entryToPathKey, scheduleCamera]);
 
   // Listen for Navbar "refocus self" event
   const [refocusTick, setRefocusTick] = useState(0);
@@ -849,7 +872,7 @@ export default function TaxonomyGraph({ currentUser }) {
   // Pan to first species when refocus-self fires
   useEffect(() => {
     if (refocusTick === 0) return;
-    setTimeout(() => {
+    scheduleCamera(() => {
       const entry = focusedEntries[0];
       if (!entry) return;
       const pathKey = entryToPathKey(entry);
@@ -858,7 +881,7 @@ export default function TaxonomyGraph({ currentUser }) {
         canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
       }
     }, 200);
-  }, [refocusTick, entryToPathKey]);
+  }, [refocusTick, entryToPathKey, scheduleCamera]);
 
   // Pan to focused species when user explicitly changes selection
   useEffect(() => {
@@ -883,14 +906,14 @@ export default function TaxonomyGraph({ currentUser }) {
     });
 
     // Delay to let layout update with expanded paths, then pan
-    setTimeout(() => {
+    scheduleCamera(() => {
       const pathKey = entryToPathKey(entry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
         canvasRef.current?.panTo(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
-  }, [focusedEntryKey, focusedUserId, entryToPathKey]);
+  }, [focusedEntryKey, focusedUserId, entryToPathKey, scheduleCamera]);
 
   // Render state
   const renderState = useMemo(() => ({
@@ -1033,7 +1056,9 @@ export default function TaxonomyGraph({ currentUser }) {
       )}
     </>
   );
-}
+});
+
+export default TaxonomyGraph;
 
 const spinnerStyle = {
   width: 32, height: 32,
