@@ -1,10 +1,21 @@
+import { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import TaxonomyGraph from '../components/graph/TaxonomyGraph';
 import SEOHead from '../components/SEOHead';
 
-export default function HomePage() {
+export default function HomePage({ treeRefetchRef }) {
   const { user } = useAuth();
+  const treeRef = useRef(null);
+
+  useEffect(() => {
+    if (treeRefetchRef) {
+      treeRefetchRef.current = () => treeRef.current?.refetch();
+    }
+    return () => {
+      if (treeRefetchRef) treeRefetchRef.current = null;
+    };
+  }, [treeRefetchRef]);
 
   return (
     <div style={{
@@ -27,7 +38,7 @@ export default function HomePage() {
           operatingSystem: 'Web',
         }}
       />
-      <TaxonomyGraph currentUser={user} />
+      <TaxonomyGraph ref={treeRef} currentUser={user} />
 
       <div style={{
         position: 'fixed',

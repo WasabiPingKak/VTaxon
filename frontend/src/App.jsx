@@ -1,3 +1,4 @@
+import { useRef, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './lib/AuthContext';
@@ -15,17 +16,23 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
 import AboutPage from './pages/AboutPage';
 import VTuberProfilePage from './pages/VTuberProfilePage';
+import WelcomeToast from './components/WelcomeToast';
 
 function AppContent() {
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const treeRefetchRef = useRef(null);
+
+  const handleNewUsers = useCallback(async () => {
+    await treeRefetchRef.current?.();
+  }, []);
 
   return (
     <>
       <Navbar />
       {isHome ? (
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<HomePage treeRefetchRef={treeRefetchRef} />} />
         </Routes>
       ) : (
         <main style={{ paddingTop: 44 }}>
@@ -80,6 +87,7 @@ function AppContent() {
           </footer>
         </main>
       )}
+      <WelcomeToast onNewUsers={handleNewUsers} visible={isHome} />
     </>
   );
 }
