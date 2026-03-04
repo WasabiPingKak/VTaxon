@@ -202,6 +202,10 @@ export default function LoginPage() {
             <TwitchLogoWhite />
             使用 Twitch 帳號登入
           </button>
+
+          <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.3)', fontSize: '0.72em', lineHeight: 1.5, textAlign: 'center' }}>
+            登入時頁面會經由認證服務 <span style={{ color: 'rgba(255,255,255,0.45)' }}>supabase.co</span> 跳轉，這是 VTaxon 使用的安全認證平台，非釣魚網站。
+          </p>
         </div>
 
       </div>
