@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import TaxonomyGraph from '../components/graph/TaxonomyGraph';
 import SEOHead from '../components/SEOHead';
@@ -27,6 +28,26 @@ export default function HomePage() {
         }}
       />
       <TaxonomyGraph currentUser={user} />
+
+      <div style={{
+        position: 'fixed',
+        bottom: 12,
+        left: 16,
+        fontSize: '0.68em',
+        zIndex: 10,
+        display: 'flex',
+        gap: 6,
+      }}>
+        <Link to="/privacy" style={{ color: 'rgba(255,255,255,0.18)', textDecoration: 'none', transition: 'color 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.18)'}
+        >隱私權政策</Link>
+        <span style={{ color: 'rgba(255,255,255,0.1)' }}>·</span>
+        <Link to="/terms" style={{ color: 'rgba(255,255,255,0.18)', textDecoration: 'none', transition: 'color 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.18)'}
+        >服務條款</Link>
+      </div>
     </div>
   );
 }
