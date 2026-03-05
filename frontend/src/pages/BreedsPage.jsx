@@ -3,19 +3,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { useToast } from '../lib/ToastContext';
 import { api } from '../lib/api';
+import { breedEmoji } from '../lib/breedUtils';
 import RankBadge from '../components/RankBadge';
 import SEOHead from '../components/SEOHead';
 
 const BREED_COLOR = '#fb923c';
-
-// taxon_ids must match breeds seed data (species/subspecies level, not genus)
-const BREED_SECTIONS = [
-  { emoji: '\uD83D\uDC15', label: '狗', taxon_id: 5219174 },   // Canis lupus familiaris
-  { emoji: '\uD83D\uDC08', label: '貓', taxon_id: 2435099 },   // Felis catus
-  { emoji: '\uD83D\uDC34', label: '馬', taxon_id: 2440886 },   // Equus caballus
-  { emoji: '\uD83D\uDC30', label: '兔', taxon_id: 2436940 },   // Oryctolagus cuniculus
-  { emoji: '\uD83D\uDC39', label: '天竺鼠', taxon_id: 5219702 }, // Cavia porcellus
-];
 
 function BreedAccordion({ section, user, addToast, navigate }) {
   const [expanded, setExpanded] = useState(false);
@@ -106,7 +98,7 @@ function BreedAccordion({ section, user, addToast, navigate }) {
         }}
       >
         <span style={{ fontWeight: 700 }}>
-          {section.emoji} {section.label}
+          {breedEmoji(section)} {section.common_name_zh || section.scientific_name}
           {loaded && (
             <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400, marginLeft: '8px', fontSize: '0.9em' }}>
               ({breeds.length} 個品種)
@@ -489,6 +481,13 @@ export default function BreedsPage() {
   const { user } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const [sections, setSections] = useState([]);
+
+  useEffect(() => {
+    api.getBreedCategories().then(data => {
+      setSections(data.categories || []);
+    }).catch(() => {});
+  }, []);
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 16px' }}>
@@ -531,7 +530,7 @@ export default function BreedsPage() {
       <GlobalBreedSearch user={user} addToast={addToast} navigate={navigate} />
 
       <div>
-        {BREED_SECTIONS.map(section => (
+        {sections.map(section => (
           <BreedAccordion
             key={section.taxon_id}
             section={section}

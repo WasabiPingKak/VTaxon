@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
+import { breedEmoji } from '../lib/breedUtils';
 import RankBadge from './RankBadge';
 
 // Inject pulse animation keyframes once
@@ -34,22 +35,6 @@ const FAMILY_COLORS = [
   '#c084fc', '#2dd4bf', '#f97316', '#ef4444',
 ];
 
-// Emoji mapping for breed quick buttons (fallback: generic animal emoji)
-const BREED_EMOJI_MAP = {
-  'Canidae': '\uD83D\uDC15',    // dog
-  'Felidae': '\uD83D\uDC08',    // cat
-  'Equidae': '\uD83D\uDC34',    // horse
-  'Leporidae': '\uD83D\uDC30',  // rabbit
-  'Caviidae': '\uD83D\uDC39',   // guinea pig
-};
-// species-level overrides (taxon_id → emoji) for same-family species
-const BREED_EMOJI_TAXON = {
-  2441022: '\uD83D\uDC02',  // cattle (Bos taurus)
-  2441110: '\uD83D\uDC11',  // sheep (Ovis aries)
-  2441056: '\uD83D\uDC10',  // goat (Capra hircus)
-  7342: '\uD83D\uDC16',     // pig (Sus scrofa)
-  2473921: '\uD83D\uDC14',  // chicken (Gallus gallus)
-};
 
 /** Loading skeleton — dark pulsing bars */
 function LoadingSkeleton() {
@@ -339,27 +324,19 @@ function SpeciesGroup({ group, onSelect, familyColor }) {
   );
 }
 
-/** Resolve emoji for a breed category */
-function breedEmoji(category) {
-  // Taxon-level override first (for same-family species like cattle/sheep/goat)
-  if (BREED_EMOJI_TAXON[category.taxon_id]) return BREED_EMOJI_TAXON[category.taxon_id];
-  // Family-level mapping
-  if (category.family && BREED_EMOJI_MAP[category.family]) return BREED_EMOJI_MAP[category.family];
-  return '\uD83D\uDC3E'; // fallback: paw prints
-}
-
 /** Quick breed entry buttons — fully dynamic from /breeds/categories API */
 function BreedQuickButtons({ onPickCategory }) {
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     api.getBreedCategories().then(data => {
-      setCategories(data.categories || []);
+      const all = data.categories || [];
+      setCategories(all.filter(c => c.breed_count >= 10));
     }).catch(() => {});
   }, []);
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
       {categories.map(cat => (
         <button
           key={cat.taxon_id}
@@ -369,18 +346,18 @@ function BreedQuickButtons({ onPickCategory }) {
             emoji: breedEmoji(cat),
           })}
           style={{
-            padding: '6px 12px',
+            padding: '5px 10px',
             background: 'rgba(251,146,60,0.1)',
             color: BREED_COLOR,
             border: `1px solid rgba(251,146,60,0.25)`,
             borderRadius: '6px',
             cursor: 'pointer',
-            fontSize: '0.9em',
+            fontSize: '0.85em',
             fontWeight: 600,
             whiteSpace: 'nowrap',
           }}
         >
-          {breedEmoji(cat)} {cat.common_name_zh || cat.scientific_name}品種({cat.breed_count})
+          {breedEmoji(cat)} {cat.common_name_zh || cat.scientific_name} ({cat.breed_count})
         </button>
       ))}
     </div>
