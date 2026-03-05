@@ -34,18 +34,22 @@ const FAMILY_COLORS = [
   '#c084fc', '#2dd4bf', '#f97316', '#ef4444',
 ];
 
-// Quick breed entry: hardcoded common pet species with taxon_ids
-// taxon_ids must match breeds seed data (species/subspecies level, not genus)
-const BREED_QUICK_ENTRIES = [
-  { emoji: '\uD83D\uDC15', label: '狗品種', taxon_id: 5219174 },   // Canis lupus familiaris
-  { emoji: '\uD83D\uDC08', label: '貓品種', taxon_id: 2435099 },   // Felis catus
-  { emoji: '\uD83D\uDC34', label: '馬品種', taxon_id: 2440886 },   // Equus caballus
-  { emoji: '\uD83D\uDC02', label: '牛品種', taxon_id: 2441022 },   // Bos taurus
-  { emoji: '\uD83D\uDC11', label: '綿羊品種', taxon_id: 2441110 }, // Ovis aries
-  { emoji: '\uD83D\uDC10', label: '山羊品種', taxon_id: 2441056 }, // Capra hircus
-  { emoji: '\uD83D\uDC30', label: '兔品種', taxon_id: 2436940 },   // Oryctolagus cuniculus
-  { emoji: '\uD83D\uDC39', label: '天竺鼠品種', taxon_id: 5219702 }, // Cavia porcellus
-];
+// Emoji mapping for breed quick buttons (fallback: generic animal emoji)
+const BREED_EMOJI_MAP = {
+  'Canidae': '\uD83D\uDC15',    // dog
+  'Felidae': '\uD83D\uDC08',    // cat
+  'Equidae': '\uD83D\uDC34',    // horse
+  'Leporidae': '\uD83D\uDC30',  // rabbit
+  'Caviidae': '\uD83D\uDC39',   // guinea pig
+};
+// species-level overrides (taxon_id → emoji) for same-family species
+const BREED_EMOJI_TAXON = {
+  2441022: '\uD83D\uDC02',  // cattle (Bos taurus)
+  2441110: '\uD83D\uDC11',  // sheep (Ovis aries)
+  2441056: '\uD83D\uDC10',  // goat (Capra hircus)
+  7342: '\uD83D\uDC16',     // pig (Sus scrofa)
+  2473921: '\uD83D\uDC14',  // chicken (Gallus gallus)
+};
 
 /** Loading skeleton — dark pulsing bars */
 function LoadingSkeleton() {
@@ -335,24 +339,35 @@ function SpeciesGroup({ group, onSelect, familyColor }) {
   );
 }
 
-/** Quick breed entry buttons */
+/** Resolve emoji for a breed category */
+function breedEmoji(category) {
+  // Taxon-level override first (for same-family species like cattle/sheep/goat)
+  if (BREED_EMOJI_TAXON[category.taxon_id]) return BREED_EMOJI_TAXON[category.taxon_id];
+  // Family-level mapping
+  if (category.family && BREED_EMOJI_MAP[category.family]) return BREED_EMOJI_MAP[category.family];
+  return '\uD83D\uDC3E'; // fallback: paw prints
+}
+
+/** Quick breed entry buttons — fully dynamic from /breeds/categories API */
 function BreedQuickButtons({ onPickCategory }) {
-  const [counts, setCounts] = useState({});
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     api.getBreedCategories().then(data => {
-      const map = {};
-      for (const c of data.categories) map[c.taxon_id] = c.breed_count;
-      setCounts(map);
+      setCategories(data.categories || []);
     }).catch(() => {});
   }, []);
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
-      {BREED_QUICK_ENTRIES.map(entry => (
+      {categories.map(cat => (
         <button
-          key={entry.taxon_id}
-          onClick={() => onPickCategory(entry)}
+          key={cat.taxon_id}
+          onClick={() => onPickCategory({
+            taxon_id: cat.taxon_id,
+            label: `${cat.common_name_zh || cat.scientific_name}品種`,
+            emoji: breedEmoji(cat),
+          })}
           style={{
             padding: '6px 12px',
             background: 'rgba(251,146,60,0.1)',
@@ -365,7 +380,7 @@ function BreedQuickButtons({ onPickCategory }) {
             whiteSpace: 'nowrap',
           }}
         >
-          {entry.emoji} {entry.label}{counts[entry.taxon_id] ? `(${counts[entry.taxon_id]})` : ''}
+          {breedEmoji(cat)} {cat.common_name_zh || cat.scientific_name}品種({cat.breed_count})
         </button>
       ))}
     </div>
