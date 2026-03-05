@@ -235,12 +235,10 @@ VTaxon/
 │   ├── chinese-names-strategy.md  # 中文名稱解析策略
 │   └── er-diagram.mermaid         # ER 圖
 ├── firebase.json               # Firebase Hosting 設定
-├── CLAUDE.md                   # 專案規格書
-└── PROGRESS.md                 # 開發進度
+└── CLAUDE.md                   # 專案規格書
 ```
 
 ## 文件
 
 - [中文名稱策略](docs/chinese-names-strategy.md)
 - [ER Diagram](docs/er-diagram.mermaid)
-- [開發進度](PROGRESS.md)

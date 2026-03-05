@@ -1,52 +1,150 @@
 erDiagram
+    users ||--o{ auth_id_aliases : "has aliases"
     users ||--o{ oauth_accounts : "has"
     users ||--o{ vtuber_traits : "has"
+    users ||--o{ fictional_species_requests : "submits"
+    users ||--o{ breed_requests : "submits"
+    users ||--o{ user_reports : "reports"
+    users ||--o{ user_reports : "reported"
+    users ||--o{ blacklist : "banned"
+    users ||--o{ blacklist : "banned by"
     species_cache ||--o{ vtuber_traits : "referenced by"
+    species_cache ||--o{ breeds : "has"
+    species_cache ||--o{ breed_requests : "for"
+    fictional_species ||--o{ vtuber_traits : "referenced by"
+    breeds ||--o{ vtuber_traits : "referenced by"
 
     users {
         uuid id PK
-        varchar display_name
-        varchar avatar_url
-        varchar role "admin | user"
-        timestamp created_at
-        timestamp updated_at
+        text display_name
+        text avatar_url
+        text role "admin | user"
+        text organization
+        text bio
+        jsonb country_flags "default []"
+        jsonb social_links "default {}"
+        text primary_platform "youtube | twitch"
+        jsonb profile_data "default {}"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    auth_id_aliases {
+        uuid auth_id PK
+        uuid user_id FK
+        timestamptz created_at
     }
 
     oauth_accounts {
         uuid id PK
         uuid user_id FK
-        varchar provider "youtube | twitch"
-        varchar provider_account_id
-        varchar provider_display_name
-        varchar provider_avatar_url
-        varchar access_token
-        varchar refresh_token
-        timestamp token_expires_at
-        timestamp created_at
+        text provider "youtube | twitch"
+        text provider_account_id "UNIQUE with provider"
+        text provider_display_name
+        text provider_avatar_url
+        text channel_url
+        boolean show_on_profile "default true"
+        text access_token
+        text refresh_token
+        timestamptz token_expires_at
+        timestamptz created_at
     }
 
     species_cache {
         integer taxon_id PK "GBIF usageKey"
-        varchar scientific_name
-        varchar common_name_en
-        varchar common_name_zh
-        varchar taxon_rank
-        varchar taxon_path "Materialized Path"
-        varchar kingdom
-        varchar phylum
-        varchar class
-        varchar order_
-        varchar family
-        varchar genus
-        timestamp cached_at
+        text scientific_name
+        text common_name_en
+        text common_name_zh
+        text taxon_rank
+        text taxon_path "Materialized Path"
+        text kingdom
+        text phylum
+        text class
+        text order_
+        text family
+        text genus
+        jsonb path_zh "default {}"
+        timestamptz cached_at
+    }
+
+    fictional_species {
+        serial id PK
+        text name "UNIQUE"
+        text name_zh
+        text origin "Level 1"
+        text sub_origin "Level 2"
+        text category_path "Materialized Path"
+        text description
+        timestamptz created_at
+    }
+
+    breeds {
+        serial id PK
+        integer taxon_id FK
+        text name_en "UNIQUE with taxon_id"
+        text name_zh
+        text breed_group
+        text wikidata_id
+        text source "default manual"
+        timestamptz created_at
     }
 
     vtuber_traits {
         uuid id PK
         uuid user_id FK
+        integer taxon_id FK "nullable"
+        integer fictional_species_id FK "nullable"
+        text display_name "deprecated"
+        text breed_name "legacy free text"
+        integer breed_id FK "nullable"
+        text trait_note
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    fictional_species_requests {
+        serial id PK
+        uuid user_id FK
+        text name_zh
+        text name_en
+        text suggested_origin
+        text suggested_sub_origin
+        text description
+        text status "default pending"
+        text admin_note
+        timestamptz created_at
+    }
+
+    breed_requests {
+        serial id PK
+        uuid user_id FK
         integer taxon_id FK
-        varchar display_name "龍、狐狸 etc"
-        varchar trait_note
-        timestamp created_at
-        timestamp updated_at
+        text name_zh
+        text name_en
+        text description
+        text status "default pending"
+        text admin_note
+        timestamptz created_at
+    }
+
+    user_reports {
+        serial id PK
+        uuid reporter_id FK
+        uuid reported_user_id FK
+        text reason
+        text evidence_url
+        text report_type "default impersonation"
+        text status "default pending"
+        text admin_note
+        timestamptz created_at
+    }
+
+    blacklist {
+        serial id PK
+        text identifier_type "UNIQUE with value"
+        text identifier_value
+        uuid user_id FK
+        text reason
+        uuid banned_by FK
+        timestamptz created_at
     }
