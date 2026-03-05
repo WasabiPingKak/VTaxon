@@ -238,7 +238,34 @@ function xorshift32(seed) {
   };
 }
 
+// ── Factoradic permutation for small arrays (guaranteed unique per seed) ──
+const FACTORIALS = [1, 1, 2, 6, 24, 120, 720]; // 0! .. 6!
+
+function nthPermutation(arr, n) {
+  const remaining = [...arr];
+  const result = [];
+  for (let i = remaining.length - 1; i >= 0; i--) {
+    const fact = FACTORIALS[i];
+    const idx = Math.floor(n / fact);
+    n %= fact;
+    result.push(remaining[idx]);
+    remaining.splice(idx, 1);
+  }
+  return result;
+}
+
 function shuffleArray(arr, seed) {
+  const n = arr.length;
+  if (n <= 1) return [...arr];
+
+  // Small arrays: cycle through all n! permutations deterministically
+  if (n <= 6) {
+    const permCount = FACTORIALS[n];
+    const permIndex = ((seed % permCount) + permCount) % permCount;
+    return nthPermutation(arr, permIndex);
+  }
+
+  // Large arrays: Fisher-Yates with seeded PRNG
   const a = [...arr];
   const rng = xorshift32(seed);
   for (let i = a.length - 1; i > 0; i--) {
@@ -299,7 +326,7 @@ function sortVtubers(vtubers, sortConfig) {
   return sorted;
 }
 
-export default function useTreeLayout(entries, fictionalEntries, expandedSet, currentUserId, sortConfig) {
+export default function useTreeLayout(entries, fictionalEntries, expandedSet, currentUserId, realSortConfig, fictSortConfig) {
   return useMemo(() => {
     const hasReal = entries && entries.length > 0;
     const hasFictional = fictionalEntries && fictionalEntries.length > 0;
@@ -314,7 +341,7 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
     // ── Real tree ──
     if (hasReal) {
       realRoot = buildTree(entries);
-      const hierData = mapToHierarchy(realRoot, expandedSet, currentUserId, 0, sortConfig);
+      const hierData = mapToHierarchy(realRoot, expandedSet, currentUserId, 0, realSortConfig);
       const h = hierarchy(hierData, d => d.children);
       layoutTree(h);
       realNodes = h.descendants();
@@ -325,7 +352,7 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
     // ── Fictional tree ──
     if (hasFictional) {
       fictRoot = buildFictionalTree(fictionalEntries);
-      const hierData = mapToHierarchy(fictRoot, expandedSet, currentUserId, 0, sortConfig);
+      const hierData = mapToHierarchy(fictRoot, expandedSet, currentUserId, 0, fictSortConfig);
       const h = hierarchy(hierData, d => d.children);
       layoutTree(h);
       fictNodes = h.descendants();
@@ -353,7 +380,7 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
       bounds: allBounds,
       maxCount,
     };
-  }, [entries, fictionalEntries, expandedSet, currentUserId, sortConfig]);
+  }, [entries, fictionalEntries, expandedSet, currentUserId, realSortConfig, fictSortConfig]);
 }
 
 /**

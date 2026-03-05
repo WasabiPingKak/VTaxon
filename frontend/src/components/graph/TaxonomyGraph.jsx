@@ -42,7 +42,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
   // Sort state
   const [sortKey, setSortKey] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [shuffleSeed, setShuffleSeed] = useState(null);
+  const [shuffleSeed, setShuffleSeed] = useState(null);   // incrementing counter, not timestamp
 
   // Filter state
   const [filters, setFilters] = useState(() => emptyFilters());
@@ -211,13 +211,24 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
     return computeFacets(all);
   }, [entries, fictionalEntries]);
 
-  // ── Sort config (stable reference via useMemo) ──
-  const sortConfig = useMemo(() => {
-    if (shuffleSeed != null) {
-      return { key: 'shuffle', order: sortOrder, shuffleSeed };
-    }
-    return { key: sortKey, order: sortOrder, shuffleSeed: null };
-  }, [sortKey, sortOrder, shuffleSeed]);
+  // ── Sort config per tree (shuffle only affects activeTree) ──
+  const baseSortConfig = useMemo(() => (
+    { key: sortKey, order: sortOrder, shuffleSeed: null }
+  ), [sortKey, sortOrder]);
+
+  const shuffleSortConfig = useMemo(() => (
+    shuffleSeed != null
+      ? { key: 'shuffle', order: sortOrder, shuffleSeed }
+      : null
+  ), [sortOrder, shuffleSeed]);
+
+  const realSortConfig = useMemo(() => (
+    shuffleSortConfig && activeTree === 'real' ? shuffleSortConfig : baseSortConfig
+  ), [shuffleSortConfig, baseSortConfig, activeTree]);
+
+  const fictSortConfig = useMemo(() => (
+    shuffleSortConfig && activeTree === 'fictional' ? shuffleSortConfig : baseSortConfig
+  ), [shuffleSortConfig, baseSortConfig, activeTree]);
 
   // Sort/filter handlers
   const handleSortChange = useCallback((key, order) => {
@@ -227,13 +238,13 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
   }, []);
 
   const handleShuffle = useCallback(() => {
-    setShuffleSeed(Date.now());
+    setShuffleSeed(s => (s ?? 0) + 1);
   }, []);
 
 
   // d3 layout (before traceBack computations so focusedEntries can sort by X)
   const { nodes, edges, bounds, rootData, fictionalRootData, maxCount } = useTreeLayout(
-    filteredEntries, filteredFictionalEntries, expandedSet, currentUser?.id, sortConfig,
+    filteredEntries, filteredFictionalEntries, expandedSet, currentUser?.id, realSortConfig, fictSortConfig,
   );
   nodesRef.current = nodes;
 
