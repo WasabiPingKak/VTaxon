@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://vtaxon.com/api/sitemap.xml
+Sitemap: https://vtaxon.web.app/api/sitemap.xml
