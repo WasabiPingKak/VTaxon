@@ -243,8 +243,12 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
 
 
   // d3 layout (before traceBack computations so focusedEntries can sort by X)
+  const activeFilterCount = countActiveFilters(filters);
+  // Sort badge text is wider than filter badges (e.g. "1年2個月"), count as 2 units
+  const hasSortBadge = (sortKey === 'debut_date' || sortKey === 'created_at') ? 2 : 0;
+  const totalBadgeCount = activeFilterCount + hasSortBadge;
   const { nodes, edges, bounds, rootData, fictionalRootData, maxCount } = useTreeLayout(
-    filteredEntries, filteredFictionalEntries, expandedSet, currentUser?.id, realSortConfig, fictSortConfig,
+    filteredEntries, filteredFictionalEntries, expandedSet, currentUser?.id, realSortConfig, fictSortConfig, totalBadgeCount,
   );
   nodesRef.current = nodes;
 
@@ -1029,6 +1033,15 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
   }, [focusedEntryKey, focusedUserId, entryToPathKey, scheduleCamera]);
 
   // Render state
+  // Only pass activeFilters when there are active selections
+  const activeFiltersForRender = useMemo(() => {
+    if (!filters) return null;
+    for (const key of Object.keys(filters)) {
+      if (filters[key] && filters[key].size > 0) return filters;
+    }
+    return null;
+  }, [filters]);
+
   const renderState = useMemo(() => ({
     hoveredNode,
     imageCache: imageCacheRef.current,
@@ -1040,7 +1053,9 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
     positionMap,
     flashMap: flashMapRef.current,
     maxCount,
-  }), [hoveredNode, imageCacheRef, focusedUserId, closeVtuberIds, closeEdgePaths, positionMap, flashTick, maxCount]);
+    activeFilters: activeFiltersForRender,
+    sortKey,
+  }), [hoveredNode, imageCacheRef, focusedUserId, closeVtuberIds, closeEdgePaths, positionMap, flashTick, maxCount, activeFiltersForRender, sortKey]);
 
   const onRender = useCallback((ctx, transform, canvasSize) => {
     drawGraph(ctx, nodes, edges, transform, canvasSize, renderState);
@@ -1177,6 +1192,40 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
           isMobile
           open={filterPanelOpen}
         />
+      )}
+
+      {/* Empty filter result overlay */}
+      {filteredCount === 0 && countActiveFilters(filters) > 0 && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          pointerEvents: 'none', zIndex: 40,
+        }}>
+          <div style={{
+            background: 'rgba(8,13,21,0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12,
+            padding: '24px 32px', textAlign: 'center', pointerEvents: 'auto',
+            maxWidth: 300,
+          }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+            <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
+              沒有符合條件的結果
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginBottom: 12 }}>
+              請嘗試調整篩選條件或清除篩選
+            </div>
+            <button
+              type="button"
+              onClick={() => handleFiltersChange(emptyFilters())}
+              style={{
+                background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.3)',
+                borderRadius: 6, padding: '6px 16px', cursor: 'pointer',
+                color: '#38bdf8', fontSize: 12, fontWeight: 500,
+              }}
+            >
+              清除全部篩選
+            </button>
+          </div>
+        </div>
       )}
 
       {focusedUserId && focusedEntries.length > 0 && !(isMobile && toolbarExpanded) && (

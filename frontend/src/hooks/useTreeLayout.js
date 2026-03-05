@@ -192,9 +192,19 @@ function mergeBounds(a, b) {
 }
 
 /** Run the full layout pipeline on a d3 hierarchy root. */
-function layoutTree(h) {
+function layoutTree(h, activeFilterCount) {
+  // Estimated badge row half-width (world px at worst-case font scale)
+  // Average badge: text ~35px, icon ~18px → use 25px avg + 5px gap each
+  const badgeHalfW = activeFilterCount > 0
+    ? (activeFilterCount * 25 + (activeFilterCount - 1) * 5) / FONT_MIN_SCALE / 2
+    : 0;
+
   for (const node of h.descendants()) {
     computeLabelLayout(node.data);
+    // Widen vtuber nodes to accommodate badge row
+    if (activeFilterCount > 0 && node.data._vtuber) {
+      node.data._labelHalfW = Math.max(node.data._labelHalfW, badgeHalfW);
+    }
   }
 
   const treeLayout = tree()
@@ -216,7 +226,7 @@ function layoutTree(h) {
 
   treeLayout(h);
   applyIntermediateLevel(h);
-  applyGridLayout(h);
+  applyGridLayout(h, activeFilterCount);
   resolveCollisions(h);
 }
 
@@ -326,7 +336,7 @@ function sortVtubers(vtubers, sortConfig) {
   return sorted;
 }
 
-export default function useTreeLayout(entries, fictionalEntries, expandedSet, currentUserId, realSortConfig, fictSortConfig) {
+export default function useTreeLayout(entries, fictionalEntries, expandedSet, currentUserId, realSortConfig, fictSortConfig, activeFilterCount) {
   return useMemo(() => {
     const hasReal = entries && entries.length > 0;
     const hasFictional = fictionalEntries && fictionalEntries.length > 0;
@@ -343,7 +353,7 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
       realRoot = buildTree(entries);
       const hierData = mapToHierarchy(realRoot, expandedSet, currentUserId, 0, realSortConfig);
       const h = hierarchy(hierData, d => d.children);
-      layoutTree(h);
+      layoutTree(h, activeFilterCount);
       realNodes = h.descendants();
       realEdges = h.links();
       realBounds = computeBounds(realNodes);
@@ -354,7 +364,7 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
       fictRoot = buildFictionalTree(fictionalEntries);
       const hierData = mapToHierarchy(fictRoot, expandedSet, currentUserId, 0, fictSortConfig);
       const h = hierarchy(hierData, d => d.children);
-      layoutTree(h);
+      layoutTree(h, activeFilterCount);
       fictNodes = h.descendants();
       fictEdges = h.links();
       fictBounds = computeBounds(fictNodes);
@@ -380,7 +390,7 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
       bounds: allBounds,
       maxCount,
     };
-  }, [entries, fictionalEntries, expandedSet, currentUserId, realSortConfig, fictSortConfig]);
+  }, [entries, fictionalEntries, expandedSet, currentUserId, realSortConfig, fictSortConfig, activeFilterCount]);
 }
 
 /**
@@ -406,7 +416,7 @@ function applyIntermediateLevel(root) {
  * rearrange them into a compact grid instead of a single row.
  * Cell width adapts to the widest label in the group.
  */
-function applyGridLayout(root) {
+function applyGridLayout(root, activeFilterCount) {
   for (const node of root.descendants()) {
     if (!node.children) continue;
 
@@ -417,7 +427,11 @@ function applyGridLayout(root) {
     const maxLabelFullW = Math.max(
       ...vtubers.map(v => (v.data._labelHalfW || 40) * 2 + LABEL_PADDING)
     );
-    const cellW = Math.max(GRID_CELL_W, maxLabelFullW);
+    // Estimate badge row width when filters active (same formula as badgeHalfW * 2)
+    const badgeRowW = activeFilterCount > 0
+      ? (activeFilterCount * 25 + (activeFilterCount - 1) * 5) / FONT_MIN_SCALE
+      : 0;
+    const cellW = Math.max(GRID_CELL_W, maxLabelFullW, badgeRowW + LABEL_PADDING);
 
     // Dynamic cell height: account for max label line count in this group
     // Next row hex top (y+cellH-hexR) must be below current row text bottom
@@ -427,7 +441,9 @@ function applyGridLayout(root) {
     const maxLines = Math.max(...vtubers.map(v => (v.data._labelLines || ['']).length));
     // text bottom from center = hexR + fs*0.3 + (maxLines-1)*lineH + fs
     const textBottom = HEX_R + worstFs * 0.3 + (maxLines - 1) * worstLineH + worstFs;
-    const cellH = Math.max(GRID_CELL_H, textBottom + HEX_R + 10);
+    // Extra space for filter badge row (one line of badges at 9px font)
+    const badgeExtra = activeFilterCount > 0 ? (9 / FONT_MIN_SCALE) * 1.25 + 4 : 0;
+    const cellH = Math.max(GRID_CELL_H, textBottom + badgeExtra + HEX_R + 10);
 
     const cols = Math.min(GRID_COLS, vtubers.length);
 

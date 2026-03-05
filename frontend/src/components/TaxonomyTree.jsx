@@ -150,7 +150,7 @@ function findNode(root, pathKey) {
   return null;
 }
 
-export default function TaxonomyTree({ currentUser }) {
+export default function TaxonomyTree({ currentUser, filters }) {
   const [entries, setEntries] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -318,6 +318,7 @@ export default function TaxonomyTree({ currentUser }) {
           currentUserId={currentUser?.id}
           onSelectVtuber={setSelectedVtuber}
           highlightPaths={highlightPaths}
+          activeFilters={filters}
         />
       ))}
 

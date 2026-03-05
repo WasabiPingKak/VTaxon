@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import RankBadge from './RankBadge';
+import { YouTubeIcon, TwitchIcon } from './SnsIcons';
 
-export default function VtuberCard({ entry, isCurrentUser, onClick }) {
+export default function VtuberCard({ entry, isCurrentUser, onClick, activeFilterBadges, sortBadge }) {
   const [imgError, setImgError] = useState(false);
 
   const flags = (entry.country_flags || [])
@@ -56,6 +57,41 @@ export default function VtuberCard({ entry, isCurrentUser, onClick }) {
           {entry.breed_name && <span style={{ color: 'rgba(255,255,255,0.35)' }}> ({speciesLabel})</span>}
           <RankBadge rank={entry.breed_name ? 'BREED' : entry.taxon_rank} style={{ marginLeft: '4px', fontSize: '0.7em' }} />
         </div>
+        {((activeFilterBadges && activeFilterBadges.length > 0) || sortBadge) && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginTop: '2px', alignItems: 'center' }}>
+            {activeFilterBadges && activeFilterBadges.map((b, i) =>
+              b.isCountry && b.countryCode ? (
+                <span key={i} style={{
+                  padding: '1px 3px', borderRadius: 3, background: b.bg,
+                  display: 'inline-flex', alignItems: 'center',
+                }}>
+                  <span className={`fi fi-${b.countryCode.toLowerCase()}`}
+                    style={{ width: 16, height: 12, display: 'inline-block', borderRadius: 1 }} />
+                </span>
+              ) : b.isPlatform ? (
+                <span key={i} style={{
+                  padding: '1px 3px', borderRadius: 3, background: b.bg,
+                  display: 'inline-flex', alignItems: 'center',
+                }}>
+                  {b.platform === 'youtube' ? <YouTubeIcon size={12} /> : <TwitchIcon size={12} />}
+                </span>
+              ) : (
+                <span key={i} style={{
+                  fontSize: '0.65em', padding: '1px 4px', borderRadius: 4,
+                  color: b.color, background: b.bg,
+                  lineHeight: 1.4, whiteSpace: 'nowrap',
+                }}>{b.label}</span>
+              )
+            )}
+            {sortBadge && (
+              <span style={{
+                fontSize: '0.65em', padding: '1px 4px', borderRadius: 4,
+                color: sortBadge.color, background: sortBadge.bg,
+                lineHeight: 1.4, whiteSpace: 'nowrap',
+              }}>{sortBadge.label}</span>
+            )}
+          </div>
+        )}
       </div>
     </button>
   );

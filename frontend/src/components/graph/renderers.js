@@ -9,6 +9,39 @@ import {
   EDGE_ALPHA, EDGE_GLOW_BLUR,
   LABEL_COLOR, LABEL_DIM, COUNT_BADGE_BG, COUNT_BADGE_TEXT,
 } from './colors.js';
+import { getActiveFilterBadges, getSortBadge } from '../../lib/filterBadges.js';
+import { getFlagImage } from '../../lib/flagImages.js';
+
+// ── Platform icon SVG paths (viewBox 0 0 24 24) for canvas rendering ──
+const PLATFORM_ICONS = {
+  youtube: {
+    paths: [
+      { d: 'M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.546 12 3.546 12 3.546s-7.505 0-9.377.504A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.504 9.376.504 9.376.504s7.505 0 9.377-.504a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z', fill: '#FF0000' },
+      { d: 'M9.545 15.568V8.432L15.818 12l-6.273 3.568z', fill: '#fff' },
+    ],
+  },
+  twitch: {
+    paths: [
+      { d: 'M11.571 4.714h1.715v5.143H11.57V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z', fill: '#9146FF' },
+    ],
+  },
+};
+
+/** Draw a platform icon (YT/Twitch) on canvas, scaled to fit iconSize at (x, y). */
+function drawPlatformIcon(ctx, platform, x, y, iconSize) {
+  const icon = PLATFORM_ICONS[platform];
+  if (!icon) return;
+  const s = iconSize / 24; // scale from 24x24 viewBox
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  for (const p of icon.paths) {
+    const path = new Path2D(p.d);
+    ctx.fillStyle = p.fill;
+    ctx.fill(path);
+  }
+  ctx.restore();
+}
 
 // ── LOD thresholds ──
 const LOD_DOTS_ONLY = 0.2;
@@ -622,6 +655,72 @@ function drawVtuberNode(ctx, node, scale, state) {
     const lineHeight = vFs * 1.25;
     const startY = node.y + hexR + vFs * 0.3;
     drawWrappedText(ctx, lines, node.x, startY, lineHeight);
+
+    // Badges below name (filter badges + sort badge)
+    if (d._entry) {
+      const badges = state.activeFilters ? getActiveFilterBadges(d._entry, state.activeFilters) : [];
+      const sortBadge = getSortBadge(d._entry, state.sortKey);
+      if (sortBadge) badges.push(sortBadge);
+      if (badges.length > 0) {
+        const badgeFs = scaledFontSize(9, scale);
+        const badgeY = startY + lines.length * lineHeight + badgeFs * 0.3;
+        const padX = 3 / Math.max(scale, FONT_MIN_SCALE);
+        const padY = 1 / Math.max(scale, FONT_MIN_SCALE);
+        const gap = 3 / Math.max(scale, FONT_MIN_SCALE);
+        const badgeR = 3 / Math.max(scale, FONT_MIN_SCALE);
+
+        // Flag badge dimensions (4:3 aspect)
+        const flagH = badgeFs;
+        const flagW = flagH * 4 / 3;
+        const flagPad = 2 / Math.max(scale, FONT_MIN_SCALE);
+
+        // Icon badge dimensions
+        const iconSize = badgeFs;
+        const iconPad = 2 / Math.max(scale, FONT_MIN_SCALE);
+
+        // Measure total width to center the row
+        ctx.font = fontStr(9, scale, 'bold');
+        const widths = badges.map(b => {
+          if (b.isCountry && b.countryCode) return flagW + flagPad * 2;
+          if (b.isPlatform) return iconSize + iconPad * 2;
+          return ctx.measureText(b.label).width + padX * 2;
+        });
+        const totalW = widths.reduce((s, w) => s + w, 0) + (badges.length - 1) * gap;
+        let bx = node.x - totalW / 2;
+
+        for (let i = 0; i < badges.length; i++) {
+          const b = badges[i];
+          const bw = widths[i];
+          const bh = badgeFs + padY * 2;
+
+          // Rounded rect background
+          ctx.beginPath();
+          roundedRect(ctx, bx, badgeY, bw, bh, badgeR);
+          ctx.fillStyle = b.bg;
+          ctx.fill();
+
+          if (b.isCountry && b.countryCode) {
+            // Draw flag SVG image
+            const flagImg = getFlagImage(b.countryCode);
+            if (flagImg && flagImg.complete && flagImg.naturalWidth > 0) {
+              ctx.drawImage(flagImg, bx + flagPad, badgeY + padY, flagW, flagH);
+            }
+          } else if (b.isPlatform) {
+            // Draw platform icon (YT / Twitch)
+            drawPlatformIcon(ctx, b.platform, bx + iconPad, badgeY + padY, iconSize);
+          } else {
+            // Text badge
+            ctx.fillStyle = b.color;
+            ctx.font = fontStr(9, scale, 'bold');
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(b.label, bx + bw / 2, badgeY + padY);
+          }
+
+          bx += bw + gap;
+        }
+      }
+    }
   }
 }
 

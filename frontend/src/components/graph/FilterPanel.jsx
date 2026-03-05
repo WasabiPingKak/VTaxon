@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { getCountryName } from '../../lib/countries';
 import { countActiveFilters } from '../../lib/treeFilters';
+import { FILTER_BADGES } from '../../lib/filterBadges';
+import { YouTubeIcon, TwitchIcon } from '../SnsIcons';
 import BottomSheet from '../BottomSheet';
 
 const GENDER_LABELS = { '男': '男', '女': '女', 'other': '自訂', unset: '未設定' };
@@ -100,6 +102,8 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
   const checkboxRow = (dim, opt, multi) => {
     const selected = filters[dim] || new Set();
     const isChecked = selected.has(opt.value);
+    // Get badge color for this option (skip country — uses flag icons)
+    const badgeConf = dim !== 'country' ? FILTER_BADGES[dim]?.[opt.value] : null;
     return (
       <button
         key={opt.value}
@@ -131,6 +135,18 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
             </svg>
           )}
         </span>
+        {/* Platform icon or badge color dot */}
+        {badgeConf?.isPlatform ? (
+          <span style={{ flexShrink: 0, opacity: isChecked ? 1 : 0.5, display: 'flex', alignItems: 'center' }}>
+            {opt.value === 'youtube' ? <YouTubeIcon size={14} /> : <TwitchIcon size={14} />}
+          </span>
+        ) : badgeConf && !badgeConf.isPlatform ? (
+          <span style={{
+            width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+            background: badgeConf.color,
+            opacity: isChecked ? 1 : 0.5,
+          }} />
+        ) : null}
         {/* Flag icon */}
         {opt.flagClass && (
           <span className={opt.flagClass}

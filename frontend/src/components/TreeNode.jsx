@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import VtuberCard from './VtuberCard';
 import RankBadge from './RankBadge';
+import { getActiveFilterBadges } from '../lib/filterBadges';
 
 const SHOW_LIMIT = 20;
 
 export default function TreeNode({
   node, depth, expandedSet, onToggle,
-  currentUserId, onSelectVtuber, highlightPaths,
+  currentUserId, onSelectVtuber, highlightPaths, activeFilters,
 }) {
   const [showAll, setShowAll] = useState(false);
 
@@ -90,6 +91,7 @@ export default function TreeNode({
                   entry={v}
                   isCurrentUser={currentUserId && v.user_id === currentUserId}
                   onClick={() => onSelectVtuber(v)}
+                  activeFilterBadges={activeFilters ? getActiveFilterBadges(v, activeFilters) : undefined}
                 />
               ))}
             </div>
@@ -106,6 +108,7 @@ export default function TreeNode({
               currentUserId={currentUserId}
               onSelectVtuber={onSelectVtuber}
               highlightPaths={highlightPaths}
+              activeFilters={activeFilters}
             />
           ))}
 
