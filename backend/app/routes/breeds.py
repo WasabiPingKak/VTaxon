@@ -199,36 +199,6 @@ def update_breed_request(req_id):
     req.status = new_status
     req.admin_note = data.get('admin_note') or req.admin_note
 
-    # Auto-create breed on approval
-    created_breed = None
-    if new_status == 'approved':
-        breed_data = data.get('breed') or {}
-        taxon_id = breed_data.get('taxon_id') or req.taxon_id
-        name_en = breed_data.get('name_en') or req.name_en
-        name_zh = breed_data.get('name_zh') or req.name_zh
+    db.session.commit()
 
-        if not taxon_id or not name_en:
-            return jsonify({'error': 'taxon_id and name_en required for approval'}), 400
-
-        created_breed = Breed(
-            taxon_id=taxon_id,
-            name_en=name_en,
-            name_zh=name_zh or None,
-            breed_group=(breed_data.get('breed_group') or '').strip() or None,
-            source='user_request',
-        )
-        db.session.add(created_breed)
-
-    try:
-        db.session.commit()
-        if created_breed:
-            invalidate_tree_cache()
-    except Exception:
-        db.session.rollback()
-        return jsonify({'error': '品種已存在或資料衝突'}), 409
-
-    result = req.to_dict()
-    if created_breed:
-        result['created_breed'] = created_breed.to_dict()
-
-    return jsonify(result)
+    return jsonify(req.to_dict())

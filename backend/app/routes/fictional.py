@@ -54,35 +54,9 @@ def update_request(req_id):
     req.status = new_status
     req.admin_note = data.get('admin_note') or req.admin_note
 
-    # Auto-create fictional_species on approval
-    if new_status == 'approved':
-        species_data = data.get('species') or {}
-        name = species_data.get('name') or req.name_en or req.name_zh
-        name_zh = species_data.get('name_zh') or req.name_zh
-        origin = species_data.get('origin') or req.suggested_origin
-        sub_origin = species_data.get('sub_origin') or req.suggested_sub_origin
-        description = species_data.get('description') or req.description
-
-        if not origin:
-            return jsonify({'error': 'origin is required for approval'}), 400
-
-        new_species = FictionalSpecies(
-            name=name,
-            name_zh=name_zh,
-            origin=origin,
-            sub_origin=sub_origin or None,
-            category_path=f"{origin}|{sub_origin}" if sub_origin else origin,
-            description=description,
-        )
-        db.session.add(new_species)
-
     db.session.commit()
 
-    result = req.to_dict()
-    if new_status == 'approved':
-        result['created_species'] = new_species.to_dict()
-
-    return jsonify(result)
+    return jsonify(req.to_dict())
 
 
 @fictional_bp.route('/requests', methods=['POST'])
