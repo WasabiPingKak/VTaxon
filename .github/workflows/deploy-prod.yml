@@ -41,7 +41,7 @@ jobs:
             --allow-unauthenticated \
             --min-instances 0 \
             --max-instances 10 \
-            --set-env-vars "FLASK_ENV=production,ALLOWED_ORIGINS=https://vtaxon.web.app" \
+            --set-env-vars "FLASK_ENV=production,ALLOWED_ORIGINS=https://vtaxon.com,https://vtaxon.web.app" \
             --set-secrets "\
           DATABASE_URL=DATABASE_URL_PROD:latest,\
           SECRET_KEY=SECRET_KEY_PROD:latest,\
