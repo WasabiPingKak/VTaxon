@@ -359,6 +359,22 @@ def _resolve_chinese_name(taxon_id, scientific_name):
     return None
 
 
+def resolve_missing_chinese_name(species_cache_obj):
+    """Back-fill common_name_zh on a SpeciesCache row and persist to DB."""
+    zh = _resolve_chinese_name(
+        species_cache_obj.taxon_id,
+        species_cache_obj.scientific_name,
+    )
+    if zh:
+        species_cache_obj.common_name_zh = zh
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            log.debug('Failed to persist Chinese name for taxon_id=%s',
+                      species_cache_obj.taxon_id)
+
+
 @lru_cache(maxsize=500)
 def _resolve_rank_zh(taxon_name, rank=None):
     """Resolve Chinese name for any taxon via static table → GBIF match → Wikidata.

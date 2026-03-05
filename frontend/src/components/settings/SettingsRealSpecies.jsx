@@ -154,13 +154,6 @@ export default function SettingsRealSpecies() {
       {/* Title row: heading + breeds link + add button */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
         <h3 style={{ margin: 0, fontSize: '1em', color: '#e2e8f0' }}>真實物種特徵</h3>
-        <Link to="/breeds" style={{
-          padding: '3px 10px', border: '1px solid rgba(251,146,60,0.3)', borderRadius: '4px',
-          background: 'rgba(251,146,60,0.1)', fontSize: '0.8em', fontWeight: 600,
-          color: '#fb923c', textDecoration: 'none',
-        }}>
-          已收錄品種 &rarr;
-        </Link>
         {!showSearch && (
           <button onClick={() => setShowSearch(true)} style={{
             marginLeft: 'auto',

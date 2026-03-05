@@ -12,6 +12,8 @@ breeds_bp = Blueprint('breeds', __name__)
 @breeds_bp.route('/categories', methods=['GET'])
 def list_breed_categories():
     """Return species that have breeds, with breed count and species info."""
+    from ..services.gbif import resolve_missing_chinese_name
+
     rows = (
         db.session.query(Breed.taxon_id, func.count(Breed.id).label('breed_count'))
         .group_by(Breed.taxon_id)
@@ -25,6 +27,9 @@ def list_breed_categories():
             'breed_count': breed_count,
         }
         if sp:
+            # Back-fill missing Chinese names
+            if not sp.common_name_zh:
+                resolve_missing_chinese_name(sp)
             entry.update(sp.to_dict())
         categories.append(entry)
 
