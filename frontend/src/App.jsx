@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './lib/AuthContext';
@@ -16,12 +16,22 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
 import AboutPage from './pages/AboutPage';
 import VTuberProfilePage from './pages/VTuberProfilePage';
+import NotFoundPage from './pages/NotFoundPage';
 import WelcomeToast from './components/WelcomeToast';
 
 function AppContent() {
   const location = useLocation();
   const isHome = location.pathname === '/';
   const treeRefetchRef = useRef(null);
+
+  // GA4: send page_view on route change
+  useEffect(() => {
+    if (window.gtag) {
+      window.gtag('event', 'page_view', {
+        page_path: location.pathname + location.search,
+      });
+    }
+  }, [location]);
 
   const handleNewUsers = useCallback(async () => {
     await treeRefetchRef.current?.();
@@ -50,6 +60,7 @@ function AppContent() {
             <Route path="/terms" element={<TermsOfServicePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/vtuber/:userId" element={<VTuberProfilePage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
 
           <footer style={{

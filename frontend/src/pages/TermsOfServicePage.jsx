@@ -31,7 +31,7 @@ const headingEn = { ...heading, color: 'rgba(255,255,255,0.5)' };
 const paraEn = { ...para, color: 'rgba(255,255,255,0.45)' };
 const listStyleEn = { ...listStyle, color: 'rgba(255,255,255,0.42)' };
 
-const LAST_UPDATED = '2026-03-04';
+const LAST_UPDATED = '2026-03-05';
 
 export default function TermsOfServicePage() {
   return (

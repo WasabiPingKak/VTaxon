@@ -31,7 +31,7 @@ const headingEn = { ...heading, color: 'rgba(255,255,255,0.5)' };
 const paraEn = { ...para, color: 'rgba(255,255,255,0.45)' };
 const listStyleEn = { ...listStyle, color: 'rgba(255,255,255,0.42)' };
 
-const LAST_UPDATED = '2026-03-04';
+const LAST_UPDATED = '2026-03-05';
 
 export default function PrivacyPolicyPage() {
   return (
@@ -103,8 +103,8 @@ export default function PrivacyPolicyPage() {
         <li><strong>sessionStorage</strong>：快取物種搜尋結果，提升使用體驗。</li>
       </ul>
       <p style={para}>
-        我們可能使用第三方分析工具（如 Google Analytics）來了解網站使用狀況，以改善服務品質。
-        這些工具可能會使用 Cookie 收集匿名的瀏覽資料（如頁面瀏覽次數、停留時間），但不會用於識別你的個人身份。
+        我們使用 Google Analytics 來了解網站使用狀況，以改善服務品質。
+        Google Analytics 會使用 Cookie 收集匿名的瀏覽資料（如頁面瀏覽次數、停留時間），但不會用於識別你的個人身份。
         我們不會使用任何追蹤 Cookie 向你投放廣告。
       </p>
 
@@ -131,6 +131,8 @@ export default function PrivacyPolicyPage() {
         <li><strong>Twitch OAuth</strong>：Twitch 帳號登入認證</li>
         <li><strong>GBIF（全球生物多樣性資訊機構）</strong>：生物分類學資料查詢</li>
         <li><strong>Google Cloud Run</strong>：後端服務部署</li>
+        <li><strong>Firebase Hosting</strong>：前端網站託管</li>
+        <li><strong>Google Analytics</strong>：匿名網站使用統計分析</li>
       </ul>
       <p style={para}>
         這些服務有各自的隱私權政策，建議你參閱相關文件以了解它們如何處理資料。
@@ -227,9 +229,9 @@ export default function PrivacyPolicyPage() {
         <li><strong>sessionStorage</strong>: Caches species search results to improve user experience.</li>
       </ul>
       <p style={paraEn}>
-        We may use third-party analytics tools (such as Google Analytics) to understand website usage
-        and improve service quality. These tools may use cookies to collect anonymous browsing data
-        (such as page views and session duration), but they are not used to identify you personally.
+        We use Google Analytics to understand website usage and improve service quality.
+        Google Analytics uses cookies to collect anonymous browsing data (such as page views and
+        session duration), but this data is not used to identify you personally.
         We do not use any tracking cookies to serve advertisements.
       </p>
 
@@ -254,6 +256,8 @@ export default function PrivacyPolicyPage() {
         <li><strong>Twitch OAuth</strong>: Twitch account login authentication</li>
         <li><strong>GBIF (Global Biodiversity Information Facility)</strong>: Biological taxonomy data queries</li>
         <li><strong>Google Cloud Run</strong>: Backend service deployment</li>
+        <li><strong>Firebase Hosting</strong>: Frontend website hosting</li>
+        <li><strong>Google Analytics</strong>: Anonymous website usage analytics</li>
       </ul>
       <p style={paraEn}>
         These services have their own privacy policies. We encourage you to review their documentation

@@ -50,7 +50,7 @@ export default function CharacterPage() {
         {/* Avatar */}
         <div style={{ marginBottom: '8px' }}>
           {user.avatar_url ? (
-            <img src={user.avatar_url} alt="" style={{ width: 80, height: 80, borderRadius: '50%' }} />
+            <img src={user.avatar_url} alt={user.display_name} loading="lazy" style={{ width: 80, height: 80, borderRadius: '50%' }} />
           ) : (
             <div style={{
               width: 80, height: 80, borderRadius: '50%', margin: '0 auto',

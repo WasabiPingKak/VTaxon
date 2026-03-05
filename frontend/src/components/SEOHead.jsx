@@ -41,10 +41,17 @@ export default function SEOHead({
       <meta name="twitter:image" content={image} />
 
       {/* JSON-LD */}
-      {jsonLd && (
-        <script type="application/ld+json">
-          {JSON.stringify(jsonLd)}
-        </script>
+      {jsonLd && (Array.isArray(jsonLd)
+        ? jsonLd.map((item, i) => (
+            <script key={i} type="application/ld+json">
+              {JSON.stringify(item)}
+            </script>
+          ))
+        : (
+            <script type="application/ld+json">
+              {JSON.stringify(jsonLd)}
+            </script>
+          )
       )}
 
       {children}

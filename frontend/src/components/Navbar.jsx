@@ -89,7 +89,7 @@ export default function Navbar() {
         textShadow: '0 0 12px rgba(56,189,248,0.5)',
         display: 'flex', alignItems: 'center', gap: 6,
       }}>
-        <img src="/favicon.svg" alt="" width={22} height={22} />
+        <img src="/favicon.svg" alt="VTaxon" width={22} height={22} />
         VTaxon
       </Link>
 
@@ -145,7 +145,7 @@ export default function Navbar() {
                 }}
               >
                 {user.avatar_url ? (
-                  <img src={user.avatar_url} alt="" style={{
+                  <img src={user.avatar_url} alt={user.display_name} loading="lazy" style={{
                     width: 28, height: 28, borderRadius: '50%', objectFit: 'cover',
                   }} />
                 ) : (

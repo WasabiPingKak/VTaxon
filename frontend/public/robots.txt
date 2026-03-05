@@ -1,8 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /profile
-Disallow: /account
-Disallow: /admin
-Disallow: /login
 
 Sitemap: https://vtaxon.com/api/sitemap.xml

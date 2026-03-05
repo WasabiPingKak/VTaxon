@@ -107,6 +107,7 @@ export default function VTuberProfilePage() {
   if (loading) {
     return (
       <div style={{ maxWidth: 700, margin: '60px auto', padding: '0 20px', textAlign: 'center' }}>
+        <SEOHead title="載入中" noindex />
         <div style={{
           width: 32, height: 32, margin: '0 auto 16px',
           border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#38bdf8',

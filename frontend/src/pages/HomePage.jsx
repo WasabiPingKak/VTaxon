@@ -28,15 +28,28 @@ export default function HomePage({ treeRefetchRef }) {
     }}>
       <SEOHead
         url="/"
-        jsonLd={{
-          '@context': 'https://schema.org',
-          '@type': 'WebApplication',
-          name: 'VTaxon',
-          url: 'https://vtaxon.com',
-          description: 'VTaxon — 將 VTuber 角色形象對應到生物分類學體系，以分類樹呈現角色之間的關聯。',
-          applicationCategory: 'Entertainment',
-          operatingSystem: 'Web',
-        }}
+        jsonLd={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'WebApplication',
+            name: 'VTaxon',
+            url: 'https://vtaxon.com',
+            description: 'VTaxon — 將 VTuber 角色形象對應到生物分類學體系，以分類樹呈現角色之間的關聯。',
+            applicationCategory: 'Entertainment',
+            operatingSystem: 'Web',
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'VTaxon',
+            url: 'https://vtaxon.com',
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: 'https://vtaxon.com/search?q={search_term_string}',
+              'query-input': 'required name=search_term_string',
+            },
+          },
+        ]}
       />
       <TaxonomyGraph ref={treeRef} currentUser={user} />
 

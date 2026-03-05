@@ -17,7 +17,10 @@ STATIC_PAGES = [
     {'loc': '/breeds',    'priority': '0.6', 'changefreq': 'weekly'},
     {'loc': '/about',     'priority': '0.4', 'changefreq': 'monthly'},
     {'loc': '/privacy',   'priority': '0.2', 'changefreq': 'monthly'},
+    {'loc': '/terms',     'priority': '0.2', 'changefreq': 'monthly'},
 ]
+
+STATIC_LASTMOD = '2026-03-05'
 
 
 @seo_bp.route('/sitemap.xml')
@@ -29,6 +32,7 @@ def sitemap():
     for page in STATIC_PAGES:
         url_el = SubElement(urlset, 'url')
         SubElement(url_el, 'loc').text = f'{SITE_URL}{page["loc"]}'
+        SubElement(url_el, 'lastmod').text = STATIC_LASTMOD
         SubElement(url_el, 'changefreq').text = page['changefreq']
         SubElement(url_el, 'priority').text = page['priority']
 

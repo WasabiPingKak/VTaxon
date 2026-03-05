@@ -408,7 +408,8 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
           {/* Avatar */}
           <div style={{ textAlign: 'center', marginBottom: '6px' }}>
             {entry.avatar_url && !imgError ? (
-              <img src={entry.avatar_url} alt=""
+              <img src={entry.avatar_url} alt={entry.display_name}
+                loading="lazy"
                 style={{ width: 80, height: 80, borderRadius: '50%' }}
                 onError={() => setImgError(true)}
               />
