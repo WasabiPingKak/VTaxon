@@ -166,7 +166,7 @@ export default function LoginPage() {
         </label>
 
         <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.3)', fontSize: '0.72em', lineHeight: 1.5, textAlign: 'center' }}>
-          登入時會跳轉至認證平台 <span style={{ color: 'rgba(255,255,255,0.45)' }}>Supabase</span>，因免費方案限制，網址會顯示一串隨機字元的 supabase.co 網域，此為正常現象，並非可疑連結。
+          登入時會跳轉至認證平台 <span style={{ color: 'rgba(255,255,255,0.45)' }}>Supabase</span>，網址可能顯示 supabase.co 網域，此為正常現象。
         </p>
 
         {/* Section 5: OAuth buttons */}
