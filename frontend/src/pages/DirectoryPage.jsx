@@ -12,7 +12,7 @@ import useIsMobile from '../hooks/useIsMobile';
 
 const DEFAULT_FILTERS = {
   q: '', country: '', gender: '', status: '',
-  org_type: '', platform: '', has_traits: '',
+  org_type: '', platform: '', has_traits: 'true',
   sort: 'created_at', order: 'desc', page: 1, per_page: 24,
 };
 

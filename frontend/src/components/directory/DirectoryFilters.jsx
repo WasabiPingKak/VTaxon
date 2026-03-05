@@ -96,10 +96,6 @@ export default function DirectoryFilters({
   ];
 
   const traitFacets = f.has_traits || {};
-  const traitOptions = [
-    { value: 'true', label: '已標註物種', count: traitFacets['true'] ?? 0 },
-    { value: 'false', label: '尚未標註', count: traitFacets['false'] ?? 0 },
-  ];
 
   // --- Collect active filter chips ---
   const chips = [];
@@ -130,13 +126,9 @@ export default function DirectoryFilters({
     const opt = platformOptions.find(x => x.value === p);
     chips.push({ key: 'platform', value: p, label: opt?.label || p });
   }
-  if (filters.has_traits) {
-    const opt = traitOptions.find(x => x.value === filters.has_traits);
-    chips.push({ key: 'has_traits', value: filters.has_traits, label: opt?.label || filters.has_traits });
-  }
 
   const removeChip = (chip) => {
-    if (chip.key === 'org_type' || chip.key === 'has_traits') {
+    if (chip.key === 'org_type') {
       updateFilter(chip.key, '');
     } else {
       const set = toSet(filters[chip.key]);
@@ -145,10 +137,12 @@ export default function DirectoryFilters({
     }
   };
 
+  const showUntagged = filters.has_traits !== 'true';
+
   const clearAll = () => {
     onChange({
       q: '', country: '', gender: '', status: '',
-      org_type: '', platform: '', has_traits: '',
+      org_type: '', platform: '', has_traits: 'true',
       sort: 'created_at', order: 'desc', page: 1,
     });
     setSearchInput('');
@@ -222,14 +216,27 @@ export default function DirectoryFilters({
           onChange={(s) => updateSetFilter('platform', s)}
           isMobile={isMobile}
         />
-        <FilterDropdown
-          label="標註"
-          options={traitOptions}
-          selected={toSet(filters.has_traits)}
-          onChange={(s) => updateSetFilter('has_traits', s)}
-          multi={false}
-          isMobile={isMobile}
-        />
+        <label
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            fontSize: '0.82em', color: 'rgba(255,255,255,0.5)',
+            cursor: 'pointer', userSelect: 'none',
+            marginLeft: 4,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={showUntagged}
+            onChange={(e) => updateFilter('has_traits', e.target.checked ? '' : 'true')}
+            style={{ accentColor: '#38bdf8', cursor: 'pointer' }}
+          />
+          顯示未標註
+          {traitFacets['false'] != null && (
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9em' }}>
+              ({traitFacets['false']})
+            </span>
+          )}
+        </label>
 
         {/* Desktop: spacer + sort + view toggle inline */}
         {!isMobile && <>
