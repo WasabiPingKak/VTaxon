@@ -30,12 +30,14 @@ export function buildTree(entries) {
 
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
+      if (!part) continue; // skip empty rank segments (missing intermediate ranks)
+
       const pathKey = parts.slice(0, i + 1).join('|');
 
       if (!current.children.has(part)) {
         const rankKey = RANK_KEYS[i];
         let nameZh = rankKey ? (entry.path_zh?.[rankKey] || '') : '';
-        if (!nameZh && i >= RANK_KEYS.length) {
+        if (!nameZh && (i >= RANK_KEYS.length || i === parts.length - 1)) {
           nameZh = entry.common_name_zh || '';
         }
 
@@ -53,7 +55,7 @@ export function buildTree(entries) {
       const child = current.children.get(part);
       child.count++;
 
-      if (!child.nameZh && i >= RANK_KEYS.length && entry.common_name_zh) {
+      if (!child.nameZh && (i >= RANK_KEYS.length || i === parts.length - 1) && entry.common_name_zh) {
         child.nameZh = entry.common_name_zh;
       }
 
@@ -191,8 +193,8 @@ export function computeCloseVtubers(focusedEntries, allEntries, traceBack = 2) {
       let common = 0;
       const minLen = Math.min(epSegs.length, fpSegs.length);
       for (let i = 0; i < minLen; i++) {
-        if (epSegs[i] === fpSegs[i]) common++;
-        else break;
+        if (epSegs[i] !== fpSegs[i]) break;
+        if (epSegs[i]) common++; // don't count empty-to-empty (missing rank) matches
       }
 
       if (common >= minCommon) {
@@ -265,8 +267,8 @@ export function computeCloseVtubersByRank(focusedEntries, allEntries, traceBack 
       let common = 0;
       const minLen = Math.min(epSegs.length, fpSegs.length);
       for (let i = 0; i < minLen; i++) {
-        if (epSegs[i] === fpSegs[i]) common++;
-        else break;
+        if (epSegs[i] !== fpSegs[i]) break;
+        if (epSegs[i]) common++; // don't count empty-to-empty (missing rank) matches
       }
 
       if (common >= minCommon) {

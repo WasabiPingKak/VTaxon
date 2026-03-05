@@ -8,7 +8,7 @@ from ..cache import (get_tree_cache, set_tree_cache, invalidate_tree_cache,
                      invalidate_fictional_tree_cache)
 from ..extensions import db
 from ..models import User, VtuberTrait, SpeciesCache, FictionalSpecies, OAuthAccount
-from ..services.gbif import _build_path_zh
+from ..services.gbif import _build_path_zh, _realign_taxon_path
 
 log = logging.getLogger(__name__)
 
@@ -79,6 +79,11 @@ def get_taxonomy_tree():
             if path_zh:
                 needs_commit = True
 
+        # Realign taxon_path to include empty segments for missing ranks
+        taxon_path, path_changed = _realign_taxon_path(species)
+        if path_changed:
+            needs_commit = True
+
         # Breed info: prefer breed object, fallback to legacy free-text
         breed_id = trait.breed_id
         breed_name_zh = None
@@ -103,7 +108,7 @@ def get_taxonomy_tree():
             'platforms': user_platforms.get(user.id, []),
             'taxon_id': species.taxon_id,
             'taxon_rank': species.taxon_rank,
-            'taxon_path': species.taxon_path,
+            'taxon_path': taxon_path,
             'scientific_name': species.scientific_name,
             'common_name_zh': species.common_name_zh,
             'breed_name': breed_name,

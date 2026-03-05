@@ -272,6 +272,13 @@ def get_species(taxon_id):
     """Get a single species by GBIF taxon_id. Check cache first."""
     cached = db.session.get(SpeciesCache, taxon_id)
     if cached:
+        # Realign taxon_path if it was stored in old compact format
+        _, path_changed = _realign_taxon_path(cached)
+        if path_changed:
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
         d = cached.to_dict()
         # Fill in any missing *_zh from static table (backward compat for old rows)
         _fill_missing_rank_zh(d, cached)
@@ -625,6 +632,37 @@ def _build_path_zh(data):
     return result
 
 
+def _realign_taxon_path(species):
+    """Rebuild taxon_path from individual rank fields to fix old compact paths.
+
+    Old format skipped null ranks: Animalia|Chordata|Arandaspididae|Sacabambaspis
+    New format preserves positions: Animalia|Chordata|||Arandaspididae|Sacabambaspis
+
+    Returns the corrected path and whether it changed.
+    """
+    rank_fields = [
+        species.kingdom, species.phylum, species.class_,
+        species.order_, species.family, species.genus,
+    ]
+    # Include species-level name if the taxon is SPECIES/SUBSPECIES/VARIETY
+    taxon_rank = (species.taxon_rank or '').upper()
+    if taxon_rank in ('SPECIES', 'SUBSPECIES', 'VARIETY'):
+        rank_fields.append(species.scientific_name)
+
+    last_non_empty = -1
+    for i, v in enumerate(rank_fields):
+        if v:
+            last_non_empty = i
+    if last_non_empty < 0:
+        return species.taxon_path, False
+
+    aligned = '|'.join((v or '') for v in rank_fields[:last_non_empty + 1])
+    changed = aligned != species.taxon_path
+    if changed:
+        species.taxon_path = aligned
+    return aligned, changed
+
+
 def _cache_species(data, common_name_zh=None):
     """Create or update a SpeciesCache entry from GBIF data."""
     usage_key = data.get('key') or data.get('usageKey')
@@ -665,8 +703,12 @@ def _cache_species(data, common_name_zh=None):
 
 
 def _build_taxon_path(data):
-    """Build materialized path from GBIF hierarchy: Kingdom|Phylum|Class|..."""
-    parts = []
+    """Build materialized path from GBIF hierarchy: Kingdom|Phylum|Class|...|Species.
+
+    Always includes all rank positions (empty string for missing ranks) up to
+    the deepest known rank so that position index == rank index.
+    e.g. Animalia|Chordata|||Arandaspididae|Sacabambaspis
+    """
     field_map = {
         'kingdom': 'kingdom',
         'phylum': 'phylum',
@@ -676,12 +718,16 @@ def _build_taxon_path(data):
         'genus': 'genus',
         'species': 'species',
     }
-    for rank in RANK_ORDER:
-        gbif_field = field_map[rank]
-        value = data.get(gbif_field)
+    parts = []
+    last_non_empty = -1
+    for i, rank in enumerate(RANK_ORDER):
+        value = data.get(field_map[rank])
+        parts.append(value or '')
         if value:
-            parts.append(value)
-    return '|'.join(parts) if parts else None
+            last_non_empty = i
+    if last_non_empty < 0:
+        return None
+    return '|'.join(parts[:last_non_empty + 1])
 
 
 def _gbif_result_to_dict(r, usage_key):
