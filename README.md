@@ -99,7 +99,7 @@ npm run dev
 
 | 路由 | 頁面 | 說明 |
 |------|------|------|
-| `/` | HomePage | 首頁 + CTA |
+| `/` | HomePage | 首頁（分類樹視覺化） |
 | `/login` | LoginPage | Google / Twitch OAuth 登入 |
 | `/profile` | CharacterPage | 角色檔案（trait 管理、個人資料編輯） |
 | `/account` | AccountPage | 帳號設定（OAuth 帳號管理） |
@@ -111,6 +111,7 @@ npm run dev
 | `/privacy` | PrivacyPolicyPage | 隱私權政策 |
 | `/terms` | TermsOfServicePage | 服務條款 |
 | `/about` | AboutPage | 關於本服務 |
+| `*` | NotFoundPage | 404 頁面 |
 
 ## API 端點
 
@@ -127,6 +128,7 @@ npm run dev
 | Method | Path | 認證 | 說明 |
 |--------|------|------|------|
 | POST | `/api/auth/callback` | JWT | OAuth 完成後建立/更新使用者 |
+| GET | `/api/users/recent` | — | 取得最近新增的使用者 |
 | GET | `/api/users/me` | JWT | 取得當前登入者資料 |
 | PATCH | `/api/users/me` | JWT | 更新個人資料 |
 | GET | `/api/users/<id>` | — | 公開查看角色資料 |
@@ -219,8 +221,9 @@ VTaxon/
 ├── frontend/
 │   ├── src/
 │   │   ├── lib/                # Supabase client、API wrapper、AuthContext
-│   │   ├── components/         # 共用元件
-│   │   └── pages/              # 11 個頁面
+│   │   ├── components/         # 共用元件（含 graph/ 分類樹視覺化）
+│   │   ├── hooks/              # 自訂 Hooks（useTreeLayout, useGraphInteraction 等）
+│   │   └── pages/              # 13 個頁面
 │   └── vite.config.js          # dev proxy → localhost:5000
 ├── scripts/
 │   ├── init_db.py              # DB 初始化腳本（staging / prod）
@@ -228,6 +231,9 @@ VTaxon/
 ├── supabase/
 │   ├── init.sql                # 完整 DB schema（public）
 │   └── init_staging.sql        # Staging schema
+├── docs/
+│   ├── chinese-names-strategy.md  # 中文名稱解析策略
+│   └── er-diagram.mermaid         # ER 圖
 ├── firebase.json               # Firebase Hosting 設定
 ├── CLAUDE.md                   # 專案規格書
 └── PROGRESS.md                 # 開發進度
@@ -236,4 +242,5 @@ VTaxon/
 ## 文件
 
 - [中文名稱策略](docs/chinese-names-strategy.md)
+- [ER Diagram](docs/er-diagram.mermaid)
 - [開發進度](PROGRESS.md)

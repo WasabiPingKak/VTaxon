@@ -78,7 +78,10 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Mothman',       '天蛾人',       '現代虛構', '都市傳說', '現代虛構|都市傳說|Mothman',       '災難預兆的飛行怪物，目擊於西維吉尼亞'),
 ('Chupacabra',    '卓柏卡布拉',   '現代虛構', '都市傳說', '現代虛構|都市傳說|Chupacabra',    '吸食牲畜血液的神秘生物'),
 ('Shadow People', '影人',         '現代虛構', '都市傳說', '現代虛構|都市傳說|Shadow People', '出沒於暗處的人形黑影存在'),
-('Cryptid',       '未確認生物',   '現代虛構', '都市傳說', '現代虛構|都市傳說|Cryptid',       '未被科學證實的神秘生物泛稱')
+('Cryptid',       '未確認生物',   '現代虛構', '都市傳說', '現代虛構|都市傳說|Cryptid',       '未被科學證實的神秘生物泛稱'),
+('Jackalope',     '鹿角兔',       '現代虛構', '都市傳說', '現代虛構|都市傳說|Jackalope',     '北美民間傳說中長有鹿角的野兔，源自懷俄明州'),
+('Skyfish',       '飛棍',         '現代虛構', '都市傳說', '現代虛構|都市傳說|Skyfish',       '高速飛行的棒狀未確認生物，又稱飛棍或天竿魚'),
+('Loch Ness Monster', '尼斯湖水怪', '現代虛構', '都市傳說', '現代虛構|都市傳說|Loch Ness Monster', '蘇格蘭尼斯湖中的傳說水怪，暱稱尼西')
 ON CONFLICT(name) DO NOTHING;
 
 -- === 科幻 (Science Fiction) ===

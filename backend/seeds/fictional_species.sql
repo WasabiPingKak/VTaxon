@@ -24,7 +24,8 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Jorogumo', '絡新婦', '東方神話', '日本神話', '東方神話|日本神話|Jorogumo', '化為美女誘人的蜘蛛妖'),
 ('Kamaitachi', '鎌鼬', '東方神話', '日本神話', '東方神話|日本神話|Kamaitachi', '以旋風之速斬切的鼬妖'),
 ('Tennyo', '天女', '東方神話', '日本神話', '東方神話|日本神話|Tennyo', '身著羽衣自天界降臨的仙女'),
-('Inugami', '犬神', '東方神話', '日本神話', '東方神話|日本神話|Inugami', '由怨念或祭祀產生的犬靈')
+('Inugami', '犬神', '東方神話', '日本神話', '東方神話|日本神話|Inugami', '由怨念或祭祀產生的犬靈'),
+('Yatagarasu', '八咫烏', '東方神話', '日本神話', '東方神話|日本神話|Yatagarasu', '日本神話中三足的神聖烏鴉，太陽的使者')
 ON CONFLICT(name) DO NOTHING;
 
 -- 中國神話
@@ -87,7 +88,9 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Gargoyle', '石像鬼', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Gargoyle', '哥德建築石雕化為活物的怪物'),
 ('Kobold', '地精', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Kobold', '地底穴居的小型爬蟲人形生物'),
 ('Troll', '巨魔', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Troll', '棲息於橋下或山洞的醜陋巨怪'),
-('Manticore', '蠍尾獅', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Manticore', '人面獅身蠍尾的複合猛獸')
+('Manticore', '蠍尾獅', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Manticore', '人面獅身蠍尾的複合猛獸'),
+('Wolpertinger', '鹿角翼兔', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Wolpertinger', '巴伐利亞民間傳說中兔身鹿角鷹翅獠牙的複合幻獸'),
+('Baphomet', '巴風特', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|Baphomet', '山羊頭人身的神秘象徵，源自中世紀傳說與西方神秘學')
 ON CONFLICT(name) DO NOTHING;
 
 -- === 奇幻文學 ===

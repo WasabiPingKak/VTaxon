@@ -43,19 +43,19 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 
 ### users
 角色主體。一筆 user = 一個 Vtuber 角色。
-- `id` (uuid, PK), `display_name`, `avatar_url`, `role` (admin|user), `organization` (text, nullable), `country_flags` (jsonb, default []), `created_at`, `updated_at`
+- `id` (uuid, PK), `display_name`, `avatar_url`, `role` (admin|user), `organization` (text, nullable), `bio` (text, nullable), `country_flags` (jsonb, default []), `social_links` (jsonb, default {}), `primary_platform` (youtube|twitch, nullable), `profile_data` (jsonb, default {}), `created_at`, `updated_at`
 
 ### oauth_accounts
 平台帳號連結，一個 user 可綁定多個平台。
-- `id` (uuid, PK), `user_id` (FK → users), `provider` (youtube|twitch), `provider_account_id` (UNIQUE with provider), `access_token`, `refresh_token`, `token_expires_at`, `created_at`
+- `id` (uuid, PK), `user_id` (FK → users), `provider` (youtube|twitch), `provider_account_id` (UNIQUE with provider), `provider_display_name`, `provider_avatar_url`, `channel_url`, `show_on_profile` (boolean, default true), `access_token`, `refresh_token`, `token_expires_at`, `created_at`
 
 ### species_cache
 從 GBIF 拉回的分類資料快取。
-- `taxon_id` (int, PK, = GBIF usageKey), `scientific_name`, `common_name_en`, `common_name_zh`, `taxon_rank`, `taxon_path` (Materialized Path, 用 `|` 分隔), `kingdom`, `phylum`, `class`, `order_`, `family`, `genus`, `cached_at`
+- `taxon_id` (int, PK, = GBIF usageKey), `scientific_name`, `common_name_en`, `common_name_zh`, `taxon_rank`, `taxon_path` (Materialized Path, 用 `|` 分隔), `kingdom`, `phylum`, `class`, `order_`, `family`, `genus`, `path_zh` (jsonb, default {}), `cached_at`
 
 ### fictional_species
 奇幻生物獨立分類表，以文化來源為主軸的分類體系。
-- `id` (serial, PK), `name`, `origin` (Level 1：東方神話、西方神話...), `sub_origin` (Level 2：日本神話、北歐神話..., nullable), `category_path` (Materialized Path, 用 `|` 分隔), `description`, `created_at`
+- `id` (serial, PK), `name`, `name_zh` (繁體中文名稱, nullable), `origin` (Level 1：東方神話、西方神話...), `sub_origin` (Level 2：日本神話、北歐神話..., nullable), `category_path` (Materialized Path, 用 `|` 分隔), `description`, `created_at`
 
 ### auth_id_aliases
 跨 email OAuth 帳號綁定別名。Supabase 用不同 email OAuth 綁定第二個平台時會建立新的 auth.users，此表映射回原 VTaxon user。
@@ -83,7 +83,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 
 ### vtuber_traits
 角色與物種的多對多關聯。一筆 trait 可關聯現實物種或奇幻生物（至少一個）。
-- `id` (uuid, PK), `user_id` (FK → users), `taxon_id` (FK → species_cache, nullable), `fictional_species_id` (FK → fictional_species, nullable), `breed_id` (FK → breeds, nullable), `breed_name`, `trait_note`, `created_at`, `updated_at`
+- `id` (uuid, PK), `user_id` (FK → users), `taxon_id` (FK → species_cache, nullable), `fictional_species_id` (FK → fictional_species, nullable), `display_name` (text, deprecated), `breed_name`, `breed_id` (FK → breeds, nullable), `trait_note`, `created_at`, `updated_at`
 - CHECK constraint: `taxon_id IS NOT NULL OR fictional_species_id IS NOT NULL`
 - Partial unique index: (user_id, taxon_id) WHERE taxon_id IS NOT NULL
 - Partial unique index: (user_id, fictional_species_id) WHERE fictional_species_id IS NOT NULL

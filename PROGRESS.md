@@ -1,6 +1,6 @@
 # VTaxon MVP 開發進度
 
-> 最後更新：2026-03-04
+> 最後更新：2026-03-05
 
 ## 已完成的階段
 
@@ -73,7 +73,7 @@
 | Supabase Auth | `src/lib/supabase.js`, `src/lib/AuthContext.jsx` | Google / Twitch OAuth 登入，JWT session 管理 |
 | API Client | `src/lib/api.js` | 自動帶 JWT 的 fetch wrapper，含 NDJSON 串流支援 |
 | Navbar | `src/components/Navbar.jsx` | 導覽列（登入/登出狀態、頭像） |
-| 首頁 | `src/pages/HomePage.jsx` | 歡迎頁面 + CTA |
+| 首頁 | `src/pages/HomePage.jsx` | 分類樹視覺化首頁（D3 Force Simulation） |
 | 登入頁 | `src/pages/LoginPage.jsx` | Google / Twitch 登入按鈕 |
 | 角色檔案 | `src/pages/CharacterPage.jsx` | trait 管理、個人資料編輯（含 bio、社群連結、影片嵌入） |
 | 帳號設定 | `src/pages/AccountPage.jsx` | OAuth 帳號管理（綁定/解綁/重新整理） |
@@ -145,7 +145,7 @@ VTaxon/
 │   ├── src/
 │   │   ├── lib/                # supabase, api, AuthContext, ToastContext, countries
 │   │   ├── components/         # Navbar, SpeciesSearch, ChannelCard, CountryPicker 等
-│   │   ├── pages/              # 12 個頁面
+│   │   ├── pages/              # 13 個頁面
 │   │   ├── App.jsx
 │   │   └── main.jsx
 │   └── vite.config.js
@@ -156,7 +156,8 @@ VTaxon/
 │   ├── init.sql                # DB schema (public)
 │   └── init_staging.sql        # DB schema (staging)
 ├── docs/
-│   └── chinese-names-strategy.md
+│   ├── chinese-names-strategy.md
+│   └── er-diagram.mermaid
 ├── firebase.json
 ├── CLAUDE.md
 └── PROGRESS.md
