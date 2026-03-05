@@ -52,7 +52,8 @@ export default function ChannelCard({
 
   const avatar = account.provider_avatar_url && !imgError ? (
     <img
-      src={account.provider_avatar_url} alt=""
+      src={account.provider_avatar_url} alt={displayName}
+      loading="lazy"
       style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', flexShrink: 0 }}
       onError={() => setImgError(true)}
     />

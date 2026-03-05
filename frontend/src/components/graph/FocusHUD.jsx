@@ -41,7 +41,8 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
         {/* Avatar */}
         {current.avatar_url && !imgError ? (
           <img
-            src={current.avatar_url} alt=""
+            src={current.avatar_url} alt={current.display_name}
+            loading="lazy"
             style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
             onError={() => setImgError(true)}
           />
@@ -126,7 +127,8 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {current.avatar_url && !imgError ? (
             <img
-              src={current.avatar_url} alt=""
+              src={current.avatar_url} alt={current.display_name}
+              loading="lazy"
               style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
               onError={() => setImgError(true)}
             />

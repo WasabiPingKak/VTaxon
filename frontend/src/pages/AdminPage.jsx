@@ -289,7 +289,7 @@ function ReportCard({ req, onUpdate }) {
         marginBottom: 12, fontSize: '0.85em', color: 'rgba(255,255,255,0.5)',
       }}>
         {req.reporter?.avatar_url ? (
-          <img src={req.reporter.avatar_url} alt="" style={{
+          <img src={req.reporter.avatar_url} alt={req.reporter?.display_name || ''} loading="lazy" style={{
             width: 24, height: 24, borderRadius: '50%', objectFit: 'cover',
           }} />
         ) : (
@@ -345,7 +345,7 @@ function ReportCard({ req, onUpdate }) {
           padding: '8px 10px',
         }}>
           {req.reported_user?.avatar_url ? (
-            <img src={req.reported_user.avatar_url} alt="" style={{
+            <img src={req.reported_user.avatar_url} alt={req.reported_user?.display_name || ''} loading="lazy" style={{
               width: 28, height: 28, borderRadius: '50%', objectFit: 'cover',
             }} />
           ) : (
@@ -662,7 +662,7 @@ function RequestCardShell({ req, isPending, children }) {
         marginBottom: 12, fontSize: '0.85em', color: 'rgba(255,255,255,0.5)',
       }}>
         {req.user?.avatar_url ? (
-          <img src={req.user.avatar_url} alt="" style={{
+          <img src={req.user.avatar_url} alt={req.user?.display_name || ''} loading="lazy" style={{
             width: 24, height: 24, borderRadius: '50%', objectFit: 'cover',
           }} />
         ) : (

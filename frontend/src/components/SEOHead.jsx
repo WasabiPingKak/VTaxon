@@ -41,6 +41,7 @@ export default function SEOHead({
       <meta name="twitter:title" content={fullTitle} />
       {description && <meta name="twitter:description" content={description} />}
       <meta name="twitter:image" content={image} />
+      <meta property="og:image:alt" content={fullTitle} />
 
       {/* JSON-LD */}
       {jsonLd && (Array.isArray(jsonLd)

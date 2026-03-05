@@ -78,7 +78,8 @@ export default function DirectoryCard({ item, onClick }) {
         {item.avatar_url && !imgError ? (
           <img
             src={item.avatar_url}
-            alt=""
+            alt={item.display_name}
+            loading="lazy"
             style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
             onError={() => setImgError(true)}
           />

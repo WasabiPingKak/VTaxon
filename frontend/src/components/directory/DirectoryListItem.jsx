@@ -58,7 +58,8 @@ export default function DirectoryListItem({ item, onClick }) {
         {item.avatar_url && !imgError ? (
           <img
             src={item.avatar_url}
-            alt=""
+            alt={item.display_name}
+            loading="lazy"
             style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
             onError={() => setImgError(true)}
           />

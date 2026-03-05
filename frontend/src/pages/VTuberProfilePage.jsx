@@ -148,9 +148,13 @@ export default function VTuberProfilePage() {
     <div style={{ maxWidth: 700, margin: '0 auto', padding: '40px 20px 80px' }}>
       <SEOHead
         title={user.display_name}
-        description={speciesNames
-          ? `${user.display_name} 的 VTuber 角色檔案 — 物種：${speciesNames}`
-          : `${user.display_name} 的 VTuber 角色檔案`}
+        description={
+          user.bio
+            ? `${user.display_name} — ${user.bio.slice(0, 120).replace(/\n/g, ' ')}${user.bio.length > 120 ? '…' : ''}`
+            : speciesNames
+              ? `${user.display_name} 的 VTuber 角色檔案 — 物種：${speciesNames}`
+              : `${user.display_name} 的 VTuber 角色檔案`
+        }
         image={user.avatar_url || undefined}
         url={`/vtuber/${userId}`}
         type="profile"

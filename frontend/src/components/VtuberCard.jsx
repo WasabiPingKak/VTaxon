@@ -36,7 +36,8 @@ export default function VtuberCard({ entry, isCurrentUser, onClick, activeFilter
     >
       {entry.avatar_url && !imgError ? (
         <img
-          src={entry.avatar_url} alt=""
+          src={entry.avatar_url} alt={entry.display_name}
+          loading="lazy"
           style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0 }}
           onError={() => setImgError(true)}
         />

@@ -60,7 +60,8 @@ function ToastCard({ user, onClose, compact }) {
       {user.avatar_url ? (
         <img
           src={user.avatar_url}
-          alt=""
+          alt={user.display_name}
+          loading="lazy"
           style={{
             width: avatarSize,
             height: avatarSize,
