@@ -88,6 +88,40 @@ SPECIES = [
         'kingdom': 'Animalia', 'phylum': 'Chordata', 'class': 'Mammalia',
         'order': 'Rodentia', 'family': 'Caviidae', 'genus': 'Cavia',
     },
+    {
+        'label': '家牛',
+        'qid': 'Q12045585',    # cattle breed (primary)
+        'extra_qids': ['Q1208989', 'Q2915', 'Q21521438'],  # beef cattle, dairy cattle, French cattle breed
+        'taxon_id': 2441022,   # Bos taurus
+        'scientific_name': 'Bos taurus Linnaeus, 1758',
+        'common_name_zh': '家牛',
+        'taxon_rank': 'SPECIES',
+        'taxon_path': 'Animalia|Chordata|Mammalia|Artiodactyla|Bovidae|Bos|Bos taurus',
+        'kingdom': 'Animalia', 'phylum': 'Chordata', 'class': 'Mammalia',
+        'order': 'Artiodactyla', 'family': 'Bovidae', 'genus': 'Bos',
+    },
+    {
+        'label': '家羊',
+        'qid': 'Q15622363',    # sheep breed
+        'taxon_id': 2441110,   # Ovis aries
+        'scientific_name': 'Ovis aries Linnaeus, 1758',
+        'common_name_zh': '家羊',
+        'taxon_rank': 'SPECIES',
+        'taxon_path': 'Animalia|Chordata|Mammalia|Artiodactyla|Bovidae|Ovis|Ovis aries',
+        'kingdom': 'Animalia', 'phylum': 'Chordata', 'class': 'Mammalia',
+        'order': 'Artiodactyla', 'family': 'Bovidae', 'genus': 'Ovis',
+    },
+    {
+        'label': '家山羊',
+        'qid': 'Q15622387',    # goat breed
+        'taxon_id': 2441056,   # Capra hircus
+        'scientific_name': 'Capra hircus Linnaeus, 1758',
+        'common_name_zh': '家山羊',
+        'taxon_rank': 'SPECIES',
+        'taxon_path': 'Animalia|Chordata|Mammalia|Artiodactyla|Bovidae|Capra|Capra hircus',
+        'kingdom': 'Animalia', 'phylum': 'Chordata', 'class': 'Mammalia',
+        'order': 'Artiodactyla', 'family': 'Bovidae', 'genus': 'Capra',
+    },
 ]
 
 # Static Taiwan Traditional Chinese names for rabbit breeds.
@@ -291,6 +325,311 @@ GUINEA_PIG_ZH_TW = {
     'Rex': '雷克斯天竺鼠',
 }
 
+# Static Taiwan Traditional Chinese names for cattle breeds.
+# Priority: these override Wikidata/Wikipedia names which often use mainland terms.
+# Sources: 台灣畜產種原知識庫, 行政院農業部, zh.wikipedia zh-tw variant.
+# Key = English breed name (must match Wikidata label exactly).
+CATTLE_ZH_TW = {
+    # --- 乳用牛 ---
+    'Holstein': '荷斯坦牛',
+    'Holstein Friesian cattle': '荷斯坦牛',
+    'Jersey cattle': '娟珊牛',
+    'Guernsey cattle': '更賽牛',
+    'Ayrshire cattle': '愛爾夏牛',
+    'Brown Swiss': '瑞士褐牛',
+    'Milking Shorthorn': '泌乳短角牛',
+    'Danish Red cattle': '丹麥紅牛',
+    'German Black Pied Cattle': '德國黑花牛',
+    'Swedish Red-and-White': '瑞典紅白牛',
+    'Norwegian Red': '挪威紅牛',
+    'Finnish Ayrshire': '芬蘭愛爾夏牛',
+    'Latvian Brown': '拉脫維亞褐牛',
+    'Estonian red cattle': '愛沙尼亞紅牛',
+    'Chinese black pied': '中國荷斯坦牛',
+    'Kazakh Whiteheaded': '哈薩克白頭牛',
+    'Lithuanian Red': '立陶宛紅牛',
+    # --- 肉用牛 ---
+    'Aberdeen Angus': '安格斯牛',
+    'Hereford': '赫里福牛',
+    'Charolais cattle': '夏洛萊牛',
+    'Limousin': '利木贊牛',
+    'Simmental cattle': '西門塔爾牛',
+    'Shorthorn': '短角牛',
+    'Brahman cattle': '布拉曼牛',
+    'Santa Gertrudis cattle': '聖乙特魯迪斯牛',
+    'Beefmaster': '比弗馬斯特牛',
+    'Brangus': '布蘭格斯牛',
+    'Texas Longhorn': '德州長角牛',
+    'Highland cattle': '高地牛',
+    'Galloway cattle': '乾洛威牛',
+    'Belted Galloway': '腰帶乾洛威牛',
+    'Belgian Blue': '比利時藍牛',
+    'Blonde d\'Aquitaine': '阿基坦金牛',
+    'Chianina': '契安尼娜牛',
+    'Gelbvieh': '德國黃牛',
+    'Murray Grey': '墨瑞灰牛',
+    'North Devon cattle': '北德文牛',
+    'South Devon': '南德文牛',
+    'Dexter cattle': '德克斯特牛',
+    'Red Angus': '紅安格斯牛',
+    'Piedmontese cattle': '皮埃蒙特牛',
+    'Salers': '薩勒斯牛',
+    'Pinzgauer cattle': '平茨高牛',
+    'Maine-Anjou': '曼安如牛',
+    'Marchigiana': '馬奇賈那牛',
+    'Romagnola cattle': '羅馬格諾拉牛',
+    'Bazadaise': '巴扎代斯牛',
+    'Parthenaise': '帕特奈斯牛',
+    # --- 和牛系 ---
+    'Wagyu': '和牛',
+    'Japanese Black': '黑毛和種',
+    'Japanese Brown': '褐毛和種',
+    'Japanese Shorthorn': '日本短角種',
+    'Japanese Polled': '無角和種',
+    'Tajima cattle': '但馬牛',
+    # --- 瘤牛 (Zebu) 系 ---
+    'Gyr Cattle': '吉爾牛',
+    'Guzerat cattle': '古澤拉特牛',
+    'Nelore': '尼洛牛',
+    'Ongole Cattle': '翁格爾牛',
+    'Kankrej': '坎克雷吉牛',
+    'Sahiwal cattle': '薩希瓦爾牛',
+    'Red Sindhi': '紅信德牛',
+    'Tharparkar': '塔爾帕卡牛',
+    'Indo-Brazilian': '印度巴西牛',
+    # --- 兼用 / 特殊品種 ---
+    'Fleckvieh cattle': '弗萊克維赫牛',
+    'Braunvieh': '布朗維赫牛',
+    'Montbéliarde': '蒙貝利亞牛',
+    'Normande': '諾曼第牛',
+    'Meuse-Rhine-Issel': '默茲─萊茵─伊瑟爾牛',
+    'English Longhorn': '英國長角牛',
+    'Lowline cattle': '澳洲矮牛',
+    'Heck cattle': '赫克牛',
+    'Spanish Fighting Bull': '西班牙鬥牛',
+    'Nguni cattle': '恩古尼牛',
+    'Afrikaner cattle': '非洲牛',
+    'Mongolian cattle': '蒙古牛',
+    'Yakutian cattle': '雅庫特牛',
+    'Yanbian cattle': '延邊牛',
+    'Hanu': '韓牛',
+    'Yuanxing': '源興牛',
+    'beefalo': '美洲野牛雜交牛',
+    'Ankole-Watusi': '安科爾─瓦圖西牛',
+    'Zebu': '瘤牛',
+    'Angeln cattle': '安格林牛',
+    'Kalmyk': '卡爾梅克牛',
+    'Swedish Red Polled': '瑞典紅無角牛',
+    'Vechur cow': '維丘牛',
+    'Maraîchine cattle': '馬雷希恩牛',
+}
+
+# Static Taiwan Traditional Chinese names for sheep breeds.
+# Sources: 台灣畜產種原知識庫, 行政院農業部, zh.wikipedia zh-tw variant.
+# Key = English breed name (must match Wikidata label exactly).
+SHEEP_ZH_TW = {
+    # --- 細毛羊（毛用） ---
+    'Merino': '美麗諾羊',
+    'Australian Merino': '澳洲美麗諾羊',
+    'Rambouillet': '蘭布依羊',
+    'Delaine Merino': '德萊美麗諾羊',
+    'Booroola Merino': '布魯拉美麗諾羊',
+    'Saxon Merino': '薩克森美麗諾羊',
+    'Peppin Merino': '佩平美麗諾羊',
+    'Poll Merino': '無角美麗諾羊',
+    # --- 長毛羊 ---
+    'Lincoln': '林肯羊',
+    'Lincoln sheep': '林肯羊',
+    'Leicester Longwool': '萊斯特長毛羊',
+    'Border Leicester': '邊區萊斯特羊',
+    'Romney': '羅姆尼羊',
+    'Cotswold': '科茨沃爾德羊',
+    'Cotswold sheep': '科茨沃爾德羊',
+    'Wensleydale': '溫斯利代爾羊',
+    'Wensleydale sheep': '溫斯利代爾羊',
+    # --- 肉用羊 ---
+    'Suffolk': '薩福克羊',
+    'Suffolk sheep': '薩福克羊',
+    'Hampshire sheep': '漢普夏羊',
+    'Dorset Horn': '多塞特角羊',
+    'Poll Dorset': '無角多塞特羊',
+    'Dorper': '杜泊羊',
+    'Texel sheep': '特塞爾羊',
+    'Texel': '特塞爾羊',
+    'Île-de-France sheep': '法蘭西島羊',
+    'Charollais': '夏洛萊羊',
+    'Oxford Down sheep': '牛津丘羊',
+    'Shropshire sheep': '什羅普夏羊',
+    'Southdown sheep': '南丘羊',
+    'Cheviot sheep': '切維厄特羊',
+    'Scottish Blackface': '蘇格蘭黑面羊',
+    'Clun Forest': '克倫森林羊',
+    'Corriedale': '考力代羊',
+    'Columbia': '哥倫比亞羊',
+    'Columbia sheep': '哥倫比亞羊',
+    'Polypay': '波利佩羊',
+    'Katahdin': '卡塔丁羊',
+    'Katahdin sheep': '卡塔丁羊',
+    'Montadale': '蒙塔代爾羊',
+    'Targhee sheep': '塔吉羊',
+    # --- 乳用羊 ---
+    'East Friesian': '東弗里斯蘭羊',
+    'Lacaune': '拉科訥羊',
+    'Awassi': '阿瓦西羊',
+    'Assaf': '阿薩夫羊',
+    # --- 毛皮 / 特殊品種 ---
+    'Karakul': '卡拉庫爾羊',
+    'Karakul sheep': '卡拉庫爾羊',
+    'Gotland pelt sheep': '哥特蘭羊',
+    'Gotland sheep': '哥特蘭羊',
+    'Jacob': '雅各布羊',
+    'Jacob sheep': '雅各布羊',
+    'Herdwick': '赫德威克羊',
+    'Swaledale': '斯韋代爾羊',
+    'Valais Blacknose': '瓦萊黑鼻羊',
+    'Valais Blacknose sheep': '瓦萊黑鼻羊',
+    'Shetland sheep': '設得蘭羊',
+    'Icelandic': '冰島羊',
+    'Icelandic sheep': '冰島羊',
+    'Soay sheep': '索伊羊',
+    'Manx Loaghtan': '曼島洛夫坦羊',
+    'North Ronaldsay Sheep': '北羅納德賽羊',
+    'North Ronaldsay sheep': '北羅納德賽羊',
+    'Barbados Black Belly': '巴貝多黑腹羊',
+    'St. Croix sheep': '聖克羅伊羊',
+    'Navajo-Churro': '納瓦荷丘羅羊',
+    'Navajo-Churro sheep': '納瓦荷丘羅羊',
+    # --- 肥尾羊 / 亞洲品種 ---
+    'Small-tail Han': '小尾寒羊',
+    'Hanzhong': '漢中綿羊',
+    'Hu sheep': '湖羊',
+    'Mongolian sheep': '蒙古羊',
+    'Altay sheep': '阿爾泰羊',
+    'Karayaka': '卡拉亞卡羊',
+    'Akkaraman': '阿卡拉曼羊',
+    'Morkaraman': '莫卡拉曼羊',
+    # --- 澳紐品種 ---
+    'Coopworth': '庫普沃斯羊',
+    'Perendale': '佩倫代爾羊',
+    'Drysdale': '德萊斯代爾羊',
+    'Dohne Merino': '多恩美麗諾羊',
+    'Arapawa Sheep': '阿拉帕瓦羊',
+    # --- 歐洲品種 ---
+    'Berrichon du Cher': '貝利雄德謝爾羊',
+    'Bleu du Maine': '曼恩藍面羊',
+    'Bizet sheep': '比澤羊',
+    'Caussenarde des Garrigues': '科斯加里格羊',
+    'Charmoise': '夏穆瓦茲羊',
+    'Castillonnaise sheep': '卡斯蒂永內斯羊',
+    'Finnish Landrace': '芬蘭地方羊',
+    'Finnsheep': '芬蘭羊',
+    'Zwartbles': '茲瓦特布勒斯羊',
+    'Ryeland': '萊蘭德羊',
+    'Lonk': '朗克羊',
+    'Hampshire Down sheep': '漢普夏丘羊',
+    'Panama': '巴拿馬羊',
+    'Ancon': '安康羊',
+    'Lithuanian Black-headed': '立陶宛黑頭羊',
+    'Faroes': '法羅羊',
+    'Racka': '拉茨卡羊',
+    'Bergamasca sheep': '貝加莫羊',
+    'Llanwenog sheep': '蘭韋諾格羊',
+    'Balwen Welsh Mountain sheep': '巴爾溫威爾斯山地羊',
+    'Welsh Mountain sheep': '威爾斯山地羊',
+    'Black Welsh Mountain sheep': '黑面威爾斯山地羊',
+    'Beulah Speckled Face': '布拉花面羊',
+    'Kerry Hill sheep': '凱里丘羊',
+    'Lleyn sheep': '利恩羊',
+    'Brecknock Hill Cheviot': '布雷克諾克丘切維厄特羊',
+    'Hill Radnor': '拉德諾山地羊',
+    'Rough Fell': '洛夫費爾羊',
+    'Dalesbred': '代爾斯布雷德羊',
+    'Derbyshire Gritstone': '德比郡砂岩羊',
+    'Whitefaced Woodland sheep': '白面林地羊',
+    'Exmoor Horn': '埃克斯穆爾角羊',
+    'Wiltshire Horn': '威爾特夏角羊',
+    'Portland sheep': '波特蘭羊',
+    'Castlemilk Moorit': '卡索米爾克摩里特羊',
+    'Boreray sheep': '博雷島羊',
+}
+
+# Static Taiwan Traditional Chinese names for goat breeds.
+# Sources: 台灣畜產種原知識庫, 行政院農業部, zh.wikipedia zh-tw variant.
+# Key = English breed name (must match Wikidata label exactly).
+GOAT_ZH_TW = {
+    # --- 乳用山羊 ---
+    'Saanen goat': '莎能山羊',
+    'Saanen': '莎能山羊',
+    'Alpine': '阿爾卑斯山羊',
+    'Alpine goat': '阿爾卑斯山羊',
+    'French Alpine': '法國阿爾卑斯山羊',
+    'Toggenburg': '吐根堡山羊',
+    'Toggenburg goat': '吐根堡山羊',
+    'LaMancha': '拉曼恰山羊',
+    'Oberhasli': '奧伯哈斯里山羊',
+    'Oberhasli goat': '奧伯哈斯里山羊',
+    'Anglo-Nubian': '努比亞山羊',
+    'Nubian goat': '努比亞山羊',
+    'Nigerian Dwarf': '奈及利亞矮山羊',
+    'Golden Guernsey': '金色根西山羊',
+    'Murciana': '穆爾西亞山羊',
+    'Maltese goat': '馬爾他山羊',
+    # --- 肉用山羊 ---
+    'Boer': '波爾山羊',
+    'Boer goat': '波爾山羊',
+    'Kiko': '基科山羊',
+    'Kiko goat': '基科山羊',
+    'Savanna goat': '薩凡納山羊',
+    'Spanish goat': '西班牙山羊',
+    'Myotonic goat': '昏倒山羊',
+    'fainting goat': '昏倒山羊',
+    'Black Bengal goat': '黑孟加拉山羊',
+    'Rangeland goat': '牧場山羊',
+    # --- 毛用山羊 ---
+    'Angora goat': '安哥拉山羊',
+    'Cashmere goat': '喀什米爾山羊',
+    'Changthangi': '昌唐吉山羊',
+    'Nigora goat': '尼哥拉山羊',
+    'Pygora goat': '皮哥拉山羊',
+    # --- 觀賞 / 迷你山羊 ---
+    'Pygmy goat': '侏儒山羊',
+    'Pygmy': '侏儒山羊',
+    'Nigerian Dwarf goat': '奈及利亞矮山羊',
+    'Mini Nubian': '迷你努比亞山羊',
+    'Miniature Silky Fainting Goat': '迷你絲毛昏倒山羊',
+    # --- 亞洲 / 非洲品種 ---
+    'Damascus goat': '大馬士革山羊',
+    'Beetal': '比特爾山羊',
+    'Jamunapari': '賈姆納帕里山羊',
+    'Barbari goat': '巴巴里山羊',
+    'Kamori goat': '卡莫里山羊',
+    'Philippine goat': '菲律賓山羊',
+    'Tokara goat': '吐噶喇山羊',
+    'Shiba goat': '柴山羊',
+    'San Clemente Island goat': '聖克里門蒂島山羊',
+    'Arapawa goat': '阿拉帕瓦山羊',
+    'Chengde Polled': '承德無角山羊',
+    'Zhongwei goat': '中衛山羊',
+    # --- 歐洲品種 ---
+    'Girgentana': '吉爾根塔那山羊',
+    'Majorera': '馬赫雷拉山羊',
+    'Murciano-Granadina': '穆爾西亞─格拉納迪那山羊',
+    'Verata': '貝拉塔山羊',
+    'Tauernsheck': '陶恩謝克山羊',
+    'Valais Blackneck goat': '瓦萊黑頸山羊',
+    'Valais Blackneck': '瓦萊黑頸山羊',
+    'Appenzell goat': '阿彭策爾山羊',
+    'Chamois Coloured': '羚羊色山羊',
+    'Grisons Striped goat': '格勞賓登條紋山羊',
+    'Peacock goat': '孔雀山羊',
+    'Poitevine goat': '普瓦特萬山羊',
+    'Rove goat': '羅夫山羊',
+    'Stiefelgeiss': '長靴山羊',
+    'Bagot goat': '巴戈特山羊',
+    'British Alpine goat': '英國阿爾卑斯山羊',
+    'Jining Grey goat': '濟寧青山羊',
+}
+
 # Manual guinea pig breeds not captured by Wikidata SPARQL.
 # Wikidata coverage for guinea pig breeds is extremely poor.
 GUINEA_PIG_MANUAL_BREEDS = [
@@ -350,6 +689,9 @@ RABBIT_MANUAL_BREEDS = [
 _SPECIES_STATIC_CONFIG = {
     2436940: (RABBIT_ZH_TW, ['rabbit', 'Rabbit']),
     5219702: (GUINEA_PIG_ZH_TW, ['guinea pig', 'Guinea pig', 'cavy']),
+    2441022: (CATTLE_ZH_TW, ['cattle', 'Cattle', 'cow']),
+    2441110: (SHEEP_ZH_TW, ['sheep', 'Sheep']),
+    2441056: (GOAT_ZH_TW, ['goat', 'Goat']),
 }
 
 # Manual breeds config: breed class QID → manual breed list
@@ -377,14 +719,9 @@ ORDER BY ?itemLabel
 """
 
 
-def fetch_breeds(species_config):
-    """Fetch breeds for a species from Wikidata SPARQL."""
-    qid = species_config['qid']
+def _fetch_sparql_breeds(qid, species_config):
+    """Fetch breeds for a single Wikidata class QID. Returns (bindings, seen_names)."""
     query = SPARQL_TEMPLATE.format(qid=qid)
-
-    print(f"  Querying Wikidata for {species_config['label']} (wd:{qid})...",
-          file=sys.stderr)
-
     resp = requests.get(WIKIDATA_SPARQL, params={
         'query': query,
         'format': 'json',
@@ -393,17 +730,17 @@ def fetch_breeds(species_config):
         'Accept': 'application/sparql-results+json',
     }, timeout=60)
     resp.raise_for_status()
-    data = resp.json()
+    return resp.json().get('results', {}).get('bindings', [])
 
+
+def _parse_bindings(bindings, species_config, seen):
+    """Parse SPARQL bindings into breed dicts, skipping already-seen names."""
     breeds = []
-    seen = set()
-    for binding in data.get('results', {}).get('bindings', []):
+    for binding in bindings:
         item_uri = binding.get('item', {}).get('value', '')
         wikidata_id = item_uri.split('/')[-1] if item_uri else None
 
         name_en = binding.get('itemLabel', {}).get('value', '').strip()
-        # Wikidata labels: zh-tw first, then zh (may be mainland usage)
-        # All values pass through OpenCC s2twp to guarantee Traditional Chinese
         raw_zhtw = binding.get('itemLabel_zhtw', {}).get('value', '').strip()
         raw_zh = binding.get('itemLabel_zh', {}).get('value', '').strip()
         wikidata_zhtw = _s2twp.convert(raw_zhtw) if raw_zhtw else None
@@ -421,8 +758,28 @@ def fetch_breeds(species_config):
             'wikidata_zhtw': wikidata_zhtw,
             'wikidata_zh': wikidata_zh,
             'wikidata_id': wikidata_id,
-            'wiki_tw': None,  # will be filled by resolve step
+            'wiki_tw': None,
         })
+    return breeds
+
+
+def fetch_breeds(species_config):
+    """Fetch breeds for a species from Wikidata SPARQL."""
+    qid = species_config['qid']
+    all_qids = [qid] + species_config.get('extra_qids', [])
+
+    breeds = []
+    seen = set()
+
+    for q in all_qids:
+        print(f"  Querying Wikidata for {species_config['label']} (wd:{q})...",
+              file=sys.stderr)
+        bindings = _fetch_sparql_breeds(q, species_config)
+        new_breeds = _parse_bindings(bindings, species_config, seen)
+        breeds.extend(new_breeds)
+        print(f"    → {len(new_breeds)} new breeds from wd:{q}", file=sys.stderr)
+        if q != all_qids[-1]:
+            time.sleep(1)
 
     # Merge manual breeds (not found in SPARQL due to P31 mismatch)
     manual_list = _MANUAL_BREEDS_MAP.get(qid, [])
