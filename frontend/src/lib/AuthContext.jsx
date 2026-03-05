@@ -75,9 +75,12 @@ export function AuthProvider({ children }) {
         ytChannel = await fetchYouTubeChannel(session.provider_token);
       }
 
-      // Use YouTube channel title if available, otherwise fall back to Google name
+      // Use YouTube channel title if available; for Twitch use nickname (display name),
+      // not name/full_name which is the ASCII login name
+      const isTwitchLogin = loginProvider === 'twitch';
       const displayName = ytChannel?.channelTitle
-        || meta.full_name || meta.name || 'Unnamed Vtuber';
+        || (isTwitchLogin ? (meta.nickname || meta.slug || meta.name) : (meta.full_name || meta.name))
+        || 'Unnamed Vtuber';
       const avatarUrl = ytChannel?.channelAvatar
         || meta.avatar_url || meta.picture;
 
