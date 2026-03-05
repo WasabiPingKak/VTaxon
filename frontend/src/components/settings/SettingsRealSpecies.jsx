@@ -25,7 +25,7 @@ function TaxonomyPath({ species }) {
   if (ranks.length === 0) return null;
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', alignItems: 'center', marginTop: '4px', fontSize: '0.8em', lineHeight: '1.6' }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', alignItems: 'center', fontSize: '0.8em', lineHeight: '1.6' }}>
       {ranks.map((r, i) => (
         <span key={r.rank} style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
           {i > 0 && <span style={{ color: 'rgba(255,255,255,0.2)', margin: '0 2px' }}>›</span>}
@@ -190,7 +190,8 @@ export default function SettingsRealSpecies() {
                 display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
               }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
+                  {trait.species && <TaxonomyPath species={trait.species} />}
+                  <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px', marginTop: trait.species ? '4px' : 0 }}>
                     {rank && <RankBadge rank={rank} />}
                     {displayName && (
                       <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#e2e8f0' }}>
@@ -209,7 +210,6 @@ export default function SettingsRealSpecies() {
                     )}
                     <BreedLabel trait={trait} />
                   </div>
-                  {trait.species && <TaxonomyPath species={trait.species} />}
                   {trait.trait_note && (
                     <div style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.35)', marginTop: '2px' }}>{trait.trait_note}</div>
                   )}

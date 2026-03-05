@@ -86,6 +86,11 @@ function ToastCard({ user, onClose, compact }) {
         <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {user.display_name}
         </strong>
+        {user.species_summary && (
+          <span style={{ fontSize: '0.78em', color: 'rgba(255, 255, 255, 0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {user.species_summary}
+          </span>
+        )}
       </div>
       <button
         onClick={handleClose}
