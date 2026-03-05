@@ -40,6 +40,9 @@ const BREED_QUICK_ENTRIES = [
   { emoji: '\uD83D\uDC15', label: '狗品種', taxon_id: 5219174 },   // Canis lupus familiaris
   { emoji: '\uD83D\uDC08', label: '貓品種', taxon_id: 2435099 },   // Felis catus
   { emoji: '\uD83D\uDC34', label: '馬品種', taxon_id: 2440886 },   // Equus caballus
+  { emoji: '\uD83D\uDC02', label: '牛品種', taxon_id: 2441022 },   // Bos taurus
+  { emoji: '\uD83D\uDC11', label: '綿羊品種', taxon_id: 2441110 }, // Ovis aries
+  { emoji: '\uD83D\uDC10', label: '山羊品種', taxon_id: 2441056 }, // Capra hircus
   { emoji: '\uD83D\uDC30', label: '兔品種', taxon_id: 2436940 },   // Oryctolagus cuniculus
   { emoji: '\uD83D\uDC39', label: '天竺鼠品種', taxon_id: 5219702 }, // Cavia porcellus
 ];
