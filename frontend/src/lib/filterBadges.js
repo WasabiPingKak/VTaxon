@@ -116,6 +116,23 @@ export function getActiveFilterBadges(entry, filters) {
  * @returns {{ label: string, color: string, bg: string } | null}
  */
 export function getSortBadge(entry, sortKey) {
+  if (sortKey === 'country') {
+    const flags = entry.country_flags || [];
+    if (flags.length === 0) return { label: '無國旗', color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.08)' };
+    return flags.map(code => ({
+      isCountry: true,
+      countryCode: code.toUpperCase(),
+      bg: 'rgba(255,255,255,0.1)',
+    }));
+  }
+
+  if (sortKey === 'organization') {
+    const org = entry.organization;
+    return org
+      ? { label: '企業', color: '#fb923c', bg: 'rgba(251,146,60,0.2)' }
+      : { label: '個人', color: '#38bdf8', bg: 'rgba(56,189,248,0.2)' };
+  }
+
   if (sortKey === 'debut_date') {
     const raw = entry.debut_date;
     if (!raw) return { label: '未設定', color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.08)' };

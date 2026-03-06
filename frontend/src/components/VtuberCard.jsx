@@ -84,12 +84,22 @@ export default function VtuberCard({ entry, isCurrentUser, onClick, activeFilter
                 }}>{b.label}</span>
               )
             )}
-            {sortBadge && (
-              <span style={{
-                fontSize: '0.65em', padding: '1px 4px', borderRadius: 4,
-                color: sortBadge.color, background: sortBadge.bg,
-                lineHeight: 1.4, whiteSpace: 'nowrap',
-              }}>{sortBadge.label}</span>
+            {sortBadge && [].concat(sortBadge).map((b, i) =>
+              b.isCountry && b.countryCode ? (
+                <span key={`s${i}`} style={{
+                  padding: '1px 3px', borderRadius: 3, background: b.bg,
+                  display: 'inline-flex', alignItems: 'center',
+                }}>
+                  <span className={`fi fi-${b.countryCode.toLowerCase()}`}
+                    style={{ width: 16, height: 12, display: 'inline-block', borderRadius: 1 }} />
+                </span>
+              ) : (
+                <span key={`s${i}`} style={{
+                  fontSize: '0.65em', padding: '1px 4px', borderRadius: 4,
+                  color: b.color, background: b.bg,
+                  lineHeight: 1.4, whiteSpace: 'nowrap',
+                }}>{b.label}</span>
+              )
             )}
           </div>
         )}

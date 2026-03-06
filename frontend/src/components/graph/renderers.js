@@ -660,7 +660,8 @@ function drawVtuberNode(ctx, node, scale, state) {
     if (d._entry) {
       const badges = state.activeFilters ? getActiveFilterBadges(d._entry, state.activeFilters) : [];
       const sortBadge = getSortBadge(d._entry, state.sortKey);
-      if (sortBadge) badges.push(sortBadge);
+      if (Array.isArray(sortBadge)) badges.push(...sortBadge);
+      else if (sortBadge) badges.push(sortBadge);
       if (badges.length > 0) {
         const badgeFs = scaledFontSize(9, scale);
         const badgeY = startY + lines.length * lineHeight + badgeFs * 0.3;
