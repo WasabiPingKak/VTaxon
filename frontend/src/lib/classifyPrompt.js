@@ -59,6 +59,8 @@ export function generateClassifyPrompt(fictionalSpeciesList) {
 ## 系統說明
 
 VTaxon 將 Vtuber 角色對應到生物分類體系。
+這個系統的目的是讓設定相近的 Vtuber 能透過分類找到彼此——例如同樣是狐系、同樣是龍族的角色可以發現「同類」。因此，**分類越精確，就越容易找到真正的同類**，建議盡量分到最細的層級。
+
 一個角色可以同時登記多個物種——只要覺得自己是、或者角色具有該物種的特徵，就可以加上去。
 例如一個「狐耳機械少女」可以同時標註「赤狐」+「妖狐」+「機器人」。
 
@@ -66,20 +68,24 @@ VTaxon 將 Vtuber 角色對應到生物分類體系。
 
 ### 一、真實物種（使用 GBIF 生物分類資料庫）
 
-系統使用**拉丁學名**搜尋，中文名或俗名經常查不到。
+系統使用 GBIF 生物分類資料庫，**拉丁學名**搜尋最準確。
+系統也支援中文搜尋（透過 TaiCOL 比對），但準確度有限，建議優先使用拉丁學名。
 請務必提供拉丁學名，讓我可以直接複製貼上搜尋。
 
-- 可選階層：目(Order) → 科(Family) → 屬(Genus) → 種(Species) → 亞種(Subspecies)
+- 可選階層：目(Order) → 科(Family) → 屬(Genus) → 種(Species) → 亞種(Subspecies) → 變種(Variety)
 - 不接受界(Kingdom)、門(Phylum)、綱(Class)，太寬泛
 - 建議精確到「種」或「屬」
 
 #### 品種系統
 
-部分常見物種支援品種（Breed）選擇，選定物種後可進一步指定品種：
-- **家犬** Canis lupus familiaris — 約 900 品種（柴犬、哈士奇、柯基…）
-- **家貓** Felis catus — 約 130 品種（布偶貓、英國短毛、曼赤肯…）
-- **家馬** Equus caballus — 約 670 品種（阿拉伯馬、純血馬…）
-- **家兔** Oryctolagus cuniculus — 約 130 品種（荷蘭垂耳兔、侏儒兔…）
+部分常見家畜／寵物支援品種（Breed）選擇，選定物種後可進一步指定品種：
+- **家犬** Canis lupus familiaris — 約 915 品種（柴犬、哈士奇、柯基…）
+- **家貓** Felis catus — 約 134 品種（布偶貓、英國短毛、曼赤肯…）
+- **家馬** Equus caballus — 約 668 品種（阿拉伯馬、純血馬…）
+- **家羊** Ovis aries — 約 585 品種（美利諾羊、薩福克羊…）
+- **家牛** Bos taurus — 約 498 品種（荷斯坦牛、安格斯牛…）
+- **家山羊** Capra hircus — 約 200 品種（努比亞山羊、波爾山羊…）
+- **家兔** Oryctolagus cuniculus — 約 129 品種（荷蘭垂耳兔、侏儒兔…）
 - **天竺鼠** Cavia porcellus — 約 24 品種（阿比西尼亞、秘魯天竺鼠…）
 
 如果你的角色有特定品種特徵（例如「藍色眼睛的暹羅貓」），請一併標註品種名稱。
@@ -93,11 +99,14 @@ VTaxon 將 Vtuber 角色對應到生物分類體系。
 | 兔耳 | Oryctolagus cuniculus（穴兔）→ 可選品種如 Holland Lop（荷蘭垂耳兔） |
 | 鹿角 | Cervus（鹿屬） |
 | 龍蝦、蝦 | Homarus（龍蝦屬）或 Decapoda（十足目） |
-| 鯊魚 | Selachimorpha 或具體如 Carcharodon carcharias（大白鯊） |
-| 蛇 | Serpentes（蛇亞目）或具體種 |
+| 鯊魚 | Carcharodon carcharias（大白鯊）或 Selachimorpha |
+| 蛇 | Serpentes（蛇亞目）或具體種如 Naja atra（眼鏡蛇） |
 | 鷹、猛禽 | Accipitridae（鷹科）或具體種 |
-| 蝴蝶 | Lepidoptera（鱗翅目）或具體種 |
+| 蝴蝶 | Papilio（鳳蝶屬）或具體種 |
 | 馬、馬娘 | Equus caballus（家馬）→ 可選品種如 Thoroughbred（純血馬） |
+| 牛 | Bos taurus（家牛）→ 可選品種如 Holstein（荷斯坦牛） |
+| 羊 | Ovis aries（家羊）→ 可選品種如 Merino（美利諾羊） |
+| 山羊 | Capra hircus（家山羊）→ 可選品種如 Boer（波爾山羊） |
 | 天竺鼠 | Cavia porcellus（天竺鼠）→ 可選品種如 Abyssinian（阿比西尼亞） |
 
 ### 二、虛構物種（VTaxon 專屬分類，非必選）
@@ -105,7 +114,7 @@ VTaxon 將 Vtuber 角色對應到生物分類體系。
 如果角色帶有神話、奇幻、超自然元素，可以從以下列表中選擇對應的虛構物種。
 純現實動物形象的角色**不需要**選虛構物種。
 
-以下是系統中所有可選的虛構物種：
+以下是系統中所有可選的虛構物種（共 6 大分類、16 子分類、155+ 個物種）：
 
 ${tree}---
 
@@ -121,7 +130,7 @@ ${tree}---
 - 提供拉丁學名（我需要直接複製到系統搜尋）
 - 格式：\`學名\` — 中文說明（階層）
 - 範例：\`Vulpes vulpes\` — 赤狐（Species）
-- 如果該物種有品種系統，請額外推薦品種
+- 如果該物種有品種系統（家犬、家貓、家馬、家牛、家羊、家山羊、家兔、天竺鼠），請額外推薦品種
 - 品種格式：\`品種英文名\` — 中文名
 - 範例：\`Ragdoll\` — 布偶貓
 
