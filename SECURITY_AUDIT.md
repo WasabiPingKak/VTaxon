@@ -10,58 +10,34 @@
 
 | 嚴重性 | 數量 | 說明 |
 |--------|------|------|
-| CRITICAL | 2 | 帳號接管、JWT 算法降級 |
+| CRITICAL | ~~2~~ 0 | ~~帳號接管、JWT 算法降級~~ 已全數修復 |
 | HIGH | 3 | CORS 萬用字元、缺少 Rate Limiting、缺少安全標頭 |
 | MEDIUM | 5 | 快取刷新濫用、JWKS 無 TTL、SQL 字串拼接、Health 端點資訊洩漏、錯誤訊息洩漏 |
 | LOW | 5 | 依賴未鎖定版本、localStorage 認證狀態、前端快取無上限、enum 未集中管理、provider 欄位無約束 |
 
 ---
 
-## CRITICAL-1: AuthIdAlias 帳號接管漏洞
+## ~~CRITICAL-1: AuthIdAlias 帳號接管漏洞~~ ✅ 已修復
 
-**檔案**: `backend/app/routes/auth.py:29-43`
+**狀態**: 已修復（2026-03-06）
 
-**問題**: `/api/auth/callback` 端點接受前端傳來的 `link_to_user_id` 參數，並直接將攻擊者的 JWT `sub` 映射到該使用者帳號，**沒有驗證呼叫者是否擁有目標帳號**。
-
-```python
-if user is None and link_to_user_id:
-    target = db.session.get(User, link_to_user_id)  # 沒有擁有權驗證！
-    if target:
-        alias = AuthIdAlias(auth_id=raw_auth_id, user_id=link_to_user_id)
-```
-
-**攻擊場景**:
-1. 攻擊者用自己的帳號登入取得合法 JWT
-2. 呼叫 `POST /api/auth/callback` 帶上 `{"link_to_user_id": "<受害者 user_id>"}`
-3. 後端將攻擊者的 auth_id 映射到受害者帳號
-4. 攻擊者現在可以操作受害者的完整帳號
-
-**修復建議**:
-- 要求呼叫者必須**已登入目標帳號**（在 session 中驗證原始 user_id）
-- 或者使用 time-limited token：前端在發起綁定前，先讓已登入的使用者產生一個短效 linking token，後端驗證此 token 確認擁有權
-- 加入此端點的 rate limiting
+**修復方式**: 以 HMAC-SHA256 簽章的 link token 取代裸 `link_to_user_id`。
+- 新增 `POST /api/auth/link-token` 端點（需登入），簽發包含 `user_id`、`exp`（10 分鐘 TTL）、`nonce` 的 token
+- `auth_callback()` 不再接受 `link_to_user_id`，改為驗證 `link_token`，驗簽失敗回傳 400
+- 前端 `linkProvider()` 在 OAuth redirect 前先取得簽章 token 存入 localStorage
+- 密鑰複用 `SUPABASE_JWT_SECRET`（透過 Google Secret Manager 管理）
 
 ---
 
-## CRITICAL-2: JWT HS256 降級攻擊風險
+## ~~CRITICAL-2: JWT HS256 降級攻擊風險~~ ✅ 已修復
 
-**檔案**: `backend/app/auth.py:90-104`
+**狀態**: 已修復（2026-03-06）
 
-**問題**: JWT 驗證有 JWKS (ES256) → HS256 的 fallback 機制。如果 `SUPABASE_JWT_SECRET` 被洩漏（例如透過 `.env` 檔案、log、或錯誤配置），攻擊者可以自行簽發任意 JWT。
-
-```python
-# Fallback: try legacy HS256 secret
-secret = current_app.config.get('SUPABASE_JWT_SECRET')
-if secret:
-    payload = jwt.decode(token, secret, algorithms=['HS256'], audience='authenticated')
-```
-
-此外，`auth.py:81` 的 `algorithms=[alg]` 信任了 token header 中的 `alg` 欄位，這是已知的 JWT 算法混淆攻擊向量（雖然 PyJWT >= 2.4 已修補，但屬於反模式）。
-
-**修復建議**:
-- 移除 HS256 fallback，或僅在明確的 migration 期間啟用並加上 deadline
-- 將 `algorithms=[alg]` 改為硬編碼 `algorithms=['ES256']`
-- 在 fallback 被觸發時記錄 WARNING log 並設定告警
+**修復方式**:
+- JWKS 驗證硬編碼 `algorithms=['ES256']`，不再從 token header 讀取演算法（消除 algorithm confusion 反模式）
+- HS256 fallback 改為預設關閉，需設定環境變數 `ALLOW_HS256_FALLBACK=1` 才啟用（緊急降級用）
+- fallback 觸發時記錄 WARNING log
+- `_get_signing_key()` 移除不必要的 RSA fallback（Supabase 使用 EC key）
 
 ---
 
@@ -222,13 +198,15 @@ cryptography>=42.0
 
 ---
 
-## LOW-2: localStorage 儲存認證狀態
+## LOW-2: localStorage 儲存認證狀態（風險已降低）
 
 **檔案**: `frontend/src/lib/AuthContext.jsx`
 
-**問題**: `vtaxon_pending_link`（使用者 UUID）儲存在 localStorage，如果遭受 XSS 攻擊可能被讀取。
+**問題**: `vtaxon_pending_link` 儲存在 localStorage，如果遭受 XSS 攻擊可能被讀取。
 
-**修復建議**: 改用 sessionStorage（隨分頁關閉清除），並加入 10 分鐘 TTL。
+**目前狀態**: CRITICAL-1 修復後，localStorage 中存的是 HMAC 簽章的 link token（含 10 分鐘 TTL），而非裸 user UUID。即使被 XSS 讀取，token 也會在 10 分鐘後失效，且僅能用於綁定操作。風險已大幅降低。
+
+**進一步改善建議**: 可改用 sessionStorage（隨分頁關閉清除）。
 
 ---
 
@@ -283,9 +261,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
 ## 修復優先順序
 
 ### 上線前必修（第一優先）
-1. **修復 AuthIdAlias 帳號接管漏洞** — CRITICAL-1
+1. ~~**修復 AuthIdAlias 帳號接管漏洞** — CRITICAL-1~~ ✅
 2. **設定 Production CORS origins** — HIGH-1（部署時確認環境變數）
-3. **移除或限制 JWT HS256 fallback** — CRITICAL-2
+3. ~~**移除或限制 JWT HS256 fallback** — CRITICAL-2~~ ✅
 4. **加入 Rate Limiting** — HIGH-2
 
 ### 上線後第一週

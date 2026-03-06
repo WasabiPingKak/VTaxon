@@ -44,7 +44,6 @@ def _get_signing_key(token):
         return None, None
 
     kid = header.get('kid')
-    alg = header.get('alg', 'ES256')
 
     for key_data in keys:
         if kid and key_data.get('kid') != kid:
@@ -52,15 +51,11 @@ def _get_signing_key(token):
         # Build a public key from JWK
         try:
             public_key = jwt.algorithms.ECAlgorithm.from_jwk(key_data)
-            return public_key, alg
+            return public_key
         except Exception:
-            try:
-                public_key = jwt.algorithms.RSAAlgorithm.from_jwk(key_data)
-                return public_key, alg
-            except Exception:
-                continue
+            continue
 
-    return None, None
+    return None
 
 
 def get_current_user():
@@ -71,14 +66,14 @@ def get_current_user():
 
     token = auth_header[7:]
 
-    # Try JWKS-based verification (new Supabase signing keys)
-    public_key, alg = _get_signing_key(token)
+    # Try JWKS-based verification (Supabase ES256 signing keys)
+    public_key = _get_signing_key(token)
     if public_key:
         try:
             payload = jwt.decode(
                 token,
                 public_key,
-                algorithms=[alg],
+                algorithms=['ES256'],
                 audience='authenticated',
             )
             user_id = payload.get('sub')
@@ -87,21 +82,23 @@ def get_current_user():
         except jwt.InvalidTokenError as e:
             logger.warning('JWKS verification failed: %s', e)
 
-    # Fallback: try legacy HS256 secret
-    secret = current_app.config.get('SUPABASE_JWT_SECRET')
-    if secret:
-        try:
-            payload = jwt.decode(
-                token,
-                secret,
-                algorithms=['HS256'],
-                audience='authenticated',
-            )
-            user_id = payload.get('sub')
-            if user_id:
-                return user_id
-        except jwt.InvalidTokenError:
-            pass
+    # HS256 fallback — disabled by default, enable only for emergencies
+    if current_app.config.get('ALLOW_HS256_FALLBACK'):
+        secret = current_app.config.get('SUPABASE_JWT_SECRET')
+        if secret:
+            logger.warning('HS256 fallback triggered — consider disabling after migration')
+            try:
+                payload = jwt.decode(
+                    token,
+                    secret,
+                    algorithms=['HS256'],
+                    audience='authenticated',
+                )
+                user_id = payload.get('sub')
+                if user_id:
+                    return user_id
+            except jwt.InvalidTokenError:
+                pass
 
     logger.warning('JWT verification failed with all methods')
     return None

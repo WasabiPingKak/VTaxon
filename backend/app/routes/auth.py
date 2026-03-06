@@ -1,3 +1,11 @@
+import base64
+import hashlib
+import hmac
+import json
+import os
+import time
+import uuid
+
 from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
@@ -7,6 +15,58 @@ from ..extensions import db
 from ..models import AuthIdAlias, Blacklist, User
 
 auth_bp = Blueprint('auth', __name__)
+
+_LINK_TOKEN_TTL = 600  # 10 minutes
+
+
+def _get_link_secret():
+    return os.environ.get('SUPABASE_JWT_SECRET', '').encode()
+
+
+def _sign_link_token(user_id):
+    payload = json.dumps({
+        'user_id': str(user_id),
+        'exp': int(time.time()) + _LINK_TOKEN_TTL,
+        'nonce': uuid.uuid4().hex,
+    }, separators=(',', ':'))
+    payload_b64 = base64.urlsafe_b64encode(payload.encode()).decode()
+    sig = hmac.new(_get_link_secret(), payload_b64.encode(), hashlib.sha256).hexdigest()
+    return f'{payload_b64}.{sig}'
+
+
+def _verify_link_token(token):
+    """Verify a link token and return the user_id, or None if invalid."""
+    try:
+        payload_b64, sig = token.rsplit('.', 1)
+    except (ValueError, AttributeError):
+        return None
+    expected_sig = hmac.new(_get_link_secret(), payload_b64.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig, expected_sig):
+        return None
+    try:
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+    except Exception:
+        return None
+    if payload.get('exp', 0) < time.time():
+        return None
+    return payload.get('user_id')
+
+
+@auth_bp.route('/link-token', methods=['POST'])
+@login_required
+def create_link_token():
+    """Issue a signed link token for the current user.
+
+    Used before OAuth redirect so the callback can securely bind a new
+    auth identity to this user without exposing the raw user_id.
+    """
+    from flask import g
+    user_id = g.current_user_id
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({'error': 'user_not_found'}), 404
+    token = _sign_link_token(user_id)
+    return jsonify({'link_token': token}), 200
 
 
 @auth_bp.route('/callback', methods=['POST'])
@@ -22,13 +82,20 @@ def auth_callback():
     user_id = g.current_user_id
     raw_auth_id = g.raw_auth_id
     data = request.get_json() or {}
-    link_to_user_id = data.get('link_to_user_id')
+
+    # Secure cross-email OAuth linking via signed token
+    link_token = data.get('link_token')
+    link_to_user_id = None
+    if link_token:
+        link_to_user_id = _verify_link_token(link_token)
+        if link_to_user_id is None:
+            return jsonify({'error': 'invalid_or_expired_link_token'}), 400
 
     user = db.session.get(User, user_id)
 
     if user is None and link_to_user_id:
         # Cross-email OAuth linking: Supabase created a new auth user,
-        # but the frontend tells us to link it to an existing VTaxon user.
+        # but the signed token proves ownership of the target VTaxon user.
         target = db.session.get(User, link_to_user_id)
         if target:
             # Create alias: map the new JWT sub to the original VTaxon user

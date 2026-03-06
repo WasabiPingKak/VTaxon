@@ -34,6 +34,7 @@ export const api = {
   authCallback: (body) => apiFetch('/auth/callback', {
     method: 'POST', body: JSON.stringify(body),
   }),
+  createLinkToken: () => apiFetch('/auth/link-token', { method: 'POST' }),
 
   // Users
   getMe: () => apiFetch('/users/me'),

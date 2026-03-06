@@ -10,6 +10,7 @@ class Config:
     SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY')
     SUPABASE_SERVICE_ROLE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
     SUPABASE_JWT_SECRET = os.environ.get('SUPABASE_JWT_SECRET')
+    ALLOW_HS256_FALLBACK = os.environ.get('ALLOW_HS256_FALLBACK', '').lower() in ('1', 'true', 'yes')
 
     # CORS
     ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', '*')

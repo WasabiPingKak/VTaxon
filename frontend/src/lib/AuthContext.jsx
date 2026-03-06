@@ -88,7 +88,7 @@ export function AuthProvider({ children }) {
         await api.authCallback({
           display_name: displayName,
           avatar_url: avatarUrl,
-          ...(pendingLink ? { link_to_user_id: pendingLink } : {}),
+          ...(pendingLink ? { link_token: pendingLink } : {}),
           ...(loginProvider ? { login_provider: loginProvider } : {}),
           ...(ytChannel?.channelAvatar ? { yt_avatar: true } : {}),
         });
@@ -208,12 +208,20 @@ export function AuthProvider({ children }) {
   async function linkProvider(provider) {
     // Mark as fresh OAuth so sync will create the new account
     sessionStorage.setItem('vtaxon_login_provider', provider);
-    // Save current VTaxon user ID before OAuth redirect.
+    // Obtain a signed link token before OAuth redirect.
     // If the new provider has a different email, Supabase creates a new
-    // auth.users record. The backend uses this to create an alias mapping
+    // auth.users record. The backend verifies this token to securely map
     // the new auth ID back to the original VTaxon user.
     if (user) {
-      localStorage.setItem('vtaxon_pending_link', user.id);
+      try {
+        const { link_token } = await api.createLinkToken();
+        localStorage.setItem('vtaxon_pending_link', link_token);
+      } catch (err) {
+        console.error('Failed to create link token:', err);
+        sessionStorage.removeItem('vtaxon_login_provider');
+        alert('綁定準備失敗，請重試');
+        return;
+      }
     }
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
