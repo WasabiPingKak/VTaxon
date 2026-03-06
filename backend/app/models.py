@@ -425,7 +425,7 @@ class VtuberTrait(db.Model):
             return (self.species.common_name_zh
                     or self.species.scientific_name)
         if self.fictional:
-            return self.fictional.name
+            return self.fictional.name_zh or self.fictional.name
         return self.display_name
 
     def to_dict(self):
