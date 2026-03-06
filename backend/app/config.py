@@ -12,8 +12,8 @@ class Config:
     SUPABASE_JWT_SECRET = os.environ.get('SUPABASE_JWT_SECRET')
     ALLOW_HS256_FALLBACK = os.environ.get('ALLOW_HS256_FALLBACK', '').lower() in ('1', 'true', 'yes')
 
-    # CORS
-    ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', '*')
+    # CORS — default empty (no wildcard); CI/CD sets explicit whitelist
+    ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', '')
 
     # DB schema (empty = default public schema)
     DB_SCHEMA = os.environ.get('DB_SCHEMA', '')
@@ -28,6 +28,15 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+
+    @classmethod
+    def init_app(cls, app):
+        origins = app.config.get('ALLOWED_ORIGINS', '')
+        if not origins:
+            raise RuntimeError(
+                'ALLOWED_ORIGINS must be set in production. '
+                'Example: ALLOWED_ORIGINS=https://vtaxon.com,https://vtaxon.web.app'
+            )
 
 
 class StagingConfig(Config):

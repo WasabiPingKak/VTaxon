@@ -11,7 +11,7 @@
 | 嚴重性 | 數量 | 說明 |
 |--------|------|------|
 | CRITICAL | ~~2~~ 0 | ~~帳號接管、JWT 算法降級~~ 已全數修復 |
-| HIGH | 3 | CORS 萬用字元、缺少 Rate Limiting、缺少安全標頭 |
+| HIGH | ~~3~~ 0 | ~~CORS 萬用字元、缺少 Rate Limiting、缺少安全標頭~~ 已全數修復 |
 | MEDIUM | 5 | 快取刷新濫用、JWKS 無 TTL、SQL 字串拼接、Health 端點資訊洩漏、錯誤訊息洩漏 |
 | LOW | 5 | 依賴未鎖定版本、localStorage 認證狀態、前端快取無上限、enum 未集中管理、provider 欄位無約束 |
 
@@ -41,64 +41,39 @@
 
 ---
 
-## HIGH-1: CORS 萬用字元配置
+## ~~HIGH-1: CORS 萬用字元配置~~ ✅ 已修復
 
-**檔案**: `backend/app/config.py:15`, `backend/app/__init__.py:18-23`
+**狀態**: 已修復（2026-03-06）
 
-**問題**: `ALLOWED_ORIGINS` 預設值為 `'*'`，如果環境變數未設定，任何網站都可以發送跨域請求。
-
-```python
-ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', '*')
-# ...
-if allowed and allowed != '*':
-    CORS(app, origins=origins)
-else:
-    CORS(app)  # 完全開放！
-```
-
-**修復建議**:
-- Production 環境**必須**明確設定允許的 origins（`https://vtaxon.web.app`）
-- 移除 `'*'` 預設值，改為空字串或 raise error
-- 加入 `supports_credentials=False` 確認不發送 cookies
+**修復方式**:
+- `ALLOWED_ORIGINS` 預設值從 `'*'` 改為空字串
+- `ProductionConfig.init_app()` 檢查：未設定時啟動報錯
+- CORS 初始化邏輯：空字串時不啟用通配符，僅 development 模式允許寬鬆 CORS
 
 ---
 
-## HIGH-2: 缺少 Rate Limiting
+## ~~HIGH-2: 缺少 Rate Limiting~~ ✅ 已修復
 
-**問題**: 整個 API 沒有任何 rate limiting 機制，容易遭受：
-- 暴力攻擊（不斷呼叫 `/api/auth/callback`）
-- GBIF API 濫用（`/api/species/search` 大量查詢會觸發 GBIF rate limit）
-- 快取刷新濫用（`/api/taxonomy/tree?refresh=1`）
-- 資源耗盡（大量分頁查詢）
+**狀態**: 已修復（2026-03-06）
 
-**修復建議**:
-- 加入 `flask-limiter` 套件
-- 建議限制：
-  - 全域：100 req/min per IP
-  - Auth 端點：10 req/min per IP
-  - Species 搜尋：30 req/min per IP
-  - Admin 端點：60 req/min per IP
+**修復方式**:
+- 新增 `flask-limiter` 套件，使用 `memory://` storage（Cloud Run 單 instance）
+- 全域預設：100 req/min per IP
+- Auth 端點：10 req/min per IP
+- Species 搜尋：30 req/min per IP
+- Taxonomy：30 req/min per IP
+- Reports 檢舉：5 req/min per IP
 
 ---
 
-## HIGH-3: 缺少 HTTP 安全標頭
+## ~~HIGH-3: 缺少 HTTP 安全標頭~~ ✅ 已修復
 
-**檔案**: `firebase.json`
+**狀態**: 已修復（2026-03-06）
 
-**問題**: Firebase Hosting 和 Flask 回應都沒有設定關鍵安全標頭。
-
-**缺少的標頭**:
-
-| 標頭 | 建議值 | 作用 |
-|------|--------|------|
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self' https://www.googletagmanager.com; ...` | 防止 XSS |
-| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` | 強制 HTTPS |
-| `X-Content-Type-Options` | `nosniff` | 防止 MIME sniffing |
-| `X-Frame-Options` | `SAMEORIGIN` | 防止 Clickjacking |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` | 控制 Referrer 洩漏 |
-| `Permissions-Policy` | `geolocation=(), microphone=(), camera=()` | 限制瀏覽器功能 |
-
-**修復建議**: 在 `firebase.json` 的 prod hosting 中加入全域 headers 區塊。
+**修復方式**:
+- Firebase Hosting（prod + staging）加入全域安全標頭：HSTS、X-Content-Type-Options、X-Frame-Options、Referrer-Policy、Permissions-Policy
+- Flask API 加入 `@after_request` hook：X-Content-Type-Options: nosniff、X-Frame-Options: DENY、Referrer-Policy
+- CSP 留待後續處理（SPA 的 CSP 較複雜，避免影響正常功能）
 
 ---
 
@@ -262,12 +237,12 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
 ### 上線前必修（第一優先）
 1. ~~**修復 AuthIdAlias 帳號接管漏洞** — CRITICAL-1~~ ✅
-2. **設定 Production CORS origins** — HIGH-1（部署時確認環境變數）
+2. ~~**設定 Production CORS origins** — HIGH-1~~ ✅
 3. ~~**移除或限制 JWT HS256 fallback** — CRITICAL-2~~ ✅
-4. **加入 Rate Limiting** — HIGH-2
+4. ~~**加入 Rate Limiting** — HIGH-2~~ ✅
 
 ### 上線後第一週
-5. 加入 HTTP 安全標頭 — HIGH-3
+5. ~~加入 HTTP 安全標頭 — HIGH-3~~ ✅
 6. 限制 cache refresh 為 admin — MEDIUM-1
 7. 加入 JWKS TTL — MEDIUM-2
 8. 清理錯誤訊息洩漏 — MEDIUM-4, MEDIUM-5

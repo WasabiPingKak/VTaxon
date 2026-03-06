@@ -2,6 +2,7 @@ from flask import Blueprint, Response, jsonify, request, stream_with_context
 
 from ..auth import admin_required
 from ..extensions import db
+from ..limiter import limiter
 from ..models import SpeciesCache
 from ..services.gbif import (
     clear_chinese_name_caches,
@@ -14,6 +15,7 @@ from ..services.gbif import (
 )
 
 species_bp = Blueprint('species', __name__)
+limiter.limit("30/minute")(species_bp)
 
 
 @species_bp.route('/search', methods=['GET'])

@@ -5,6 +5,7 @@ from flask_cors import CORS
 
 from .config import config
 from .extensions import db
+from .limiter import limiter
 
 
 def create_app(config_name=None):
@@ -14,13 +15,22 @@ def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(config[config_name])
 
+    # Run config-specific init (e.g. ProductionConfig checks ALLOWED_ORIGINS)
+    config_cls = config[config_name]
+    if hasattr(config_cls, 'init_app'):
+        config_cls.init_app(app)
+
     # CORS: restrict origins based on ALLOWED_ORIGINS config
-    allowed = app.config.get('ALLOWED_ORIGINS', '*')
-    if allowed and allowed != '*':
-        origins = [o.strip() for o in allowed.split(',')]
+    allowed = app.config.get('ALLOWED_ORIGINS', '')
+    if allowed:
+        origins = [o.strip() for o in allowed.split(',') if o.strip()]
         CORS(app, origins=origins)
-    else:
+    elif config_name == 'development':
         CORS(app)
+    # else: no CORS (production without ALLOWED_ORIGINS blocked by init_app)
+
+    # Rate limiting
+    limiter.init_app(app)
 
     # DB Schema isolation: set PostgreSQL search_path for staging
     db_schema = app.config.get('DB_SCHEMA', '')
@@ -53,6 +63,14 @@ def create_app(config_name=None):
     app.register_blueprint(fictional_bp, url_prefix='/api/fictional-species')
     app.register_blueprint(reports_bp, url_prefix='/api/reports')
     app.register_blueprint(seo_bp, url_prefix='/api')
+
+    # Security headers for all API responses
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        return response
 
     @app.route('/api/health')
     @app.route('/health')

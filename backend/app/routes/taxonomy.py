@@ -3,6 +3,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from ..auth import admin_required
+from ..limiter import limiter
 from ..cache import (get_tree_cache, set_tree_cache, invalidate_tree_cache,
                      get_fictional_tree_cache, set_fictional_tree_cache,
                      invalidate_fictional_tree_cache)
@@ -13,6 +14,7 @@ from ..services.gbif import _build_path_zh, _realign_taxon_path
 log = logging.getLogger(__name__)
 
 taxonomy_bp = Blueprint('taxonomy', __name__)
+limiter.limit("30/minute")(taxonomy_bp)
 
 
 def _rebuild_path_zh(species):

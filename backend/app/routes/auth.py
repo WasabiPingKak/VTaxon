@@ -12,9 +12,11 @@ from sqlalchemy.exc import IntegrityError
 from ..auth import login_required
 from ..cache import invalidate_tree_cache
 from ..extensions import db
+from ..limiter import limiter
 from ..models import AuthIdAlias, Blacklist, User
 
 auth_bp = Blueprint('auth', __name__)
+limiter.limit("10/minute")(auth_bp)
 
 _LINK_TOKEN_TTL = 600  # 10 minutes
 

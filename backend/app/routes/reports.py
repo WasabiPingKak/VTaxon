@@ -3,9 +3,11 @@ from flask import Blueprint, g, jsonify, request
 from ..auth import admin_required, get_current_user
 from ..cache import invalidate_tree_cache
 from ..extensions import db
+from ..limiter import limiter
 from ..models import Blacklist, OAuthAccount, User, UserReport
 
 reports_bp = Blueprint('reports', __name__)
+limiter.limit("5/minute")(reports_bp)
 
 
 @reports_bp.route('', methods=['POST'])
