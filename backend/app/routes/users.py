@@ -10,7 +10,8 @@ from sqlalchemy.exc import IntegrityError
 from ..auth import login_required
 from ..cache import invalidate_tree_cache
 from ..extensions import db
-from ..models import Blacklist, OAuthAccount, SpeciesCache, User, VtuberTrait
+from ..models import (Blacklist, Breed, FictionalSpecies, OAuthAccount,
+                       SpeciesCache, User, VtuberTrait)
 
 users_bp = Blueprint('users', __name__)
 
@@ -43,20 +44,40 @@ def recent_users():
         .all()
     )
 
-    # Collect species names for each user
+    # Collect species names for each user (real species + breeds + fictional)
     user_ids = [u.id for u, _ in rows]
     species_names = {}
     if user_ids:
         trait_rows = (
-            db.session.query(VtuberTrait.user_id, SpeciesCache.common_name_zh,
-                             SpeciesCache.scientific_name)
-            .join(SpeciesCache, VtuberTrait.taxon_id == SpeciesCache.taxon_id)
+            db.session.query(
+                VtuberTrait.user_id,
+                SpeciesCache.common_name_zh,
+                SpeciesCache.scientific_name,
+                Breed.name_zh.label('breed_zh'),
+                Breed.name_en.label('breed_en'),
+                FictionalSpecies.name_zh.label('fict_zh'),
+                FictionalSpecies.name.label('fict_en'),
+            )
+            .outerjoin(SpeciesCache, VtuberTrait.taxon_id == SpeciesCache.taxon_id)
+            .outerjoin(Breed, VtuberTrait.breed_id == Breed.id)
+            .outerjoin(FictionalSpecies,
+                       VtuberTrait.fictional_species_id == FictionalSpecies.id)
             .filter(VtuberTrait.user_id.in_(user_ids))
             .filter(VtuberTrait.created_at > since)
             .all()
         )
-        for uid, zh, sci in trait_rows:
-            species_names.setdefault(str(uid), []).append(zh or sci or '')
+        for uid, sp_zh, sp_sci, br_zh, br_en, fi_zh, fi_en in trait_rows:
+            # Prefer breed name if present, then species name, then fictional
+            if br_zh or br_en:
+                name = br_zh or br_en
+            elif sp_zh or sp_sci:
+                name = sp_zh or sp_sci
+            elif fi_zh or fi_en:
+                name = fi_zh or fi_en
+            else:
+                name = ''
+            if name:
+                species_names.setdefault(str(uid), []).append(name)
 
     return jsonify([
         {
