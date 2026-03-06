@@ -55,6 +55,7 @@ CREATE TABLE species_cache (
     scientific_name TEXT NOT NULL,
     common_name_en TEXT,
     common_name_zh TEXT,
+    alternative_names_zh TEXT,     -- 俗名／別名（逗號分隔，如「綿羊」）
     taxon_rank TEXT,
     taxon_path TEXT,               -- Materialized Path, '|' 分隔
     kingdom TEXT,

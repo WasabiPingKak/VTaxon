@@ -124,6 +124,38 @@ def _get_labels(qid):
         return None, None
 
 
+def get_aliases_by_gbif_id(gbif_taxon_id):
+    """Fetch zh-tw aliases from Wikidata using a GBIF taxon ID (P846).
+
+    Returns a comma-separated string of aliases, or None.
+    """
+    qid = _find_entity_by_gbif_id(gbif_taxon_id)
+    if not qid:
+        return None
+    try:
+        data = _wikidata_get({
+            'action': 'wbgetentities',
+            'ids': qid,
+            'languages': 'zh-tw|zh-hant|zh',
+            'props': 'aliases',
+        })
+        entity = data.get('entities', {}).get(qid, {})
+        all_aliases = entity.get('aliases', {})
+        seen = set()
+        result = []
+        for lang in ZH_LANGS:
+            for alias in all_aliases.get(lang, []):
+                value = alias.get('value')
+                if value:
+                    converted = _s2twp.convert(value)
+                    if converted not in seen:
+                        seen.add(converted)
+                        result.append(converted)
+        return ', '.join(result) if result else None
+    except Exception:
+        return None
+
+
 def clear_cache():
     """Clear in-memory LRU caches for Wikidata lookups."""
     _find_entity_by_gbif_id.cache_clear()

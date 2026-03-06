@@ -117,6 +117,7 @@ class SpeciesCache(db.Model):
     scientific_name = db.Column(db.Text, nullable=False)
     common_name_en = db.Column(db.Text)
     common_name_zh = db.Column(db.Text)
+    alternative_names_zh = db.Column(db.Text)
     taxon_rank = db.Column(db.Text)
     taxon_path = db.Column(db.Text)
     kingdom = db.Column(db.Text)
@@ -136,6 +137,7 @@ class SpeciesCache(db.Model):
             'scientific_name': self.scientific_name,
             'common_name_en': self.common_name_en,
             'common_name_zh': self.common_name_zh,
+            'alternative_names_zh': self.alternative_names_zh,
             'taxon_rank': self.taxon_rank,
             'taxon_path': self.taxon_path,
             'kingdom': self.kingdom,

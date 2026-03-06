@@ -21,7 +21,7 @@ from sqlalchemy import func
 from ..extensions import db
 from ..models import Breed, SpeciesCache
 from .taxonomy_zh import get_taxonomy_zh, get_taxonomy_zh_for_ranks
-from .wikidata import get_chinese_name_by_gbif_id
+from .wikidata import get_chinese_name_by_gbif_id, get_aliases_by_gbif_id
 from .wikidata import clear_cache as wikidata_clear_cache
 from .taicol import get_chinese_name as taicol_get_chinese_name
 from .taicol import search_by_chinese as taicol_search_chinese
@@ -359,6 +359,32 @@ def _resolve_chinese_name(taxon_id, scientific_name):
     return None
 
 
+@lru_cache(maxsize=500)
+def _resolve_alternative_names(taxon_id, scientific_name):
+    """Resolve alternative Chinese names (俗名) through TaiCOL → Wikidata aliases.
+
+    Returns comma-separated string of alternative names, or None.
+    """
+    # TaiCOL alternative_name_c
+    if scientific_name:
+        try:
+            _zh, alt = taicol_get_chinese_name(scientific_name)
+            if alt:
+                return alt
+        except Exception:
+            pass
+
+    # Wikidata aliases fallback
+    try:
+        aliases = get_aliases_by_gbif_id(taxon_id)
+        if aliases:
+            return aliases
+    except Exception:
+        pass
+
+    return None
+
+
 def resolve_missing_chinese_name(species_cache_obj):
     """Back-fill common_name_zh on a SpeciesCache row and persist to DB."""
     zh = _resolve_chinese_name(
@@ -420,18 +446,22 @@ def _enrich_chinese_names(species_list):
 
     Adds:
       - common_name_zh: species-level Chinese name
+      - alternative_names_zh: 俗名／別名（逗號分隔）
       - species_zh: alias for common_name_zh (for breadcrumb consistency)
       - kingdom_zh, phylum_zh, class_zh, order_zh, family_zh, genus_zh
 
     Uses DB cache (species_cache) as first lookup before hitting external APIs.
     """
     for sp in species_list:
-        # Species-level Chinese name — check DB cache first
+        # Species-level Chinese name + alternative names — check DB cache first
         if not sp.get('common_name_zh'):
             try:
                 cached = db.session.get(SpeciesCache, sp['taxon_id'])
-                if cached and cached.common_name_zh:
-                    sp['common_name_zh'] = cached.common_name_zh
+                if cached:
+                    if cached.common_name_zh:
+                        sp['common_name_zh'] = cached.common_name_zh
+                    if cached.alternative_names_zh:
+                        sp['alternative_names_zh'] = cached.alternative_names_zh
             except Exception:
                 pass
 
@@ -450,6 +480,13 @@ def _enrich_chinese_names(species_list):
 
         # species_zh alias for breadcrumb consistency
         sp['species_zh'] = sp.get('common_name_zh')
+
+        # Alternative names (俗名) — resolve if not already from DB cache
+        if not sp.get('alternative_names_zh'):
+            sp['alternative_names_zh'] = _resolve_alternative_names(
+                sp['taxon_id'],
+                sp.get('canonical_name') or sp.get('scientific_name') or sp.get('canonicalName'),
+            )
 
         # Higher taxonomy Chinese names (static table)
         rank_zh = get_taxonomy_zh_for_ranks(
@@ -483,6 +520,9 @@ def _cache_enriched_species(species_list):
             if existing:
                 if sp.get('common_name_zh') and not existing.common_name_zh:
                     existing.common_name_zh = sp['common_name_zh']
+                # Backfill alternative_names_zh if empty
+                if sp.get('alternative_names_zh') and not existing.alternative_names_zh:
+                    existing.alternative_names_zh = sp['alternative_names_zh']
                 # Backfill path_zh if empty
                 if not existing.path_zh or existing.path_zh == {}:
                     pzh = _build_path_zh(sp)
@@ -494,6 +534,7 @@ def _cache_enriched_species(species_list):
                     scientific_name=sp.get('scientific_name', ''),
                     common_name_en=sp.get('common_name_en'),
                     common_name_zh=sp.get('common_name_zh'),
+                    alternative_names_zh=sp.get('alternative_names_zh'),
                     taxon_rank=sp.get('taxon_rank'),
                     taxon_path=sp.get('taxon_path'),
                     kingdom=sp.get('kingdom'),

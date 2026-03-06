@@ -65,6 +65,7 @@ CREATE TABLE staging.species_cache (
     scientific_name TEXT NOT NULL,
     common_name_en TEXT,
     common_name_zh TEXT,
+    alternative_names_zh TEXT,
     taxon_rank TEXT,
     taxon_path TEXT,
     kingdom TEXT,

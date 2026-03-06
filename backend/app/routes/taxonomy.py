@@ -113,6 +113,7 @@ def get_taxonomy_tree():
             'taxon_path': taxon_path,
             'scientific_name': species.scientific_name,
             'common_name_zh': species.common_name_zh,
+            'alternative_names_zh': species.alternative_names_zh,
             'breed_name': breed_name,
             'breed_id': breed_id,
             'breed_name_zh': breed_name_zh,
