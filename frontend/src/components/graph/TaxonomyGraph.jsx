@@ -239,15 +239,21 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
 
   const handleShuffle = useCallback(() => {
     setShuffleSeed(s => (s ?? 0) + 1);
-    // Pan to the root of whichever tree is being shuffled
+    // Pan so the root sits near the top (~1/5 of viewport height)
     scheduleCamera(() => {
       const prefix = activeTree === 'fictional' ? '__F__' : '';
       const rootNode = nodesRef.current.find(
         n => n.depth === 0 && (n.data._pathKey || '') === prefix,
       );
-      if (rootNode) panToWithInsets(rootNode.x, rootNode.y);
+      if (!rootNode) return;
+      const [, l, r, , t] = cameraInsetsRef.current;
+      // Inflate bottomInset so panTo's "center" lands at ~20% from top
+      // cy = t + (h - t - bFake) / 2 = t + 0.2*(h - t)  →  bFake = 0.6*(h - t)
+      const vh = window.innerHeight;
+      const fakeBottom = 0.6 * (vh - t);
+      canvasRef.current?.panTo(rootNode.x, rootNode.y, undefined, l, r, fakeBottom, t);
     }, 80);
-  }, [activeTree, scheduleCamera, panToWithInsets]);
+  }, [activeTree, scheduleCamera]);
 
 
   // d3 layout (before traceBack computations so focusedEntries can sort by X)
