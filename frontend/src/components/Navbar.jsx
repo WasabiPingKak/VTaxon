@@ -3,6 +3,7 @@ import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import useIsMobile from '../hooks/useIsMobile';
+import NotificationBell from './NotificationBell';
 
 function AvatarFallback({ name, size = 32 }) {
   const initial = (name || '?')[0].toUpperCase();
@@ -134,6 +135,7 @@ export default function Navbar() {
                 </svg>
                 {!isMobile && '定位自己'}
               </button>
+              <NotificationBell />
               <div ref={dropdownRef} style={{ position: 'relative' }}>
               <button
                 type="button"

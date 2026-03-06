@@ -53,6 +53,7 @@ def create_app(config_name=None):
     from .routes.fictional import fictional_bp
     from .routes.reports import reports_bp
     from .routes.seo import seo_bp
+    from .routes.notifications import notifications_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(users_bp, url_prefix='/api/users')
@@ -62,6 +63,7 @@ def create_app(config_name=None):
     app.register_blueprint(breeds_bp, url_prefix='/api/breeds')
     app.register_blueprint(fictional_bp, url_prefix='/api/fictional-species')
     app.register_blueprint(reports_bp, url_prefix='/api/reports')
+    app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
     app.register_blueprint(seo_bp, url_prefix='/api')
 
     # Security headers for all API responses

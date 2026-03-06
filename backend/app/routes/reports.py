@@ -87,6 +87,11 @@ def update_report(report_id):
     if 'admin_note' in data:
         report.admin_note = data['admin_note'] or None
 
+    if new_status:
+        from ..services.notifications import create_notification
+        create_notification(report.reporter_id, 'report', report.id,
+                            new_status, report.admin_note)
+
     db.session.commit()
     return jsonify(report.to_dict())
 
@@ -207,6 +212,10 @@ def ban_user(report_id):
     report.status = 'confirmed'
     if 'admin_note' in data:
         report.admin_note = data['admin_note'] or None
+
+    from ..services.notifications import create_notification
+    create_notification(report.reporter_id, 'report', report.id,
+                        'confirmed', report.admin_note)
 
     # Delete the reported user (CASCADE clears oauth_accounts, vtuber_traits, etc.)
     db.session.delete(reported_user)
