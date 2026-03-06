@@ -13,6 +13,7 @@ const COUNTRIES = [
   { code: 'FR', name: '法國' },
   { code: 'CN', name: '中國' },
   { code: 'HK', name: '香港' },
+  { code: 'MO', name: '澳門' },
   { code: 'SG', name: '新加坡' },
   { code: 'MY', name: '馬來西亞' },
   { code: 'TH', name: '泰國' },
