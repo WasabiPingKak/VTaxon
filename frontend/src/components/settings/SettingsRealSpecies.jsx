@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../lib/ToastContext';
 import { api } from '../../lib/api';
+import { formatAltNamesInline, altNamesTooltip } from '../../lib/altNames';
 import SpeciesSearch from '../SpeciesSearch';
 import RankBadge from '../RankBadge';
 import AiPromptBlock from '../AiPromptBlock';
@@ -186,11 +187,20 @@ export default function SettingsRealSpecies() {
                   {trait.species && <TaxonomyPath species={trait.species} />}
                   <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px', marginTop: trait.species ? '4px' : 0 }}>
                     {rank && <RankBadge rank={rank} />}
-                    {displayName && (
-                      <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#e2e8f0' }}>
-                        {displayName}
-                      </span>
-                    )}
+                    {displayName && (() => {
+                      const altInline = formatAltNamesInline(trait.species?.alternative_names_zh);
+                      const altTitle = altNamesTooltip(trait.species?.alternative_names_zh);
+                      return (
+                        <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#e2e8f0' }}>
+                          {displayName}
+                          {altInline && (
+                            <span title={altTitle} style={{ fontWeight: 400, fontSize: '0.85em', color: 'rgba(255,255,255,0.35)' }}>
+                              {altInline}
+                            </span>
+                          )}
+                        </span>
+                      );
+                    })()}
                     {trait.species && (
                       <span style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.5)' }}>
                         {trait.species.scientific_name}

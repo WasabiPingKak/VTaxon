@@ -222,6 +222,12 @@ export default function PreviewPanel({ user, oauthAccounts, traits, selectedTrai
                     {species.common_name_zh}
                   </div>
                 )}
+                {species.alternative_names_zh && (
+                  <div>
+                    <span style={{ ...previewLabelStyle }}>俗名</span>
+                    {species.alternative_names_zh.split(/[,，]/).map(s => s.trim()).filter(Boolean).join('、')}
+                  </div>
+                )}
                 {trait.breed_name && (
                   <div>
                     <span style={{ ...previewLabelStyle }}>品種</span>
