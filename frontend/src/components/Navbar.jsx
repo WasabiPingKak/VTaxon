@@ -195,19 +195,6 @@ export default function Navbar() {
                   >
                     我的角色
                   </Link>
-                  <Link
-                    to="/account"
-                    onClick={() => setDropdownOpen(false)}
-                    style={{
-                      display: 'block',
-                      padding: '10px 14px',
-                      textDecoration: 'none',
-                      color: 'rgba(255,255,255,0.8)',
-                      fontSize: '0.85em',
-                    }}
-                  >
-                    帳號設定
-                  </Link>
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
                   {user.role === 'admin' && (
                     <Link

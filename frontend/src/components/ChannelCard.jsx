@@ -49,6 +49,7 @@ export default function ChannelCard({
   useEffect(() => { setDraft(account.channel_url || ''); }, [account.channel_url]);
 
   const avatarSize = mode === 'full' ? 40 : 32;
+  const displayName = account.provider_display_name || account.provider_account_id;
 
   const avatar = account.provider_avatar_url && !imgError ? (
     <img
@@ -60,8 +61,6 @@ export default function ChannelCard({
   ) : (
     <AvatarFallback provider={account.provider} size={avatarSize} />
   );
-
-  const displayName = account.provider_display_name || account.provider_account_id;
 
   const primaryBadge = isPrimary ? (
     <span style={{

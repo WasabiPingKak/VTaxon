@@ -1,18 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import LinksRow from '../components/LinksRow';
 import PreviewPanel from '../components/PreviewPanel';
 import SettingsProfile from '../components/settings/SettingsProfile';
+import SettingsSnsLinks from '../components/settings/SettingsSnsLinks';
 import SettingsRealSpecies from '../components/settings/SettingsRealSpecies';
 import SettingsFictional from '../components/settings/SettingsFictional';
+import SettingsAccounts from '../components/settings/SettingsAccounts';
 import SEOHead from '../components/SEOHead';
+
+const TABS = [
+  { key: 'species', label: '物種標註' },
+  { key: 'profile', label: '基本資料' },
+  { key: 'account', label: '帳號設定' },
+];
 
 export default function CharacterPage() {
   const { user, loading } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [oauthAccounts, setOauthAccounts] = useState([]);
-  const [profileOpen, setProfileOpen] = useState(false);
+
+  const activeTab = searchParams.get('tab') || 'species';
 
   // Preview panel state — loaded on demand
   const [showPreview, setShowPreview] = useState(false);
@@ -38,6 +48,14 @@ export default function CharacterPage() {
       console.error('Failed to load preview data:', err);
     }
   }, [user]);
+
+  function setActiveTab(tab) {
+    if (tab === 'species') {
+      setSearchParams({}, { replace: true });
+    } else {
+      setSearchParams({ tab }, { replace: true });
+    }
+  }
 
   if (!loading && !user) return <Navigate to="/login" replace />;
   if (loading) return <p style={{ textAlign: 'center', marginTop: '40px', color: 'rgba(255,255,255,0.5)' }}>載入中…</p>;
@@ -86,9 +104,6 @@ export default function CharacterPage() {
 
         {/* Action buttons */}
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-          <Link to="/account" style={{ ...smallBtnStyle, textDecoration: 'none' }}>
-            帳號設定
-          </Link>
           <button type="button" onClick={openPreview} style={smallBtnStyle}>
             預覽側邊欄
           </button>
@@ -107,40 +122,62 @@ export default function CharacterPage() {
         />
       )}
 
-      {/* === 基本資料（收合式） === */}
-      <div style={{ marginBottom: '24px' }}>
-        <button
-          type="button"
-          onClick={() => setProfileOpen(o => !o)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '6px', width: '100%',
-            padding: '12px 16px', background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px',
-            cursor: 'pointer', color: '#e2e8f0', fontSize: '1em', fontWeight: 600,
-          }}
-        >
-          <span style={{
-            display: 'inline-block', transition: 'transform 0.2s',
-            transform: profileOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-          }}>▸</span>
-          編輯基本資料
-        </button>
-        {profileOpen && (
-          <div style={{ marginTop: '16px' }}>
+      {/* === Tab Bar === */}
+      <div style={{
+        display: 'flex',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        marginBottom: '24px',
+      }}>
+        {TABS.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setActiveTab(key)}
+            style={{
+              padding: '10px 20px',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === key ? '2px solid #38bdf8' : '2px solid transparent',
+              color: activeTab === key ? '#38bdf8' : 'rgba(255,255,255,0.5)',
+              fontWeight: activeTab === key ? 600 : 400,
+              cursor: 'pointer',
+              fontSize: '0.95em',
+              transition: 'color 0.15s, border-color 0.15s',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* === Tab Content === */}
+      {activeTab === 'species' && (
+        <>
+          <div style={{ marginBottom: '24px' }}>
+            <SettingsRealSpecies />
+          </div>
+          <div style={{ marginBottom: '24px' }}>
+            <SettingsFictional />
+          </div>
+        </>
+      )}
+
+      {activeTab === 'profile' && (
+        <>
+          <div style={{ marginBottom: '24px' }}>
             <SettingsProfile />
           </div>
-        )}
-      </div>
+          <div style={{ marginBottom: '24px' }}>
+            <SettingsSnsLinks />
+          </div>
+        </>
+      )}
 
-      {/* === 真實物種特徵 (always visible) === */}
-      <div style={{ marginBottom: '24px' }}>
-        <SettingsRealSpecies />
-      </div>
-
-      {/* === 虛構物種特徵 (always visible) === */}
-      <div style={{ marginBottom: '24px' }}>
-        <SettingsFictional />
-      </div>
+      {activeTab === 'account' && (
+        <div style={{ marginBottom: '24px' }}>
+          <SettingsAccounts />
+        </div>
+      )}
     </div>
   );
 }
