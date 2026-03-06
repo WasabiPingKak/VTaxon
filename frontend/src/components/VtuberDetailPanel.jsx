@@ -538,6 +538,12 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
                     {entry.common_name_zh}
                   </div>
                 )}
+                {entry.alternative_names_zh && (
+                  <div>
+                    <span style={labelStyle}>俗名</span>
+                    {entry.alternative_names_zh.split(/[,，]/).map(s => s.trim()).filter(Boolean).join('、')}
+                  </div>
+                )}
                 {entry.breed_name && (
                   <div>
                     <span style={labelStyle}>品種</span>

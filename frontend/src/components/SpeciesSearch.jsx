@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { breedEmoji } from '../lib/breedUtils';
+import { formatAltNamesInline, altNamesTooltip } from '../lib/altNames';
 import RankBadge from './RankBadge';
 
 // Inject pulse animation keyframes once
@@ -178,6 +179,8 @@ function SpeciesRow({ sp, onSelect, indent, connector, familyColor }) {
   const enName = sp.common_name_en;
   const hasChinese = !!zhName;
   const rank = (sp.taxon_rank || '').toUpperCase();
+  const altInline = formatAltNamesInline(sp.alternative_names_zh);
+  const altTitle = altNamesTooltip(sp.alternative_names_zh);
 
   return (
     <div style={{
@@ -199,7 +202,14 @@ function SpeciesRow({ sp, onSelect, indent, connector, familyColor }) {
           <RankBadge rank={rank} />
           {hasChinese ? (
             <>
-              <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#e2e8f0' }}>{zhName}</span>
+              <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#e2e8f0' }}>
+                {zhName}
+                {altInline && (
+                  <span title={altTitle} style={{ fontWeight: 400, fontSize: '0.85em', color: 'rgba(255,255,255,0.35)' }}>
+                    {altInline}
+                  </span>
+                )}
+              </span>
               <span style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.5)' }}>{binomial}</span>
             </>
           ) : (

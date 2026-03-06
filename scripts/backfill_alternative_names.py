@@ -37,21 +37,55 @@ def get_schema(target):
     return 'staging' if target == 'staging' else 'public'
 
 
+def _strip_author(name):
+    """Strip author from scientific name, e.g. 'Canis lupus Linnaeus, 1758' → 'Canis lupus'."""
+    if not name:
+        return name
+    # Canonical names have 2-3 words (genus + species + subspecies); author starts after
+    parts = name.split()
+    # Keep only lowercase parts after the first uppercase genus word
+    canon = [parts[0]]
+    for p in parts[1:]:
+        if p[0].islower():
+            canon.append(p)
+        else:
+            break
+    return ' '.join(canon)
+
+
+def _resolve_current_taxon_id(scientific_name):
+    """Get the current GBIF taxon_id for a scientific name via /species/match."""
+    try:
+        import requests
+        canonical = _strip_author(scientific_name)
+        r = requests.get('https://api.gbif.org/v1/species/match',
+                         params={'name': canonical, 'verbose': 'false'}, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        if data.get('matchType') != 'NONE':
+            return data.get('usageKey')
+    except Exception:
+        pass
+    return None
+
+
 def fetch_alternative_names(scientific_name, taxon_id):
     """Resolve alternative names via TaiCOL → Wikidata aliases."""
+    canonical = _strip_author(scientific_name)
     # TaiCOL
     try:
         from app.services.taicol import get_chinese_name as taicol_get
-        _zh, alt = taicol_get(scientific_name)
+        _zh, alt = taicol_get(canonical)
         if alt:
             return alt
     except Exception:
         pass
 
-    # Wikidata aliases
+    # Wikidata aliases — use current GBIF taxon_id to avoid stale ID drift
+    resolved_id = _resolve_current_taxon_id(scientific_name) or taxon_id
     try:
         from app.services.wikidata import get_aliases_by_gbif_id
-        aliases = get_aliases_by_gbif_id(taxon_id)
+        aliases = get_aliases_by_gbif_id(resolved_id)
         if aliases:
             return aliases
     except Exception:
@@ -76,24 +110,38 @@ def main():
     # Set search_path
     cur.execute(f"SET search_path TO {schema}, public;")
 
-    # Find rows missing alternative_names_zh
+    # Step 0: Clean up — null out alternative_names_zh for non-species ranks
+    cur.execute("""
+        UPDATE species_cache
+        SET alternative_names_zh = NULL
+        WHERE alternative_names_zh IS NOT NULL
+          AND taxon_rank NOT IN ('SPECIES', 'SUBSPECIES', 'VARIETY')
+    """)
+    cleaned = cur.rowcount
+    if cleaned:
+        print(f'Cleaned {cleaned} non-species rows that had alternative_names_zh')
+
+    # Find rows missing alternative_names_zh (species-level only)
     cur.execute("""
         SELECT taxon_id, scientific_name, common_name_zh
         FROM species_cache
         WHERE alternative_names_zh IS NULL
+          AND taxon_rank IN ('SPECIES', 'SUBSPECIES', 'VARIETY')
         ORDER BY taxon_id
     """)
     rows = cur.fetchall()
-    print(f'Found {len(rows)} species_cache rows missing alternative_names_zh')
+    print(f'Found {len(rows)} species-level rows missing alternative_names_zh')
 
     updated = 0
     skipped = 0
     for i, (taxon_id, scientific_name, common_name_zh) in enumerate(rows):
         alt = fetch_alternative_names(scientific_name, taxon_id)
 
-        # 如果俗名跟正式名一樣就跳過
-        if alt and alt == common_name_zh:
-            alt = None
+        # 去重：移除與 common_name_zh 相同的俗名
+        if alt and common_name_zh:
+            parts = [n.strip() for n in alt.split(',')]
+            parts = [n for n in parts if n and n != common_name_zh]
+            alt = ', '.join(parts) if parts else None
 
         if alt:
             display = f'{common_name_zh or scientific_name} → 俗名: {alt}'

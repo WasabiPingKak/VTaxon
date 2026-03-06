@@ -360,11 +360,17 @@ def _resolve_chinese_name(taxon_id, scientific_name):
 
 
 @lru_cache(maxsize=500)
-def _resolve_alternative_names(taxon_id, scientific_name):
+def _resolve_alternative_names(taxon_id, scientific_name, taxon_rank=None):
     """Resolve alternative Chinese names (俗名) through TaiCOL → Wikidata aliases.
 
+    Only resolves for SPECIES/SUBSPECIES/VARIETY ranks — higher ranks return None.
     Returns comma-separated string of alternative names, or None.
     """
+    # Only species-level taxa have meaningful 俗名
+    if taxon_rank:
+        rank_upper = taxon_rank.upper()
+        if rank_upper not in ('SPECIES', 'SUBSPECIES', 'VARIETY'):
+            return None
     # TaiCOL alternative_name_c
     if scientific_name:
         try:
@@ -486,7 +492,16 @@ def _enrich_chinese_names(species_list):
             sp['alternative_names_zh'] = _resolve_alternative_names(
                 sp['taxon_id'],
                 sp.get('canonical_name') or sp.get('scientific_name') or sp.get('canonicalName'),
+                taxon_rank=sp.get('taxon_rank'),
             )
+
+        # Deduplicate: remove alt names that match common_name_zh
+        alt = sp.get('alternative_names_zh')
+        primary = sp.get('common_name_zh')
+        if alt and primary:
+            parts = [n.strip() for n in alt.split(',')]
+            parts = [n for n in parts if n and n != primary]
+            sp['alternative_names_zh'] = ', '.join(parts) if parts else None
 
         # Higher taxonomy Chinese names (static table)
         rank_zh = get_taxonomy_zh_for_ranks(
