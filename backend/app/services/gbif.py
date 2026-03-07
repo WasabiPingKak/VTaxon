@@ -72,7 +72,7 @@ def suggest_species(query, limit=10):
             continue
         status = (r.get('status') or '').upper()
         rank = (r.get('rank') or '').upper()
-        if rank not in ('ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
+        if rank not in ('KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
             continue
         # SYNONYM → resolve to accepted species (cap to avoid HTTP flood)
         if status == 'SYNONYM':
@@ -254,7 +254,7 @@ def _suggest_species_stream(query, limit=10):
             continue
         status = (r.get('status') or '').upper()
         rank = (r.get('rank') or '').upper()
-        if rank not in ('ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
+        if rank not in ('KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
             continue
         # SYNONYM → resolve to accepted species (cap to avoid HTTP flood)
         if status == 'SYNONYM':
@@ -289,8 +289,12 @@ def _search_via_taicol_stream(query, limit=10):
             continue
 
         matched = match_species(scientific_name)
+
+        # GBIF Backbone 找不到 → 用 TaiCOL 資料建構結果
         if not matched:
-            continue
+            matched = _build_from_taicol(tr)
+            if not matched:
+                continue
 
         taxon_id = matched['taxon_id']
         if taxon_id in seen_keys:
@@ -763,8 +767,12 @@ def _search_via_taicol(query, limit=10):
 
         # Use GBIF match to get authoritative taxonomy + taxon_id
         matched = match_species(scientific_name)
+
+        # GBIF Backbone 找不到 → 用 TaiCOL 資料建構結果
         if not matched:
-            continue
+            matched = _build_from_taicol(tr)
+            if not matched:
+                continue
 
         taxon_id = matched['taxon_id']
         if taxon_id in seen_keys:
@@ -778,6 +786,77 @@ def _search_via_taicol(query, limit=10):
         species_list.append(matched)
 
     return species_list
+
+
+# ---------------------------------------------------------------------------
+# TaiCOL fallback builder (for taxa missing from GBIF Backbone)
+# ---------------------------------------------------------------------------
+
+def _build_from_taicol(tr):
+    """Build a species dict from TaiCOL data when GBIF Backbone has no match.
+
+    Uses a negative ID derived from the scientific name hash to avoid
+    collisions with GBIF's positive integer IDs.
+    Writes result to species_cache so trait creation can find it later.
+    """
+    scientific_name = tr.get('scientific_name')
+    if not scientific_name:
+        return None
+
+    rank = (tr.get('rank') or '').upper()
+    if not rank:
+        return None
+
+    # Generate a stable negative ID from scientific name
+    taxon_id = -(abs(hash(scientific_name)) % 900_000_000 + 100_000_000)
+
+    # Check if already cached (by negative ID)
+    cached = db.session.get(SpeciesCache, taxon_id)
+    if cached:
+        d = cached.to_dict()
+        _fill_missing_rank_zh(d, cached)
+        return d
+
+    common_name_zh = tr.get('common_name_zh')
+
+    result = {
+        'taxon_id': taxon_id,
+        'scientific_name': scientific_name,
+        'canonical_name': scientific_name,
+        'common_name_en': None,
+        'common_name_zh': common_name_zh,
+        'taxon_rank': rank,
+        'species_binomial': None,
+        'species_key': None,
+        'kingdom': None,
+        'phylum': None,
+        'class': None,
+        'order': None,
+        'family': None,
+        'genus': None,
+        'taxon_path': None,
+    }
+
+    # Try to get higher taxonomy from static table
+    zh = get_taxonomy_zh(scientific_name)
+    if zh and not common_name_zh:
+        result['common_name_zh'] = zh
+
+    # Write to species_cache for trait creation
+    try:
+        entry = SpeciesCache(
+            taxon_id=taxon_id,
+            scientific_name=scientific_name,
+            common_name_zh=result.get('common_name_zh'),
+            taxon_rank=rank,
+        )
+        db.session.add(entry)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        log.debug('Failed to cache TaiCOL-only taxon %s', scientific_name)
+
+    return result
 
 
 # ---------------------------------------------------------------------------

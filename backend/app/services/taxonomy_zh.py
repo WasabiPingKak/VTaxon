@@ -40,6 +40,9 @@ TAXONOMY_ZH = {
     'Ctenophora': '櫛水母動物門',
     'Chaetognatha': '毛顎動物門',
 
+    # --- Subphylum 亞門 ---
+    'Medusozoa': '水母亞門',
+
     # --- Class 綱 ---
     'Mammalia': '哺乳綱',
     'Aves': '鳥綱',
@@ -62,6 +65,10 @@ TAXONOMY_ZH = {
     'Pinopsida': '松綱',
     'Polypodiopsida': '水龍骨綱',
     'Agaricomycetes': '傘菌綱',
+    'Scyphozoa': '缽水母綱',
+    'Cubozoa': '箱型水母綱',
+    'Hydrozoa': '水螅綱',
+    'Staurozoa': '十字水母綱',
 
     # --- Order 目 ---
     'Carnivora': '食肉目',

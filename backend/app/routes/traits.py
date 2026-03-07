@@ -8,7 +8,7 @@ from ..services.gbif import get_species
 
 traits_bp = Blueprint('traits', __name__)
 
-ALLOWED_RANKS = {'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'}
+ALLOWED_RANKS = {'KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'}
 
 
 def _canonical_name(scientific_name):
