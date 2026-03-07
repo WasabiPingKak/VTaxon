@@ -654,8 +654,8 @@ def clean_alt_names(alt_str, primary_zh):
         # Skip if same as primary name
         if primary_zh and n == primary_zh:
             continue
-        # Skip genus-style names ending with 屬
-        if n.endswith('屬'):
+        # Skip taxonomy-style names ending with 屬 (genus) or 科 (family)
+        if n.endswith('屬') or n.endswith('科'):
             continue
         # Skip non-CJK entries (e.g. Latin scientific names)
         if not _has_cjk(n):
