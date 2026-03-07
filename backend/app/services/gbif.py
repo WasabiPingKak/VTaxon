@@ -548,6 +548,19 @@ def _enrich_chinese_names(species_list):
 
         sp.update(rank_zh)
 
+        # Fallback: for higher-rank taxa, use {rank}_zh as common_name_zh
+        if not sp.get('common_name_zh'):
+            taxon_rank = (sp.get('taxon_rank') or '').upper()
+            rank_key_map = {
+                'KINGDOM': 'kingdom_zh', 'PHYLUM': 'phylum_zh',
+                'CLASS': 'class_zh', 'ORDER': 'order_zh',
+                'FAMILY': 'family_zh', 'GENUS': 'genus_zh',
+            }
+            zh_key = rank_key_map.get(taxon_rank)
+            if zh_key and sp.get(zh_key):
+                sp['common_name_zh'] = sp[zh_key]
+                sp['species_zh'] = sp[zh_key]
+
     # Write enriched Chinese names back to DB cache
     _cache_enriched_species(species_list)
 
