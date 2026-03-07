@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths, buildBreedPaths, entryToVtuberPathKey } from '../../lib/treeUtils';
+import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, extendSingleChildChains, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths, buildBreedPaths, entryToVtuberPathKey, buildTree, buildFictionalTree } from '../../lib/treeUtils';
 import GraphCanvas from './GraphCanvas';
 import { drawGraph, createStarField } from './renderers';
 import useTreeLayout from '../../hooks/useTreeLayout';
@@ -111,6 +111,14 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
             const fictUserPaths = computeFictionalHighlightPaths(fe, currentUser.id);
             for (const p of fictUserPaths) defaultExpanded.add(p);
           }
+        }
+
+        // Extend single-child chains to leaf/fork
+        const tempTree = buildTree(e);
+        extendSingleChildChains(tempTree, defaultExpanded);
+        if (fe.length > 0) {
+          const tempFictTree = buildFictionalTree(fe);
+          extendSingleChildChains(tempFictTree, defaultExpanded);
         }
 
         setExpandedSet(defaultExpanded);

@@ -216,6 +216,7 @@ export function findNode(root, pathKey) {
   let current = root;
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
+    if (!part) continue; // skip empty rank segments (missing intermediate ranks)
     // Try normalized key for species-level segments
     const key = i >= RANK_KEYS.length ? stripAuthor(part) : part;
     const child = current.children.get(key) || current.children.get(part);
@@ -264,6 +265,28 @@ export function autoExpandPaths(node, pathSet) {
     for (const child of node.children.values()) {
       pathSet.add(child.pathKey);
       autoExpandPaths(child, pathSet);
+    }
+  }
+}
+
+/**
+ * Extend single-child chains: for every already-expanded node whose only child
+ * is NOT yet expanded, expand it and recurse until a leaf or fork is reached.
+ */
+export function extendSingleChildChains(node, pathSet) {
+  if (!node) return;
+  // First recurse into children that are already expanded
+  for (const child of node.children.values()) {
+    if (pathSet.has(child.pathKey)) {
+      extendSingleChildChains(child, pathSet);
+    }
+  }
+  // If this node has exactly one child and that child is not yet expanded, expand it
+  if (node.children.size === 1) {
+    const child = node.children.values().next().value;
+    if (!pathSet.has(child.pathKey)) {
+      pathSet.add(child.pathKey);
+      extendSingleChildChains(child, pathSet);
     }
   }
 }
