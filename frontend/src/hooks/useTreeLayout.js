@@ -497,7 +497,8 @@ function _compactNode(node) {
     _compactNode(child);
   }
 
-  // Compact non-grid children: slide together to close gaps between subtrees
+  // Compact non-grid children: ensure exactly LABEL_PADDING between subtree extents.
+  // Handles both excess gaps (pull left) and overlaps (push right).
   const nonGrid = node.children.filter(c => !c.data._inGrid);
   if (nonGrid.length > 1) {
     nonGrid.sort((a, b) => a.x - b.x);
@@ -505,8 +506,9 @@ function _compactNode(node) {
       const prev = nonGrid[i - 1];
       const curr = nonGrid[i];
       const gap = (curr.x + curr.data._extLeft) - (prev.x + prev.data._extRight);
-      if (gap > LABEL_PADDING) {
-        shiftSubtree(curr, -(gap - LABEL_PADDING));
+      const shift = LABEL_PADDING - gap;
+      if (Math.abs(shift) > 0.5) {
+        shiftSubtree(curr, shift);
       }
     }
   }
