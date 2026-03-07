@@ -227,7 +227,7 @@ function layoutTree(h, activeFilterCount) {
   treeLayout(h);
   applyIntermediateLevel(h);
   applyGridLayout(h, activeFilterCount);
-  recenterParents(h);
+  compactTree(h);
   resolveCollisions(h);
 }
 
@@ -475,22 +475,62 @@ function applyGridLayout(root, activeFilterCount) {
 }
 
 /**
- * After grid layout compresses vtuber children, recenter each parent
- * over its children's actual x-positions (bottom-up).
+ * Bottom-up subtree compaction: close gaps created by grid compression.
+ * For each node, compute the horizontal subtree extent (_extLeft, _extRight
+ * relative to node.x). Non-grid siblings are slid together so subtrees are
+ * separated by exactly LABEL_PADDING. Parents are re-centered over children.
  */
-function recenterParents(root) {
-  const nodes = root.descendants();
-  for (let i = nodes.length - 1; i >= 0; i--) {
-    const node = nodes[i];
-    if (!node.children || node.children.length === 0) continue;
-    const avgX = node.children.reduce((s, c) => s + c.x, 0) / node.children.length;
-    node.x = avgX;
+function compactTree(root) {
+  _compactNode(root);
+}
+
+function _compactNode(node) {
+  if (!node.children || node.children.length === 0) {
+    const halfW = node.data._labelHalfW || 40;
+    node.data._extLeft = -halfW;
+    node.data._extRight = halfW;
+    return;
   }
+
+  // Recurse children first (bottom-up)
+  for (const child of node.children) {
+    _compactNode(child);
+  }
+
+  // Compact non-grid children: slide together to close gaps between subtrees
+  const nonGrid = node.children.filter(c => !c.data._inGrid);
+  if (nonGrid.length > 1) {
+    nonGrid.sort((a, b) => a.x - b.x);
+    for (let i = 1; i < nonGrid.length; i++) {
+      const prev = nonGrid[i - 1];
+      const curr = nonGrid[i];
+      const gap = (curr.x + curr.data._extLeft) - (prev.x + prev.data._extRight);
+      if (gap > LABEL_PADDING) {
+        shiftSubtree(curr, -(gap - LABEL_PADDING));
+      }
+    }
+  }
+
+  // Compute subtree extent from all children
+  let minX = Infinity, maxX = -Infinity;
+  for (const child of node.children) {
+    minX = Math.min(minX, child.x + child.data._extLeft);
+    maxX = Math.max(maxX, child.x + child.data._extRight);
+  }
+
+  // Re-center parent over children extent
+  node.x = (minX + maxX) / 2;
+
+  const halfW = node.data._labelHalfW || 40;
+  node.data._extLeft = Math.min(-halfW, minX - node.x);
+  node.data._extRight = Math.max(halfW, maxX - node.x);
 }
 
 /**
  * Post-layout collision sweep: for each depth level, scan left-to-right
  * and push overlapping nodes (+ their entire subtree) rightward.
+ * Uses subtree extents (from compactTree) when available for accurate
+ * overlap detection; falls back to label width for nodes without extents.
  * Skips grid nodes (handled by dynamic cell width in applyGridLayout).
  */
 function resolveCollisions(root) {
@@ -517,13 +557,17 @@ function resolveCollisions(root) {
       // Only compare nodes at similar y (skip intermediate-level vs normal)
       if (Math.abs(left.y - right.y) > NODE_DY * 0.5) continue;
 
-      const leftHalf = left.data._labelHalfW || 40;
-      const rightHalf = right.data._labelHalfW || 40;
-      const minDist = leftHalf + rightHalf + LABEL_PADDING;
-      const actual = right.x - left.x;
+      // Use subtree extent if available, otherwise label width
+      const leftEnd = left.data._extRight != null
+        ? left.x + left.data._extRight
+        : left.x + (left.data._labelHalfW || 40);
+      const rightStart = right.data._extLeft != null
+        ? right.x + right.data._extLeft
+        : right.x - (right.data._labelHalfW || 40);
+      const actual = rightStart - leftEnd;
 
-      if (actual < minDist) {
-        const shift = minDist - actual;
+      if (actual < LABEL_PADDING) {
+        const shift = LABEL_PADDING - actual;
         shiftSubtree(right, shift);
       }
     }
