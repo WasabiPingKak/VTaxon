@@ -1173,10 +1173,15 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
           <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, lineHeight: 1.5 }}>
             將 VTuber 角色形象對應到生物分類學體系，以分類樹呈現角色之間的關聯。
           </div>
-          <Link to="/about" style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 6, display: 'inline-block', textDecoration: 'none' }}
-            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
-            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
-          >關於本站 →</Link>
+          <Link to="/about" style={{
+            display: 'inline-block', marginTop: 8, padding: '3px 10px',
+            fontSize: 10, color: 'rgba(255,255,255,0.5)', textDecoration: 'none',
+            border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12,
+            background: 'rgba(255,255,255,0.04)', transition: 'border-color 0.15s, color 0.15s',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
+          >關於本站</Link>
         </div>
       )}
 
