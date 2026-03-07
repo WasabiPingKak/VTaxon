@@ -51,22 +51,8 @@ jobs:
           SUPABASE_JWT_SECRET=SUPABASE_JWT_SECRET:latest,\
           TWITCH_CLIENT_ID=TWITCH_CLIENT_ID:latest"
 
-      - name: Cleanup old Artifact Registry images
-        run: |
-          REPO="${{ env.DOCKER_REGISTRY }}/${{ secrets.GCP_PROJECT_ID }}/vtaxon-docker/vtaxon-api"
-          gcloud artifacts docker images list "$REPO" \
-            --include-tags \
-            --filter="tags:staging-*" \
-            --sort-by="~UPDATE_TIME" \
-            --format="get(version)" \
-          | tail -n +4 \
-          | while read -r digest; do
-              gcloud artifacts docker images delete "$REPO@$digest" --quiet --delete-tags 2>/dev/null || true
-            done
-
   deploy-frontend:
     runs-on: ubuntu-latest
-    needs: deploy-backend
     steps:
       - uses: actions/checkout@v4
 
