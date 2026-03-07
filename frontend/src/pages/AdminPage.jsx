@@ -42,15 +42,15 @@ const STATUS_BADGE = {
 const REQUEST_ACTIONS = {
   pending:     [
     { status: 'received', label: '受理', style: 'primary' },
-    { status: 'rejected', label: '不採納', style: 'danger' },
+    { status: 'rejected', label: '不處理', style: 'danger' },
   ],
   received:    [
     { status: 'in_progress', label: '開始處理', style: 'primary' },
-    { status: 'rejected', label: '不採納', style: 'danger' },
+    { status: 'rejected', label: '不處理', style: 'danger' },
   ],
   in_progress: [
     { status: 'completed', label: '完成', style: 'success' },
-    { status: 'rejected', label: '不採納', style: 'danger' },
+    { status: 'rejected', label: '不處理', style: 'danger' },
   ],
 };
 
@@ -58,11 +58,11 @@ const REQUEST_ACTIONS = {
 const REPORT_ACTIONS = {
   pending:        [
     { status: 'investigating', label: '開始調查', style: 'primary' },
-    { status: 'dismissed', label: '不採納', style: 'danger' },
+    { status: 'dismissed', label: '不處理', style: 'danger' },
   ],
   investigating:  [
     { status: 'confirmed', label: '確認處理', style: 'success' },
-    { status: 'dismissed', label: '不採納', style: 'danger' },
+    { status: 'dismissed', label: '不處理', style: 'danger' },
   ],
 };
 
@@ -549,7 +549,7 @@ function ReportCard({ req, onUpdate }) {
                 ...ACTION_STYLES.danger, fontSize: '0.85em',
                 opacity: loading ? 0.5 : 1,
               }}>
-                不採納
+                不處理
               </button>
               <button type="button" disabled={previewLoading || !req.reported_user} onClick={handlePreview} style={{
                 padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
@@ -629,7 +629,7 @@ function ReportCard({ req, onUpdate }) {
                   ...ACTION_STYLES.danger, fontSize: '0.85em',
                   opacity: loading ? 0.5 : 1,
                 }}>
-                  不採納
+                  不處理
                 </button>
                 <button
                   type="button"
