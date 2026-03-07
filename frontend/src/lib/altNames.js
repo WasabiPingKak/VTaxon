@@ -30,6 +30,19 @@ export function formatAltNamesInline(altStr, max = 2) {
 }
 
 /**
+ * Format all alt names as a full parenthetical string (no truncation).
+ * e.g. "（家綿羊、綿羊、羊）"
+ * @param {string|null} altStr
+ * @returns {string} formatted string or empty
+ */
+export function formatAltNamesFull(altStr) {
+  if (!altStr) return '';
+  const all = altStr.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+  if (all.length === 0) return '';
+  return `（${all.join('、')}）`;
+}
+
+/**
  * Get full alt names string for tooltip.
  * @param {string|null} altStr
  * @returns {string}
