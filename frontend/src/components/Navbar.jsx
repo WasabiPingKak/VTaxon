@@ -29,6 +29,7 @@ export default function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const [adminPendingTotal, setAdminPendingTotal] = useState(0);
+  const [directoryCount, setDirectoryCount] = useState(null);
 
   const handleRefocusSelf = useCallback(() => {
     if (location.pathname !== '/') navigate('/');
@@ -45,6 +46,15 @@ export default function Navbar() {
     document.addEventListener('pointerdown', handler, true);
     return () => document.removeEventListener('pointerdown', handler, true);
   }, [dropdownOpen]);
+
+  // Fetch tagged VTuber count for directory badge
+  useEffect(() => {
+    let cancelled = false;
+    api.getDirectory({ has_traits: 'true', per_page: 1 })
+      .then(data => { if (!cancelled) setDirectoryCount(data.total ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // Fetch admin pending counts on mount + periodically
   useEffect(() => {
@@ -113,6 +123,17 @@ export default function Navbar() {
             <path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
           {!isMobile && '圖鑑'}
+          {directoryCount != null && (
+            <span style={{
+              fontSize: '0.75em', fontWeight: 600,
+              padding: '1px 6px', borderRadius: 8,
+              background: 'rgba(56,189,248,0.15)',
+              color: '#38bdf8',
+              minWidth: 14, textAlign: 'center',
+            }}>
+              {directoryCount}
+            </span>
+          )}
         </Link>
         {!loading && (
           user ? (
