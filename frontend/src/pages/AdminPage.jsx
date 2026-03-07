@@ -795,17 +795,18 @@ export default function AdminPage() {
     }
   }, [section]);
 
+  const isAdmin = user?.role === 'admin';
   useEffect(() => {
-    if (user?.role === 'admin') {
+    if (isAdmin) {
       fetchRequests(activeTab);
     }
-  }, [activeTab, user, fetchRequests]);
+  }, [activeTab, isAdmin, fetchRequests]);
 
   const currentStatusTabs = section === 'report' ? REPORT_STATUS_TABS : STATUS_TABS;
 
   // Fetch pending counts for ALL sections (for section tab badges + title)
   const fetchAllPendingCounts = useCallback(() => {
-    if (user?.role !== 'admin') return;
+    if (!isAdmin) return;
     const fns = { fictional: api.getRequests, breed: api.getBreedRequests, report: api.getReports };
     for (const [key, fn] of Object.entries(fns)) {
       fn('pending')
@@ -815,13 +816,13 @@ export default function AdminPage() {
         })
         .catch(() => {});
     }
-  }, [user]);
+  }, [isAdmin]);
 
   useEffect(() => { fetchAllPendingCounts(); }, [fetchAllPendingCounts]);
 
   // Fetch counts for all status tabs
   useEffect(() => {
-    if (user?.role !== 'admin') return;
+    if (!isAdmin) return;
     const fn = section === 'fictional' ? api.getRequests
       : section === 'breed' ? api.getBreedRequests
       : api.getReports;
@@ -836,7 +837,7 @@ export default function AdminPage() {
           .catch(() => {});
       }
     }
-  }, [user, section, activeTab]);
+  }, [isAdmin, section, activeTab]);
 
   if (authLoading) {
     return <p style={{ textAlign: 'center', marginTop: 40, color: 'rgba(255,255,255,0.5)' }}>載入中…</p>;

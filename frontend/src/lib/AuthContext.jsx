@@ -43,8 +43,11 @@ export function AuthProvider({ children }) {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
+        // TOKEN_REFRESHED only updates the JWT — no need to re-sync user data,
+        // which would cause unnecessary re-renders and UI flicker (e.g. AdminPage)
+        if (event === 'TOKEN_REFRESHED') return;
         if (session) syncUser(session);
         else {
           setUser(null);

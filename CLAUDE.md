@@ -102,6 +102,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 | Production | `main` | vtaxon-api-prod | vtaxon.web.app |
 
 - **所有開發都在 `develop` 分支進行**，push 後自動部署到 staging
+- **任何程式碼修改（feature、bugfix、refactor）都必須先從 `develop` 開一個獨立的 feature branch（如 `feature/xxx`、`fix/xxx`），不得直接在 `develop` 上修改。** 完成後再 merge 回 `develop`。
 - Merge `develop` → `main` 後自動部署到 production
 - Staging 使用 DB 的 `staging` schema，Production 使用 `public` schema（同一個 Supabase 專案）
 - CI/CD：`.github/workflows/deploy-staging.yml` / `deploy-prod.yml`
