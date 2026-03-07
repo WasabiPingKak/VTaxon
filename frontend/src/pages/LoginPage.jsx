@@ -169,8 +169,29 @@ export default function LoginPage() {
           登入時會跳轉至認證平台 <span style={{ color: 'rgba(255,255,255,0.45)' }}>Supabase</span>，網址可能顯示 supabase.co 網域，此為正常現象。
         </p>
 
-        {/* Section 5: OAuth buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, ...sectionGap }}>
+        {/* Section 5: Google OAuth limit notice */}
+        <div style={{
+          background: 'rgba(251,146,60,0.08)',
+          border: '1px solid rgba(251,146,60,0.3)',
+          borderRadius: 10,
+          padding: '12px 14px',
+          ...sectionGap,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <WarningIcon />
+            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8em', lineHeight: 1.7 }}>
+              <strong style={{ color: '#fb923c' }}>Google 登入名額可能已滿</strong>
+              <br />
+              因 Google OAuth 正在重新驗證中，測試期間使用者上限為 100 人。若 Google 登入時出現錯誤畫面，請改用{' '}
+              <strong style={{ color: '#a970ff' }}>Twitch 帳號</strong>登入。
+              <br />
+              <span style={{ color: 'rgba(255,255,255,0.4)' }}>已註冊過的 Google 帳號不受影響，可正常登入。</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 6: OAuth buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
           <button
             disabled={disabled}
             onClick={() => { if (!disabled) signInWithGoogle(); }}
