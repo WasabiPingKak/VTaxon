@@ -774,69 +774,6 @@ def _has_cjk(text):
     return False
 
 
-def _build_from_taicol(tr):
-    """Build a species result dict from TaiCOL data when GBIF has no match.
-
-    Uses TaiCOL higherTaxa API to fill in the full taxonomy hierarchy.
-    """
-    scientific_name = tr.get('scientific_name', '')
-    rank = (tr.get('rank') or 'UNRANKED').upper()
-    kingdom = tr.get('kingdom')
-
-    # Build hierarchy from TaiCOL higherTaxa API
-    hierarchy = {}
-    taicol_taxon_id = tr.get('taicol_taxon_id')
-    if taicol_taxon_id:
-        higher_taxa = taicol_get_higher_taxa_zh(taicol_taxon_id)
-        for ht in higher_taxa:
-            ht_rank = (ht.get('rank') or '').upper()
-            ht_name = ht.get('name')
-            if ht_rank and ht_name:
-                rank_field_map = {
-                    'KINGDOM': 'kingdom', 'PHYLUM': 'phylum',
-                    'CLASS': 'class', 'ORDER': 'order',
-                    'FAMILY': 'family', 'GENUS': 'genus',
-                }
-                field = rank_field_map.get(ht_rank)
-                if field:
-                    hierarchy[field] = ht_name
-
-    # Use kingdom from TaiCOL result if not in hierarchy
-    if kingdom and 'kingdom' not in hierarchy:
-        hierarchy['kingdom'] = kingdom
-
-    # Build taxon_path from hierarchy
-    rank_order = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus']
-    parts = [hierarchy.get(r, '') for r in rank_order]
-    last_non_empty = -1
-    for i, v in enumerate(parts):
-        if v:
-            last_non_empty = i
-    taxon_path = '|'.join(parts[:last_non_empty + 1]) if last_non_empty >= 0 else None
-
-    # Use a negative taicol_taxon_id hash as pseudo taxon_id (no GBIF key)
-    pseudo_id = abs(hash(scientific_name)) % 10_000_000 + 90_000_000
-
-    return {
-        'taxon_id': pseudo_id,
-        'scientific_name': scientific_name,
-        'canonical_name': scientific_name,
-        'common_name_en': None,
-        'common_name_zh': tr.get('common_name_zh'),
-        'taxon_rank': rank,
-        'species_binomial': None,
-        'species_key': None,
-        'kingdom': hierarchy.get('kingdom'),
-        'phylum': hierarchy.get('phylum'),
-        'class': hierarchy.get('class'),
-        'order': hierarchy.get('order'),
-        'family': hierarchy.get('family'),
-        'genus': hierarchy.get('genus'),
-        'taxon_path': taxon_path,
-        '_from_taicol': True,
-    }
-
-
 def _fallback_taicol_by_name(query, limit=10):
     """Fallback for Latin queries: search TaiCOL by scientific_name when GBIF has no results.
 
@@ -916,6 +853,7 @@ def _build_from_taicol(tr):
 
     Uses a negative ID derived from the scientific name hash to avoid
     collisions with GBIF's positive integer IDs.
+    Uses TaiCOL higherTaxa API to fill in the full taxonomy hierarchy.
     Writes result to species_cache so trait creation can find it later.
     """
     scientific_name = tr.get('scientific_name')
@@ -938,6 +876,38 @@ def _build_from_taicol(tr):
 
     common_name_zh = tr.get('common_name_zh')
 
+    # Build hierarchy from TaiCOL higherTaxa API
+    hierarchy = {}
+    taicol_taxon_id = tr.get('taicol_taxon_id')
+    if taicol_taxon_id:
+        higher_taxa = taicol_get_higher_taxa_zh(taicol_taxon_id)
+        for ht in higher_taxa:
+            ht_rank = (ht.get('rank') or '').upper()
+            ht_name = ht.get('name')
+            if ht_rank and ht_name:
+                rank_field_map = {
+                    'KINGDOM': 'kingdom', 'PHYLUM': 'phylum',
+                    'CLASS': 'class', 'ORDER': 'order',
+                    'FAMILY': 'family', 'GENUS': 'genus',
+                }
+                field = rank_field_map.get(ht_rank)
+                if field:
+                    hierarchy[field] = ht_name
+
+    # Use kingdom from TaiCOL result if not in hierarchy
+    kingdom = tr.get('kingdom')
+    if kingdom and 'kingdom' not in hierarchy:
+        hierarchy['kingdom'] = kingdom
+
+    # Build taxon_path from hierarchy
+    rank_order = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus']
+    parts = [hierarchy.get(r, '') for r in rank_order]
+    last_non_empty = -1
+    for i, v in enumerate(parts):
+        if v:
+            last_non_empty = i
+    taxon_path = '|'.join(parts[:last_non_empty + 1]) if last_non_empty >= 0 else None
+
     result = {
         'taxon_id': taxon_id,
         'scientific_name': scientific_name,
@@ -947,16 +917,17 @@ def _build_from_taicol(tr):
         'taxon_rank': rank,
         'species_binomial': None,
         'species_key': None,
-        'kingdom': None,
-        'phylum': None,
-        'class': None,
-        'order': None,
-        'family': None,
-        'genus': None,
-        'taxon_path': None,
+        'kingdom': hierarchy.get('kingdom'),
+        'phylum': hierarchy.get('phylum'),
+        'class': hierarchy.get('class'),
+        'order': hierarchy.get('order'),
+        'family': hierarchy.get('family'),
+        'genus': hierarchy.get('genus'),
+        'taxon_path': taxon_path,
+        '_from_taicol': True,
     }
 
-    # Try to get higher taxonomy from static table
+    # Try to get higher taxonomy zh from static table
     zh = get_taxonomy_zh(scientific_name)
     if zh and not common_name_zh:
         result['common_name_zh'] = zh
@@ -968,6 +939,14 @@ def _build_from_taicol(tr):
             scientific_name=scientific_name,
             common_name_zh=result.get('common_name_zh'),
             taxon_rank=rank,
+            taxon_path=taxon_path,
+            kingdom=hierarchy.get('kingdom'),
+            phylum=hierarchy.get('phylum'),
+            class_=hierarchy.get('class'),
+            order_=hierarchy.get('order'),
+            family=hierarchy.get('family'),
+            genus=hierarchy.get('genus'),
+            path_zh=_build_path_zh(result),
         )
         db.session.add(entry)
         db.session.commit()
