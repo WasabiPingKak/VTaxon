@@ -41,7 +41,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
 
   // Sort state
   const [sortKey, setSortKey] = useState('created_at');
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [shuffleSeed, setShuffleSeed] = useState(null);   // incrementing counter, not timestamp
 
   // Filter state
