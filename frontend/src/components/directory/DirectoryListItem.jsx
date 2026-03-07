@@ -161,7 +161,7 @@ export default function DirectoryListItem({ item, onClick }) {
 
       {/* Created date */}
       <div style={{ color: 'rgba(255,255,255,0.4)' }}>
-        {item.created_at ? item.created_at.slice(0, 10) : '-'}
+        {item.created_at ? new Date(item.created_at).toLocaleDateString('zh-TW') : '-'}
       </div>
 
       {/* Locate */}

@@ -53,7 +53,7 @@ export default function DirectoryCard({ item, onClick }) {
 
   const debutDate = pd.debut_date;
   const debutDuration = formatDuration(debutDate);
-  const joinedDate = item.created_at ? item.created_at.slice(0, 10) : null;
+  const joinedDate = item.created_at ? new Date(item.created_at).toLocaleDateString('zh-TW') : null;
 
   const handleLocate = (e) => {
     e.stopPropagation();
