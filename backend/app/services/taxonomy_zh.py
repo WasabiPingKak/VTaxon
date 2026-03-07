@@ -307,6 +307,22 @@ TAXONOMY_ZH = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Species-level Chinese name overrides (keyed by GBIF taxon_id)
+#
+# Corrects known errors in Wikidata zh-tw labels or fills gaps where
+# both TaiCOL and Wikidata lack the proper Traditional Chinese name.
+# ---------------------------------------------------------------------------
+SPECIES_ZH_OVERRIDES = {
+    2481661: '皇帝企鵝',       # Aptenodytes forsteri — Wikidata zh-tw has 帝企鵝
+}
+
+
+def get_species_zh_override(taxon_id):
+    """Return overridden Chinese name for a taxon_id, or None."""
+    return SPECIES_ZH_OVERRIDES.get(taxon_id)
+
+
 def get_taxonomy_zh(name):
     """Look up the Chinese name for a taxonomy term.
 

@@ -21,7 +21,7 @@ from sqlalchemy import func
 
 from ..extensions import db
 from ..models import Breed, SpeciesCache
-from .taxonomy_zh import get_taxonomy_zh, get_taxonomy_zh_for_ranks
+from .taxonomy_zh import get_taxonomy_zh, get_taxonomy_zh_for_ranks, get_species_zh_override
 from .wikidata import get_chinese_name_by_gbif_id, get_aliases_by_gbif_id
 from .wikidata import clear_cache as wikidata_clear_cache
 from .taicol import get_chinese_name as taicol_get_chinese_name
@@ -370,10 +370,16 @@ def cache_from_search_result(gbif_data):
 def _resolve_chinese_name(taxon_id, scientific_name):
     """Resolve Chinese name through the fallback chain.
 
+    0. Static override table (corrects known Wikidata errors)
     1. TaiCOL (by scientific name) — authoritative for zh-tw
     2. Wikidata (by GBIF taxon ID) — broader coverage, less reliable
     Returns Chinese name string or None.
     """
+    # Check override table first
+    override = get_species_zh_override(taxon_id)
+    if override:
+        return override
+
     # Try TaiCOL first (authoritative for zh-tw names)
     if scientific_name:
         try:
@@ -494,6 +500,11 @@ def _enrich_chinese_names(species_list):
     Uses DB cache (species_cache) as first lookup before hitting external APIs.
     """
     for sp in species_list:
+        # Static override takes highest priority (corrects known errors)
+        override = get_species_zh_override(sp.get('taxon_id'))
+        if override:
+            sp['common_name_zh'] = override
+
         # Species-level Chinese name + alternative names — check DB cache first
         if not sp.get('common_name_zh'):
             try:
@@ -578,7 +589,11 @@ def _cache_enriched_species(species_list):
                 continue
             existing = db.session.get(SpeciesCache, taxon_id)
             if existing:
-                if sp.get('common_name_zh') and not existing.common_name_zh:
+                # Override table corrections always win over cached values
+                override = get_species_zh_override(taxon_id)
+                if override and existing.common_name_zh != override:
+                    existing.common_name_zh = override
+                elif sp.get('common_name_zh') and not existing.common_name_zh:
                     existing.common_name_zh = sp['common_name_zh']
                 # Backfill alternative_names_zh if empty
                 if sp.get('alternative_names_zh') and not existing.alternative_names_zh:
