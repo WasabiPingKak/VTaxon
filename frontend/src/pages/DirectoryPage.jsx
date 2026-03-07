@@ -29,8 +29,8 @@ export default function DirectoryPage() {
     if (isMobile && viewMode !== 'grid') setViewMode('grid');
   }, [isMobile]);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const params = {};
       for (const [k, v] of Object.entries(filters)) {
@@ -41,12 +41,20 @@ export default function DirectoryPage() {
     } catch (err) {
       console.error('Directory fetch error:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filters]);
 
   useEffect(() => {
     fetchData();
+  }, [fetchData]);
+
+  // Auto-refresh every 30s when page is visible
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchData(true);
+    }, 30000);
+    return () => clearInterval(id);
   }, [fetchData]);
 
   const handleFiltersChange = (newFilters) => {
@@ -103,6 +111,11 @@ export default function DirectoryPage() {
         >關於本站</Link>
       </p>
 
+      {data && (
+        <div style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>
+          共 {data.total} 位實況主
+        </div>
+      )}
       <DirectoryFilters
         filters={filters}
         onChange={handleFiltersChange}
@@ -174,7 +187,6 @@ export default function DirectoryPage() {
         <Pagination
           page={data.page}
           totalPages={data.total_pages}
-          total={data.total}
           onPageChange={handlePageChange}
         />
       )}
