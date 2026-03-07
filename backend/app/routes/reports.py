@@ -58,7 +58,7 @@ def create_report():
 def list_reports():
     """List reports filtered by status. Admin only."""
     status = request.args.get('status', 'pending')
-    if status not in ('pending', 'confirmed', 'dismissed'):
+    if status not in ('pending', 'investigating', 'confirmed', 'dismissed'):
         return jsonify({'error': 'Invalid status'}), 400
 
     reports = (UserReport.query
@@ -79,7 +79,7 @@ def update_report(report_id):
 
     data = request.get_json() or {}
     new_status = data.get('status')
-    if new_status and new_status not in ('confirmed', 'dismissed'):
+    if new_status and new_status not in ('investigating', 'confirmed', 'dismissed'):
         return jsonify({'error': 'Invalid status'}), 400
 
     if new_status:

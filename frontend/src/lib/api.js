@@ -226,8 +226,17 @@ export const api = {
   }),
 
   // Notifications
-  getNotifications: (unreadOnly = false) =>
-    apiFetch(`/notifications${unreadOnly ? '?unread_only=true' : ''}`),
+  getNotifications: (options = {}) => {
+    const params = new URLSearchParams();
+    if (options.unreadOnly) params.set('unread_only', 'true');
+    if (options.limit) params.set('limit', String(options.limit));
+    const qs = params.toString();
+    return apiFetch(`/notifications${qs ? '?' + qs : ''}`);
+  },
+  getNotificationsGrouped: (type) => {
+    const qs = type ? `?type=${encodeURIComponent(type)}` : '';
+    return apiFetch(`/notifications/grouped${qs}`);
+  },
   getUnreadCount: () => apiFetch('/notifications/unread-count'),
   markNotificationsRead: (body) => apiFetch('/notifications/read', {
     method: 'POST', body: JSON.stringify(body),

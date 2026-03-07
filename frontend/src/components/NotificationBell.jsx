@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 
 function timeAgo(dateStr) {
@@ -13,12 +14,24 @@ function timeAgo(dateStr) {
   return `${Math.floor(days / 30)} 個月前`;
 }
 
+const STATUS_COLORS = {
+  received: '#38bdf8',
+  in_progress: '#eab308',
+  completed: '#4ade80',
+  rejected: '#f87171',
+  investigating: '#38bdf8',
+  confirmed: '#4ade80',
+  dismissed: '#f87171',
+  approved: '#4ade80',
+};
+
 export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const ref = useRef(null);
+  const navigate = useNavigate();
 
   // Poll unread count every 60s
   useEffect(() => {
@@ -47,7 +60,7 @@ export default function NotificationBell() {
     if (open) { setOpen(false); return; }
     setOpen(true);
     setLoading(true);
-    api.getNotifications()
+    api.getNotifications({ limit: 5 })
       .then(d => {
         setNotifications(d.notifications || []);
         // Mark all as read
@@ -60,6 +73,16 @@ export default function NotificationBell() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [open, unreadCount]);
+
+  const handleViewAll = () => {
+    setOpen(false);
+    navigate('/notifications');
+  };
+
+  const handleClickNotification = () => {
+    setOpen(false);
+    navigate('/notifications');
+  };
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -117,38 +140,63 @@ export default function NotificationBell() {
               沒有通知
             </div>
           ) : (
-            notifications.map(n => (
-              <div key={n.id} style={{
-                padding: '10px 14px',
-                borderBottom: '1px solid rgba(255,255,255,0.04)',
-                display: 'flex', gap: 8,
-              }}>
-                {!n.is_read && (
-                  <span style={{
-                    width: 6, height: 6, borderRadius: '50%',
-                    background: '#38bdf8', flexShrink: 0, marginTop: 6,
-                  }} />
-                )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: '#fff', fontSize: '0.82em', fontWeight: 600 }}>
-                    {n.title}
-                  </div>
-                  {n.message && (
-                    <div style={{
-                      color: 'rgba(255,255,255,0.55)', fontSize: '0.78em',
-                      marginTop: 3, lineHeight: 1.4,
-                      overflow: 'hidden', textOverflow: 'ellipsis',
-                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                    }}>
-                      {n.message}
-                    </div>
+            <>
+              {notifications.map(n => (
+                <div
+                  key={n.id}
+                  onClick={handleClickNotification}
+                  style={{
+                    padding: '10px 14px',
+                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    display: 'flex', gap: 8,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {n.status && (
+                    <span style={{
+                      width: 6, height: 6, borderRadius: '50%',
+                      background: STATUS_COLORS[n.status] || 'rgba(255,255,255,0.3)',
+                      flexShrink: 0, marginTop: 6,
+                    }} />
                   )}
-                  <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72em', marginTop: 4 }}>
-                    {timeAgo(n.created_at)}
+                  {!n.status && !n.is_read && (
+                    <span style={{
+                      width: 6, height: 6, borderRadius: '50%',
+                      background: '#38bdf8', flexShrink: 0, marginTop: 6,
+                    }} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: '#fff', fontSize: '0.82em', fontWeight: 600 }}>
+                      {n.title}
+                    </div>
+                    {n.message && (
+                      <div style={{
+                        color: 'rgba(255,255,255,0.55)', fontSize: '0.78em',
+                        marginTop: 3, lineHeight: 1.4,
+                        overflow: 'hidden', textOverflow: 'ellipsis',
+                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                      }}>
+                        {n.message}
+                      </div>
+                    )}
+                    <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.72em', marginTop: 4 }}>
+                      {timeAgo(n.created_at)}
+                    </div>
                   </div>
                 </div>
+              ))}
+              <div
+                onClick={handleViewAll}
+                style={{
+                  padding: '10px 14px', textAlign: 'center',
+                  color: '#38bdf8', fontSize: '0.82em',
+                  cursor: 'pointer', fontWeight: 500,
+                  borderTop: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                查看全部通知
               </div>
-            ))
+            </>
           )}
         </div>
       )}

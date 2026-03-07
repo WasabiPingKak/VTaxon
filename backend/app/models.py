@@ -399,6 +399,7 @@ class Notification(db.Model):
     reference_id = db.Column(db.Integer, nullable=False)
     title = db.Column(db.Text, nullable=False)
     message = db.Column(db.Text)
+    status = db.Column(db.Text)
     is_read = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
                            default=lambda: datetime.now(timezone.utc))
@@ -410,6 +411,7 @@ class Notification(db.Model):
             'reference_id': self.reference_id,
             'title': self.title,
             'message': self.message,
+            'status': self.status,
             'is_read': self.is_read,
             'created_at': self.created_at.isoformat(),
         }
