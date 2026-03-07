@@ -815,6 +815,10 @@ def _cache_species(data, common_name_zh=None):
     if not usage_key:
         return None
 
+    # Reject non-CJK values (e.g. Latin names from Wikidata languagefallback)
+    if common_name_zh and not _has_cjk(common_name_zh):
+        common_name_zh = None
+
     taxon_path = _build_taxon_path(data)
     path_zh = _build_path_zh(data)
 
