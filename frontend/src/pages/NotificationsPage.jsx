@@ -20,11 +20,11 @@ const STATUS_LABELS = {
   received: '已受理',
   in_progress: '處理中',
   completed: '已完成',
-  rejected: '未採納',
+  rejected: '不處理',
   approved: '已批准',
   investigating: '調查中',
   confirmed: '已確認處理',
-  dismissed: '未採納',
+  dismissed: '不處理',
 };
 
 const STATUS_COLORS = {

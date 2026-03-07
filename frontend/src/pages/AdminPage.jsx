@@ -9,14 +9,14 @@ const REQUEST_STATUS_TABS = [
   { key: 'received', label: '已受理' },
   { key: 'in_progress', label: '處理中' },
   { key: 'completed', label: '已完成' },
-  { key: 'rejected', label: '未採納' },
+  { key: 'rejected', label: '不處理' },
 ];
 
 const REPORT_STATUS_TABS = [
   { key: 'pending', label: '待審核' },
   { key: 'investigating', label: '調查中' },
   { key: 'confirmed', label: '已確認' },
-  { key: 'dismissed', label: '未採納' },
+  { key: 'dismissed', label: '不處理' },
 ];
 
 const SECTION_TABS = [
@@ -32,10 +32,10 @@ const STATUS_BADGE = {
   in_progress:   { bg: 'rgba(234,179,8,0.15)', color: '#eab308', label: '處理中' },
   completed:     { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', label: '已完成' },
   approved:      { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', label: '已批准' },
-  rejected:      { bg: 'rgba(239,68,68,0.15)', color: '#f87171', label: '未採納' },
+  rejected:      { bg: 'rgba(239,68,68,0.15)', color: '#f87171', label: '不處理' },
   investigating: { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8', label: '調查中' },
   confirmed:     { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', label: '已確認' },
-  dismissed:     { bg: 'rgba(100,100,100,0.15)', color: '#999', label: '未採納' },
+  dismissed:     { bg: 'rgba(100,100,100,0.15)', color: '#999', label: '不處理' },
 };
 
 // Next actions for request types (fictional/breed)
