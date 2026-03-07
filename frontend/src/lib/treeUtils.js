@@ -50,9 +50,13 @@ export function buildTree(entries) {
 
       const pathKey = parts.slice(0, i + 1).join('|');
 
+      // Use path_ranks for rank determination and zh key lookup
+      const rankFromPath = entry.path_ranks?.[i];
+      const zhKey = rankFromPath ? rankFromPath.toLowerCase() : RANK_KEYS[i];
+      const rank = rankFromPath || RANK_NAMES[i] || '';
+
       if (!current.children.has(part)) {
-        const rankKey = RANK_KEYS[i];
-        let nameZh = rankKey ? (entry.path_zh?.[rankKey] || '') : '';
+        let nameZh = zhKey ? (entry.path_zh?.[zhKey] || '') : '';
         if (!nameZh && (i >= RANK_KEYS.length || i === parts.length - 1)) {
           nameZh = entry.common_name_zh || '';
         }
@@ -60,7 +64,7 @@ export function buildTree(entries) {
         current.children.set(part, {
           name: stripAuthor(part),
           nameZh,
-          rank: RANK_NAMES[i] || '',
+          rank,
           pathKey,
           count: 0,
           children: new Map(),
@@ -70,6 +74,14 @@ export function buildTree(entries) {
 
       const child = current.children.get(part);
       child.count++;
+
+      // Update rank if new entry provides a more specific rank (e.g. SUBPHYLUM vs PHYLUM)
+      if (rankFromPath && child.rank !== rankFromPath && rankFromPath.startsWith('SUB')) {
+        child.rank = rankFromPath;
+        if (!child.nameZh && zhKey) {
+          child.nameZh = entry.path_zh?.[zhKey] || '';
+        }
+      }
 
       if (!child.nameZh && (i >= RANK_KEYS.length || i === parts.length - 1) && entry.common_name_zh) {
         child.nameZh = entry.common_name_zh;

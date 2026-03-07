@@ -43,6 +43,9 @@ TAXONOMY_ZH = {
     # --- Subphylum 亞門 ---
     'Medusozoa': '水母亞門',
 
+    # --- Subclass 亞綱 ---
+    'Hydroidolina': '軟水母亞綱',
+
     # --- Class 綱 ---
     'Mammalia': '哺乳綱',
     'Aves': '鳥綱',

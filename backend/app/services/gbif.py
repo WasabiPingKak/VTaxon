@@ -74,7 +74,7 @@ def suggest_species(query, limit=10):
             continue
         status = (r.get('status') or '').upper()
         rank = (r.get('rank') or '').upper()
-        if rank not in ('KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
+        if rank not in ('KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'SUBCLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
             continue
         # SYNONYM → resolve to accepted species (cap to avoid HTTP flood)
         if status == 'SYNONYM':
@@ -266,7 +266,7 @@ def _suggest_species_stream(query, limit=10):
             continue
         status = (r.get('status') or '').upper()
         rank = (r.get('rank') or '').upper()
-        if rank not in ('KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
+        if rank not in ('KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'SUBCLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
             continue
         # SYNONYM → resolve to accepted species (cap to avoid HTTP flood)
         if status == 'SYNONYM':
@@ -987,6 +987,22 @@ def _build_path_zh(data):
         if latin:
             zh = get_taxonomy_zh(latin) or _resolve_rank_zh(latin, rank=rank)
             result[field] = zh
+
+    # For SUBPHYLUM/SUBCLASS taxa, add sub-rank zh from static table
+    taxon_rank = (data.get('taxon_rank') or data.get('rank') or '').upper()
+    if taxon_rank == 'SUBPHYLUM':
+        canonical = data.get('canonical_name') or data.get('canonicalName') or data.get('scientific_name', '')
+        if canonical:
+            zh = get_taxonomy_zh(canonical)
+            if zh:
+                result['subphylum'] = zh
+    elif taxon_rank == 'SUBCLASS':
+        canonical = data.get('canonical_name') or data.get('canonicalName') or data.get('scientific_name', '')
+        if canonical:
+            zh = get_taxonomy_zh(canonical)
+            if zh:
+                result['subclass'] = zh
+
     return result
 
 
@@ -995,6 +1011,9 @@ def _realign_taxon_path(species):
 
     Old format skipped null ranks: Animalia|Chordata|Arandaspididae|Sacabambaspis
     New format preserves positions: Animalia|Chordata|||Arandaspididae|Sacabambaspis
+
+    For SUBPHYLUM/SUBCLASS rank taxa, appends the scientific name after the
+    standard hierarchy (same logic as _build_taxon_path).
 
     Returns the corrected path and whether it changed.
     """
@@ -1020,6 +1039,16 @@ def _realign_taxon_path(species):
         return species.taxon_path, False
 
     aligned = '|'.join((v or '') for v in rank_fields[:last_non_empty + 1])
+
+    # For SUBPHYLUM/SUBCLASS, append scientific_name after standard hierarchy
+    if taxon_rank in ('SUBPHYLUM', 'SUBCLASS'):
+        sci_name = re.sub(
+            r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '',
+            species.scientific_name or '',
+        ).strip()
+        if sci_name and not aligned.endswith(sci_name):
+            aligned = aligned + '|' + sci_name
+
     changed = aligned != species.taxon_path
     if changed:
         species.taxon_path = aligned
@@ -1075,6 +1104,11 @@ def _build_taxon_path(data):
     Always includes all rank positions (empty string for missing ranks) up to
     the deepest known rank so that position index == rank index.
     e.g. Animalia|Chordata|||Arandaspididae|Sacabambaspis
+
+    For SUBPHYLUM/SUBCLASS rank taxa, appends the canonical name after the
+    standard hierarchy so the path is distinguishable from the parent rank.
+    e.g. Medusozoa → Animalia|Cnidaria|Medusozoa
+         Hydroidolina → Animalia|Cnidaria|Hydrozoa|Hydroidolina
     """
     field_map = {
         'kingdom': 'kingdom',
@@ -1094,7 +1128,22 @@ def _build_taxon_path(data):
             last_non_empty = i
     if last_non_empty < 0:
         return None
-    return '|'.join(parts[:last_non_empty + 1])
+    path = '|'.join(parts[:last_non_empty + 1])
+
+    # For SUBPHYLUM/SUBCLASS, append canonical name so the path includes
+    # the sub-rank taxon itself (not just its parent hierarchy)
+    taxon_rank = (data.get('rank') or '').upper()
+    if taxon_rank in ('SUBPHYLUM', 'SUBCLASS'):
+        canonical = data.get('canonicalName') or data.get('scientificName', '')
+        if canonical:
+            # Strip author citation
+            canonical = re.sub(
+                r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '', canonical
+            ).strip()
+            if canonical and not path.endswith(canonical):
+                path = path + '|' + canonical
+
+    return path
 
 
 def _resolve_synonym(synonym_key, synonym_canonical_name, seen_keys=None):
