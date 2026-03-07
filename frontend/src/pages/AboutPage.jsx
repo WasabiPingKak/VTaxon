@@ -53,7 +53,7 @@ export default function AboutPage() {
           '@type': 'AboutPage',
           name: '關於 VTaxon',
           description: 'VTaxon 專案介紹與開發者資訊',
-          url: 'https://vtaxon.web.app/about',
+          url: 'https://vtaxon.com/about',
         }}
       />
 
