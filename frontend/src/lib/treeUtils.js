@@ -3,6 +3,13 @@
  * Used by both the legacy text tree and the new graph canvas.
  */
 
+/** Strip taxonomic author citations from scientific names.
+ *  "Vulpes zerda (Zimmermann, 1780)" → "Vulpes zerda" */
+export function stripAuthor(name) {
+  if (!name) return name;
+  return name.replace(/\s+\(?[A-Z][\w.\s,''-]*,\s*\d{4}\)?$/, '').trim();
+}
+
 const RANK_KEYS = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
 const RANK_NAMES = {
   0: 'KINGDOM', 1: 'PHYLUM', 2: 'CLASS', 3: 'ORDER',
@@ -42,7 +49,7 @@ export function buildTree(entries) {
         }
 
         current.children.set(part, {
-          name: part,
+          name: stripAuthor(part),
           nameZh,
           rank: RANK_NAMES[i] || '',
           pathKey,
