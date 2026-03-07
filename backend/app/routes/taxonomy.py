@@ -16,6 +16,92 @@ log = logging.getLogger(__name__)
 taxonomy_bp = Blueprint('taxonomy', __name__)
 limiter.limit("30/minute")(taxonomy_bp)
 
+# Standard 7-position rank order for taxon_path
+_STANDARD_RANKS = ['KINGDOM', 'PHYLUM', 'CLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES']
+
+# Medusozoa classes: Cnidaria classes that belong under the Medusozoa subphylum
+_MEDUSOZOA_CLASSES = {'Scyphozoa', 'Cubozoa', 'Staurozoa', 'Hydrozoa'}
+
+
+def _compute_path_ranks(taxon_path, taxon_rank):
+    """Compute a rank label array for each segment of taxon_path.
+
+    Standard 7-segment paths map 1:1 to _STANDARD_RANKS.
+    SUBPHYLUM taxa (3 segments like Animalia|Cnidaria|Medusozoa):
+        → ['KINGDOM', 'PHYLUM', 'SUBPHYLUM']
+    SUBCLASS taxa (4 segments like Animalia|Cnidaria|Hydrozoa|Hydroidolina):
+        → ['KINGDOM', 'PHYLUM', 'CLASS', 'SUBCLASS']
+    """
+    if not taxon_path:
+        return []
+    parts = taxon_path.split('|')
+    n = len(parts)
+    rank_upper = (taxon_rank or '').upper()
+
+    # For SUBPHYLUM/SUBCLASS, the last segment is the sub-rank taxon itself
+    if rank_upper == 'SUBPHYLUM' and n >= 2:
+        ranks = list(_STANDARD_RANKS[:n - 1])
+        ranks.append('SUBPHYLUM')
+        return ranks
+    if rank_upper == 'SUBCLASS' and n >= 3:
+        ranks = list(_STANDARD_RANKS[:n - 1])
+        ranks.append('SUBCLASS')
+        return ranks
+
+    # Standard path: use positional mapping
+    return list(_STANDARD_RANKS[:n])
+
+
+def _inject_medusozoa(entries):
+    """Post-process entries to inject Medusozoa subphylum between Cnidaria and its classes.
+
+    Only modifies entries where phylum=Cnidaria and class is one of the
+    Medusozoa classes. Inserts 'Medusozoa' into taxon_path and updates
+    path_ranks and path_zh accordingly.
+
+    This is display-only — does NOT modify the DB.
+    """
+    for entry in entries:
+        path = entry.get('taxon_path')
+        if not path:
+            continue
+
+        parts = path.split('|')
+        path_ranks = entry.get('path_ranks', [])
+
+        # Find phylum position (should be index 1)
+        phylum_idx = None
+        for i, r in enumerate(path_ranks):
+            if r == 'PHYLUM':
+                phylum_idx = i
+                break
+        if phylum_idx is None or phylum_idx + 1 >= len(parts):
+            continue
+
+        # Check: is this a Cnidaria entry with a Medusozoa class?
+        if parts[phylum_idx] != 'Cnidaria':
+            continue
+        class_idx = phylum_idx + 1
+        if class_idx >= len(parts):
+            continue
+        class_name = parts[class_idx]
+        if class_name not in _MEDUSOZOA_CLASSES:
+            continue
+
+        # Insert Medusozoa between phylum and class
+        insert_pos = phylum_idx + 1
+        parts.insert(insert_pos, 'Medusozoa')
+        path_ranks.insert(insert_pos, 'SUBPHYLUM')
+
+        entry['taxon_path'] = '|'.join(parts)
+        entry['path_ranks'] = path_ranks
+
+        # Update path_zh with subphylum
+        pzh = entry.get('path_zh') or {}
+        if isinstance(pzh, dict):
+            pzh['subphylum'] = '水母亞門'
+            entry['path_zh'] = pzh
+
 
 def _rebuild_path_zh(species):
     """Rebuild path_zh using full fallback chain (static table + Wikidata).
@@ -112,6 +198,7 @@ def get_taxonomy_tree():
             'taxon_id': species.taxon_id,
             'taxon_rank': species.taxon_rank,
             'taxon_path': taxon_path,
+            'path_ranks': _compute_path_ranks(taxon_path, species.taxon_rank),
             'scientific_name': species.scientific_name,
             'common_name_zh': species.common_name_zh,
             'alternative_names_zh': species.alternative_names_zh,
@@ -128,6 +215,9 @@ def get_taxonomy_tree():
             db.session.commit()
         except Exception:
             db.session.rollback()
+
+    # Post-process: inject Medusozoa subphylum for display
+    _inject_medusozoa(entries)
 
     result = {'entries': entries}
     set_tree_cache(result)
