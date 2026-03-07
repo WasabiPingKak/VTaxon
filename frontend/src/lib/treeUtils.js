@@ -17,6 +17,15 @@ const RANK_NAMES = {
   8: 'BREED',
 };
 
+/** Split taxon_path and normalize species-level segments (strip author citations). */
+function splitPath(taxonPath) {
+  const parts = (taxonPath || '').split('|');
+  for (let i = RANK_KEYS.length; i < parts.length; i++) {
+    parts[i] = stripAuthor(parts[i]);
+  }
+  return parts;
+}
+
 /**
  * Build a tree structure from flat entries based on taxon_path.
  * Each entry's taxon_path looks like "Animalia|Chordata|Mammalia|..."
@@ -29,7 +38,7 @@ export function buildTree(entries) {
   };
 
   for (const entry of entries) {
-    const parts = (entry.taxon_path || '').split('|');
+    const parts = splitPath(entry.taxon_path);
     if (parts.length === 0) continue;
 
     let current = root;
@@ -92,7 +101,32 @@ export function buildTree(entries) {
     }
   }
 
+  // Post-pass: move unbreed vtubers to "未指定品種" node when breed siblings exist
+  _addUnspecifiedBreedNodes(root);
+
   return root;
+}
+
+/** Recursively add "未指定品種" virtual nodes for species that have both
+ *  breed children and vtubers without a breed. */
+function _addUnspecifiedBreedNodes(node) {
+  for (const child of node.children.values()) {
+    _addUnspecifiedBreedNodes(child);
+  }
+  if ((node.rank === 'SPECIES' || node.rank === 'SUBSPECIES') &&
+      node.vtubers.length > 0 && node.children.size > 0) {
+    const unspecKey = '__breed__unspecified';
+    node.children.set(unspecKey, {
+      name: '',
+      nameZh: '未指定品種',
+      rank: 'BREED',
+      pathKey: `${node.pathKey}|${unspecKey}`,
+      count: node.vtubers.length,
+      children: new Map(),
+      vtubers: [...node.vtubers],
+    });
+    node.vtubers = [];
+  }
 }
 
 /**
@@ -104,7 +138,7 @@ export function computeHighlightPaths(entries, userId) {
 
   for (const entry of entries) {
     if (entry.user_id !== userId) continue;
-    const parts = (entry.taxon_path || '').split('|');
+    const parts = splitPath(entry.taxon_path);
     for (let i = 1; i <= parts.length; i++) {
       paths.add(parts.slice(0, i).join('|'));
     }
@@ -130,8 +164,11 @@ export function findNode(root, pathKey) {
 
   const parts = navPath.split('|');
   let current = root;
-  for (const part of parts) {
-    const child = current.children.get(part);
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    // Try normalized key for species-level segments
+    const key = i >= RANK_KEYS.length ? stripAuthor(part) : part;
+    const child = current.children.get(key) || current.children.get(part);
     if (!child) return null;
     if (child.pathKey === pathKey) return child;
     current = child;
@@ -145,7 +182,7 @@ export function findNode(root, pathKey) {
 export function collectAllPaths(entries) {
   const all = new Set();
   for (const entry of entries) {
-    const parts = (entry.taxon_path || '').split('|');
+    const parts = splitPath(entry.taxon_path);
     for (let i = 1; i <= parts.length; i++) {
       all.add(parts.slice(0, i).join('|'));
     }
@@ -176,7 +213,7 @@ export function computeCloseVtubers(focusedEntries, allEntries, traceBack = 2) {
   const closeMap = new Map(); // Map<userId, Set<taxonPath>>
 
   const focusedPaths = focusedEntries.map(e => e.taxon_path).filter(Boolean);
-  const focusedSegArrays = focusedPaths.map(p => p.split('|'));
+  const focusedSegArrays = focusedPaths.map(p => splitPath(p));
 
   // Pre-compute minCommon for each focused entry
   const minCommons = focusedSegArrays.map(segs => {
@@ -191,7 +228,7 @@ export function computeCloseVtubers(focusedEntries, allEntries, traceBack = 2) {
     const ep = entry.taxon_path;
     if (!ep) continue;
 
-    const epSegs = ep.split('|');
+    const epSegs = splitPath(ep);
 
     for (let fi = 0; fi < focusedSegArrays.length; fi++) {
       const fpSegs = focusedSegArrays[fi];
@@ -227,7 +264,7 @@ export function collectCloseVtuberPaths(closeVtuberIds, entries) {
 
   for (const entry of entries) {
     if (!closeVtuberIds.has(entry.user_id)) continue;
-    const parts = (entry.taxon_path || '').split('|');
+    const parts = splitPath(entry.taxon_path);
     for (let i = 1; i <= parts.length; i++) {
       paths.add(parts.slice(0, i).join('|'));
     }
@@ -248,7 +285,7 @@ export function computeCloseVtubersByRank(focusedEntries, allEntries, traceBack 
   const focusedUserId = focusedEntries[0].user_id;
 
   const focusedPaths = focusedEntries.map(e => e.taxon_path).filter(Boolean);
-  const focusedSegArrays = focusedPaths.map(p => p.split('|'));
+  const focusedSegArrays = focusedPaths.map(p => splitPath(p));
 
   // Pre-compute minCommon for each focused entry
   const minCommons = focusedSegArrays.map(segs => {
@@ -265,7 +302,7 @@ export function computeCloseVtubersByRank(focusedEntries, allEntries, traceBack 
     const ep = entry.taxon_path;
     if (!ep) continue;
 
-    const epSegs = ep.split('|');
+    const epSegs = splitPath(ep);
 
     for (let fi = 0; fi < focusedSegArrays.length; fi++) {
       const fpSegs = focusedSegArrays[fi];
@@ -296,7 +333,7 @@ export function computeCloseVtubersByRank(focusedEntries, allEntries, traceBack 
 export function collectPathsToDepth(entries, maxDepth) {
   const paths = new Set();
   for (const entry of entries) {
-    const parts = (entry.taxon_path || '').split('|');
+    const parts = splitPath(entry.taxon_path);
     const limit = Math.min(parts.length, maxDepth);
     for (let i = 1; i <= limit; i++) {
       paths.add(parts.slice(0, i).join('|'));
@@ -520,7 +557,7 @@ export function computeCloseEdgePaths(focusedEntries, allEntries, closeVtuberIds
   if (!focusedEntries?.length || !allEntries) return edgeKeys;
 
   const focusedUserId = focusedEntries[0].user_id;
-  const focusedSegs = (focusedEntries[0].taxon_path || '').split('|');
+  const focusedSegs = splitPath(focusedEntries[0].taxon_path);
   const ancestorDepth = Math.max(0, focusedSegs.length - traceBack);
   const ancestorPrefix = focusedSegs.slice(0, ancestorDepth).join('|');
 
@@ -533,20 +570,22 @@ export function computeCloseEdgePaths(focusedEntries, allEntries, closeVtuberIds
 
     const ep = entry.taxon_path;
     if (!ep) continue;
-    if (!ep.startsWith(ancestorPrefix)) continue;
 
-    const parts = ep.split('|');
+    const parts = splitPath(ep);
+    const normalized = parts.join('|');
+    if (!normalized.startsWith(ancestorPrefix)) continue;
+
     // Add all intermediate pathKeys from ancestorDepth+1 down to leaf
     for (let i = ancestorDepth + 1; i <= parts.length; i++) {
       edgeKeys.add(parts.slice(0, i).join('|'));
     }
     // Add vtuber leaf node pathKey
-    let leafKey = ep;
+    let leafKey = normalized;
     if (entry.breed_id) leafKey += `|__breed__${entry.breed_id}`;
     edgeKeys.add(leafKey + `|__vtuber__${entry.user_id}`);
     // Add breed pathKey if applicable
     if (entry.breed_id) {
-      edgeKeys.add(`${ep}|__breed__${entry.breed_id}`);
+      edgeKeys.add(`${normalized}|__breed__${entry.breed_id}`);
     }
   }
   return edgeKeys;

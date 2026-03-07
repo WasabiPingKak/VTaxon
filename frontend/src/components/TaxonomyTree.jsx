@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
+import { buildTree, computeHighlightPaths, collectAllPaths, findNode } from '../lib/treeUtils';
 import TreeNode from './TreeNode';
 import VtuberDetailPanel from './VtuberDetailPanel';
 
@@ -24,130 +25,6 @@ if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-st
     }
   `;
   document.head.appendChild(style);
-}
-
-const RANK_KEYS = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
-const RANK_NAMES = {
-  0: 'KINGDOM', 1: 'PHYLUM', 2: 'CLASS', 3: 'ORDER',
-  4: 'FAMILY', 5: 'GENUS', 6: 'SPECIES', 7: 'SUBSPECIES',
-  8: 'BREED',
-};
-
-/**
- * Build a tree structure from flat entries based on taxon_path.
- * Each entry's taxon_path looks like "Animalia|Chordata|Mammalia|..."
- * The vtuber is placed at the deepest node corresponding to their path.
- */
-function buildTree(entries) {
-  const root = { name: 'Life', nameZh: '生命', rank: 'ROOT', pathKey: '', count: 0, children: new Map(), vtubers: [] };
-
-  for (const entry of entries) {
-    const parts = (entry.taxon_path || '').split('|');
-    if (parts.length === 0) continue;
-
-    let current = root;
-    root.count++;
-
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i];
-      const pathKey = parts.slice(0, i + 1).join('|');
-
-      if (!current.children.has(part)) {
-        // Determine Chinese name for this rank level
-        const rankKey = RANK_KEYS[i]; // kingdom=0, phylum=1, ...
-        let nameZh = rankKey ? (entry.path_zh?.[rankKey] || '') : '';
-
-        // For species/subspecies levels (beyond genus), use common_name_zh
-        if (!nameZh && i >= RANK_KEYS.length) {
-          nameZh = entry.common_name_zh || '';
-        }
-
-        current.children.set(part, {
-          name: part,
-          nameZh,
-          rank: RANK_NAMES[i] || '',
-          pathKey,
-          count: 0,
-          children: new Map(),
-          vtubers: [],
-        });
-      }
-
-      const child = current.children.get(part);
-      child.count++;
-
-      // Backfill Chinese name if this node was created without one
-      if (!child.nameZh && i >= RANK_KEYS.length && entry.common_name_zh) {
-        child.nameZh = entry.common_name_zh;
-      }
-
-      // If this is the last part, handle breed sub-node or attach directly
-      if (i === parts.length - 1) {
-        if (entry.breed_id) {
-          const breedKey = `${pathKey}|__breed__${entry.breed_id}`;
-          if (!child.children.has(`__breed__${entry.breed_id}`)) {
-            child.children.set(`__breed__${entry.breed_id}`, {
-              name: entry.breed_name_en || entry.breed_name || '',
-              nameZh: entry.breed_name_zh || entry.breed_name || '',
-              rank: 'BREED',
-              pathKey: breedKey,
-              count: 0,
-              children: new Map(),
-              vtubers: [],
-            });
-          }
-          const breedNode = child.children.get(`__breed__${entry.breed_id}`);
-          breedNode.count++;
-          breedNode.vtubers.push(entry);
-        } else {
-          child.vtubers.push(entry);
-        }
-      }
-
-      current = child;
-    }
-  }
-
-  return root;
-}
-
-/**
- * Compute the set of path keys that should be auto-expanded
- * for the current user's traits.
- */
-function computeHighlightPaths(entries, userId) {
-  const paths = new Set();
-  if (!userId) return paths;
-
-  for (const entry of entries) {
-    if (entry.user_id !== userId) continue;
-    const parts = (entry.taxon_path || '').split('|');
-    for (let i = 1; i <= parts.length; i++) {
-      paths.add(parts.slice(0, i).join('|'));
-    }
-    // Include breed node path if present
-    if (entry.breed_id) {
-      const fullPath = parts.join('|');
-      paths.add(`${fullPath}|__breed__${entry.breed_id}`);
-    }
-  }
-  return paths;
-}
-
-/**
- * Find a node in the tree by its pathKey.
- */
-function findNode(root, pathKey) {
-  if (root.pathKey === pathKey) return root;
-  const parts = pathKey.split('|');
-  let current = root;
-  for (const part of parts) {
-    const child = current.children.get(part);
-    if (!child) return null;
-    if (child.pathKey === pathKey) return child;
-    current = child;
-  }
-  return null;
 }
 
 export default function TaxonomyTree({ currentUser, filters }) {
@@ -245,17 +122,7 @@ export default function TaxonomyTree({ currentUser, filters }) {
 
   const handleExpandAll = () => {
     if (!entries) return;
-    const all = new Set();
-    for (const entry of entries) {
-      const parts = (entry.taxon_path || '').split('|');
-      for (let i = 1; i <= parts.length; i++) {
-        all.add(parts.slice(0, i).join('|'));
-      }
-      if (entry.breed_id) {
-        all.add(`${parts.join('|')}|__breed__${entry.breed_id}`);
-      }
-    }
-    setExpandedSet(all);
+    setExpandedSet(collectAllPaths(entries));
   };
 
   const handleCollapseAll = () => {

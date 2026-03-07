@@ -12,6 +12,7 @@ Chinese name fallback chain:
 
 import json
 import logging
+import re
 from functools import lru_cache
 
 import requests
@@ -778,7 +779,12 @@ def _realign_taxon_path(species):
     # Include species-level name if the taxon is SPECIES/SUBSPECIES/VARIETY
     taxon_rank = (species.taxon_rank or '').upper()
     if taxon_rank in ('SPECIES', 'SUBSPECIES', 'VARIETY'):
-        rank_fields.append(species.scientific_name)
+        # Strip author citations (e.g. "Felis catus Linnaeus, 1758" → "Felis catus")
+        name = re.sub(
+            r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '',
+            species.scientific_name or '',
+        ).strip()
+        rank_fields.append(name or species.scientific_name)
 
     last_non_empty = -1
     for i, v in enumerate(rank_fields):
