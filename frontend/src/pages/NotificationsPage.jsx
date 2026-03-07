@@ -235,8 +235,9 @@ export default function NotificationsPage() {
 
           return (
             <div key={key} style={{
-              background: 'rgba(255,255,255,0.03)',
+              background: group.has_unread ? 'rgba(56,189,248,0.04)' : 'rgba(255,255,255,0.03)',
               border: `1px solid ${group.has_unread ? 'rgba(56,189,248,0.2)' : 'rgba(255,255,255,0.08)'}`,
+              borderLeft: group.has_unread ? '3px solid #38bdf8' : '1px solid rgba(255,255,255,0.08)',
               borderRadius: 10, marginBottom: 10,
               overflow: 'hidden',
             }}>
@@ -254,7 +255,7 @@ export default function NotificationsPage() {
                 {/* Unread indicator */}
                 {group.has_unread && (
                   <span style={{
-                    width: 7, height: 7, borderRadius: '50%',
+                    width: 8, height: 8, borderRadius: '50%',
                     background: '#38bdf8', flexShrink: 0,
                   }} />
                 )}
@@ -262,7 +263,8 @@ export default function NotificationsPage() {
                 {/* Title + type */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
-                    color: '#fff', fontSize: '0.88em', fontWeight: 600,
+                    color: group.has_unread ? '#fff' : 'rgba(255,255,255,0.6)',
+                    fontSize: '0.88em', fontWeight: 600,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>
                     {group.latest_title}
@@ -348,9 +350,18 @@ export default function NotificationsPage() {
                         {/* Content */}
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ color: '#fff', fontSize: '0.84em', fontWeight: 500 }}>
+                            <span style={{
+                              color: item.is_read ? 'rgba(255,255,255,0.5)' : '#fff',
+                              fontSize: '0.84em', fontWeight: 500,
+                            }}>
                               {item.title}
                             </span>
+                            {!item.is_read && (
+                              <span style={{
+                                width: 6, height: 6, borderRadius: '50%',
+                                background: '#38bdf8', display: 'inline-block', flexShrink: 0,
+                              }} />
+                            )}
                             <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.72em' }}>
                               {formatDate(item.created_at)}
                             </span>
