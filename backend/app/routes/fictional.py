@@ -57,7 +57,8 @@ def update_request(req_id):
 
     from ..services.notifications import create_notification
     create_notification(req.user_id, 'fictional_request', req.id,
-                        new_status, req.admin_note)
+                        new_status, req.admin_note,
+                        subject_name=req.name_zh or req.name_en)
 
     db.session.commit()
 

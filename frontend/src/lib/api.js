@@ -242,6 +242,9 @@ export const api = {
     method: 'POST', body: JSON.stringify(body),
   }),
 
+  // Admin counts
+  getAdminCounts: () => apiFetch('/admin/request-counts'),
+
   // Reports (admin)
   getReports: (status = 'pending') =>
     apiFetch(`/reports?status=${encodeURIComponent(status)}`),

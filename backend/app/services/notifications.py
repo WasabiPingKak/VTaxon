@@ -24,13 +24,16 @@ TITLE_MAP = {
 }
 
 
-def create_notification(user_id, type_, reference_id, status, admin_note=None):
+def create_notification(user_id, type_, reference_id, status, admin_note=None,
+                        subject_name=None):
     if not user_id:
         return
     titles = TITLE_MAP.get(type_, {})
     title = titles.get(status)
     if not title:
         return
+    if subject_name:
+        title = f"{title}：{subject_name}"
     message = (admin_note or '')[:500] or None
     notif = Notification(
         user_id=str(user_id),

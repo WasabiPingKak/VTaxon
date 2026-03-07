@@ -815,37 +815,34 @@ export default function AdminPage() {
 
   const fetchAllPendingCounts = useCallback(() => {
     if (!isAdmin) return;
-    const fns = { fictional: api.getRequests, breed: api.getBreedRequests, report: api.getReports };
-    for (const [key, fn] of Object.entries(fns)) {
-      fn('pending')
-        .then(data => {
-          const items = data.requests ?? data.reports ?? [];
-          setPendingCounts(prev => ({ ...prev, [key]: items.length }));
-        })
-        .catch(() => {});
-    }
+    api.getAdminCounts()
+      .then(data => {
+        const fc = data.fictional || {};
+        const bc = data.breed || {};
+        const rc = data.report || {};
+        setPendingCounts({
+          fictional: (fc.pending || 0) + (fc.received || 0) + (fc.in_progress || 0),
+          breed: (bc.pending || 0) + (bc.received || 0) + (bc.in_progress || 0),
+          report: (rc.pending || 0) + (rc.investigating || 0),
+        });
+        // Pre-fill sub-tab counts
+        const newCounts = {};
+        for (const [key, obj] of Object.entries({ fictional: fc, breed: bc, report: rc })) {
+          for (const [status, count] of Object.entries(obj)) {
+            newCounts[`${key}_${status}`] = count;
+          }
+        }
+        setCounts(prev => ({ ...prev, ...newCounts }));
+      })
+      .catch(() => {});
   }, [isAdmin]);
 
   useEffect(() => { fetchAllPendingCounts(); }, [fetchAllPendingCounts]);
 
-  // Fetch counts for all status tabs
+  // Re-fetch counts when section changes (counts already pre-filled by fetchAllPendingCounts)
   useEffect(() => {
-    if (!isAdmin) return;
-    const fn = section === 'fictional' ? api.getRequests
-      : section === 'breed' ? api.getBreedRequests
-      : api.getReports;
-    const tabs = section === 'report' ? REPORT_STATUS_TABS : REQUEST_STATUS_TABS;
-    for (const tab of tabs) {
-      if (tab.key !== activeTab) {
-        fn(tab.key)
-          .then(data => {
-            const items = data.requests ?? data.reports ?? [];
-            setCounts(prev => ({ ...prev, [`${section}_${tab.key}`]: items.length }));
-          })
-          .catch(() => {});
-      }
-    }
-  }, [isAdmin, section, activeTab]);
+    if (isAdmin) fetchAllPendingCounts();
+  }, [isAdmin, section]);
 
   if (authLoading) {
     return <p style={{ textAlign: 'center', marginTop: 40, color: 'rgba(255,255,255,0.5)' }}>載入中…</p>;
@@ -865,27 +862,12 @@ export default function AdminPage() {
   const handleUpdate = () => {
     fetchRequests(activeTab);
     fetchAllPendingCounts();
-    const fn = section === 'fictional' ? api.getRequests
-      : section === 'breed' ? api.getBreedRequests
-      : api.getReports;
-    const tabs = section === 'report' ? REPORT_STATUS_TABS : REQUEST_STATUS_TABS;
-    for (const tab of tabs) {
-      if (tab.key !== activeTab) {
-        fn(tab.key)
-          .then(data => {
-            const items = data.requests ?? data.reports ?? [];
-            setCounts(prev => ({ ...prev, [`${section}_${tab.key}`]: items.length }));
-          })
-          .catch(() => {});
-      }
-    }
   };
 
   function handleSectionChange(key) {
     setSection(key);
     setActiveTab('pending');
     setRequests([]);
-    setCounts({});
   }
 
   const CardComponent = section === 'fictional' ? FictionalRequestCard
