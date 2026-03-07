@@ -27,7 +27,7 @@ if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-st
   document.head.appendChild(style);
 }
 
-const HIGH_RANKS = new Set(['KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'ORDER', 'FAMILY', 'GENUS']);
+const HIGH_RANKS = new Set(['KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'SUBCLASS', 'INFRACLASS', 'ORDER', 'FAMILY', 'GENUS']);
 const BREED_COLOR = '#fb923c';
 
 const FAMILY_COLORS = [

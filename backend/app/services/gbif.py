@@ -927,6 +927,18 @@ def _build_from_taicol(tr):
         '_from_taicol': True,
     }
 
+    # Fill *_zh fields from static table + Wikidata fallback
+    rank_zh = get_taxonomy_zh_for_ranks(
+        kingdom=hierarchy.get('kingdom'), phylum=hierarchy.get('phylum'),
+        class_=hierarchy.get('class'), order=hierarchy.get('order'),
+        family=hierarchy.get('family'), genus=hierarchy.get('genus'),
+    )
+    # genus_zh Wikidata fallback if static table missed
+    if not rank_zh.get('genus_zh') and hierarchy.get('genus'):
+        rank_zh['genus_zh'] = _resolve_genus_zh(hierarchy['genus'])
+    result.update(rank_zh)
+    result['species_zh'] = result.get('common_name_zh')
+
     # Try to get higher taxonomy zh from static table
     zh = get_taxonomy_zh(scientific_name)
     if zh and not common_name_zh:

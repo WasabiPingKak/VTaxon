@@ -6,7 +6,10 @@
 const RANK_CONFIG = {
   KINGDOM:    { label: '界',   bg: 'rgba(192,132,252,0.15)', color: '#c084fc', border: 'rgba(192,132,252,0.3)' },
   PHYLUM:     { label: '門',   bg: 'rgba(129,140,248,0.15)', color: '#818cf8', border: 'rgba(129,140,248,0.3)' },
+  SUBPHYLUM:  { label: '亞門', bg: 'rgba(129,140,248,0.12)', color: '#a5b4fc', border: 'rgba(129,140,248,0.25)' },
   CLASS:      { label: '綱',   bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8', border: 'rgba(56,189,248,0.3)' },
+  SUBCLASS:   { label: '亞綱', bg: 'rgba(56,189,248,0.12)',  color: '#7dd3fc', border: 'rgba(56,189,248,0.25)' },
+  INFRACLASS: { label: '下綱', bg: 'rgba(56,189,248,0.10)',  color: '#bae6fd', border: 'rgba(56,189,248,0.20)' },
   ORDER:      { label: '目',   bg: 'rgba(52,211,153,0.15)',  color: '#34d399', border: 'rgba(52,211,153,0.3)' },
   FAMILY:     { label: '科',   bg: 'rgba(96,165,250,0.15)',  color: '#60a5fa', border: 'rgba(96,165,250,0.3)' },
   GENUS:      { label: '屬',   bg: 'rgba(251,191,36,0.15)',  color: '#fbbf24', border: 'rgba(251,191,36,0.3)' },
