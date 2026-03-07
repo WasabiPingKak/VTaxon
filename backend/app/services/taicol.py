@@ -24,9 +24,6 @@ def search_by_chinese(query, limit=10):
 
     def _collect(data):
         for entry in data:
-            rank = (entry.get('rank') or '').lower()
-            if rank not in ('kingdom', 'phylum', 'subphylum', 'class', 'order', 'family', 'genus', 'species', 'subspecies', 'variety'):
-                continue
             sci = entry.get('simple_name')
             if not sci or sci in seen:
                 continue
@@ -36,6 +33,8 @@ def search_by_chinese(query, limit=10):
                 'common_name_zh': entry.get('common_name_c'),
                 'alternative_name_zh': entry.get('alternative_name_c'),
                 'rank': entry.get('rank'),
+                'kingdom': entry.get('kingdom'),
+                'taicol_taxon_id': entry.get('taxon_id'),
             })
 
     # Primary: search by common_name (exact Chinese name match)
@@ -88,6 +87,35 @@ def get_chinese_name(scientific_name):
         return entry.get('common_name_c'), entry.get('alternative_name_c')
     except Exception:
         return None, None
+
+
+def search_by_scientific_name(scientific_name, limit=10):
+    """Search TaiCOL by scientific name, returning full entry data.
+
+    Unlike get_chinese_name() which returns only (zh, alt), this returns
+    a list of dicts with all fields needed by _build_from_taicol().
+    """
+    try:
+        resp = requests.get(f'{TAICOL_BASE}/taxon', params={
+            'scientific_name': scientific_name,
+            'limit': limit,
+        }, timeout=10)
+        if resp.status_code != 200:
+            return []
+
+        data = resp.json().get('data', [])
+        results = []
+        for entry in data:
+            results.append({
+                'scientific_name': entry.get('simple_name'),
+                'common_name_zh': entry.get('common_name_c'),
+                'rank': entry.get('rank'),
+                'kingdom': entry.get('kingdom'),
+                'taicol_taxon_id': entry.get('taxon_id'),
+            })
+        return results
+    except Exception:
+        return []
 
 
 def clear_cache():

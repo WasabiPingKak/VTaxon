@@ -26,6 +26,8 @@ from .wikidata import get_chinese_name_by_gbif_id, get_aliases_by_gbif_id
 from .wikidata import clear_cache as wikidata_clear_cache
 from .taicol import get_chinese_name as taicol_get_chinese_name
 from .taicol import search_by_chinese as taicol_search_chinese
+from .taicol import search_by_scientific_name as taicol_search_by_scientific_name
+from .taicol import get_higher_taxa_zh as taicol_get_higher_taxa_zh
 from .taicol import clear_cache as taicol_clear_cache
 
 log = logging.getLogger(__name__)
@@ -89,13 +91,15 @@ def suggest_species(query, limit=10):
         seen_keys.add(key)
         species_list.append(_gbif_result_to_dict(r, key))
 
-    # Fallback: if suggest returned nothing, try /species/match
+    # Fallback: GBIF suggest returned nothing — try match, then TaiCOL
     if not species_list:
         matched = match_species(query)
         if matched:
             matched.pop('match_type', None)
             matched.pop('confidence', None)
             species_list.append(matched)
+        else:
+            species_list = _fallback_taicol_by_name(query, limit=limit)
 
     # Enrich with Chinese names
     _enrich_chinese_names(species_list)
@@ -279,13 +283,15 @@ def _suggest_species_stream(query, limit=10):
         seen_keys.add(key)
         species_list.append(_gbif_result_to_dict(r, key))
 
-    # Fallback: if suggest returned nothing, try /species/match
+    # Fallback: GBIF suggest returned nothing — try match, then TaiCOL
     if not species_list:
         matched = match_species(query)
         if matched:
             matched.pop('match_type', None)
             matched.pop('confidence', None)
             species_list.append(matched)
+        else:
+            species_list = _fallback_taicol_by_name(query, limit=limit)
 
     for sp in species_list:
         _enrich_chinese_names([sp])
@@ -607,6 +613,9 @@ def _cache_enriched_species(species_list):
             taxon_id = sp.get('taxon_id')
             if not taxon_id:
                 continue
+            # Skip TaiCOL-only results with pseudo IDs — not real GBIF keys
+            if sp.get('_from_taicol'):
+                continue
             existing = db.session.get(SpeciesCache, taxon_id)
             if existing:
                 # Override table corrections always win over cached values
@@ -765,10 +774,104 @@ def _has_cjk(text):
     return False
 
 
+def _build_from_taicol(tr):
+    """Build a species result dict from TaiCOL data when GBIF has no match.
+
+    Uses TaiCOL higherTaxa API to fill in the full taxonomy hierarchy.
+    """
+    scientific_name = tr.get('scientific_name', '')
+    rank = (tr.get('rank') or 'UNRANKED').upper()
+    kingdom = tr.get('kingdom')
+
+    # Build hierarchy from TaiCOL higherTaxa API
+    hierarchy = {}
+    taicol_taxon_id = tr.get('taicol_taxon_id')
+    if taicol_taxon_id:
+        higher_taxa = taicol_get_higher_taxa_zh(taicol_taxon_id)
+        for ht in higher_taxa:
+            ht_rank = (ht.get('rank') or '').upper()
+            ht_name = ht.get('name')
+            if ht_rank and ht_name:
+                rank_field_map = {
+                    'KINGDOM': 'kingdom', 'PHYLUM': 'phylum',
+                    'CLASS': 'class', 'ORDER': 'order',
+                    'FAMILY': 'family', 'GENUS': 'genus',
+                }
+                field = rank_field_map.get(ht_rank)
+                if field:
+                    hierarchy[field] = ht_name
+
+    # Use kingdom from TaiCOL result if not in hierarchy
+    if kingdom and 'kingdom' not in hierarchy:
+        hierarchy['kingdom'] = kingdom
+
+    # Build taxon_path from hierarchy
+    rank_order = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus']
+    parts = [hierarchy.get(r, '') for r in rank_order]
+    last_non_empty = -1
+    for i, v in enumerate(parts):
+        if v:
+            last_non_empty = i
+    taxon_path = '|'.join(parts[:last_non_empty + 1]) if last_non_empty >= 0 else None
+
+    # Use a negative taicol_taxon_id hash as pseudo taxon_id (no GBIF key)
+    pseudo_id = abs(hash(scientific_name)) % 10_000_000 + 90_000_000
+
+    return {
+        'taxon_id': pseudo_id,
+        'scientific_name': scientific_name,
+        'canonical_name': scientific_name,
+        'common_name_en': None,
+        'common_name_zh': tr.get('common_name_zh'),
+        'taxon_rank': rank,
+        'species_binomial': None,
+        'species_key': None,
+        'kingdom': hierarchy.get('kingdom'),
+        'phylum': hierarchy.get('phylum'),
+        'class': hierarchy.get('class'),
+        'order': hierarchy.get('order'),
+        'family': hierarchy.get('family'),
+        'genus': hierarchy.get('genus'),
+        'taxon_path': taxon_path,
+        '_from_taicol': True,
+    }
+
+
+def _fallback_taicol_by_name(query, limit=10):
+    """Fallback for Latin queries: search TaiCOL by scientific_name when GBIF has no results.
+
+    Returns a list of species dicts built from TaiCOL + GBIF match.
+    """
+    try:
+        zh_name, _alt = taicol_get_chinese_name(query)
+    except Exception:
+        zh_name = None
+
+    if not zh_name:
+        return []
+
+    # TaiCOL knows this name — try GBIF match first
+    matched = match_species(query)
+    if matched:
+        if not matched.get('common_name_zh'):
+            matched['common_name_zh'] = zh_name
+        return [matched]
+
+    # GBIF also has no match — build from TaiCOL data
+    taicol_results = taicol_search_by_scientific_name(query, limit=limit)
+    results = []
+    for tr in taicol_results:
+        built = _build_from_taicol(tr)
+        if built:
+            results.append(built)
+    return results
+
+
 def _search_via_taicol(query, limit=10):
     """Search by Chinese name via TaiCOL, then enrich with GBIF data.
 
     Flow: TaiCOL (Chinese search) → GBIF /species/match (full taxonomy)
+    Falls back to _build_from_taicol() when GBIF has no match.
     """
     taicol_results = taicol_search_chinese(query, limit=limit)
     if not taicol_results:
