@@ -110,6 +110,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 
 ## 開發注意事項
 
+- **Feature branch 必須使用獨立 worktree**：開發新功能時，使用 `EnterWorktree` 工具從 `develop` 建立獨立的 git worktree + feature branch。禁止在主 worktree 用 `git checkout -b` 開新分支，以避免 unstaged changes 跨分支汙染。
 - 資料庫選用 Supabase 免費方案，注意儲存空間限制。
 - Google Cloud Run 有冷啟動延遲，Flask 應用應盡量縮短啟動時間（精簡 import、延遲載入非必要模組）。
 - 奇幻生物使用獨立分類系統（`fictional_species` 表），分類由管理者手動預建。
