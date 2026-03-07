@@ -32,6 +32,7 @@ log = logging.getLogger(__name__)
 GBIF_BASE = 'https://api.gbif.org/v1'
 
 RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']
+_MAX_SYNONYM_RESOLVES = 8
 
 
 def clear_chinese_name_caches():
@@ -63,6 +64,7 @@ def suggest_species(query, limit=10):
 
     species_list = []
     seen_keys = set()
+    synonym_attempts = 0
     for r in results:
         key = r.get('key')
         if not key or key in seen_keys:
@@ -71,9 +73,12 @@ def suggest_species(query, limit=10):
         rank = (r.get('rank') or '').upper()
         if rank not in ('ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
             continue
-        # SYNONYM → resolve to accepted species
+        # SYNONYM → resolve to accepted species (cap to avoid HTTP flood)
         if status == 'SYNONYM':
-            resolved = _resolve_synonym(key, r.get('canonicalName'))
+            if synonym_attempts >= _MAX_SYNONYM_RESOLVES:
+                continue
+            synonym_attempts += 1
+            resolved = _resolve_synonym(key, r.get('canonicalName'), seen_keys=seen_keys)
             if resolved and resolved['taxon_id'] not in seen_keys:
                 seen_keys.add(resolved['taxon_id'])
                 species_list.append(resolved)
@@ -241,6 +246,7 @@ def _suggest_species_stream(query, limit=10):
 
     species_list = []
     seen_keys = set()
+    synonym_attempts = 0
     for r in raw:
         key = r.get('key')
         if not key or key in seen_keys:
@@ -249,9 +255,12 @@ def _suggest_species_stream(query, limit=10):
         rank = (r.get('rank') or '').upper()
         if rank not in ('ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
             continue
-        # SYNONYM → resolve to accepted species
+        # SYNONYM → resolve to accepted species (cap to avoid HTTP flood)
         if status == 'SYNONYM':
-            resolved = _resolve_synonym(key, r.get('canonicalName'))
+            if synonym_attempts >= _MAX_SYNONYM_RESOLVES:
+                continue
+            synonym_attempts += 1
+            resolved = _resolve_synonym(key, r.get('canonicalName'), seen_keys=seen_keys)
             if resolved and resolved['taxon_id'] not in seen_keys:
                 seen_keys.add(resolved['taxon_id'])
                 species_list.append(resolved)
@@ -861,8 +870,13 @@ def _build_taxon_path(data):
     return '|'.join(parts[:last_non_empty + 1])
 
 
-def _resolve_synonym(synonym_key, synonym_canonical_name):
+def _resolve_synonym(synonym_key, synonym_canonical_name, seen_keys=None):
     """Resolve a SYNONYM to its accepted species via GBIF /species/{key}.
+
+    If seen_keys is provided, skips the second HTTP call when the accepted
+    key is already collected — avoids redundant requests for synonyms that
+    all resolve to the same accepted species (e.g. Bellis perennis has 35+
+    synonyms that all point to the same taxon).
 
     Returns an accepted species dict with synonym_name attached, or None.
     """
@@ -873,6 +887,10 @@ def _resolve_synonym(synonym_key, synonym_canonical_name):
         data = resp.json()
         accepted_key = data.get('acceptedKey')
         if not accepted_key:
+            return None
+
+        # Early exit: accepted species already collected
+        if seen_keys is not None and accepted_key in seen_keys:
             return None
 
         # Fetch the accepted species
