@@ -120,12 +120,12 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [currentUser, fetchTreeData]);
+  }, [currentUser?.id, fetchTreeData]);
 
   // Auto-focus logged-in user
   useEffect(() => {
     if (currentUser && !focusedUserId) setFocusedUserId(currentUser.id);
-  }, [currentUser, focusedUserId]);
+  }, [currentUser?.id, focusedUserId]);
 
   // Centralized camera scheduling — cancels any pending camera move before scheduling a new one
   const scheduleCamera = useCallback((fn, delay) => {
