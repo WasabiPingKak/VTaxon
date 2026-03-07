@@ -20,7 +20,7 @@ export default function SettingsAccounts() {
     if (user) {
       loadOAuthAccounts();
     }
-  }, [user]);
+  }, [user?.id]);
 
   async function loadOAuthAccounts() {
     try {

@@ -39,7 +39,7 @@ export default function SettingsFictional() {
 
   useEffect(() => {
     if (user) loadTraits();
-  }, [user]);
+  }, [user?.id]);
 
   async function loadTraits() {
     try {

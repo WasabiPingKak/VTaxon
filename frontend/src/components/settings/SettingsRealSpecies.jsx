@@ -92,7 +92,7 @@ export default function SettingsRealSpecies() {
 
   useEffect(() => {
     if (user) loadTraits();
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (showSearch && searchRef.current) {
