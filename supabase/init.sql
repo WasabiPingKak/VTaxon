@@ -301,12 +301,14 @@ CREATE TABLE notifications (
     reference_id INTEGER NOT NULL, -- 對應的 request/report ID
     title TEXT NOT NULL,
     message TEXT,
+    status TEXT,                   -- 狀態快照（received/in_progress/completed/rejected/investigating/confirmed/dismissed）
     is_read BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_user_unread ON notifications(user_id, is_read) WHERE is_read = false;
+CREATE INDEX idx_notifications_type_ref ON notifications(type, reference_id);
 
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 

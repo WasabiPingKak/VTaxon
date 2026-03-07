@@ -178,7 +178,8 @@ def create_breed_request():
 @admin_required
 def list_breed_requests():
     status = request.args.get('status', 'pending')
-    if status not in ('pending', 'approved', 'rejected'):
+    if status not in ('pending', 'received', 'in_progress', 'completed',
+                       'approved', 'rejected'):
         return jsonify({'error': 'Invalid status filter'}), 400
 
     reqs = (BreedRequest.query
@@ -198,8 +199,8 @@ def update_breed_request(req_id):
 
     data = request.get_json() or {}
     new_status = data.get('status')
-    if new_status not in ('approved', 'rejected'):
-        return jsonify({'error': 'status must be approved or rejected'}), 400
+    if new_status not in ('received', 'in_progress', 'completed', 'rejected'):
+        return jsonify({'error': 'status must be received, in_progress, completed, or rejected'}), 400
 
     req.status = new_status
     req.admin_note = data.get('admin_note') or req.admin_note

@@ -15,6 +15,7 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
 import AboutPage from './pages/AboutPage';
 import VTuberProfilePage from './pages/VTuberProfilePage';
+import NotificationsPage from './pages/NotificationsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import WelcomeToast from './components/WelcomeToast';
 
@@ -55,6 +56,7 @@ function AppContent() {
             <Route path="/directory" element={<DirectoryPage />} />
             <Route path="/breeds" element={<BreedsPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/terms" element={<TermsOfServicePage />} />
             <Route path="/about" element={<AboutPage />} />

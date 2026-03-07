@@ -4,14 +4,17 @@ import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import SEOHead from '../components/SEOHead';
 
-const STATUS_TABS = [
+const REQUEST_STATUS_TABS = [
   { key: 'pending', label: '待審核' },
-  { key: 'approved', label: '已批准' },
+  { key: 'received', label: '已受理' },
+  { key: 'in_progress', label: '處理中' },
+  { key: 'completed', label: '已完成' },
   { key: 'rejected', label: '已駁回' },
 ];
 
 const REPORT_STATUS_TABS = [
   { key: 'pending', label: '待審核' },
+  { key: 'investigating', label: '調查中' },
   { key: 'confirmed', label: '已確認' },
   { key: 'dismissed', label: '已駁回' },
 ];
@@ -22,26 +25,73 @@ const SECTION_TABS = [
   { key: 'report', label: '帳號檢舉' },
 ];
 
+// Status badge color mapping
+const STATUS_BADGE = {
+  pending:       { bg: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', label: '待審核' },
+  received:      { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8', label: '已受理' },
+  in_progress:   { bg: 'rgba(234,179,8,0.15)', color: '#eab308', label: '處理中' },
+  completed:     { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', label: '已完成' },
+  approved:      { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', label: '已批准' },
+  rejected:      { bg: 'rgba(239,68,68,0.15)', color: '#f87171', label: '已駁回' },
+  investigating: { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8', label: '調查中' },
+  confirmed:     { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', label: '已確認' },
+  dismissed:     { bg: 'rgba(100,100,100,0.15)', color: '#999', label: '已駁回' },
+};
+
+// Next actions for request types (fictional/breed)
+const REQUEST_ACTIONS = {
+  pending:     [
+    { status: 'received', label: '受理', style: 'primary' },
+    { status: 'rejected', label: '駁回', style: 'danger' },
+  ],
+  received:    [
+    { status: 'in_progress', label: '開始處理', style: 'primary' },
+    { status: 'rejected', label: '駁回', style: 'danger' },
+  ],
+  in_progress: [
+    { status: 'completed', label: '完成', style: 'success' },
+    { status: 'rejected', label: '駁回', style: 'danger' },
+  ],
+};
+
+// Next actions for reports
+const REPORT_ACTIONS = {
+  pending:        [
+    { status: 'investigating', label: '開始調查', style: 'primary' },
+    { status: 'dismissed', label: '駁回', style: 'danger' },
+  ],
+  investigating:  [
+    { status: 'confirmed', label: '確認處理', style: 'success' },
+    { status: 'dismissed', label: '駁回', style: 'danger' },
+  ],
+};
+
+const ACTION_STYLES = {
+  primary: {
+    background: 'rgba(56,189,248,0.12)', color: '#38bdf8',
+    border: '1px solid rgba(56,189,248,0.25)',
+  },
+  success: {
+    background: 'rgba(34,197,94,0.15)', color: '#4ade80',
+    border: '1px solid rgba(34,197,94,0.3)',
+  },
+  danger: {
+    background: 'rgba(239,68,68,0.12)', color: '#f87171',
+    border: '1px solid rgba(239,68,68,0.25)',
+  },
+};
+
 // ── Fictional Species Request Card ──────────────────
 
 function FictionalRequestCard({ req, onUpdate }) {
   const [note, setNote] = useState(req.admin_note || '');
   const [loading, setLoading] = useState(false);
-  const isPending = req.status === 'pending';
+  const actions = REQUEST_ACTIONS[req.status];
 
   const handleAction = async (status) => {
     setLoading(true);
     try {
       const body = { status, admin_note: note || undefined };
-      if (status === 'approved') {
-        body.species = {
-          name: req.name_en || req.name_zh,
-          name_zh: req.name_zh,
-          origin: req.suggested_origin,
-          sub_origin: req.suggested_sub_origin,
-          description: req.description,
-        };
-      }
       await api.updateRequest(req.id, body);
       onUpdate();
     } catch (err) {
@@ -52,7 +102,7 @@ function FictionalRequestCard({ req, onUpdate }) {
   };
 
   return (
-    <RequestCardShell req={req} isPending={isPending}>
+    <RequestCardShell req={req}>
       <div style={{ display: 'grid', gap: 6, fontSize: '0.9em' }}>
         <div>
           <span style={{ color: 'rgba(255,255,255,0.4)' }}>中文名稱：</span>
@@ -81,15 +131,12 @@ function FictionalRequestCard({ req, onUpdate }) {
         )}
       </div>
 
-      <AdminActions
-        isPending={isPending}
+      <MultiStageActions
+        actions={actions}
         loading={loading}
         note={note}
         setNote={setNote}
-        onApprove={() => handleAction('approved')}
-        onReject={() => handleAction('rejected')}
-        approveDisabled={!req.suggested_origin}
-        approveTitle={!req.suggested_origin ? '缺少分類來源，無法批准' : ''}
+        onAction={handleAction}
         adminNote={req.admin_note}
       />
     </RequestCardShell>
@@ -100,22 +147,13 @@ function FictionalRequestCard({ req, onUpdate }) {
 
 function BreedRequestCard({ req, onUpdate }) {
   const [note, setNote] = useState(req.admin_note || '');
-  const [nameEn, setNameEn] = useState(req.name_en || '');
-  const [nameZh, setNameZh] = useState(req.name_zh || '');
   const [loading, setLoading] = useState(false);
-  const isPending = req.status === 'pending';
+  const actions = REQUEST_ACTIONS[req.status];
 
   const handleAction = async (status) => {
     setLoading(true);
     try {
       const body = { status, admin_note: note || undefined };
-      if (status === 'approved') {
-        body.breed = {
-          taxon_id: req.taxon_id,
-          name_en: nameEn.trim(),
-          name_zh: nameZh.trim() || undefined,
-        };
-      }
       await api.updateBreedRequest(req.id, body);
       onUpdate();
     } catch (err) {
@@ -125,14 +163,8 @@ function BreedRequestCard({ req, onUpdate }) {
     }
   };
 
-  const inputStyle = {
-    padding: '4px 8px', border: '1px solid rgba(255,255,255,0.12)',
-    borderRadius: 4, background: '#1a2433', color: '#e2e8f0',
-    fontSize: '0.85em', width: '100%', boxSizing: 'border-box',
-  };
-
   return (
-    <RequestCardShell req={req} isPending={isPending}>
+    <RequestCardShell req={req}>
       <div style={{ display: 'grid', gap: 6, fontSize: '0.9em' }}>
         {req.name_zh && (
           <div>
@@ -165,29 +197,12 @@ function BreedRequestCard({ req, onUpdate }) {
         )}
       </div>
 
-      {isPending && (
-        <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-          <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.4)' }}>批准時建立的品種資料：</div>
-          <input
-            type="text" value={nameEn} onChange={e => setNameEn(e.target.value)}
-            placeholder="英文名（必填）" style={inputStyle}
-          />
-          <input
-            type="text" value={nameZh} onChange={e => setNameZh(e.target.value)}
-            placeholder="中文名" style={inputStyle}
-          />
-        </div>
-      )}
-
-      <AdminActions
-        isPending={isPending}
+      <MultiStageActions
+        actions={actions}
         loading={loading}
         note={note}
         setNote={setNote}
-        onApprove={() => handleAction('approved')}
-        onReject={() => handleAction('rejected')}
-        approveDisabled={!nameEn.trim() || !req.taxon_id}
-        approveTitle={!req.taxon_id ? '缺少所屬物種' : !nameEn.trim() ? '需要英文名稱' : ''}
+        onAction={handleAction}
         adminNote={req.admin_note}
       />
     </RequestCardShell>
@@ -205,9 +220,10 @@ function ReportCard({ req, onUpdate }) {
   const [userDetail, setUserDetail] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
-  const isPending = req.status === 'pending';
+  const actions = REPORT_ACTIONS[req.status];
+  const isTerminal = !actions;
 
-  // Fetch reported user detail (OAuth accounts, bio, traits, etc.)
+  // Fetch reported user detail
   useEffect(() => {
     if (!req.reported_user_id) return;
     let cancelled = false;
@@ -218,6 +234,18 @@ function ReportCard({ req, onUpdate }) {
       .finally(() => { if (!cancelled) setDetailLoading(false); });
     return () => { cancelled = true; };
   }, [req.reported_user_id]);
+
+  const handleAction = async (status) => {
+    setLoading(true);
+    try {
+      await api.updateReport(req.id, { status, admin_note: note || undefined });
+      onUpdate();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePreview = async () => {
     setPreviewLoading(true);
@@ -265,17 +293,7 @@ function ReportCard({ req, onUpdate }) {
     }
   };
 
-  const handleDismiss = async () => {
-    setLoading(true);
-    try {
-      await api.updateReport(req.id, { status: 'dismissed', admin_note: note || undefined });
-      onUpdate();
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const badge = STATUS_BADGE[req.status] || STATUS_BADGE.pending;
 
   return (
     <div style={{
@@ -305,17 +323,13 @@ function ReportCard({ req, onUpdate }) {
         </span>
         <span>·</span>
         <span>{new Date(req.created_at).toLocaleDateString('zh-TW')}</span>
-        {!isPending && (
-          <span style={{
-            marginLeft: 'auto', padding: '2px 8px', borderRadius: 4,
-            fontSize: '0.8em', fontWeight: 600,
-            background: req.status === 'confirmed'
-              ? 'rgba(239,68,68,0.15)' : 'rgba(100,100,100,0.15)',
-            color: req.status === 'confirmed' ? '#f87171' : '#999',
-          }}>
-            {req.status === 'confirmed' ? '已確認' : '已駁回'}
-          </span>
-        )}
+        <span style={{
+          marginLeft: 'auto', padding: '2px 8px', borderRadius: 4,
+          fontSize: '0.8em', fontWeight: 600,
+          background: badge.bg, color: badge.color,
+        }}>
+          {badge.label}
+        </span>
       </div>
 
       {/* Report type badge */}
@@ -409,7 +423,6 @@ function ReportCard({ req, onUpdate }) {
             padding: '0 12px 10px', fontSize: '0.83em',
             borderTop: '1px solid rgba(234,179,8,0.1)',
           }}>
-            {/* Bio */}
             {userDetail.bio && (
               <div style={{
                 marginTop: 8, padding: '6px 10px', borderRadius: 4,
@@ -419,8 +432,6 @@ function ReportCard({ req, onUpdate }) {
                 {userDetail.bio}
               </div>
             )}
-
-            {/* OAuth accounts detail */}
             {(userDetail.oauth_accounts || []).length > 0 && (
               <div style={{ marginTop: 8 }}>
                 <div style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>綁定帳號：</div>
@@ -449,8 +460,6 @@ function ReportCard({ req, onUpdate }) {
                 ))}
               </div>
             )}
-
-            {/* Social links */}
             {userDetail.social_links && Object.keys(userDetail.social_links).length > 0 && (
               <div style={{ marginTop: 8 }}>
                 <div style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>社群連結：</div>
@@ -469,8 +478,6 @@ function ReportCard({ req, onUpdate }) {
                 </div>
               </div>
             )}
-
-            {/* Profile data summary */}
             {userDetail.profile_data && Object.keys(userDetail.profile_data).length > 0 && (
               <div style={{ marginTop: 8 }}>
                 <div style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>角色資料：</div>
@@ -495,8 +502,6 @@ function ReportCard({ req, onUpdate }) {
                 </div>
               </div>
             )}
-
-            {/* Registration date */}
             <div style={{ marginTop: 8, color: 'rgba(255,255,255,0.35)' }}>
               註冊於 {new Date(userDetail.created_at).toLocaleDateString('zh-TW')}
             </div>
@@ -521,8 +526,8 @@ function ReportCard({ req, onUpdate }) {
         </div>
       )}
 
-      {/* Admin actions for pending reports */}
-      {isPending && (
+      {/* Admin actions for non-terminal reports */}
+      {!isTerminal && (
         <div style={{ marginTop: 14 }}>
           <textarea
             value={note} onChange={e => setNote(e.target.value)}
@@ -536,21 +541,19 @@ function ReportCard({ req, onUpdate }) {
             }}
           />
 
-          {/* Blacklist preview */}
-          {!previewItems && (
+          {/* For investigating status with confirm action, show blacklist preview */}
+          {req.status === 'investigating' && !previewItems && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
-              <button type="button" disabled={loading} onClick={handleDismiss} style={{
+              <button type="button" disabled={loading} onClick={() => handleAction('dismissed')} style={{
                 padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
-                background: 'rgba(100,100,100,0.12)', color: '#999',
-                border: '1px solid rgba(100,100,100,0.25)', fontSize: '0.85em',
+                ...ACTION_STYLES.danger, fontSize: '0.85em',
                 opacity: loading ? 0.5 : 1,
               }}>
                 駁回
               </button>
               <button type="button" disabled={previewLoading || !req.reported_user} onClick={handlePreview} style={{
                 padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
-                background: 'rgba(239,68,68,0.12)', color: '#f87171',
-                border: '1px solid rgba(239,68,68,0.25)', fontSize: '0.85em',
+                ...ACTION_STYLES.success, fontSize: '0.85em',
                 opacity: (previewLoading || !req.reported_user) ? 0.5 : 1,
               }}>
                 {previewLoading ? '載入中…' : req.report_type === 'not_vtuber'
@@ -559,7 +562,29 @@ function ReportCard({ req, onUpdate }) {
             </div>
           )}
 
-          {previewItems && (
+          {/* For pending reports: simple action buttons */}
+          {req.status === 'pending' && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
+              {actions.map(act => (
+                <button
+                  key={act.status}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => handleAction(act.status)}
+                  style={{
+                    padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
+                    ...ACTION_STYLES[act.style], fontSize: '0.85em',
+                    opacity: loading ? 0.5 : 1,
+                  }}
+                >
+                  {act.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Blacklist preview for investigating */}
+          {req.status === 'investigating' && previewItems && (
             <div style={{ marginTop: 10 }}>
               <div style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>
                 選擇要封鎖的帳號識別碼：
@@ -599,10 +624,9 @@ function ReportCard({ req, onUpdate }) {
                 );
               })}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
-                <button type="button" disabled={loading} onClick={handleDismiss} style={{
+                <button type="button" disabled={loading} onClick={() => handleAction('dismissed')} style={{
                   padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
-                  background: 'rgba(100,100,100,0.12)', color: '#999',
-                  border: '1px solid rgba(100,100,100,0.25)', fontSize: '0.85em',
+                  ...ACTION_STYLES.danger, fontSize: '0.85em',
                   opacity: loading ? 0.5 : 1,
                 }}>
                   駁回
@@ -613,8 +637,7 @@ function ReportCard({ req, onUpdate }) {
                   onClick={handleBan}
                   style={{
                     padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
-                    background: 'rgba(239,68,68,0.15)', color: '#f87171',
-                    border: '1px solid rgba(239,68,68,0.3)', fontSize: '0.85em',
+                    ...ACTION_STYLES.success, fontSize: '0.85em',
                     fontWeight: 600,
                     opacity: (loading || selectedIds.size === 0) ? 0.5 : 1,
                   }}
@@ -629,8 +652,8 @@ function ReportCard({ req, onUpdate }) {
         </div>
       )}
 
-      {/* Admin note for resolved reports */}
-      {!isPending && req.admin_note && (
+      {/* Admin note for terminal reports */}
+      {isTerminal && req.admin_note && (
         <div style={{
           marginTop: 10, padding: '8px 10px',
           background: 'rgba(255,255,255,0.03)',
@@ -648,7 +671,9 @@ function ReportCard({ req, onUpdate }) {
 
 // ── Shared components ──────────────────
 
-function RequestCardShell({ req, isPending, children }) {
+function RequestCardShell({ req, children }) {
+  const badge = STATUS_BADGE[req.status] || STATUS_BADGE.pending;
+
   return (
     <div style={{
       background: 'rgba(255,255,255,0.03)',
@@ -678,29 +703,25 @@ function RequestCardShell({ req, isPending, children }) {
         </span>
         <span>·</span>
         <span>{new Date(req.created_at).toLocaleDateString('zh-TW')}</span>
-        {!isPending && (
-          <span style={{
-            marginLeft: 'auto',
-            padding: '2px 8px',
-            borderRadius: 4,
-            fontSize: '0.8em',
-            fontWeight: 600,
-            background: req.status === 'approved'
-              ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-            color: req.status === 'approved'
-              ? '#4ade80' : '#f87171',
-          }}>
-            {req.status === 'approved' ? '已批准' : '已駁回'}
-          </span>
-        )}
+        <span style={{
+          marginLeft: 'auto',
+          padding: '2px 8px',
+          borderRadius: 4,
+          fontSize: '0.8em',
+          fontWeight: 600,
+          background: badge.bg,
+          color: badge.color,
+        }}>
+          {badge.label}
+        </span>
       </div>
       {children}
     </div>
   );
 }
 
-function AdminActions({ isPending, loading, note, setNote, onApprove, onReject, approveDisabled, approveTitle, adminNote }) {
-  if (!isPending) {
+function MultiStageActions({ actions, loading, note, setNote, onAction, adminNote }) {
+  if (!actions) {
     return adminNote ? (
       <div style={{
         marginTop: 10, padding: '8px 10px',
@@ -733,33 +754,22 @@ function AdminActions({ isPending, loading, note, setNote, onApprove, onReject, 
       <div style={{
         display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10,
       }}>
-        <button
-          type="button"
-          disabled={loading}
-          onClick={onReject}
-          style={{
-            padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
-            background: 'rgba(239,68,68,0.12)', color: '#f87171',
-            border: '1px solid rgba(239,68,68,0.25)', fontSize: '0.85em',
-            opacity: loading ? 0.5 : 1,
-          }}
-        >
-          駁回
-        </button>
-        <button
-          type="button"
-          disabled={loading || approveDisabled}
-          onClick={onApprove}
-          title={approveTitle}
-          style={{
-            padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
-            background: 'rgba(34,197,94,0.15)', color: '#4ade80',
-            border: '1px solid rgba(34,197,94,0.3)', fontSize: '0.85em',
-            opacity: (loading || approveDisabled) ? 0.5 : 1,
-          }}
-        >
-          批准並新增
-        </button>
+        {actions.map(act => (
+          <button
+            key={act.status}
+            type="button"
+            disabled={loading}
+            onClick={() => onAction(act.status)}
+            style={{
+              padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
+              ...ACTION_STYLES[act.style],
+              fontSize: '0.85em',
+              opacity: loading ? 0.5 : 1,
+            }}
+          >
+            {act.label}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -774,7 +784,6 @@ export default function AdminPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [counts, setCounts] = useState({});
-  // Pending counts per section (for section tabs + title badge)
   const [pendingCounts, setPendingCounts] = useState({});
 
   const fetchRequests = useCallback(async (status) => {
@@ -802,9 +811,8 @@ export default function AdminPage() {
     }
   }, [activeTab, isAdmin, fetchRequests]);
 
-  const currentStatusTabs = section === 'report' ? REPORT_STATUS_TABS : STATUS_TABS;
+  const currentStatusTabs = section === 'report' ? REPORT_STATUS_TABS : REQUEST_STATUS_TABS;
 
-  // Fetch pending counts for ALL sections (for section tab badges + title)
   const fetchAllPendingCounts = useCallback(() => {
     if (!isAdmin) return;
     const fns = { fictional: api.getRequests, breed: api.getBreedRequests, report: api.getReports };
@@ -826,7 +834,7 @@ export default function AdminPage() {
     const fn = section === 'fictional' ? api.getRequests
       : section === 'breed' ? api.getBreedRequests
       : api.getReports;
-    const tabs = section === 'report' ? REPORT_STATUS_TABS : STATUS_TABS;
+    const tabs = section === 'report' ? REPORT_STATUS_TABS : REQUEST_STATUS_TABS;
     for (const tab of tabs) {
       if (tab.key !== activeTab) {
         fn(tab.key)
@@ -860,7 +868,7 @@ export default function AdminPage() {
     const fn = section === 'fictional' ? api.getRequests
       : section === 'breed' ? api.getBreedRequests
       : api.getReports;
-    const tabs = section === 'report' ? REPORT_STATUS_TABS : STATUS_TABS;
+    const tabs = section === 'report' ? REPORT_STATUS_TABS : REQUEST_STATUS_TABS;
     for (const tab of tabs) {
       if (tab.key !== activeTab) {
         fn(tab.key)
