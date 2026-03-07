@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import RankBadge from './RankBadge';
 import { YouTubeIcon, TwitchIcon, SNS_ICON_MAP, SNS_LABELS } from './SnsIcons';
@@ -338,7 +339,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
   const socialLinks = userDetail?.social_links || {};
   const bio = userDetail?.bio;
 
-  return (
+  return createPortal(
     <>
       <style>{`
         @keyframes vtaxonSlideIn  { from { transform: translateX(100%); } to { transform: translateX(0); } }
@@ -586,7 +587,8 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
 
