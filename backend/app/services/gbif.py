@@ -89,6 +89,14 @@ def suggest_species(query, limit=10):
         seen_keys.add(key)
         species_list.append(_gbif_result_to_dict(r, key))
 
+    # Fallback: if suggest returned nothing, try /species/match
+    if not species_list:
+        matched = match_species(query)
+        if matched:
+            matched.pop('match_type', None)
+            matched.pop('confidence', None)
+            species_list.append(matched)
+
     # Enrich with Chinese names
     _enrich_chinese_names(species_list)
 
@@ -270,6 +278,14 @@ def _suggest_species_stream(query, limit=10):
             continue
         seen_keys.add(key)
         species_list.append(_gbif_result_to_dict(r, key))
+
+    # Fallback: if suggest returned nothing, try /species/match
+    if not species_list:
+        matched = match_species(query)
+        if matched:
+            matched.pop('match_type', None)
+            matched.pop('confidence', None)
+            species_list.append(matched)
 
     for sp in species_list:
         _enrich_chinese_names([sp])
