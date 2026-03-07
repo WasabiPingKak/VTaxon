@@ -110,7 +110,7 @@ def main():
     # Set search_path
     cur.execute(f"SET search_path TO {schema}, public;")
 
-    # Step 0: Clean up — null out alternative_names_zh for non-species ranks
+    # Step 0a: Clean up — null out alternative_names_zh for non-species ranks
     cur.execute("""
         UPDATE species_cache
         SET alternative_names_zh = NULL
@@ -120,6 +120,26 @@ def main():
     cleaned = cur.rowcount
     if cleaned:
         print(f'Cleaned {cleaned} non-species rows that had alternative_names_zh')
+
+    # Step 0b: Re-clean existing alt names with updated filter rules
+    cur.execute("""
+        SELECT taxon_id, common_name_zh, alternative_names_zh
+        FROM species_cache
+        WHERE alternative_names_zh IS NOT NULL
+    """)
+    existing_rows = cur.fetchall()
+    recleaned = 0
+    from app.services.gbif import clean_alt_names
+    for taxon_id, common_name_zh, alt in existing_rows:
+        new_alt = clean_alt_names(alt, common_name_zh)
+        if new_alt != alt:
+            cur.execute(
+                "UPDATE species_cache SET alternative_names_zh = %s WHERE taxon_id = %s",
+                (new_alt, taxon_id),
+            )
+            recleaned += 1
+    if recleaned:
+        print(f'Re-cleaned {recleaned} rows with updated filter rules')
 
     # Find rows missing alternative_names_zh (species-level only)
     cur.execute("""
@@ -137,11 +157,9 @@ def main():
     for i, (taxon_id, scientific_name, common_name_zh) in enumerate(rows):
         alt = fetch_alternative_names(scientific_name, taxon_id)
 
-        # 去重：移除與 common_name_zh 相同的俗名
-        if alt and common_name_zh:
-            parts = [n.strip() for n in alt.split(',')]
-            parts = [n for n in parts if n and n != common_name_zh]
-            alt = ', '.join(parts) if parts else None
+        # 清理：去重、移除屬名、移除非中文
+        from app.services.gbif import clean_alt_names
+        alt = clean_alt_names(alt, common_name_zh)
 
         if alt:
             display = f'{common_name_zh or scientific_name} → 俗名: {alt}'

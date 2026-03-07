@@ -495,13 +495,10 @@ def _enrich_chinese_names(species_list):
                 taxon_rank=sp.get('taxon_rank'),
             )
 
-        # Deduplicate: remove alt names that match common_name_zh
-        alt = sp.get('alternative_names_zh')
-        primary = sp.get('common_name_zh')
-        if alt and primary:
-            parts = [n.strip() for n in alt.split(',')]
-            parts = [n for n in parts if n and n != primary]
-            sp['alternative_names_zh'] = ', '.join(parts) if parts else None
+        # Clean alt names: remove duplicates, genus names, non-CJK
+        sp['alternative_names_zh'] = clean_alt_names(
+            sp.get('alternative_names_zh'), sp.get('common_name_zh')
+        )
 
         # Higher taxonomy Chinese names (static table)
         rank_zh = get_taxonomy_zh_for_ranks(
@@ -632,6 +629,39 @@ def get_subspecies_stream(species_key, limit=50):
     for sp in subspecies:
         _enrich_chinese_names([sp])
         yield json.dumps(sp, ensure_ascii=False) + '\n'
+
+
+# ---------------------------------------------------------------------------
+# Alt-name cleaning
+# ---------------------------------------------------------------------------
+
+def clean_alt_names(alt_str, primary_zh):
+    """Clean alternative names: remove duplicates, genus names, non-CJK entries.
+
+    Args:
+        alt_str: comma-separated alternative names string
+        primary_zh: the primary common_name_zh to deduplicate against
+    Returns:
+        cleaned comma-separated string, or None if empty after cleaning.
+    """
+    if not alt_str:
+        return None
+    parts = [n.strip() for n in alt_str.split(',')]
+    cleaned = []
+    for n in parts:
+        if not n:
+            continue
+        # Skip if same as primary name
+        if primary_zh and n == primary_zh:
+            continue
+        # Skip taxonomy-style names ending with 屬 (genus) or 科 (family)
+        if n.endswith('屬') or n.endswith('科'):
+            continue
+        # Skip non-CJK entries (e.g. Latin scientific names)
+        if not _has_cjk(n):
+            continue
+        cleaned.append(n)
+    return ', '.join(cleaned) if cleaned else None
 
 
 # ---------------------------------------------------------------------------

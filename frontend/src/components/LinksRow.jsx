@@ -3,7 +3,10 @@ import { YouTubeIcon, TwitchIcon, SNS_ICON_MAP, SNS_LABELS } from './SnsIcons';
 /** Links row: OAuth icons + SNS icons + flag icons */
 export default function LinksRow({ oauthAccounts, socialLinks, countryFlags }) {
   const flags = (countryFlags || []);
-  const hasLinks = oauthAccounts.length > 0 || Object.keys(socialLinks || {}).length > 0;
+  const hasOAuth = oauthAccounts.length > 0;
+  const snsEntries = Object.entries(socialLinks || {}).filter(([, url]) => url);
+  const hasSns = snsEntries.length > 0;
+  const hasLinks = hasOAuth || hasSns;
 
   if (!hasLinks && flags.length === 0) return null;
 
@@ -30,11 +33,15 @@ export default function LinksRow({ oauthAccounts, socialLinks, countryFlags }) {
         );
       })}
 
-      {Object.entries(socialLinks || {})
+      {hasOAuth && hasSns && (
+        <span style={{ color: 'rgba(255,255,255,0.15)', margin: '0 2px' }}>|</span>
+      )}
+
+      {snsEntries
         .sort(([a], [b]) => (a === 'email') - (b === 'email'))
         .map(([key, url]) => {
         const Icon = SNS_ICON_MAP[key];
-        if (!Icon || !url) return null;
+        if (!Icon) return null;
         const isEmail = key === 'email';
         const href = isEmail && !url.startsWith('mailto:') ? `mailto:${url}` : url;
         return (

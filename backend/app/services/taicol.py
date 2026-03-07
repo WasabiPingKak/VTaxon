@@ -13,33 +13,55 @@ TAICOL_BASE = 'https://api.taicol.tw/v2'
 
 
 def search_by_chinese(query, limit=10):
-    """Search TaiCOL by Chinese name using taxon_group parameter.
+    """Search TaiCOL by Chinese name using common_name + taxon_group.
 
+    Queries both parameters and merges results (common_name first, then
+    taxon_group as supplement), deduped by scientific_name.
     Returns list of dicts with scientific_name, common_name_c, rank, etc.
     """
-    try:
-        resp = requests.get(f'{TAICOL_BASE}/taxon', params={
-            'taxon_group': query,
-            'limit': limit,
-        }, timeout=10)
-        if resp.status_code != 200:
-            return []
+    seen = set()
+    results = []
 
-        data = resp.json().get('data', [])
-        results = []
+    def _collect(data):
         for entry in data:
             rank = (entry.get('rank') or '').lower()
             if rank not in ('species', 'subspecies'):
                 continue
+            sci = entry.get('simple_name')
+            if not sci or sci in seen:
+                continue
+            seen.add(sci)
             results.append({
-                'scientific_name': entry.get('simple_name'),
+                'scientific_name': sci,
                 'common_name_zh': entry.get('common_name_c'),
                 'alternative_name_zh': entry.get('alternative_name_c'),
                 'rank': entry.get('rank'),
             })
-        return results
+
+    # Primary: search by common_name (exact Chinese name match)
+    try:
+        resp = requests.get(f'{TAICOL_BASE}/taxon', params={
+            'common_name': query,
+            'limit': limit,
+        }, timeout=10)
+        if resp.status_code == 200:
+            _collect(resp.json().get('data', []))
     except Exception:
-        return []
+        pass
+
+    # Supplement: search by taxon_group (broader, includes partial matches)
+    if len(results) < limit:
+        try:
+            resp = requests.get(f'{TAICOL_BASE}/taxon', params={
+                'taxon_group': query,
+                'limit': limit,
+            }, timeout=10)
+            if resp.status_code == 200:
+                _collect(resp.json().get('data', []))
+        except Exception:
+            pass
+
+    return results[:limit]
 
 
 @lru_cache(maxsize=500)
