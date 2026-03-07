@@ -243,7 +243,12 @@ const AUTO_EXPAND_THRESHOLD = 5;
  */
 export function autoExpandPaths(node, pathSet) {
   if (!node || node.children.size === 0) return;
-  if (node.children.size <= AUTO_EXPAND_THRESHOLD) {
+  if (node.children.size === 1) {
+    // Special case: 只有一個子節點時無條件遞迴展開
+    const child = node.children.values().next().value;
+    pathSet.add(child.pathKey);
+    autoExpandPaths(child, pathSet);
+  } else if (node.children.size <= AUTO_EXPAND_THRESHOLD) {
     for (const child of node.children.values()) {
       pathSet.add(child.pathKey);
       autoExpandPaths(child, pathSet);
