@@ -8,7 +8,7 @@ from ..models import User
 
 seo_bp = Blueprint('seo', __name__)
 
-SITE_URL = 'https://vtaxon.web.app'
+SITE_URL = 'https://vtaxon.com'
 
 STATIC_PAGES = [
     {'loc': '/',          'priority': '1.0', 'changefreq': 'daily'},

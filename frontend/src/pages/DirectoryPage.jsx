@@ -83,7 +83,7 @@ export default function DirectoryPage() {
           '@type': 'CollectionPage',
           name: 'VTuber 圖鑑',
           description: '探索所有已建檔的 VTuber 角色與物種分類',
-          url: 'https://vtaxon.web.app/directory',
+          url: 'https://vtaxon.com/directory',
         }}
       >
         {currentPage > 1 && (

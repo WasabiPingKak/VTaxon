@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async';
 
 const SITE_NAME = 'VTaxon';
-const SITE_URL = 'https://vtaxon.web.app';
+const SITE_URL = 'https://vtaxon.com';
 const DEFAULT_DESCRIPTION = 'VTaxon — 將 VTuber 角色形象對應到生物分類學體系，以分類樹呈現角色之間的關聯。';
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;
 

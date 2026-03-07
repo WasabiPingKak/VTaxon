@@ -96,10 +96,10 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 
 ## 部署架構
 
-| 環境 | Git 分支 | 後端 Cloud Run | 前端 Firebase Hosting |
-|------|---------|---------------|----------------------|
+| 環境 | Git 分支 | 後端 Cloud Run | 前端 |
+|------|---------|---------------|------|
 | Staging | `develop` | vtaxon-api-staging | vtaxon-staging.web.app |
-| Production | `main` | vtaxon-api-prod | vtaxon.web.app |
+| Production | `main` | vtaxon-api-prod | vtaxon.com |
 
 - **所有開發都在 `develop` 分支進行**，push 後自動部署到 staging
 - **任何程式碼修改（feature、bugfix、refactor）都必須先從 `develop` 開一個獨立的 feature branch（如 `feature/xxx`、`fix/xxx`），不得直接在 `develop` 上修改。** 完成後再 merge 回 `develop`。
