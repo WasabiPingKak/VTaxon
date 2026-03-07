@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths } from '../../lib/treeUtils';
 import GraphCanvas from './GraphCanvas';
@@ -1173,6 +1173,10 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
           <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, lineHeight: 1.5 }}>
             將 VTuber 角色形象對應到生物分類學體系，以分類樹呈現角色之間的關聯。
           </div>
+          <Link to="/about" style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 6, display: 'inline-block', textDecoration: 'none' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
+          >關於本站 →</Link>
         </div>
       )}
 
