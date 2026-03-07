@@ -834,6 +834,9 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
     return entryToVtuberPathKey(entry, breedPaths);
   }, [breedPaths]);
 
+  const entryToPathKeyRef = useRef(entryToPathKey);
+  entryToPathKeyRef.current = entryToPathKey;
+
   // Locate: ensure paths expanded, then pan back to focused user's node
   const handleLocateFocused = useCallback(() => {
     const entry = focusedEntries[focusedSpeciesIdx];
@@ -958,13 +961,14 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
     scheduleCamera(() => {
       const entry = focusedEntries[0];
       if (!entry) return;
-      const pathKey = entryToPathKey(entry);
+      const pathKey = entryToPathKeyRef.current(entry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 200);
-  }, [refocusTick, entryToPathKey, scheduleCamera]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refocusTick, scheduleCamera]);
 
   // Pan to focused species when user explicitly changes selection
   useEffect(() => {
@@ -990,13 +994,14 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
 
     // Delay to let layout update with expanded paths, then pan
     scheduleCamera(() => {
-      const pathKey = entryToPathKey(entry);
+      const pathKey = entryToPathKeyRef.current(entry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
-  }, [focusedEntryKey, focusedUserId, entryToPathKey, scheduleCamera]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusedEntryKey, focusedUserId, scheduleCamera]);
 
   // Render state
   // Only pass activeFilters when there are active selections
