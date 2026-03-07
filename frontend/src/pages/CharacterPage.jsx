@@ -35,7 +35,7 @@ export default function CharacterPage() {
         .then(data => setOauthAccounts(data.oauth_accounts || []))
         .catch(err => console.error('Failed to load OAuth accounts:', err));
     }
-  }, [user]);
+  }, [user?.id]);
 
   const openPreview = useCallback(async () => {
     if (!user) return;
@@ -47,7 +47,7 @@ export default function CharacterPage() {
     } catch (err) {
       console.error('Failed to load preview data:', err);
     }
-  }, [user]);
+  }, [user?.id]);
 
   function setActiveTab(tab) {
     if (tab === 'species') {

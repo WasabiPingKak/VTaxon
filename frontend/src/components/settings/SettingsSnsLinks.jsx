@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../lib/ToastContext';
 import { api } from '../../lib/api';
@@ -21,8 +21,13 @@ export default function SettingsSnsLinks() {
   const [socialLinks, setSocialLinks] = useState({});
   const [savingSns, setSavingSns] = useState(false);
 
+  // Only initialize when user identity changes, not on every user object update.
+  // Prevents unsaved SNS links from being wiped when profile section saves.
+  const initializedIdRef = useRef(null);
   useEffect(() => {
-    if (user) setSocialLinks(user.social_links || {});
+    if (!user || user.id === initializedIdRef.current) return;
+    initializedIdRef.current = user.id;
+    setSocialLinks(user.social_links || {});
   }, [user]);
 
   async function handleSaveSns(e) {

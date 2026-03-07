@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import { api } from './api';
 import { useToast } from './ToastContext';
@@ -253,18 +253,20 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function signOut() {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
-  }
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    session, user, loading, setUser,
+    signInWithGoogle, signInWithTwitch, signOut,
+    linkProvider, unlinkProvider,
+  }), [session, user, loading, signOut]);
 
   return (
-    <AuthContext.Provider value={{
-      session, user, loading, setUser,
-      signInWithGoogle, signInWithTwitch, signOut,
-      linkProvider, unlinkProvider,
-    }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../lib/ToastContext';
 import { api } from '../../lib/api';
@@ -69,8 +69,13 @@ export default function SettingsProfile() {
 
   const [saving, setSaving] = useState(false);
 
+  // Only initialize form when user identity changes (login/logout),
+  // NOT when user object reference changes (e.g. after saving SNS links).
+  // This prevents unsaved form data from being wiped out.
+  const initializedIdRef = useRef(null);
   useEffect(() => {
-    if (!user) return;
+    if (!user || user.id === initializedIdRef.current) return;
+    initializedIdRef.current = user.id;
     setDisplayName(user.display_name || '');
     const org = user.organization || '';
     setOrgType(org ? 'corporate' : 'indie');
