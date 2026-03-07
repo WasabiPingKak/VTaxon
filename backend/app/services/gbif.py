@@ -67,13 +67,18 @@ def suggest_species(query, limit=10):
         key = r.get('key')
         if not key or key in seen_keys:
             continue
-        # suggest may return SYNONYM entries; skip non-ACCEPTED
         status = (r.get('status') or '').upper()
-        if status and status != 'ACCEPTED':
-            continue
-        # Only include SPECIES and SUBSPECIES ranks
         rank = (r.get('rank') or '').upper()
         if rank not in ('ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
+            continue
+        # SYNONYM → resolve to accepted species
+        if status == 'SYNONYM':
+            resolved = _resolve_synonym(key, r.get('canonicalName'))
+            if resolved and resolved['taxon_id'] not in seen_keys:
+                seen_keys.add(resolved['taxon_id'])
+                species_list.append(resolved)
+            continue
+        if status and status != 'ACCEPTED':
             continue
         seen_keys.add(key)
         species_list.append(_gbif_result_to_dict(r, key))
@@ -105,6 +110,19 @@ def match_species(name):
     usage_key = data.get('usageKey')
     if not usage_key:
         return None
+
+    # If SYNONYM, resolve to accepted species
+    status = (data.get('status') or '').upper()
+    if status == 'SYNONYM':
+        accepted_key = data.get('acceptedUsageKey')
+        if accepted_key:
+            synonym_name = data.get('canonicalName')
+            resolved = _resolve_synonym(usage_key, synonym_name)
+            if resolved:
+                resolved['match_type'] = data.get('matchType')
+                resolved['confidence'] = data.get('confidence')
+                _enrich_chinese_names([resolved])
+                return resolved
 
     result = _gbif_result_to_dict(data, usage_key)
     result['match_type'] = data.get('matchType')
@@ -228,10 +246,17 @@ def _suggest_species_stream(query, limit=10):
         if not key or key in seen_keys:
             continue
         status = (r.get('status') or '').upper()
-        if status and status != 'ACCEPTED':
-            continue
         rank = (r.get('rank') or '').upper()
         if rank not in ('ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
+            continue
+        # SYNONYM → resolve to accepted species
+        if status == 'SYNONYM':
+            resolved = _resolve_synonym(key, r.get('canonicalName'))
+            if resolved and resolved['taxon_id'] not in seen_keys:
+                seen_keys.add(resolved['taxon_id'])
+                species_list.append(resolved)
+            continue
+        if status and status != 'ACCEPTED':
             continue
         seen_keys.add(key)
         species_list.append(_gbif_result_to_dict(r, key))
@@ -834,6 +859,34 @@ def _build_taxon_path(data):
     if last_non_empty < 0:
         return None
     return '|'.join(parts[:last_non_empty + 1])
+
+
+def _resolve_synonym(synonym_key, synonym_canonical_name):
+    """Resolve a SYNONYM to its accepted species via GBIF /species/{key}.
+
+    Returns an accepted species dict with synonym_name attached, or None.
+    """
+    try:
+        resp = requests.get(f'{GBIF_BASE}/species/{synonym_key}', timeout=10)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        accepted_key = data.get('acceptedKey')
+        if not accepted_key:
+            return None
+
+        # Fetch the accepted species
+        resp2 = requests.get(f'{GBIF_BASE}/species/{accepted_key}', timeout=10)
+        if resp2.status_code != 200:
+            return None
+        accepted = resp2.json()
+
+        result = _gbif_result_to_dict(accepted, accepted_key)
+        result['synonym_name'] = synonym_canonical_name or data.get('canonicalName')
+        return result
+    except Exception:
+        log.debug('Failed to resolve synonym key=%s', synonym_key)
+        return None
 
 
 def _gbif_result_to_dict(r, usage_key):

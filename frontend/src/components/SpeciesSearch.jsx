@@ -221,6 +221,11 @@ function SpeciesRow({ sp, onSelect, indent, connector, familyColor }) {
             <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9em' }}>({enName})</span>
           )}
         </div>
+        {sp.synonym_name && (
+          <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.35)', marginTop: '2px', fontStyle: 'italic' }}>
+            = {sp.synonym_name}
+          </div>
+        )}
         {!indent && <Breadcrumb sp={sp} />}
       </div>
       {onSelect && (
