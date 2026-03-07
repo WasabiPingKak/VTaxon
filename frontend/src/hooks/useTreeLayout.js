@@ -227,6 +227,7 @@ function layoutTree(h, activeFilterCount) {
   treeLayout(h);
   applyIntermediateLevel(h);
   applyGridLayout(h, activeFilterCount);
+  recenterParents(h);
   resolveCollisions(h);
 }
 
@@ -470,6 +471,20 @@ function applyGridLayout(root, activeFilterCount) {
       vtubers[i].data._inGrid = true;
       vtubers[i].data._gridBarY = barY;
     }
+  }
+}
+
+/**
+ * After grid layout compresses vtuber children, recenter each parent
+ * over its children's actual x-positions (bottom-up).
+ */
+function recenterParents(root) {
+  const nodes = root.descendants();
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const node = nodes[i];
+    if (!node.children || node.children.length === 0) continue;
+    const avgX = node.children.reduce((s, c) => s + c.x, 0) / node.children.length;
+    node.x = avgX;
   }
 }
 
