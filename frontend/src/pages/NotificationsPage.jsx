@@ -369,7 +369,7 @@ export default function NotificationsPage() {
                           {item.message && (
                             <div style={{
                               color: 'rgba(255,255,255,0.5)', fontSize: '0.8em',
-                              marginTop: 3, lineHeight: 1.4,
+                              marginTop: 3, lineHeight: 1.4, whiteSpace: 'pre-wrap',
                             }}>
                               {item.message}
                             </div>

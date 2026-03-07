@@ -660,6 +660,7 @@ function ReportCard({ req, onUpdate }) {
           borderRadius: 6, fontSize: '0.85em',
           color: 'rgba(255,255,255,0.6)',
           borderLeft: '3px solid rgba(255,255,255,0.1)',
+          whiteSpace: 'pre-wrap',
         }}>
           <span style={{ color: 'rgba(255,255,255,0.4)' }}>管理員備註：</span>
           {req.admin_note}
