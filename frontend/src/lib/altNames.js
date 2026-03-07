@@ -39,7 +39,7 @@ export function formatAltNamesFull(altStr) {
   if (!altStr) return '';
   const all = altStr.split(/[,，]/).map(s => s.trim()).filter(Boolean);
   if (all.length === 0) return '';
-  return `（${all.join('、')}）`;
+  return all.join('、');
 }
 
 /**
