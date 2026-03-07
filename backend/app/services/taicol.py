@@ -25,7 +25,7 @@ def search_by_chinese(query, limit=10):
     def _collect(data):
         for entry in data:
             rank = (entry.get('rank') or '').lower()
-            if rank not in ('species', 'subspecies'):
+            if rank not in ('kingdom', 'phylum', 'subphylum', 'class', 'order', 'family', 'genus', 'species', 'subspecies', 'variety'):
                 continue
             sci = entry.get('simple_name')
             if not sci or sci in seen:
