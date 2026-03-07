@@ -225,6 +225,14 @@ export const api = {
     method: 'POST', body: JSON.stringify(body),
   }),
 
+  // Notifications
+  getNotifications: (unreadOnly = false) =>
+    apiFetch(`/notifications${unreadOnly ? '?unread_only=true' : ''}`),
+  getUnreadCount: () => apiFetch('/notifications/unread-count'),
+  markNotificationsRead: (body) => apiFetch('/notifications/read', {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+
   // Reports (admin)
   getReports: (status = 'pending') =>
     apiFetch(`/reports?status=${encodeURIComponent(status)}`),

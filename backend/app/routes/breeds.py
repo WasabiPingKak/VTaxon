@@ -204,6 +204,10 @@ def update_breed_request(req_id):
     req.status = new_status
     req.admin_note = data.get('admin_note') or req.admin_note
 
+    from ..services.notifications import create_notification
+    create_notification(req.user_id, 'breed_request', req.id,
+                        new_status, req.admin_note)
+
     db.session.commit()
 
     return jsonify(req.to_dict())

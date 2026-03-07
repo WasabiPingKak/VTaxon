@@ -389,6 +389,32 @@ class Blacklist(db.Model):
         return result
 
 
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id',
+                        ondelete='CASCADE'), nullable=False)
+    type = db.Column(db.Text, nullable=False)
+    reference_id = db.Column(db.Integer, nullable=False)
+    title = db.Column(db.Text, nullable=False)
+    message = db.Column(db.Text)
+    is_read = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'type': self.type,
+            'reference_id': self.reference_id,
+            'title': self.title,
+            'message': self.message,
+            'is_read': self.is_read,
+            'created_at': self.created_at.isoformat(),
+        }
+
+
 class VtuberTrait(db.Model):
     __tablename__ = 'vtuber_traits'
 

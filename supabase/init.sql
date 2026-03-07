@@ -292,3 +292,23 @@ CREATE TRIGGER trg_users_updated_at
 CREATE TRIGGER trg_vtuber_traits_updated_at
     BEFORE UPDATE ON vtuber_traits
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- 11. notifications — 通知
+CREATE TABLE notifications (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type TEXT NOT NULL,            -- 'fictional_request' | 'breed_request' | 'report'
+    reference_id INTEGER NOT NULL, -- 對應的 request/report ID
+    title TEXT NOT NULL,
+    message TEXT,
+    is_read BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX idx_notifications_user_unread ON notifications(user_id, is_read) WHERE is_read = false;
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "notifications_select_own" ON notifications
+    FOR SELECT USING (auth.uid() = user_id);
