@@ -54,6 +54,7 @@ def get_taxonomy_tree():
         .join(SpeciesCache, VtuberTrait.taxon_id == SpeciesCache.taxon_id)
         .join(User, VtuberTrait.user_id == User.id)
         .filter(VtuberTrait.taxon_id.isnot(None))
+        .order_by(User.created_at.desc())
         .all()
     )
 
@@ -155,6 +156,7 @@ def get_fictional_tree():
         .join(FictionalSpecies, VtuberTrait.fictional_species_id == FictionalSpecies.id)
         .join(User, VtuberTrait.user_id == User.id)
         .filter(VtuberTrait.fictional_species_id.isnot(None))
+        .order_by(User.created_at.desc())
         .all()
     )
 
