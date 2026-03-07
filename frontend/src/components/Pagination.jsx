@@ -1,4 +1,4 @@
-export default function Pagination({ page, totalPages, total, onPageChange }) {
+export default function Pagination({ page, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
 
   const pages = [];
@@ -20,12 +20,9 @@ export default function Pagination({ page, totalPages, total, onPageChange }) {
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '16px 0', gap: 12, flexWrap: 'wrap',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '16px 0', gap: 4,
     }}>
-      <span style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.5)' }}>
-        共 {total} 位實況主
-      </span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         <button
           type="button"
