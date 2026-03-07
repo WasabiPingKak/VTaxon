@@ -192,41 +192,45 @@ function SpeciesRow({ sp, onSelect, indent, connector, familyColor }) {
       alignItems: 'flex-start',
       background: indent ? 'rgba(255,255,255,0.02)' : 'transparent',
     }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'baseline' }}>
           {connector && (
             <span style={{ color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace', fontSize: '0.9em', marginRight: '2px' }}>
               {connector}
             </span>
           )}
           <RankBadge rank={rank} />
-          {hasChinese ? (
-            <>
-              <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#e2e8f0' }}>
-                {zhName}
-              </span>
-              <span style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.5)' }}>{binomial}</span>
-            </>
-          ) : (
-            <span style={{ fontWeight: 700, fontSize: '1.05em', fontStyle: 'italic', color: '#cbd5e1' }}>
-              {binomial}
-            </span>
-          )}
-          {enName && (
-            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9em' }}>({enName})</span>
-          )}
         </div>
-        {sp.synonym_name && (
-          <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.35)', marginTop: '2px', fontStyle: 'italic' }}>
-            = {sp.synonym_name}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px' }}>
+            {hasChinese ? (
+              <>
+                <span style={{ fontWeight: 700, fontSize: '1.05em', color: '#e2e8f0' }}>
+                  {zhName}
+                </span>
+                <span style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.5)' }}>{binomial}</span>
+              </>
+            ) : (
+              <span style={{ fontWeight: 700, fontSize: '1.05em', fontStyle: 'italic', color: '#cbd5e1' }}>
+                {binomial}
+              </span>
+            )}
+            {enName && (
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9em' }}>({enName})</span>
+            )}
           </div>
-        )}
-        {altFull && (
-          <div title={altTitle} style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.35)', marginTop: '2px', lineHeight: 1.4 }}>
-            {altFull}
-          </div>
-        )}
-        {!indent && <Breadcrumb sp={sp} />}
+          {sp.synonym_name && (
+            <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.35)', marginTop: '2px', fontStyle: 'italic' }}>
+              = {sp.synonym_name}
+            </div>
+          )}
+          {altFull && (
+            <div title={altTitle} style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.35)', marginTop: '2px', lineHeight: 1.4 }}>
+              {altFull}
+            </div>
+          )}
+          {!indent && <Breadcrumb sp={sp} />}
+        </div>
       </div>
       {onSelect && (
         <button onClick={() => onSelect(sp)} style={{
