@@ -11,6 +11,7 @@ import {
 } from './colors.js';
 import { getActiveFilterBadges, getSortBadge } from '../../lib/filterBadges.js';
 import { getFlagImage } from '../../lib/flagImages.js';
+import { stripAuthor } from '../../lib/treeUtils.js';
 
 // ── Platform icon SVG paths (viewBox 0 0 24 24) for canvas rendering ──
 const PLATFORM_ICONS = {
@@ -467,7 +468,7 @@ function drawSpeciesNode(ctx, node, scale, state) {
     ctx.font = fontStr(10, scale, '', 'italic');
     const latinFs = scaledFontSize(10, scale);
     const latinY = node.y + h / 2 + latinFs * 0.8;
-    ctx.fillText(d._name || '', node.x, latinY);
+    ctx.fillText(stripAuthor(d._name) || '', node.x, latinY);
 
     // Rank label + count below Latin name
     const count = d._count || 0;
