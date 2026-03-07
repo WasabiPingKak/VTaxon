@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths } from '../../lib/treeUtils';
+import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths } from '../../lib/treeUtils';
 import GraphCanvas from './GraphCanvas';
 import { drawGraph, createStarField } from './renderers';
 import useTreeLayout from '../../hooks/useTreeLayout';
@@ -681,25 +681,10 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
       } else {
         toggleActionRef.current = 'expand';
         next.add(pathKey);
-        // Auto-expand: single-child → always drill; count===1 → drill to bottom
+        // Auto-expand: recursively expand children when ≤ 5 at each level
         const treeRoot = pathKey.startsWith('__F__') ? fictionalRootData : rootData;
         if (treeRoot) {
-          const autoExpand = (n) => {
-            if (!n) return;
-            if (n.children.size === 1) {
-              const child = [...n.children.values()][0];
-              next.add(child.pathKey);
-              autoExpand(child);
-            } else {
-              for (const child of n.children.values()) {
-                if (child.count === 1) {
-                  next.add(child.pathKey);
-                  autoExpand(child);
-                }
-              }
-            }
-          };
-          autoExpand(findNode(treeRoot, pathKey));
+          autoExpandPaths(findNode(treeRoot, pathKey), next);
         }
       }
       return next;
