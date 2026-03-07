@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
-import { buildTree, computeHighlightPaths, collectAllPaths, findNode } from '../lib/treeUtils';
+import { buildTree, computeHighlightPaths, collectAllPaths, findNode, autoExpandPaths } from '../lib/treeUtils';
 import TreeNode from './TreeNode';
 import VtuberDetailPanel from './VtuberDetailPanel';
 
@@ -103,17 +103,9 @@ export default function TaxonomyTree({ currentUser, filters }) {
         next.delete(pathKey);
       } else {
         next.add(pathKey);
-        // Auto-expand through empty intermediate nodes
-        // Walk down the tree to find the node, then drill down while:
-        // - node has no vtubers AND
-        // - node has exactly 1 child
+        // Auto-expand: recursively expand children when ≤ 5 at each level
         if (tree) {
-          let node = findNode(tree, pathKey);
-          while (node && node.vtubers.length === 0 && node.children.size === 1) {
-            const child = [...node.children.values()][0];
-            next.add(child.pathKey);
-            node = child;
-          }
+          autoExpandPaths(findNode(tree, pathKey), next);
         }
       }
       return next;

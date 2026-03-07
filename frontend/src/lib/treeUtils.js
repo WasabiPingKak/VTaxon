@@ -193,6 +193,22 @@ export function collectAllPaths(entries) {
   return all;
 }
 
+const AUTO_EXPAND_THRESHOLD = 5;
+
+/**
+ * Recursively expand children into pathSet when a node has ≤ threshold children.
+ * Each level independently checks children.size ≤ 5; stops drilling when exceeded.
+ */
+export function autoExpandPaths(node, pathSet) {
+  if (!node || node.children.size === 0) return;
+  if (node.children.size <= AUTO_EXPAND_THRESHOLD) {
+    for (const child of node.children.values()) {
+      pathSet.add(child.pathKey);
+      autoExpandPaths(child, pathSet);
+    }
+  }
+}
+
 const CLASS_IDX = 2;
 
 /**
