@@ -315,6 +315,7 @@ TAXONOMY_ZH = {
 # ---------------------------------------------------------------------------
 SPECIES_ZH_OVERRIDES = {
     2481661: '皇帝企鵝',       # Aptenodytes forsteri — Wikidata zh-tw has 帝企鵝
+    8460871: '前突三角龍',     # Triceratops prorsus — extinct, no zh in Wikidata/TaiCOL
 }
 
 
