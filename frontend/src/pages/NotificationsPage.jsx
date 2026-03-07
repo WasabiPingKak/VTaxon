@@ -152,7 +152,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (user) fetchGroups();
-  }, [user, fetchGroups]);
+  }, [user?.id, fetchGroups]);
 
   const handleMarkAllRead = async () => {
     try {
