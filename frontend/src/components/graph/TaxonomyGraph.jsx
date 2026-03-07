@@ -48,6 +48,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
   const [filters, setFilters] = useState(() => emptyFilters());
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
+  const [showDescription, setShowDescription] = useState(true);
   const isMobile = useIsMobile();
 
   // Camera insets: [padding, leftInset, rightInset, bottomInset, topInset]
@@ -1158,31 +1159,40 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
         />
       </div>
 
-      <div style={{ position: 'absolute', left: isMobile ? 8 : 16, top: isMobile ? 52 : 60, display: 'flex',
-        flexDirection: 'column', alignItems: 'flex-start', gap: 8, zIndex: 50, pointerEvents: 'none' }}>
-
-        {/* 用途說明（僅桌面版，滿足 Google OAuth 審核） */}
-        {!isMobile && (
-          <div style={{
-            background: 'rgba(8,13,21,0.75)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 10,
-            padding: '8px 12px',
-            pointerEvents: 'auto',
-            maxWidth: 170,
-          }}>
+      {/* 用途說明（右上角，滿足 Google OAuth 審核） */}
+      {!isMobile && showDescription && (
+        <div style={{
+          position: 'absolute', right: 16, top: 60, zIndex: 50,
+          background: 'rgba(8,13,21,0.75)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 10,
+          padding: '8px 12px',
+          maxWidth: 200,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
             <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
               VTuber 生物分類系統
             </div>
-            <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, lineHeight: 1.5 }}>
-              將 VTuber 角色形象對應到生物分類學體系，以分類樹呈現角色之間的關聯。
-            </div>
+            <button type="button" onClick={() => setShowDescription(false)}
+              style={{
+                background: 'none', border: 'none', padding: 0, margin: '-2px -4px 0 0',
+                color: 'rgba(255,255,255,0.3)', fontSize: 16, lineHeight: 1,
+                cursor: 'pointer', flexShrink: 0,
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+            >&times;</button>
           </div>
-        )}
+          <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, lineHeight: 1.5 }}>
+            將 VTuber 角色形象對應到生物分類學體系，以分類樹呈現角色之間的關聯。
+          </div>
+        </div>
+      )}
 
-        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 8, pointerEvents: 'none' }}>
+      <div style={{ position: 'absolute', left: isMobile ? 8 : 16, top: isMobile ? 52 : 60, display: 'flex',
+        flexDirection: 'row', alignItems: 'flex-start', gap: 8, zIndex: 50, pointerEvents: 'none' }}>
         <FloatingToolbar
           canvasRef={canvasRef}
           filteredCount={filteredCount}
@@ -1217,7 +1227,6 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
             onClose={() => setFilterPanelOpen(false)}
           />
         )}
-        </div>
       </div>
 
       {/* Mobile: FilterPanel as animated bottom sheet (always mounted) */}
