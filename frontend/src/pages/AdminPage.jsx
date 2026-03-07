@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
@@ -776,6 +776,97 @@ function MultiStageActions({ actions, loading, note, setNote, onAction, adminNot
   );
 }
 
+// ── Export Toolbar (for "已受理" tab) ──────────────────
+
+function ExportToolbar({ section, requestCount, onTransitioned }) {
+  const [exporting, setExporting] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const data = section === 'fictional'
+        ? await api.exportFictionalRequests()
+        : await api.exportBreedRequests();
+      await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+      showToast(`已匯出 ${data.export_metadata.total_requests} 筆回報到剪貼簿`);
+    } catch (err) {
+      alert('匯出失敗：' + err.message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleTransition = async () => {
+    setTransitioning(true);
+    try {
+      const data = section === 'fictional'
+        ? await api.transitionFictionalRequests()
+        : await api.transitionBreedRequests();
+      showToast(`已將 ${data.updated} 筆回報轉為處理中`);
+      onTransitioned();
+    } catch (err) {
+      alert('轉移失敗：' + err.message);
+    } finally {
+      setTransitioning(false);
+    }
+  };
+
+  const disabled = requestCount === 0;
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <button
+          type="button"
+          disabled={disabled || exporting}
+          onClick={handleExport}
+          style={{
+            padding: '6px 14px', borderRadius: 6, cursor: disabled ? 'default' : 'pointer',
+            background: 'rgba(56,189,248,0.12)', color: '#38bdf8',
+            border: '1px solid rgba(56,189,248,0.25)',
+            fontSize: '0.85em', fontWeight: 500,
+            opacity: (disabled || exporting) ? 0.4 : 1,
+          }}
+        >
+          {exporting ? '匯出中…' : '匯出'}
+        </button>
+        <button
+          type="button"
+          disabled={disabled || transitioning}
+          onClick={handleTransition}
+          style={{
+            padding: '6px 14px', borderRadius: 6, cursor: disabled ? 'default' : 'pointer',
+            background: 'rgba(234,179,8,0.12)', color: '#eab308',
+            border: '1px solid rgba(234,179,8,0.25)',
+            fontSize: '0.85em', fontWeight: 500,
+            opacity: (disabled || transitioning) ? 0.4 : 1,
+          }}
+        >
+          {transitioning ? '轉移中…' : '全部轉為處理中'}
+        </button>
+      </div>
+      {toast && (
+        <div style={{
+          marginTop: 8, padding: '6px 12px', borderRadius: 6,
+          background: 'rgba(34,197,94,0.15)', color: '#4ade80',
+          fontSize: '0.85em', display: 'inline-block',
+        }}>
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main AdminPage ──────────────────
 
 export default function AdminPage() {
@@ -959,6 +1050,15 @@ export default function AdminPage() {
           );
         })}
       </div>
+
+      {/* Export toolbar for received tab (fictional / breed only) */}
+      {activeTab === 'received' && section !== 'report' && (
+        <ExportToolbar
+          section={section}
+          requestCount={requests.length}
+          onTransitioned={handleUpdate}
+        />
+      )}
 
       {/* Content */}
       {loading ? (

@@ -245,6 +245,12 @@ export const api = {
   // Admin counts
   getAdminCounts: () => apiFetch('/admin/request-counts'),
 
+  // Admin export
+  exportFictionalRequests: () => apiFetch('/admin/export-fictional'),
+  exportBreedRequests: () => apiFetch('/admin/export-breeds'),
+  transitionFictionalRequests: () => apiFetch('/admin/transition-fictional', { method: 'POST' }),
+  transitionBreedRequests: () => apiFetch('/admin/transition-breeds', { method: 'POST' }),
+
   // Reports (admin)
   getReports: (status = 'pending') =>
     apiFetch(`/reports?status=${encodeURIComponent(status)}`),
