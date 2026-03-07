@@ -3,7 +3,8 @@ from sqlalchemy import func
 
 from ..auth import login_required
 from ..extensions import db
-from ..models import Notification
+from ..models import (BreedRequest, FictionalSpeciesRequest, Notification,
+                      UserReport)
 
 notifications_bp = Blueprint('notifications', __name__)
 
@@ -38,6 +39,56 @@ def grouped_notifications():
             groups[key] = []
         groups[key].append(n.to_dict())
 
+    # Batch-load original requests for summaries
+    fictional_ids = [k[1] for k in groups if k[0] == 'fictional_request']
+    breed_ids = [k[1] for k in groups if k[0] == 'breed_request']
+    report_ids = [k[1] for k in groups if k[0] == 'report']
+
+    fictional_map = {r.id: r for r in
+                     FictionalSpeciesRequest.query.filter(
+                         FictionalSpeciesRequest.id.in_(fictional_ids)
+                     ).all()} if fictional_ids else {}
+    breed_map = {r.id: r for r in
+                 BreedRequest.query.filter(
+                     BreedRequest.id.in_(breed_ids)
+                 ).all()} if breed_ids else {}
+    report_map = {r.id: r for r in
+                  UserReport.query.filter(
+                      UserReport.id.in_(report_ids)
+                  ).all()} if report_ids else {}
+
+    def _build_summary(type_, ref_id):
+        if type_ == 'fictional_request':
+            r = fictional_map.get(ref_id)
+            if not r:
+                return None
+            return {
+                'name_zh': r.name_zh,
+                'name_en': r.name_en,
+                'suggested_origin': r.suggested_origin,
+                'suggested_sub_origin': r.suggested_sub_origin,
+                'description': r.description,
+            }
+        if type_ == 'breed_request':
+            r = breed_map.get(ref_id)
+            if not r:
+                return None
+            return {
+                'name_zh': r.name_zh,
+                'name_en': r.name_en,
+                'description': r.description,
+                'taxon_id': r.taxon_id,
+            }
+        if type_ == 'report':
+            r = report_map.get(ref_id)
+            if not r:
+                return None
+            return {
+                'report_type': r.report_type,
+                'reason': r.reason,
+            }
+        return None
+
     # Build result sorted by latest notification time per group
     result = []
     for (type_, ref_id), items in groups.items():
@@ -49,6 +100,7 @@ def grouped_notifications():
             'latest_status': items[0].get('status'),
             'latest_at': items[0]['created_at'],
             'has_unread': has_unread,
+            'request_summary': _build_summary(type_, ref_id),
             'timeline': items,  # newest first
         })
 
