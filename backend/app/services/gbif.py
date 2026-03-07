@@ -644,15 +644,19 @@ def clean_alt_names(alt_str, primary_zh):
     Returns:
         cleaned comma-separated string, or None if empty after cleaning.
     """
+    import unicodedata
     if not alt_str:
         return None
+    # Normalize to NFC to handle CJK compatibility chars (e.g. U+F9FE → U+8336)
+    alt_str = unicodedata.normalize('NFC', alt_str)
+    primary_norm = unicodedata.normalize('NFC', primary_zh) if primary_zh else None
     parts = [n.strip() for n in alt_str.split(',')]
     cleaned = []
     for n in parts:
         if not n:
             continue
         # Skip if same as primary name
-        if primary_zh and n == primary_zh:
+        if primary_norm and n == primary_norm:
             continue
         # Skip taxonomy-style names ending with 屬 (genus) or 科 (family)
         if n.endswith('屬') or n.endswith('科'):
