@@ -6,20 +6,20 @@ TITLE_MAP = {
         'received':    '虛構物種申請已受理',
         'in_progress': '虛構物種申請處理中',
         'completed':   '虛構物種申請已完成',
-        'rejected':    '虛構物種申請已駁回',
+        'rejected':    '虛構物種申請未採納',
         'approved':    '虛構物種申請已批准',  # 向下相容
     },
     'breed_request': {
         'received':    '品種申請已受理',
         'in_progress': '品種申請處理中',
         'completed':   '品種申請已完成',
-        'rejected':    '品種申請已駁回',
+        'rejected':    '品種申請未採納',
         'approved':    '品種申請已批准',
     },
     'report': {
         'investigating': '帳號檢舉調查中',
         'confirmed':     '帳號檢舉已確認處理',
-        'dismissed':     '帳號檢舉已駁回',
+        'dismissed':     '帳號檢舉未採納',
     },
 }
 
