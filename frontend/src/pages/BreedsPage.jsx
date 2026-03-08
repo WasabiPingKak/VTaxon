@@ -167,19 +167,24 @@ const breedRequestInputStyle = {
 
 function BreedRequestInline() {
   const [show, setShow] = useState(false);
-  const [form, setForm] = useState({ name_zh: '', name_en: '', description: '' });
+  const [form, setForm] = useState({ name_zh: '', name_en: '', scientific_name: '', description: '' });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [guideOpen, setGuideOpen] = useState(true);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.name_zh.trim() || !form.name_en.trim() || !form.description.trim()) return;
+    if (!form.name_zh.trim() || !form.name_en.trim() || !form.scientific_name.trim() || !form.description.trim()) return;
     setSubmitting(true);
     try {
-      await api.createBreedRequest(form);
+      const payload = {
+        ...form,
+        description: `[所屬物種學名: ${form.scientific_name.trim()}]\n${form.description}`,
+      };
+      delete payload.scientific_name;
+      await api.createBreedRequest(payload);
       setSubmitted(true);
-      setForm({ name_zh: '', name_en: '', description: '' });
+      setForm({ name_zh: '', name_en: '', scientific_name: '', description: '' });
     } catch (err) {
       alert(err.message);
     } finally {
@@ -278,8 +283,9 @@ function BreedRequestInline() {
               <strong style={{ color: BREED_COLOR }}>回報受理條件</strong>（缺少以下任一項將會被退回）：<br />
               ✓ 已查過物種或分類的學名（在 Google 等搜尋引擎查到的）<br />
               ✓ 已在本站的物種搜尋中用學名搜過，確認找不到或缺少中文名<br />
+              ✓ 已填寫該品種所屬物種的拉丁學名<br />
               ✓ 在補充說明中附上參考資料連結（如維基百科、學術資料庫）<br />
-              <span style={{ marginTop: '4px', display: 'inline-block' }}>三個欄位皆為必填。</span>
+              <span style={{ marginTop: '4px', display: 'inline-block' }}>四個欄位皆為必填。</span>
             </div>
           </div>
         )}
@@ -309,6 +315,18 @@ function BreedRequestInline() {
         </div>
         <div>
           <label style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.5)', marginBottom: '3px', display: 'block' }}>
+            所屬物種學名 <span style={{ color: '#f87171' }}>*</span>
+            <span style={{ color: 'rgba(255,255,255,0.3)', marginLeft: '6px' }}>（例：Canis lupus familiaris、Felis catus）</span>
+          </label>
+          <input
+            type="text" value={form.scientific_name} required
+            onChange={(e) => setForm(prev => ({ ...prev, scientific_name: e.target.value }))}
+            placeholder="該品種所屬物種的拉丁學名"
+            style={{ ...breedRequestInputStyle, fontStyle: 'italic' }}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.5)', marginBottom: '3px', display: 'block' }}>
             補充說明 <span style={{ color: '#f87171' }}>*</span>
             <span style={{ color: 'rgba(255,255,255,0.3)', marginLeft: '6px' }}>（請附上維基百科或其他可靠來源的連結）</span>
           </label>
@@ -321,7 +339,7 @@ function BreedRequestInline() {
           />
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button type="submit" disabled={submitting || !form.name_zh.trim() || !form.name_en.trim() || !form.description.trim()} style={{
+          <button type="submit" disabled={submitting || !form.name_zh.trim() || !form.name_en.trim() || !form.scientific_name.trim() || !form.description.trim()} style={{
             padding: '6px 14px', background: BREED_COLOR, color: '#0d1526',
             border: 'none', borderRadius: '4px', cursor: 'pointer',
             fontSize: '0.85em', fontWeight: 600,
