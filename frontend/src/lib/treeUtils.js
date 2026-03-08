@@ -273,6 +273,7 @@ export function autoExpandPaths(node, pathSet) {
 /** 若節點只有 1 個子節點，展開它並遞迴向下直到分叉或葉 */
 function expandSingleChildChain(node, pathSet) {
   if (!node || node.children.size !== 1) return;
+  pathSet.add(node.pathKey);
   const child = node.children.values().next().value;
   pathSet.add(child.pathKey);
   if (child.children.size === 1) {
