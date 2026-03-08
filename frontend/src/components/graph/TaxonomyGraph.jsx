@@ -96,10 +96,12 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
       .then(({ entries: e, fictionalEntries: fe }) => {
         if (cancelled) return;
 
-        // Default expand: real depth=4, fictional depth=2
-        const defaultExpanded = collectPathsToDepth(e, 4);
+        // Default expand: logged-in users only expand own paths; guests expand to Phylum (depth=2)
+        const defaultExpanded = currentUser
+          ? new Set()
+          : collectPathsToDepth(e, 2);
         if (fe.length > 0) {
-          const fictExpanded = collectFictionalPathsToDepth(fe, 2);
+          const fictExpanded = collectFictionalPathsToDepth(fe, 1);
           for (const p of fictExpanded) defaultExpanded.add(p);
         }
 
