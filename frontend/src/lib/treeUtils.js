@@ -158,7 +158,7 @@ function _addUnspecifiedBreedNodes(node) {
   for (const child of node.children.values()) {
     _addUnspecifiedBreedNodes(child);
   }
-  if ((node.rank === 'SPECIES' || node.rank === 'SUBSPECIES') &&
+  if ((node.rank === 'SPECIES' || node.rank === 'SUBSPECIES' || node.rank === 'FORM') &&
       node.vtubers.length > 0 && node.children.size > 0) {
     const unspecKey = '__breed__unspecified';
     node.children.set(unspecKey, {

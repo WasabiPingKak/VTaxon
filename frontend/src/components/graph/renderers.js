@@ -341,7 +341,7 @@ function drawNode(ctx, node, scale, state) {
     drawVtuberNode(ctx, node, scale, state);
   } else if (d._rank === 'BREED') {
     drawBreedNode(ctx, node, scale, state);
-  } else if (d._rank === 'SPECIES' || d._rank === 'SUBSPECIES' || d._rank === 'F_SPECIES') {
+  } else if (d._rank === 'SPECIES' || d._rank === 'SUBSPECIES' || d._rank === 'FORM' || d._rank === 'F_SPECIES') {
     drawSpeciesNode(ctx, node, scale, state);
   } else {
     drawTaxonomyNode(ctx, node, scale, state);
