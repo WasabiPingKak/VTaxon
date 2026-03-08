@@ -5,7 +5,7 @@ import TaxonomyGraph from '../components/graph/TaxonomyGraph';
 import SEOHead from '../components/SEOHead';
 
 export default function HomePage({ treeRefetchRef }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const treeRef = useRef(null);
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export default function HomePage({ treeRefetchRef }) {
           },
         ]}
       />
-      <TaxonomyGraph ref={treeRef} currentUser={user} />
+      <TaxonomyGraph ref={treeRef} currentUser={user} authLoading={authLoading} />
 
       <div style={{
         position: 'fixed',
