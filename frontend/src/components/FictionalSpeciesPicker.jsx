@@ -41,6 +41,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
   const [requestForm, setRequestForm] = useState({ name_zh: '', name_en: '', suggested_origin: '', description: '' });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,7 +99,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
 
   async function handleSubmitRequest(e) {
     e.preventDefault();
-    if (!requestForm.name_zh.trim()) return;
+    if (!requestForm.name_zh.trim() || !requestForm.name_en.trim() || !requestForm.suggested_origin.trim() || !requestForm.description.trim()) return;
     setSubmitting(true);
     try {
       await api.createFictionalRequest(requestForm);
@@ -248,50 +249,128 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
             <div style={{ fontSize: '0.9em', color: 'rgba(255,255,255,0.6)', marginBottom: '8px' }}>
               回報遺漏的虛構物種
             </div>
+            {/* Collapsible guide */}
             <div style={{
-              fontSize: '0.8em', color: 'rgba(255,255,255,0.4)', marginBottom: '10px',
-              lineHeight: 1.6, padding: '8px 10px',
+              marginBottom: '10px',
               background: 'rgba(255,255,255,0.02)', borderRadius: '4px',
+              border: '1px solid rgba(255,255,255,0.06)',
             }}>
-              如果你發現某個有知名度的物種不在列表中，歡迎告訴我們！
-              我們會定期審核並補上遺漏的種類，也可以補充你希望增加的分類種類或深度。送出後管理員會收到通知。
+              <button
+                type="button"
+                onClick={() => setGuideOpen(prev => !prev)}
+                style={{
+                  width: '100%', textAlign: 'left',
+                  padding: '8px 10px', background: 'transparent',
+                  border: 'none', cursor: 'pointer',
+                  color: 'rgba(255,255,255,0.6)', fontSize: '0.8em', fontWeight: 600,
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                }}
+              >
+                <span style={{ fontSize: '0.85em' }}>{guideOpen ? '▼' : '▶'}</span>
+                送出回報前，請先確認以下事項
+              </button>
+              {guideOpen && (
+                <div style={{
+                  fontSize: '0.78em', color: 'rgba(255,255,255,0.45)', lineHeight: 1.7,
+                  padding: '0 10px 10px 10px',
+                }}>
+                  <p style={{ margin: '0 0 6px 0', fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>
+                    1. 必須是有具體形象的物種
+                  </p>
+                  <div style={{ paddingLeft: '12px', marginBottom: '8px' }}>
+                    虛構物種必須有明確的外觀形象特徵。<br />
+                    <span style={{ color: 'rgba(239,68,68,0.7)' }}>✗</span>「神」「精靈」「妖怪」等空泛分類不會被收錄<br />
+                    <span style={{ color: 'rgba(52,211,153,0.8)' }}>✓</span> 應具體到某個文化體系中的特定物種，例如「阿努比斯（埃及神話）」「九尾狐（東亞神話）」「獨角獸（西方神話）」
+                  </div>
+                  <p style={{ margin: '0 0 6px 0', fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>
+                    2. 希望分類可以自創階層
+                  </p>
+                  <div style={{ paddingLeft: '12px', marginBottom: '8px' }}>
+                    如果現有分類中沒有合適的，你可以自行建議新的分類路徑（例：「北歐神話 → 巨人族」）。<br />
+                    管理員會根據你的建議整理到合適的位置。
+                  </div>
+                  <p style={{ margin: '0 0 6px 0', fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>
+                    3. 補充說明請附上來源或典故
+                  </p>
+                  <div style={{ paddingLeft: '12px', marginBottom: '10px' }}>
+                    請在補充說明中簡述該物種的文化出處，或附上維基百科等參考連結。<br />
+                    這能幫助管理員快速確認並正確分類。
+                  </div>
+                  <div style={{
+                    padding: '8px 10px', background: 'rgba(255,255,255,0.03)',
+                    borderRadius: '4px', borderLeft: '3px solid rgba(56,189,248,0.3)',
+                  }}>
+                    <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.55)', marginBottom: '4px' }}>
+                      回報受理條件（缺少以下任一項將會被退回）：
+                    </div>
+                    <span style={{ color: 'rgba(52,211,153,0.8)' }}>✓</span> 物種名稱明確且具體（非空泛分類詞）<br />
+                    <span style={{ color: 'rgba(52,211,153,0.8)' }}>✓</span> 已填寫英文名稱（方便國際化與查證）<br />
+                    <span style={{ color: 'rgba(52,211,153,0.8)' }}>✓</span> 已填寫希望的分類路徑<br />
+                    <span style={{ color: 'rgba(52,211,153,0.8)' }}>✓</span> 補充說明中包含來源典故或參考連結<br />
+                    <span style={{ marginTop: '4px', display: 'inline-block' }}>四個欄位皆為必填。</span>
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <input
-                type="text"
-                value={requestForm.name_zh}
-                onChange={(e) => setRequestForm(prev => ({ ...prev, name_zh: e.target.value }))}
-                placeholder="物種名稱（中文）*"
-                required
-                style={formInputStyle}
-              />
-              <input
-                type="text"
-                value={requestForm.name_en}
-                onChange={(e) => setRequestForm(prev => ({ ...prev, name_en: e.target.value }))}
-                placeholder="英文名（選填）"
-                style={formInputStyle}
-              />
-              <input
-                type="text"
-                value={requestForm.suggested_origin}
-                onChange={(e) => setRequestForm(prev => ({ ...prev, suggested_origin: e.target.value }))}
-                placeholder="希望分類（例：東方神話 → 日本神話）"
-                style={formInputStyle}
-              />
-              <textarea
-                value={requestForm.description}
-                onChange={(e) => setRequestForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="簡述這個物種的特徵…"
-                rows={2}
-                style={{ ...formInputStyle, resize: 'vertical' }}
-              />
+              <div>
+                <label style={formLabelStyle}>物種中文名稱 *</label>
+                <input
+                  type="text"
+                  value={requestForm.name_zh}
+                  onChange={(e) => setRequestForm(prev => ({ ...prev, name_zh: e.target.value }))}
+                  placeholder="虛構物種中文名稱"
+                  required
+                  style={formInputStyle}
+                />
+                <div style={formHintStyle}>（例：九尾狐、鳳凰、克拉肯）</div>
+              </div>
+              <div>
+                <label style={formLabelStyle}>物種英文名稱 *</label>
+                <input
+                  type="text"
+                  value={requestForm.name_en}
+                  onChange={(e) => setRequestForm(prev => ({ ...prev, name_en: e.target.value }))}
+                  placeholder="虛構物種英文名稱"
+                  required
+                  style={formInputStyle}
+                />
+                <div style={formHintStyle}>（例：Nine-tailed Fox、Phoenix、Kraken）</div>
+              </div>
+              <div>
+                <label style={formLabelStyle}>希望分類 *</label>
+                <input
+                  type="text"
+                  value={requestForm.suggested_origin}
+                  onChange={(e) => setRequestForm(prev => ({ ...prev, suggested_origin: e.target.value }))}
+                  placeholder="希望歸入的分類（如：東方神話 → 日本神話）"
+                  required
+                  style={formInputStyle}
+                />
+                <div style={formHintStyle}>（可自創階層，例：東方神話 → 日本神話）</div>
+              </div>
+              <div>
+                <label style={formLabelStyle}>補充說明 *</label>
+                <textarea
+                  value={requestForm.description}
+                  onChange={(e) => setRequestForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="簡述物種形象特徵、來源典故或附上參考連結（必填）"
+                  rows={2}
+                  required
+                  style={{ ...formInputStyle, resize: 'vertical' }}
+                />
+                <div style={formHintStyle}>（請附上來源典故或參考連結）</div>
+              </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="submit" disabled={submitting} style={{
-                  padding: '6px 14px', background: '#38bdf8', color: '#0d1526',
-                  border: 'none', borderRadius: '4px', cursor: 'pointer',
-                  fontSize: '0.85em', fontWeight: 600,
-                }}>
+                <button
+                  type="submit"
+                  disabled={submitting || !requestForm.name_zh.trim() || !requestForm.name_en.trim() || !requestForm.suggested_origin.trim() || !requestForm.description.trim()}
+                  style={{
+                    padding: '6px 14px', background: '#38bdf8', color: '#0d1526',
+                    border: 'none', borderRadius: '4px', cursor: 'pointer',
+                    fontSize: '0.85em', fontWeight: 600,
+                    opacity: (submitting || !requestForm.name_zh.trim() || !requestForm.name_en.trim() || !requestForm.suggested_origin.trim() || !requestForm.description.trim()) ? 0.5 : 1,
+                  }}>
                   {submitting ? '送出中…' : '送出回報'}
                 </button>
                 <button
@@ -386,4 +465,12 @@ const formInputStyle = {
   width: '100%', padding: '8px 10px', border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: '4px', fontSize: '0.9em', boxSizing: 'border-box',
   background: '#1a2433', color: '#e2e8f0',
+};
+
+const formLabelStyle = {
+  fontSize: '0.8em', color: 'rgba(255,255,255,0.5)', marginBottom: '3px', display: 'block',
+};
+
+const formHintStyle = {
+  fontSize: '0.75em', color: 'rgba(255,255,255,0.3)', marginTop: '2px',
 };
