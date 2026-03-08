@@ -627,21 +627,25 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
     const centerY = (bounds.minY + bounds.maxY) / 2;
 
     setTimeout(() => {
-      canvasRef.current?.fitView(centerX, centerY, 0.5);
-
-      // If logged in, pan to user's node after a beat
       if (currentUser) {
+        // Logged-in: go directly to user's node (tree only expands user's paths)
         const userEntry = entries?.find(e => e.user_id === currentUser.id)
           || fictionalEntries?.find(e => e.user_id === currentUser.id);
         if (userEntry) {
           const userPathKey = entryToVtuberPathKey(userEntry, breedPaths);
           const userNode = nodes.find(n => n.data._pathKey === userPathKey);
           if (userNode) {
-            setTimeout(() => {
-              panToWithInsets(userNode.x, userNode.y, 0.8);
-            }, 800);
+            panToWithInsets(userNode.x, userNode.y, 0.8);
+          } else {
+            canvasRef.current?.fitBounds(bounds.minX, bounds.minY, bounds.maxX, bounds.maxY, ...cameraInsetsRef.current);
           }
+        } else {
+          // User has no entries — fit the whole visible tree
+          canvasRef.current?.fitBounds(bounds.minX, bounds.minY, bounds.maxX, bounds.maxY, ...cameraInsetsRef.current);
         }
+      } else {
+        // Guest: fit the tree overview
+        canvasRef.current?.fitView(centerX, centerY, 0.5);
       }
     }, 100);
   }, [bounds, nodes, currentUser, entries, fictionalEntries]);
