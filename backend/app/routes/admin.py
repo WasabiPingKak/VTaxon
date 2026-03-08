@@ -171,23 +171,39 @@ def export_breeds():
 @admin_required
 def transition_fictional():
     """Batch transition all received fictional requests to in_progress."""
-    count = (
+    from ..services.notifications import create_notification
+
+    requests = (
         FictionalSpeciesRequest.query
         .filter_by(status='received')
-        .update({'status': 'in_progress'})
+        .all()
     )
+    for r in requests:
+        r.status = 'in_progress'
+        create_notification(
+            r.user_id, 'fictional_request', r.id, 'in_progress',
+            subject_name=r.name_zh,
+        )
     db.session.commit()
-    return jsonify({'updated': count})
+    return jsonify({'updated': len(requests)})
 
 
 @admin_bp.route('/transition-breeds', methods=['POST'])
 @admin_required
 def transition_breeds():
     """Batch transition all received breed requests to in_progress."""
-    count = (
+    from ..services.notifications import create_notification
+
+    requests = (
         BreedRequest.query
         .filter_by(status='received')
-        .update({'status': 'in_progress'})
+        .all()
     )
+    for r in requests:
+        r.status = 'in_progress'
+        create_notification(
+            r.user_id, 'breed_request', r.id, 'in_progress',
+            subject_name=r.name_zh or r.name_en,
+        )
     db.session.commit()
-    return jsonify({'updated': count})
+    return jsonify({'updated': len(requests)})
