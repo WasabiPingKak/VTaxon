@@ -206,15 +206,8 @@ def directory():
             query = query.filter(or_(*conditions))
 
     # Organization type filter
-    if org_type == 'corporate':
-        query = query.filter(
-            User.organization.isnot(None),
-            User.organization != '',
-        )
-    elif org_type == 'indie':
-        query = query.filter(
-            or_(User.organization.is_(None), User.organization == '')
-        )
+    if org_type in ('corporate', 'indie', 'club'):
+        query = query.filter(User.org_type == org_type)
 
     # Platform filter
     if platform:
@@ -308,6 +301,7 @@ def directory():
             'display_name': u.display_name,
             'avatar_url': u.avatar_url,
             'organization': u.organization,
+            'org_type': u.org_type or 'indie',
             'country_flags': u.country_flags or [],
             'created_at': u.created_at.isoformat() if u.created_at else None,
             'profile_data': {
@@ -387,17 +381,12 @@ def _compute_facets():
     facets['status'] = {r[0]: r[1] for r in rows if r[0] != '_none'}
 
     # Org type counts
-    corporate = db.session.execute(text(
-        "SELECT COUNT(*) FROM users "
-        "WHERE organization IS NOT NULL AND organization != ''"
-    )).scalar() or 0
-    total_users = db.session.execute(text(
-        "SELECT COUNT(*) FROM users"
-    )).scalar() or 0
-    facets['org_type'] = {
-        'corporate': corporate,
-        'indie': total_users - corporate,
-    }
+    rows = db.session.execute(text(
+        "SELECT COALESCE(org_type, 'indie'), COUNT(*) "
+        "FROM users GROUP BY 1"
+    )).fetchall()
+    facets['org_type'] = {r[0]: r[1] for r in rows}
+    total_users = sum(facets['org_type'].values())
 
     # Platform counts
     rows = db.session.execute(text(
@@ -436,12 +425,22 @@ def update_me():
 
     data = request.get_json() or {}
     allowed = {'display_name', 'organization', 'bio', 'country_flags',
-               'social_links', 'primary_platform', 'profile_data'}
+               'social_links', 'primary_platform', 'profile_data', 'org_type'}
 
     ALLOWED_SNS_KEYS = {
         'twitter', 'threads', 'instagram', 'bluesky',
         'discord', 'facebook', 'marshmallow', 'email',
     }
+
+    if 'org_type' in data:
+        if data['org_type'] not in ('indie', 'corporate', 'club'):
+            return jsonify({'error': 'org_type must be indie, corporate, or club'}), 400
+        if data['org_type'] == 'corporate':
+            org = data.get('organization', user.organization)
+            if not org or not org.strip():
+                return jsonify({'error': '企業勢必須填入組織名稱'}), 400
+        if data['org_type'] == 'indie':
+            data['organization'] = None
 
     if 'social_links' in data:
         links = data['social_links']

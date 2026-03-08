@@ -20,6 +20,7 @@ export const FILTER_BADGES = {
   org_type: {
     corporate: { label: '企業', color: '#fb923c', bg: 'rgba(251,146,60,0.2)' },
     indie:     { label: '個人', color: '#38bdf8', bg: 'rgba(56,189,248,0.2)' },
+    club:      { label: '社團', color: '#a78bfa', bg: 'rgba(167,139,250,0.2)' },
   },
   platform: {
     youtube: { label: 'YT', color: '#FF0000', bg: 'rgba(255,0,0,0.15)', isPlatform: true, platform: 'youtube' },
@@ -39,7 +40,7 @@ function entryValue(entry, dim) {
     case 'status':
       return entry.activity_status || 'unset';
     case 'org_type':
-      return entry.organization ? 'corporate' : 'indie';
+      return entry.org_type || (entry.organization ? 'corporate' : 'indie');
     case 'platform':
       return entry.platforms || [];
     default:
@@ -127,10 +128,9 @@ export function getSortBadge(entry, sortKey) {
   }
 
   if (sortKey === 'organization') {
-    const org = entry.organization;
-    return org
-      ? { label: '企業', color: '#fb923c', bg: 'rgba(251,146,60,0.2)' }
-      : { label: '個人', color: '#38bdf8', bg: 'rgba(56,189,248,0.2)' };
+    const ot = entry.org_type || (entry.organization ? 'corporate' : 'indie');
+    const badge = FILTER_BADGES.org_type[ot];
+    return badge || { label: '個人', color: '#38bdf8', bg: 'rgba(56,189,248,0.2)' };
   }
 
   if (sortKey === 'debut_date') {

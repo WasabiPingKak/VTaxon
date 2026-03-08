@@ -45,7 +45,7 @@ export default function SettingsProfile() {
 
   // Existing fields
   const [displayName, setDisplayName] = useState('');
-  const [orgType, setOrgType] = useState('indie'); // 'indie' | 'corporate'
+  const [orgType, setOrgType] = useState('indie'); // 'indie' | 'corporate' | 'club'
   const [organization, setOrganization] = useState('');
   const [bio, setBio] = useState('');
   const [countryFlags, setCountryFlags] = useState([]);
@@ -78,7 +78,7 @@ export default function SettingsProfile() {
     initializedIdRef.current = user.id;
     setDisplayName(user.display_name || '');
     const org = user.organization || '';
-    setOrgType(org ? 'corporate' : 'indie');
+    setOrgType(user.org_type || (org ? 'corporate' : 'indie'));
     setOrganization(org);
     setBio(user.bio || '');
     setCountryFlags(user.country_flags || []);
@@ -114,7 +114,10 @@ export default function SettingsProfile() {
     if (!user) return false;
     const pd = user.profile_data || {};
     if (displayName !== (user.display_name || '')) return true;
-    const currentOrg = orgType === 'corporate' ? organization : '';
+    const currentOrgType = orgType;
+    const savedOrgType = user.org_type || (user.organization ? 'corporate' : 'indie');
+    if (currentOrgType !== savedOrgType) return true;
+    const currentOrg = orgType === 'indie' ? '' : organization;
     if (currentOrg !== (user.organization || '')) return true;
     if (bio !== (user.bio || '')) return true;
     if (JSON.stringify(countryFlags) !== JSON.stringify(user.country_flags || [])) return true;
@@ -200,7 +203,12 @@ export default function SettingsProfile() {
     try {
       const updated = await api.updateMe({
         display_name: displayName.trim(),
-        organization: orgType === 'corporate' ? (organization.trim() || null) : null,
+        org_type: orgType,
+        organization: orgType === 'corporate'
+          ? (organization.trim() || null)
+          : orgType === 'club'
+            ? (organization.trim() || null)
+            : null,
         bio: bio.trim() || null,
         country_flags: countryFlags,
         profile_data,
@@ -247,10 +255,20 @@ export default function SettingsProfile() {
               style={{ accentColor: '#38bdf8' }} />
             企業勢
           </label>
+          <label style={radioLabelStyle}>
+            <input type="radio" name="orgType" value="club"
+              checked={orgType === 'club'} onChange={() => setOrgType('club')}
+              style={{ accentColor: '#38bdf8' }} />
+            社團勢
+          </label>
         </div>
         {orgType === 'corporate' && (
           <input type="text" value={organization} onChange={(e) => setOrganization(e.target.value)}
             placeholder="組織名稱" style={{ ...inputStyle, marginTop: '8px' }} />
+        )}
+        {orgType === 'club' && (
+          <input type="text" value={organization} onChange={(e) => setOrganization(e.target.value)}
+            placeholder="社團名稱（選填）" style={{ ...inputStyle, marginTop: '8px' }} />
         )}
       </div>
 

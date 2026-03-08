@@ -87,6 +87,7 @@ export default function DirectoryFilters({
   const orgOptions = [
     { value: 'corporate', label: '企業勢', count: orgFacets['corporate'] ?? 0 },
     { value: 'indie', label: '個人勢', count: orgFacets['indie'] ?? 0 },
+    { value: 'club', label: '社團勢', count: orgFacets['club'] ?? 0 },
   ];
 
   const platformFacets = f.platform || {};

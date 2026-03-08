@@ -13,6 +13,7 @@ class User(db.Model):
     avatar_url = db.Column(db.Text)
     role = db.Column(db.Text, nullable=False, default='user')
     organization = db.Column(db.Text)
+    org_type = db.Column(db.String(20), default='indie')
     bio = db.Column(db.Text)
     country_flags = db.Column(db.JSON, default=list)
     social_links = db.Column(db.JSON, default=dict)
@@ -49,6 +50,7 @@ class User(db.Model):
             'avatar_url': self.avatar_url,
             'role': self.role,
             'organization': self.organization,
+            'org_type': self.org_type or 'indie',
             'bio': self.bio,
             'country_flags': self.country_flags or [],
             'social_links': self.social_links or {},

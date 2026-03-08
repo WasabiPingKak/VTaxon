@@ -45,8 +45,8 @@ export function filterEntries(entries, filters) {
     }
 
     if (hasOrgType) {
-      if (org_type.has('corporate') && !e.organization) return false;
-      if (org_type.has('indie') && e.organization) return false;
+      const ot = e.org_type || (e.organization ? 'corporate' : 'indie');
+      if (!org_type.has(ot)) return false;
     }
 
     if (hasPlatform) {
@@ -106,7 +106,7 @@ export function computeFacets(entries) {
     status.set(s, (status.get(s) || 0) + 1);
 
     // Organization type
-    const orgKey = e.organization ? 'corporate' : 'indie';
+    const orgKey = e.org_type || (e.organization ? 'corporate' : 'indie');
     org_type.set(orgKey, (org_type.get(orgKey) || 0) + 1);
 
     // Platforms
