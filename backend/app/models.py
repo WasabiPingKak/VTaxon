@@ -438,6 +438,7 @@ class VtuberTrait(db.Model):
     breed_id = db.Column(db.Integer, db.ForeignKey('breeds.id',
                          ondelete='SET NULL'))
     trait_note = db.Column(db.Text)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
                            default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False,
@@ -481,6 +482,7 @@ class VtuberTrait(db.Model):
             'breed_name': breed_display,
             'breed_id': self.breed_id,
             'trait_note': self.trait_note,
+            'sort_order': self.sort_order,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
         }

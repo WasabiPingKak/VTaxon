@@ -186,6 +186,9 @@ export const api = {
     method: 'PATCH', body: JSON.stringify(body),
   }),
   deleteTrait: (id) => apiFetch(`/traits/${id}`, { method: 'DELETE' }),
+  reorderTraits: (traitIds) => apiFetch('/traits/reorder', {
+    method: 'PUT', body: JSON.stringify({ trait_ids: traitIds }),
+  }),
 
   // Taxonomy
   getTaxonomyTree: (qs = '') => apiFetch(`/taxonomy/tree${qs}`),

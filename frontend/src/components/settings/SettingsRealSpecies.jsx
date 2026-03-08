@@ -84,12 +84,16 @@ function RemoveButton({ onClick }) {
 }
 
 
-export default function SettingsRealSpecies() {
+export default function SettingsRealSpecies({ onReorder }) {
   const { user } = useAuth();
   const { addToast } = useToast();
   const [traits, setTraits] = useState([]);
+  const [allTraits, setAllTraits] = useState([]); // all traits including fictional, for reorder API
   const [showSearch, setShowSearch] = useState(false);
   const searchRef = useRef(null);
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+  const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
   useEffect(() => {
     if (user) loadTraits();
@@ -104,11 +108,40 @@ export default function SettingsRealSpecies() {
   async function loadTraits() {
     try {
       const data = await api.getTraits(user.id);
-      // Only real species traits (taxon_id is set)
-      setTraits((data.traits || []).filter(t => t.taxon_id));
+      const all = data.traits || [];
+      setAllTraits(all);
+      setTraits(all.filter(t => t.taxon_id));
     } catch (err) {
       console.error(err);
     }
+  }
+
+  async function applyReorder(newRealTraits) {
+    const prevTraits = traits;
+    const prevAll = allTraits;
+    // Build new full list: replace real traits portion while keeping fictional order
+    const fictionalTraits = allTraits.filter(t => !t.taxon_id);
+    const newAll = [...newRealTraits, ...fictionalTraits];
+    const orderedIds = newAll.map(t => t.id);
+
+    setTraits(newRealTraits);
+    setAllTraits(newAll);
+    try {
+      await api.reorderTraits(orderedIds);
+      onReorder?.();
+    } catch (err) {
+      setTraits(prevTraits);
+      setAllTraits(prevAll);
+      addToast('排序更新失敗', { type: 'error' });
+    }
+  }
+
+  function moveTraitBy(index, delta) {
+    const newIdx = index + delta;
+    if (newIdx < 0 || newIdx >= traits.length) return;
+    const newTraits = [...traits];
+    [newTraits[index], newTraits[newIdx]] = [newTraits[newIdx], newTraits[index]];
+    applyReorder(newTraits);
   }
 
   async function handleAddTrait(species) {
@@ -171,19 +204,71 @@ export default function SettingsRealSpecies() {
         <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '16px' }}>尚未新增真實物種特徵</p>
       ) : (
         <div style={{ marginBottom: '16px' }}>
-          {traits.map(trait => {
+          {traits.map((trait, idx) => {
             const displayName = trait.species?.common_name_zh || displayScientificName(trait.species) || trait.display_name;
             const rank = (trait.species?.taxon_rank || '').toUpperCase() || null;
+            const showSortControls = traits.length >= 2;
 
             return (
-              <div key={trait.id} style={{
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.06)',
-                background: 'rgba(255,255,255,0.02)',
-                marginBottom: '8px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-              }}>
+              <div
+                key={trait.id}
+                draggable={!isTouch && showSortControls}
+                onDragStart={() => setDragIdx(idx)}
+                onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+                onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
+                onDrop={() => {
+                  if (dragIdx !== null && dragIdx !== idx) {
+                    const newTraits = [...traits];
+                    const [moved] = newTraits.splice(dragIdx, 1);
+                    newTraits.splice(idx, 0, moved);
+                    applyReorder(newTraits);
+                  }
+                  setDragIdx(null);
+                  setDragOverIdx(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: dragOverIdx === idx && dragIdx !== null && dragIdx !== idx
+                    ? '1px solid rgba(56,189,248,0.5)'
+                    : '1px solid rgba(255,255,255,0.06)',
+                  background: dragIdx === idx ? 'rgba(56,189,248,0.08)' : 'rgba(255,255,255,0.02)',
+                  marginBottom: '8px',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                  opacity: dragIdx === idx ? 0.5 : 1,
+                  cursor: !isTouch && showSortControls ? 'grab' : 'default',
+                }}
+              >
+                {/* Sort controls */}
+                {showSortControls && (
+                  isTouch ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginRight: '8px', flexShrink: 0 }}>
+                      <button
+                        onClick={() => moveTraitBy(idx, -1)}
+                        disabled={idx === 0}
+                        style={{
+                          padding: '2px 6px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '3px', color: idx === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.5)',
+                          cursor: idx === 0 ? 'default' : 'pointer', fontSize: '0.7em', lineHeight: 1,
+                        }}
+                      >▲</button>
+                      <button
+                        onClick={() => moveTraitBy(idx, 1)}
+                        disabled={idx === traits.length - 1}
+                        style={{
+                          padding: '2px 6px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '3px', color: idx === traits.length - 1 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.5)',
+                          cursor: idx === traits.length - 1 ? 'default' : 'pointer', fontSize: '0.7em', lineHeight: 1,
+                        }}
+                      >▼</button>
+                    </div>
+                  ) : (
+                    <div style={{
+                      marginRight: '8px', color: 'rgba(255,255,255,0.2)', fontSize: '1.1em',
+                      display: 'flex', alignItems: 'center', flexShrink: 0, userSelect: 'none',
+                    }}>⠿</div>
+                  )
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {trait.species && <TaxonomyPath species={trait.species} />}
                   <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px', marginTop: trait.species ? '4px' : 0 }}>
