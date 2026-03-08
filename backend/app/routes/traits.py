@@ -8,7 +8,8 @@ from ..services.gbif import get_species
 
 traits_bp = Blueprint('traits', __name__)
 
-ALLOWED_RANKS = {'KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'SUBCLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY', 'FORM'}
+ALLOWED_RANKS = {'SUBPHYLUM', 'CLASS', 'SUBCLASS', 'INFRACLASS', 'SUPERORDER', 'ORDER', 'SUBORDER', 'INFRAORDER', 'SUPERFAMILY', 'FAMILY', 'SUBFAMILY', 'TRIBE', 'SUBTRIBE', 'GENUS', 'SUBGENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY', 'FORM'}
+BLOCKED_HIGH_RANKS = {'KINGDOM', 'PHYLUM', 'SUPERCLASS'}
 
 
 def _canonical_name(scientific_name):
@@ -58,9 +59,9 @@ def create_trait():
                 return jsonify({'error': 'Species not found in GBIF'}), 404
             species = db.session.get(SpeciesCache, taxon_id)
 
-        # Rank restriction
+        # Rank restriction: block Kingdom/Phylum/Class and other high ranks
         rank = (species.taxon_rank or '').upper() if species else ''
-        if rank and rank not in ALLOWED_RANKS:
+        if rank and (rank in BLOCKED_HIGH_RANKS or rank not in ALLOWED_RANKS):
             return jsonify({
                 'error': f'不支援此分類階層：{rank}。請選擇目(Order)到亞種(Subspecies)之間的階層。',
                 'code': 'rank_not_allowed',
