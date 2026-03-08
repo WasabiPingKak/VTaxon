@@ -317,6 +317,24 @@ export function extendSingleChildChains(node, pathSet) {
   }
 }
 
+/**
+ * Traverse the ENTIRE tree and expand all single-child chains,
+ * regardless of whether they are connected to already-expanded paths.
+ */
+export function expandAllSingleChildChains(node, pathSet) {
+  if (!node) return;
+  for (const child of node.children.values()) {
+    if (effectiveChildCount(child) === 1 && child.children.size === 1) {
+      // Single-child chain: expand and recurse
+      pathSet.add(child.pathKey);
+      expandAllSingleChildChains(child, pathSet);
+    } else if (child.children.size > 0) {
+      // Multiple children: don't expand this node, but still check subtrees
+      expandAllSingleChildChains(child, pathSet);
+    }
+  }
+}
+
 const CLASS_IDX = 2;
 
 /**
