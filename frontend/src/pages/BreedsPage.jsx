@@ -170,10 +170,11 @@ function BreedRequestInline() {
   const [form, setForm] = useState({ name_zh: '', name_en: '', description: '' });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(true);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.name_zh.trim() && !form.name_en.trim()) return;
+    if (!form.name_zh.trim() || !form.name_en.trim() || !form.description.trim()) return;
     setSubmitting(true);
     try {
       await api.createBreedRequest(form);
@@ -234,29 +235,93 @@ function BreedRequestInline() {
       marginBottom: '16px', padding: '14px 16px',
       background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)',
     }}>
-      <div style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.5)', marginBottom: '8px' }}>
-        回報遺漏的品種，管理員會定期審核並補上。
+      <div style={{ marginBottom: '10px' }}>
+        <button
+          type="button"
+          onClick={() => setGuideOpen(!guideOpen)}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'rgba(255,255,255,0.6)', fontSize: '0.85em', padding: 0,
+            display: 'flex', alignItems: 'center', gap: '4px',
+          }}
+        >
+          <span style={{ fontSize: '0.8em', transform: guideOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s', display: 'inline-block' }}>▶</span>
+          送出回報前，請先確認以下事項
+        </button>
+        {guideOpen && (
+          <div style={{
+            marginTop: '8px', padding: '12px 14px', fontSize: '0.82em', lineHeight: 1.7,
+            color: 'rgba(255,255,255,0.55)', background: 'rgba(255,255,255,0.02)',
+            borderRadius: '4px', border: '1px solid rgba(255,255,255,0.06)',
+          }}>
+            <div style={{ marginBottom: '8px' }}>
+              <strong style={{ color: 'rgba(255,255,255,0.7)' }}>1. 品種不是物種</strong><br />
+              品種是物種底下人為培育的變種（例如「柴犬」是家犬的品種）。<br />
+              如果你要找的是一個獨立的動物（例如「雞」「蟒蛇」「倉鼠」），那是物種而非品種，請回到角色設定頁使用物種搜尋。
+            </div>
+            <div style={{ marginBottom: '8px' }}>
+              <strong style={{ color: 'rgba(255,255,255,0.7)' }}>2. 請用學名搜尋物種</strong><br />
+              系統的物種搜尋使用 GBIF 全球資料庫，需要輸入拉丁文學名。<br />
+              學名不是英文俗名（例如 "chicken" 搜不到，但 "Gallus gallus" 可以）。<br />
+              Google 搜尋「動物中文名 + 學名」就能找到。<br />
+              例如想找「雞」→ 搜尋「雞 學名」→ 得到 Gallus gallus domesticus → 回到角色設定頁輸入 "Gallus" 即可找到。
+            </div>
+            <div style={{ marginBottom: '8px' }}>
+              <strong style={{ color: 'rgba(255,255,255,0.7)' }}>3. 不需要精確到種</strong><br />
+              系統接受目、科、屬等較高層級的學名。例如搜尋 "Felidae"（貓科）或 "Canidae"（犬科）都能找到。
+            </div>
+            <div style={{ marginBottom: '8px' }}>
+              <strong style={{ color: 'rgba(255,255,255,0.7)' }}>4. 找得到物種但沒有中文名？</strong><br />
+              請直接在補充說明填寫：希望新增的中文名 + 對應學名 + 參考來源連結，管理員會協助補上。
+            </div>
+            <div style={{ padding: '8px 10px', background: 'rgba(251,146,60,0.06)', borderRadius: '4px', border: '1px solid rgba(251,146,60,0.15)' }}>
+              <strong style={{ color: BREED_COLOR }}>回報受理條件</strong>（缺少以下任一項將會被退回）：<br />
+              ✓ 已查過物種或分類的學名（在 Google 等搜尋引擎查到的）<br />
+              ✓ 已在本站的物種搜尋中用學名搜過，確認找不到或缺少中文名<br />
+              ✓ 在補充說明中附上參考資料連結（如維基百科、學術資料庫）<br />
+              <span style={{ marginTop: '4px', display: 'inline-block' }}>三個欄位皆為必填。</span>
+            </div>
+          </div>
+        )}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <input
-          type="text" value={form.name_zh}
-          onChange={(e) => setForm(prev => ({ ...prev, name_zh: e.target.value }))}
-          placeholder="品種中文名稱" style={breedRequestInputStyle}
-        />
-        <input
-          type="text" value={form.name_en}
-          onChange={(e) => setForm(prev => ({ ...prev, name_en: e.target.value }))}
-          placeholder="品種英文名稱" style={breedRequestInputStyle}
-        />
-        <textarea
-          value={form.description}
-          onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
-          placeholder="補充說明（選填）"
-          rows={2}
-          style={{ ...breedRequestInputStyle, resize: 'vertical' }}
-        />
+        <div>
+          <label style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.5)', marginBottom: '3px', display: 'block' }}>
+            品種中文名稱 <span style={{ color: '#f87171' }}>*</span>
+            <span style={{ color: 'rgba(255,255,255,0.3)', marginLeft: '6px' }}>（例：柴犬、布偶貓）</span>
+          </label>
+          <input
+            type="text" value={form.name_zh} required
+            onChange={(e) => setForm(prev => ({ ...prev, name_zh: e.target.value }))}
+            placeholder="品種中文名稱" style={breedRequestInputStyle}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.5)', marginBottom: '3px', display: 'block' }}>
+            品種英文名稱 <span style={{ color: '#f87171' }}>*</span>
+            <span style={{ color: 'rgba(255,255,255,0.3)', marginLeft: '6px' }}>（例：Shiba Inu、Ragdoll）</span>
+          </label>
+          <input
+            type="text" value={form.name_en} required
+            onChange={(e) => setForm(prev => ({ ...prev, name_en: e.target.value }))}
+            placeholder="品種英文名稱" style={breedRequestInputStyle}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.5)', marginBottom: '3px', display: 'block' }}>
+            補充說明 <span style={{ color: '#f87171' }}>*</span>
+            <span style={{ color: 'rgba(255,255,255,0.3)', marginLeft: '6px' }}>（請附上維基百科或其他可靠來源的連結）</span>
+          </label>
+          <textarea
+            value={form.description} required
+            onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="補充說明（必填，請附上參考來源的連結）"
+            rows={2}
+            style={{ ...breedRequestInputStyle, resize: 'vertical' }}
+          />
+        </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button type="submit" disabled={submitting || (!form.name_zh.trim() && !form.name_en.trim())} style={{
+          <button type="submit" disabled={submitting || !form.name_zh.trim() || !form.name_en.trim() || !form.description.trim()} style={{
             padding: '6px 14px', background: BREED_COLOR, color: '#0d1526',
             border: 'none', borderRadius: '4px', cursor: 'pointer',
             fontSize: '0.85em', fontWeight: 600,
@@ -486,7 +551,7 @@ export default function BreedsPage() {
   useEffect(() => {
     api.getBreedCategories().then(data => {
       setSections(data.categories || []);
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   return (

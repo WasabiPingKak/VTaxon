@@ -158,15 +158,20 @@ def create_breed_request():
 
     name_zh = (data.get('name_zh') or '').strip()
     name_en = (data.get('name_en') or '').strip()
-    if not name_zh and not name_en:
-        return jsonify({'error': '請至少填寫中文或英文品種名稱'}), 400
+    if not name_zh:
+        return jsonify({'error': '請填寫品種中文名稱'}), 400
+    if not name_en:
+        return jsonify({'error': '請填寫品種英文名稱'}), 400
+    description = (data.get('description') or '').strip()
+    if not description:
+        return jsonify({'error': '請填寫補充說明並附上參考來源連結'}), 400
 
     req = BreedRequest(
         user_id=g.current_user_id,
         taxon_id=data.get('taxon_id'),
-        name_zh=name_zh or None,
-        name_en=name_en or None,
-        description=(data.get('description') or '').strip() or None,
+        name_zh=name_zh,
+        name_en=name_en,
+        description=description,
     )
     db.session.add(req)
     db.session.commit()
