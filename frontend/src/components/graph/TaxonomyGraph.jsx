@@ -115,10 +115,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
           }
         }
 
-        // Expand all single-child chains across the real species tree only
-        const tempTree = buildTree(e);
-        expandAllSingleChildChains(tempTree, defaultExpanded);
-
+        // Single-child chain expansion is handled by the normalize useEffect
         setExpandedSet(defaultExpanded);
       })
       .catch(err => {
@@ -130,6 +127,24 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       });
     return () => { cancelled = true; };
   }, [authLoading, currentUser?.id, fetchTreeData]);
+
+  // Normalize expandedSet: ensure all single-child chains are expanded after any change.
+  // Real tree: expand ALL single-child chains (full tree scan).
+  // Fictional tree: only extend from already-expanded paths (keeps default collapsed).
+  useEffect(() => {
+    if (!entries?.length) return;
+    const next = new Set(expandedSet);
+    const sizeBefore = next.size;
+    const tempTree = buildTree(entries);
+    expandAllSingleChildChains(tempTree, next);
+    if (fictionalEntries?.length) {
+      const tempFictTree = buildFictionalTree(fictionalEntries);
+      extendSingleChildChains(tempFictTree, next);
+    }
+    if (next.size > sizeBefore) {
+      setExpandedSet(next);
+    }
+  }, [expandedSet, entries, fictionalEntries]);
 
   // Auto-focus logged-in user
   useEffect(() => {
