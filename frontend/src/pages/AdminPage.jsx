@@ -796,8 +796,15 @@ function ExportToolbar({ section, requestCount, onTransitioned }) {
       const data = section === 'fictional'
         ? await api.exportFictionalRequests()
         : await api.exportBreedRequests();
-      await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-      showToast(`已匯出 ${data.export_metadata.total_requests} 筆回報到剪貼簿`);
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `export-${section}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`已匯出 ${data.export_metadata.total_requests} 筆回報`);
     } catch (err) {
       alert('匯出失敗：' + err.message);
     } finally {
