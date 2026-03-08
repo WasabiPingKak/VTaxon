@@ -674,7 +674,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
       <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.4)', marginBottom: '16px', lineHeight: 1.7 }}>
         上方按鈕為已收錄的品種（如柴犬、布偶貓），若沒有列出你要的品種，代表系統尚未收錄，建議先選好物種後再回報想要的品種。
         <br />
-        搜尋框可輸入中文名、英文俗名或學名。<strong style={{ color: 'rgba(255,255,255,0.55)' }}>學名的搜尋結果最精確</strong>，中文名有時會找不到或不完整。
+        搜尋框<strong style={{ color: 'rgba(255,255,255,0.55)' }}>建議直接輸入學名（如 Canis lupus familiaris）</strong>，結果最精確。中文名因 GBIF 及 Wikidata 資料涵蓋有限，經常搜不到或不完整，英文俗名亦僅供參考。
         <div style={{ marginTop: '6px' }}>
           <span
             onClick={() => setShowSourceInfo(!showSourceInfo)}
