@@ -21,7 +21,6 @@ export default function CharacterPage() {
   const { user, loading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [oauthAccounts, setOauthAccounts] = useState([]);
-  const [traitVersion, setTraitVersion] = useState(0);
 
   const activeTab = searchParams.get('tab') || 'species';
 
@@ -48,7 +47,7 @@ export default function CharacterPage() {
     } catch (err) {
       console.error('Failed to load preview data:', err);
     }
-  }, [user?.id, traitVersion]);
+  }, [user?.id]);
 
   function setActiveTab(tab) {
     if (tab === 'species') {
@@ -155,10 +154,10 @@ export default function CharacterPage() {
       {activeTab === 'species' && (
         <>
           <div style={{ marginBottom: '24px' }}>
-            <SettingsRealSpecies onReorder={() => setTraitVersion(v => v + 1)} />
+            <SettingsRealSpecies />
           </div>
           <div style={{ marginBottom: '24px' }}>
-            <SettingsFictional onReorder={() => setTraitVersion(v => v + 1)} />
+            <SettingsFictional />
           </div>
         </>
       )}
