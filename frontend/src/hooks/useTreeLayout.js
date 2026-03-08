@@ -125,7 +125,7 @@ function computeLabelLayout(data) {
     return;
   }
 
-  if (_rank === 'SPECIES' || _rank === 'SUBSPECIES' || _rank === 'F_SPECIES') {
+  if (_rank === 'SPECIES' || _rank === 'SUBSPECIES' || _rank === 'FORM' || _rank === 'F_SPECIES') {
     // Species: wrap main label inside rect, cap collision width.
     const mainLabel = _nameZh || _name;
     const { lines, widest } = computeWrappedLines(ctx, mainLabel, MAX_LABEL_W.SPECIES, 12);
@@ -153,7 +153,7 @@ function computeLabelLayout(data) {
 }
 
 // Ranks that use rect rendering (not circle)
-const RECT_RANKS = new Set(['SPECIES', 'SUBSPECIES', 'BREED', 'F_SPECIES']);
+const RECT_RANKS = new Set(['SPECIES', 'SUBSPECIES', 'FORM', 'BREED', 'F_SPECIES']);
 
 /** Compute bounds from a list of d3 hierarchy nodes. */
 function computeBounds(nodes) {

@@ -15,6 +15,7 @@ export const RANK_COLORS = {
   GENUS:      { node: '#fbbf24', glow: 'rgba(251,191,36,0.6)' },
   SPECIES:    { node: '#93c5fd', glow: 'rgba(147,197,253,0.6)' },
   SUBSPECIES: { node: '#a78bfa', glow: 'rgba(167,139,250,0.6)' },
+  FORM:       { node: '#10b981', glow: 'rgba(16,185,129,0.6)' },
   BREED:      { node: '#fb923c', glow: 'rgba(251,146,60,0.6)' },
   F_ROOT:       { node: '#f0abfc', glow: 'rgba(240,171,252,0.5)' },
   F_ORIGIN:     { node: '#f97316', glow: 'rgba(249,115,22,0.6)' },
@@ -24,7 +25,7 @@ export const RANK_COLORS = {
 
 export const RANK_LABELS = {
   ROOT: '根', KINGDOM: '界', PHYLUM: '門', CLASS: '綱', ORDER: '目',
-  FAMILY: '科', GENUS: '屬', SPECIES: '種', SUBSPECIES: '亞種', BREED: '品種',
+  FAMILY: '科', GENUS: '屬', SPECIES: '種', SUBSPECIES: '亞種', FORM: '變型', BREED: '品種',
   F_ROOT: '虛構', F_ORIGIN: '來源', F_SUB_ORIGIN: '子來源', F_SPECIES: '虛構種',
 };
 

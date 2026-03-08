@@ -74,7 +74,7 @@ def suggest_species(query, limit=10):
             continue
         status = (r.get('status') or '').upper()
         rank = (r.get('rank') or '').upper()
-        if rank not in ('KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'SUBCLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
+        if rank not in ('KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'SUBCLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY', 'FORM'):
             continue
         # SYNONYM → resolve to accepted species (cap to avoid HTTP flood)
         if status == 'SYNONYM':
@@ -266,7 +266,7 @@ def _suggest_species_stream(query, limit=10):
             continue
         status = (r.get('status') or '').upper()
         rank = (r.get('rank') or '').upper()
-        if rank not in ('KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'SUBCLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY'):
+        if rank not in ('KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'SUBCLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY', 'FORM'):
             continue
         # SYNONYM → resolve to accepted species (cap to avoid HTTP flood)
         if status == 'SYNONYM':
@@ -436,7 +436,7 @@ def _resolve_alternative_names(taxon_id, scientific_name, taxon_rank=None):
     # Only species-level taxa have meaningful 俗名
     if taxon_rank:
         rank_upper = taxon_rank.upper()
-        if rank_upper not in ('SPECIES', 'SUBSPECIES', 'VARIETY'):
+        if rank_upper not in ('SPECIES', 'SUBSPECIES', 'VARIETY', 'FORM'):
             return None
     # TaiCOL alternative_name_c
     if scientific_name:
@@ -675,7 +675,7 @@ def get_subspecies(species_key, limit=50):
     for r in results:
         rank = (r.get('rank') or '').upper()
         status = (r.get('taxonomicStatus') or r.get('status') or '').upper()
-        if rank not in ('SUBSPECIES', 'VARIETY'):
+        if rank not in ('SUBSPECIES', 'VARIETY', 'FORM'):
             continue
         if status and status != 'ACCEPTED':
             continue
@@ -708,7 +708,7 @@ def get_subspecies_stream(species_key, limit=50):
     for r in results:
         rank = (r.get('rank') or '').upper()
         status = (r.get('taxonomicStatus') or r.get('status') or '').upper()
-        if rank not in ('SUBSPECIES', 'VARIETY'):
+        if rank not in ('SUBSPECIES', 'VARIETY', 'FORM'):
             continue
         if status and status != 'ACCEPTED':
             continue
@@ -1023,7 +1023,7 @@ def _realign_taxon_path(species):
     ]
     # Include species-level name if the taxon is SPECIES/SUBSPECIES/VARIETY
     taxon_rank = (species.taxon_rank or '').upper()
-    if taxon_rank in ('SPECIES', 'SUBSPECIES', 'VARIETY'):
+    if taxon_rank in ('SPECIES', 'SUBSPECIES', 'VARIETY', 'FORM'):
         # Strip author citations (e.g. "Felis catus Linnaeus, 1758" → "Felis catus")
         name = re.sub(
             r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '',
