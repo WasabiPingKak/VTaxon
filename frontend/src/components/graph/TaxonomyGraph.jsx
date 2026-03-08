@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, extendSingleChildChains, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths, buildBreedPaths, entryToVtuberPathKey, buildTree, buildFictionalTree } from '../../lib/treeUtils';
+import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, extendSingleChildChains, expandAllSingleChildChains, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths, buildBreedPaths, entryToVtuberPathKey, buildTree, buildFictionalTree } from '../../lib/treeUtils';
 import GraphCanvas from './GraphCanvas';
 import { drawGraph, createStarField } from './renderers';
 import useTreeLayout from '../../hooks/useTreeLayout';
@@ -55,11 +55,11 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const breedPaths = useMemo(() => buildBreedPaths(entries || []), [entries]);
 
   // Camera insets: [padding, leftInset, rightInset, bottomInset, topInset]
-  // Desktop: left toolbar ~200px wide; Mobile: mini bar ~50px, HUD at bottom ~60px
+  // Desktop: left toolbar ~200px wide; Mobile: top horizontal bar, bottom HUD drawer
   const cameraInsetsRef = useRef([80, 220, 100, 80, 100]);
   useEffect(() => {
     cameraInsetsRef.current = isMobile
-      ? [40, 56, 16, 70, 56]
+      ? [40, 16, 16, 72, 60]
       : [80, 220, 100, 80, 100];
   }, [isMobile]);
 
@@ -103,10 +103,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         const defaultExpanded = currentUser
           ? new Set()
           : collectPathsToDepth(e, 2);
-        if (fe.length > 0) {
-          const fictExpanded = collectFictionalPathsToDepth(fe, 1);
-          for (const p of fictExpanded) defaultExpanded.add(p);
-        }
+        // Fictional tree: no default expansion (only show origin-level orange nodes)
 
         // Also expand current user's paths (both trees)
         if (currentUser) {
@@ -118,14 +115,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
           }
         }
 
-        // Extend single-child chains to leaf/fork
-        const tempTree = buildTree(e);
-        extendSingleChildChains(tempTree, defaultExpanded);
-        if (fe.length > 0) {
-          const tempFictTree = buildFictionalTree(fe);
-          extendSingleChildChains(tempFictTree, defaultExpanded);
-        }
-
+        // Single-child chain expansion is handled by the normalize useEffect
         setExpandedSet(defaultExpanded);
       })
       .catch(err => {
@@ -137,6 +127,24 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       });
     return () => { cancelled = true; };
   }, [authLoading, currentUser?.id, fetchTreeData]);
+
+  // Normalize expandedSet: ensure all single-child chains are expanded after any change.
+  // Real tree: expand ALL single-child chains (full tree scan).
+  // Fictional tree: only extend from already-expanded paths (keeps default collapsed).
+  useEffect(() => {
+    if (!entries?.length) return;
+    const next = new Set(expandedSet);
+    const sizeBefore = next.size;
+    const tempTree = buildTree(entries);
+    expandAllSingleChildChains(tempTree, next);
+    if (fictionalEntries?.length) {
+      const tempFictTree = buildFictionalTree(fictionalEntries);
+      extendSingleChildChains(tempFictTree, next);
+    }
+    if (next.size > sizeBefore) {
+      setExpandedSet(next);
+    }
+  }, [expandedSet, entries, fictionalEntries]);
 
   // Auto-focus logged-in user
   useEffect(() => {
@@ -841,6 +849,11 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     if (entry) setFocusedEntryKey(entryToKey(entry));
   }, [focusedSpeciesIdx, focusedEntries]);
 
+  const handleJumpToSpecies = useCallback((index) => {
+    const entry = focusedEntries[index];
+    if (entry) setFocusedEntryKey(entryToKey(entry));
+  }, [focusedEntries]);
+
   const handleClearFocus = useCallback(() => {
     setFocusedUserId(null);
     setFocusedEntryKey(null);
@@ -1173,7 +1186,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         </div>
       )}
 
-      <div style={{ position: 'absolute', left: isMobile ? 8 : 16, top: isMobile ? 52 : 60, display: 'flex',
+      <div style={{ position: 'absolute', left: isMobile ? 8 : 16, ...(isMobile ? { right: 8 } : {}), top: isMobile ? 52 : 60, display: 'flex',
         flexDirection: 'row', alignItems: 'flex-start', gap: 8, zIndex: 50, pointerEvents: 'none' }}>
         <FloatingToolbar
           canvasRef={canvasRef}
@@ -1257,13 +1270,14 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         </div>
       )}
 
-      {focusedUserId && focusedEntries.length > 0 && !(isMobile && toolbarExpanded) && (
+      {focusedUserId && focusedEntries.length > 0 && (
         <FocusHUD
           focusedEntries={focusedEntries}
           speciesIndex={focusedSpeciesIdx}
           onPrev={handleFocusPrev}
           onNext={handleFocusNext}
           onLocate={handleLocateFocused}
+          onJumpToSpecies={handleJumpToSpecies}
           isMobile={isMobile}
         />
       )}

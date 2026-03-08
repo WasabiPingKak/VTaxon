@@ -116,3 +116,4 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 - Google Cloud Run 有冷啟動延遲，Flask 應用應盡量縮短啟動時間（精簡 import、延遲載入非必要模組）。
 - 奇幻生物使用獨立分類系統（`fictional_species` 表），分類由管理者手動預建。
 - `taxon_path` 欄位需要 `varchar_pattern_ops` 索引以支援前綴查詢。
+- **`.claude/settings.local.json` 權限格式**：Bash 萬用字元規則必須用空格分隔，不可用冒號。正確：`Bash(git *)`，錯誤：`Bash(git:*)`。使用者可能會請求重新檢查格式，屆時掃描所有 `:*)` 並改為 ` *)`。

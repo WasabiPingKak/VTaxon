@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { countActiveFilters } from '../../lib/treeFilters';
 import BottomSheet from '../BottomSheet';
+
+const SORT_SHORT = { created_at: '登錄', debut_date: '出道', display_name: '名稱', country: '國旗', organization: '組織' };
 
 const DEPTH_LABELS = { 8: '同亞種', 7: '同種', 6: '同屬', 5: '同科', 4: '同目', 3: '同綱', 2: '同門', 1: '同界' };
 
@@ -47,6 +49,8 @@ export default function FloatingToolbar({
   onExpandedChange,
 }) {
   const [hovered, setHovered] = useState(null);
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const sortBtnRef = useRef(null);
   const setExpanded = (v) => onExpandedChange?.(v);
 
   const activeFilterCount = countActiveFilters(filters);
@@ -56,6 +60,18 @@ export default function FloatingToolbar({
   useEffect(() => {
     if (!isMobile) setExpanded(false);
   }, [isMobile]);
+
+  // Close sort dropdown on outside click
+  useEffect(() => {
+    if (!sortDropdownOpen) return;
+    const handler = (e) => {
+      if (sortBtnRef.current && !sortBtnRef.current.contains(e.target)) {
+        setSortDropdownOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, [sortDropdownOpen]);
 
   // Body scroll lock is handled by BottomSheet component
 
@@ -139,9 +155,8 @@ export default function FloatingToolbar({
   // ── Full toolbar content (shared between desktop panel and mobile bottom sheet) ──
   const toolbarContent = (
     <>
-      {/* ── Zoom ── */}
-      {[
-        {
+      {/* ── Zoom (hidden on mobile BottomSheet) ── */}
+      {!isMobile && [{
           id: 'fitAll', tint: '#FF6B35', title: '完整展開', action: onExpandBothTrees,
           icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
         },
@@ -303,11 +318,102 @@ export default function FloatingToolbar({
     </>
   );
 
-  // ═══════ Mobile: collapsed mini-bar + expandable bottom sheet ═══════
+  // ── Mobile-only: simplified BottomSheet content (no tree selector, sort, filter) ──
+  const mobileSheetContent = (
+    <>
+      {/* ── Tree expand/collapse controls ── */}
+      {onSelectTree && (
+        <div style={{ paddingTop: 2 }}>
+          {[
+            { key: 'real', label: '現實生物' },
+            { key: 'fictional', label: '虛構生物' },
+          ].map(item => {
+            const isActive = activeTree === item.key;
+            return (
+              <div key={item.key} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0 8px', height: 32,
+                background: isActive ? 'rgba(255,107,53,0.08)' : 'transparent',
+                borderRadius: 4,
+              }}>
+                <span style={{
+                  fontSize: F.option,
+                  color: isActive ? '#FF6B35' : 'rgba(255,255,255,0.5)',
+                  fontWeight: isActive ? 600 : 400,
+                }}>{item.label}</span>
+                <span style={{ display: 'flex', gap: 2 }}>
+                  {iconBtn(`expand-${item.key}`, `${item.label} 全部展開`, () => { onSelectTree(item.key); onExpandAll(item.key); }, expandIcon)}
+                  {iconBtn(`collapse-${item.key}`, `${item.label} 全部收合`, () => { onSelectTree(item.key); onCollapseAll(item.key); }, collapseIcon)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── 打亂排序 ── */}
+      {onShuffle && (
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 6, padding: '6px 4px 0' }}>
+          {actionBtn('shuffle-btn', '打亂排序', () => { onShuffle(); setExpanded(false); },
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3" />
+              <circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="15.5" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="8.5" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
+              <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+            </svg>,
+          )}
+        </div>
+      )}
+
+      {/* ── Trace back range ── */}
+      {showTraceBack && (
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 6, paddingTop: 4, paddingBottom: 2 }}>
+          <div style={{ textAlign: 'center', fontSize: F.section, color: 'rgba(255,255,255,0.35)', marginBottom: 2, letterSpacing: 1.5 }}>
+            溯源範圍
+          </div>
+          {traceBackLevels.map(lv => {
+            const isActive = lv.available && lv.value === traceBack;
+            return radioRow(`tb-${lv.label}`, lv.label, isActive, () => onTraceBackChange(lv.value), { disabled: !lv.available });
+          })}
+        </div>
+      )}
+
+      {/* ── Close vtuber stats ── */}
+      {rankEntries.length > 0 && (
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 4, paddingTop: 4, paddingBottom: 2 }}>
+          <div style={{ textAlign: 'center', fontSize: F.section, color: 'rgba(255,255,255,0.35)', marginBottom: 2, letterSpacing: 1.5 }}>
+            與我相近
+          </div>
+          {rankEntries.map(({ label, count }) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 10px', fontSize: F.option, color: 'rgba(255,255,255,0.55)' }}>
+              <span>{label}</span>
+              <span style={{ color: '#FF6B35', fontWeight: 600 }}>{count}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Footer ── */}
+      <div style={{
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        marginTop: 6, padding: '5px 0 2px',
+        textAlign: 'center', fontSize: F.footer, color: 'rgba(255,255,255,0.4)',
+      }}>
+        {filteredCount != null && filteredCount !== totalCount
+          ? <span>{filteredCount}/{totalCount} 筆</span>
+          : <span>{entryCount || totalCount || 0} 筆</span>}
+      </div>
+    </>
+  );
+
+  // ═══════ Mobile: top horizontal toolbar + simplified bottom sheet ═══════
   if (isMobile) {
+    const currentSortLabel = isShuffled ? '隨機' : (SORT_SHORT[sortKey] || '排序');
     return (
       <>
-        {/* Mini floating bar: hamburger + zoom buttons */}
+        {/* ── Top horizontal bar: 5 elements ── */}
         <div style={{
           background: 'rgba(8,13,21,0.8)',
           backdropFilter: 'blur(10px)',
@@ -315,78 +421,153 @@ export default function FloatingToolbar({
           border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: 10,
           padding: '4px',
-          display: 'flex', flexDirection: 'column', gap: 2,
+          display: 'flex', flexDirection: 'row', gap: 4, alignItems: 'center',
           pointerEvents: 'auto',
         }}>
-          {/* Toggle button */}
-          <button type="button" title="展開工具列" onClick={() => setExpanded(true)}
+          {/* 1. Hamburger — open simplified BottomSheet */}
+          <button type="button" title="展開工具列" onClick={() => { setExpanded(true); setSortDropdownOpen(false); }}
             style={{
-              width: 34, height: 30, padding: 0,
+              minWidth: 34, height: 34, padding: 0, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: expanded ? 'rgba(255,107,53,0.15)' : 'transparent',
               border: 'none', borderRadius: 6,
               color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="3" y1="6" x2="21" y2="6" />
               <line x1="3" y1="12" x2="21" y2="12" />
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          {/* Fit all */}
+
+          {/* 2. Fit all — expand both trees */}
           <button type="button" title="完整展開" onClick={onExpandBothTrees}
             style={{
-              width: 34, height: 30, padding: 0,
+              minWidth: 34, height: 34, padding: 0, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'transparent', border: 'none', borderRadius: 6,
               color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
             </svg>
           </button>
-          {/* Zoom in */}
-          <button type="button" title="放大" onClick={() => canvasRef.current?.zoomIn()}
-            style={{
-              width: 34, height: 30, padding: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'transparent', border: 'none', borderRadius: 6,
-              color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
-            }}
-          >
-            <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
-          </button>
-          {/* Zoom out */}
-          <button type="button" title="縮小" onClick={() => canvasRef.current?.zoomOut()}
-            style={{
-              width: 34, height: 30, padding: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'transparent', border: 'none', borderRadius: 6,
-              color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
-            }}
-          >
-            <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>{'\u2212'}</span>
-          </button>
-          {/* Filter badge shortcut */}
+
+          {/* 3. Segmented tree toggle */}
+          {onSelectTree && (
+            <div style={{
+              display: 'flex', background: 'rgba(255,255,255,0.08)',
+              borderRadius: 6, padding: 2, flexShrink: 0,
+            }}>
+              {[
+                { key: 'real', label: '現實' },
+                { key: 'fictional', label: '虛構' },
+              ].map(item => {
+                const isActive = activeTree === item.key;
+                return (
+                  <button key={item.key} type="button"
+                    onClick={() => { onSelectTree(item.key); setSortDropdownOpen(false); }}
+                    style={{
+                      padding: '0 10px', height: 28, border: 'none', borderRadius: 4,
+                      fontSize: 11, fontWeight: isActive ? 600 : 400, whiteSpace: 'nowrap',
+                      background: isActive ? 'rgba(255,107,53,0.2)' : 'transparent',
+                      color: isActive ? '#FF6B35' : 'rgba(255,255,255,0.5)',
+                      cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                  >{item.label}</button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* 4. Sort dropdown */}
+          {onSortChange && (
+            <div ref={sortBtnRef} style={{ position: 'relative', flexShrink: 0 }}>
+              <button type="button" title="排序方式"
+                onClick={() => setSortDropdownOpen(prev => !prev)}
+                style={{
+                  height: 34, padding: '0 8px', border: 'none', borderRadius: 6,
+                  display: 'flex', alignItems: 'center', gap: 3,
+                  background: sortDropdownOpen ? 'rgba(255,107,53,0.15)' : 'transparent',
+                  color: isShuffled ? 'rgba(255,255,255,0.5)' : '#FF6B35',
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <span>{currentSortLabel}</span>
+                <span style={{ fontSize: 9, opacity: 0.7 }}>▾</span>
+              </button>
+
+              {/* Sort popover */}
+              {sortDropdownOpen && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, marginTop: 4,
+                  zIndex: 100, minWidth: 140,
+                  background: 'rgba(8,13,21,0.95)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 8, padding: '4px 0',
+                  animation: 'sortDropIn 0.2s cubic-bezier(0.32,0.72,0,1)',
+                }}>
+                  <style>{`@keyframes sortDropIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+                  {SORT_OPTIONS.map(opt => {
+                    const isActive = sortKey === opt.key && !isShuffled;
+                    return (
+                      <button key={opt.key} type="button"
+                        onClick={() => {
+                          if (isActive) {
+                            onSortChange(sortKey, sortOrder === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            onSortChange(opt.key, sortOrder);
+                          }
+                          if (!isActive) setSortDropdownOpen(false);
+                        }}
+                        style={{
+                          width: '100%', height: 44, padding: '0 14px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          background: isActive ? 'rgba(255,107,53,0.1)' : 'transparent',
+                          border: 'none', cursor: 'pointer',
+                          color: isActive ? '#FF6B35' : 'rgba(255,255,255,0.65)',
+                          fontSize: 13, fontWeight: isActive ? 600 : 400,
+                          transition: 'background 0.15s',
+                        }}
+                      >
+                        <span>{opt.label}</span>
+                        {isActive && (
+                          <span style={{ fontSize: 12 }}>
+                            {sortOrder === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 5. Filter button + badge */}
           {hasFilters && (
             <button type="button" title="篩選" data-filter-toggle
-              onClick={() => { onFilterToggle(); }}
+              onClick={() => { onFilterToggle(); setSortDropdownOpen(false); }}
               style={{
-                width: 34, height: 30, padding: 0, position: 'relative',
+                minWidth: 34, height: 34, padding: 0, position: 'relative', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: filterPanelOpen ? 'rgba(56,189,248,0.15)' : 'transparent',
                 border: 'none', borderRadius: 6,
                 color: filterPanelOpen ? '#38bdf8' : 'rgba(255,255,255,0.7)', cursor: 'pointer',
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
               </svg>
               {activeFilterCount > 0 && (
                 <span style={{
-                  position: 'absolute', top: 1, right: 1,
+                  position: 'absolute', top: 0, right: -2,
                   background: '#FF6B35', color: '#fff', borderRadius: 7, padding: '0 3px',
                   fontSize: 9, fontWeight: 700, lineHeight: '13px', minWidth: 13, textAlign: 'center',
                 }}>{activeFilterCount}</span>
@@ -395,19 +576,18 @@ export default function FloatingToolbar({
           )}
         </div>
 
-        {/* Expanded bottom sheet */}
+        {/* ── Simplified BottomSheet (advanced settings only) ── */}
         <BottomSheet open={expanded} onClose={() => setExpanded(false)} maxHeight="70vh">
-          {/* Handle bar + close */}
           <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 2px' }}>
             <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 4px 8px' }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>工具列</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>進階設定</span>
             <button type="button" onClick={() => setExpanded(false)}
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 18, cursor: 'pointer', padding: '0 4px' }}
             >&times;</button>
           </div>
-          {toolbarContent}
+          {mobileSheetContent}
         </BottomSheet>
       </>
     );
