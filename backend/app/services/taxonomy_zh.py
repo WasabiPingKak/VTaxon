@@ -335,6 +335,24 @@ def get_species_zh_override(taxon_id):
     return SPECIES_ZH_OVERRIDES.get(taxon_id)
 
 
+# ---------------------------------------------------------------------------
+# Scientific name overrides (keyed by GBIF taxon_id)
+#
+# For taxa where the GBIF accepted name differs from the name used in
+# mainstream literature / Wikipedia.  The override is exposed as
+# ``display_name_override`` in API responses so the frontend can show
+# the commonly-used binomial while still noting the GBIF accepted name.
+# ---------------------------------------------------------------------------
+SPECIES_NAME_OVERRIDES = {
+    2435023: 'Otocolobus manul',  # 兔猻 — GBIF accepted: Felis manul, 主流文獻用 Otocolobus
+}
+
+
+def get_species_name_override(taxon_id):
+    """Return overridden scientific name for a taxon_id, or None."""
+    return SPECIES_NAME_OVERRIDES.get(taxon_id)
+
+
 def get_taxonomy_zh(name):
     """Look up the Chinese name for a taxonomy term.
 

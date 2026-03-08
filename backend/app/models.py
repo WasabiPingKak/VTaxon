@@ -131,6 +131,7 @@ class SpeciesCache(db.Model):
                           default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
+        from .services.taxonomy_zh import get_species_name_override
         path_zh = self.path_zh or {}
         result = {
             'taxon_id': self.taxon_id,
@@ -153,6 +154,9 @@ class SpeciesCache(db.Model):
             'family_zh': path_zh.get('family'),
             'genus_zh': path_zh.get('genus'),
         }
+        name_override = get_species_name_override(self.taxon_id)
+        if name_override:
+            result['display_name_override'] = name_override
         return result
 
 

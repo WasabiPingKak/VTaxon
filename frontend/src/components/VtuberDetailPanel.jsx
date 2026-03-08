@@ -6,6 +6,7 @@ import { YouTubeIcon, TwitchIcon, SNS_ICON_MAP, SNS_LABELS } from './SnsIcons';
 import ProfileInfoCard from './ProfileInfoCard';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
+import { displayScientificName } from '../lib/speciesName';
 
 const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
 const RANK_TO_UPPER = {
@@ -389,7 +390,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
             display: 'flex', gap: '6px', padding: '10px 20px 0', flexWrap: 'wrap',
           }}>
             {allEntries.map((e, i) => {
-              const label = e.fictional_name_zh || e.common_name_zh || e.scientific_name || e.display_name;
+              const label = e.fictional_name_zh || e.common_name_zh || displayScientificName(e) || e.display_name;
               const active = i === activeIdx;
               const tabKey = e.fictional_path
                 ? `F\0${e.fictional_path}\0${e.fictional_species_id || ''}`
@@ -538,7 +539,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
               <div style={{ fontSize: '0.9em', lineHeight: '1.8' }}>
                 <div>
                   <span style={labelStyle}>學名</span>
-                  {entry.scientific_name}
+                  {displayScientificName(entry)}
                 </div>
                 {entry.common_name_zh && (
                   <div>
@@ -581,7 +582,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
                 taxonPath={entry.taxon_path}
                 pathZh={entry.path_zh}
                 commonNameZh={entry.common_name_zh}
-                scientificName={entry.scientific_name}
+                scientificName={displayScientificName(entry)}
               />
             </div>
           )}
