@@ -139,9 +139,8 @@ export default function FloatingToolbar({
   // ── Full toolbar content (shared between desktop panel and mobile bottom sheet) ──
   const toolbarContent = (
     <>
-      {/* ── Zoom ── */}
-      {[
-        {
+      {/* ── Zoom (hidden on mobile BottomSheet) ── */}
+      {!isMobile && [{
           id: 'fitAll', tint: '#FF6B35', title: '完整展開', action: onExpandBothTrees,
           icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
         },
@@ -303,11 +302,11 @@ export default function FloatingToolbar({
     </>
   );
 
-  // ═══════ Mobile: collapsed mini-bar + expandable bottom sheet ═══════
+  // ═══════ Mobile: top horizontal mini-bar + expandable bottom sheet ═══════
   if (isMobile) {
     return (
       <>
-        {/* Mini floating bar: hamburger + zoom buttons */}
+        {/* Mini horizontal bar: hamburger + fit-all + filter (3 buttons) */}
         <div style={{
           background: 'rgba(8,13,21,0.8)',
           backdropFilter: 'blur(10px)',
@@ -315,20 +314,20 @@ export default function FloatingToolbar({
           border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: 10,
           padding: '4px',
-          display: 'flex', flexDirection: 'column', gap: 2,
+          display: 'flex', flexDirection: 'row', gap: 2,
           pointerEvents: 'auto',
         }}>
-          {/* Toggle button */}
+          {/* Hamburger — expand BottomSheet */}
           <button type="button" title="展開工具列" onClick={() => setExpanded(true)}
             style={{
-              width: 34, height: 30, padding: 0,
+              minWidth: 44, minHeight: 44, padding: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: expanded ? 'rgba(255,107,53,0.15)' : 'transparent',
               border: 'none', borderRadius: 6,
               color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
             }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="3" y1="6" x2="21" y2="6" />
               <line x1="3" y1="12" x2="21" y2="12" />
               <line x1="3" y1="18" x2="21" y2="18" />
@@ -337,56 +336,34 @@ export default function FloatingToolbar({
           {/* Fit all */}
           <button type="button" title="完整展開" onClick={onExpandBothTrees}
             style={{
-              width: 34, height: 30, padding: 0,
+              minWidth: 44, minHeight: 44, padding: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'transparent', border: 'none', borderRadius: 6,
               color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
             </svg>
-          </button>
-          {/* Zoom in */}
-          <button type="button" title="放大" onClick={() => canvasRef.current?.zoomIn()}
-            style={{
-              width: 34, height: 30, padding: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'transparent', border: 'none', borderRadius: 6,
-              color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
-            }}
-          >
-            <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
-          </button>
-          {/* Zoom out */}
-          <button type="button" title="縮小" onClick={() => canvasRef.current?.zoomOut()}
-            style={{
-              width: 34, height: 30, padding: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'transparent', border: 'none', borderRadius: 6,
-              color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
-            }}
-          >
-            <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>{'\u2212'}</span>
           </button>
           {/* Filter badge shortcut */}
           {hasFilters && (
             <button type="button" title="篩選" data-filter-toggle
               onClick={() => { onFilterToggle(); }}
               style={{
-                width: 34, height: 30, padding: 0, position: 'relative',
+                minWidth: 44, minHeight: 44, padding: 0, position: 'relative',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: filterPanelOpen ? 'rgba(56,189,248,0.15)' : 'transparent',
                 border: 'none', borderRadius: 6,
                 color: filterPanelOpen ? '#38bdf8' : 'rgba(255,255,255,0.7)', cursor: 'pointer',
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
               </svg>
               {activeFilterCount > 0 && (
                 <span style={{
-                  position: 'absolute', top: 1, right: 1,
+                  position: 'absolute', top: 2, right: 2,
                   background: '#FF6B35', color: '#fff', borderRadius: 7, padding: '0 3px',
                   fontSize: 9, fontWeight: 700, lineHeight: '13px', minWidth: 13, textAlign: 'center',
                 }}>{activeFilterCount}</span>
