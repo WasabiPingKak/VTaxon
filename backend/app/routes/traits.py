@@ -5,7 +5,6 @@ from ..cache import invalidate_tree_cache, invalidate_fictional_tree_cache
 from ..extensions import db
 from ..models import Breed, FictionalSpecies, SpeciesCache, VtuberTrait
 from ..services.gbif import get_species
-from sqlalchemy import func
 
 traits_bp = Blueprint('traits', __name__)
 
@@ -93,7 +92,6 @@ def create_trait():
                     replaced_info = {
                         'replaced_trait_id': et.id,
                         'replaced_display_name': et.computed_display_name(),
-                        'replaced_sort_order': et.sort_order,
                     }
                     db.session.delete(et)
                     break
@@ -126,14 +124,6 @@ def create_trait():
         if taxon_id and not _breed_matches_taxon(breed, taxon_id):
             return jsonify({'error': 'Breed does not belong to this species'}), 400
 
-    # Determine sort_order for new trait
-    if replaced_info:
-        new_sort_order = replaced_info['replaced_sort_order']
-    else:
-        max_order = db.session.query(func.max(VtuberTrait.sort_order)).filter_by(
-            user_id=g.current_user_id).scalar()
-        new_sort_order = (max_order + 1) if max_order is not None else 0
-
     trait = VtuberTrait(
         user_id=g.current_user_id,
         taxon_id=taxon_id,
@@ -141,7 +131,6 @@ def create_trait():
         breed_id=breed_id,
         breed_name=data.get('breed_name') if not breed_id else None,
         trait_note=data.get('trait_note'),
-        sort_order=new_sort_order,
     )
     db.session.add(trait)
     db.session.commit()
@@ -162,33 +151,8 @@ def list_traits():
     if not user_id:
         return jsonify({'error': 'user_id query parameter required'}), 400
 
-    traits = VtuberTrait.query.filter_by(user_id=user_id).order_by(
-        VtuberTrait.sort_order.asc()).all()
+    traits = VtuberTrait.query.filter_by(user_id=user_id).all()
     return jsonify({'traits': [t.to_dict() for t in traits]})
-
-
-@traits_bp.route('/reorder', methods=['PUT'])
-@login_required
-def reorder_traits():
-    data = request.get_json() or {}
-    ordered_ids = data.get('trait_ids', [])
-
-    traits = VtuberTrait.query.filter_by(user_id=g.current_user_id).all()
-    trait_map = {str(t.id): t for t in traits}
-
-    if len(ordered_ids) != len(traits):
-        return jsonify({'error': 'trait_ids count mismatch'}), 400
-
-    for i, tid in enumerate(ordered_ids):
-        trait = trait_map.get(str(tid))
-        if not trait:
-            return jsonify({'error': f'Trait {tid} not found'}), 400
-        trait.sort_order = i
-
-    db.session.commit()
-    invalidate_tree_cache()
-    invalidate_fictional_tree_cache()
-    return jsonify({'message': 'ok'})
 
 
 @traits_bp.route('/<trait_id>', methods=['PATCH'])

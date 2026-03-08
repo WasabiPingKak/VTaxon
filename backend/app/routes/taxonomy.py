@@ -208,7 +208,6 @@ def get_taxonomy_tree():
             'breed_name_zh': breed_name_zh,
             'breed_name_en': breed_name_en,
             'path_zh': path_zh,
-            'sort_order': trait.sort_order,
         })
 
     # Persist rebuilt path_zh to DB so future reads are instant
@@ -292,7 +291,6 @@ def get_fictional_tree():
             'fictional_name_zh': fictional.name_zh or fictional.name,
             'origin': fictional.origin,
             'sub_origin': fictional.sub_origin,
-            'sort_order': trait.sort_order,
         })
 
     result = {'entries': entries}

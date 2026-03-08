@@ -169,7 +169,6 @@ CREATE TABLE vtuber_traits (
     breed_name TEXT,               -- 品種名稱（legacy 自由文字，優先使用 breed_id）
     breed_id   INTEGER REFERENCES breeds(id) ON DELETE SET NULL,
     trait_note TEXT,
-    sort_order INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CHECK (taxon_id IS NOT NULL OR fictional_species_id IS NOT NULL)
@@ -179,7 +178,6 @@ CREATE INDEX idx_vtuber_traits_user_id ON vtuber_traits(user_id);
 CREATE INDEX idx_vtuber_traits_taxon_id ON vtuber_traits(taxon_id);
 CREATE INDEX idx_vtuber_traits_fictional_species_id ON vtuber_traits(fictional_species_id);
 CREATE INDEX idx_vtuber_traits_breed_id ON vtuber_traits(breed_id);
-CREATE INDEX idx_vtuber_traits_sort_order ON vtuber_traits(user_id, sort_order);
 
 -- 同一角色不能重複標註同一現實物種
 CREATE UNIQUE INDEX idx_vtuber_traits_user_taxon

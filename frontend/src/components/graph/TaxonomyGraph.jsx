@@ -632,11 +632,8 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     setTimeout(() => {
       if (currentUser) {
         // Logged-in: go directly to user's node (tree only expands user's paths)
-        const allUserEntries = [
-          ...(entries || []).filter(e => e.user_id === currentUser.id),
-          ...(fictionalEntries || []).filter(e => e.user_id === currentUser.id),
-        ].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-        const userEntry = allUserEntries[0];
+        const userEntry = entries?.find(e => e.user_id === currentUser.id)
+          || fictionalEntries?.find(e => e.user_id === currentUser.id);
         if (userEntry) {
           const userPathKey = entryToVtuberPathKey(userEntry, breedPaths);
           const userNode = nodes.find(n => n.data._pathKey === userPathKey);
@@ -931,7 +928,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     if (!selectedVtuber) return [];
     const real = entries ? entries.filter(e => e.user_id === selectedVtuber.user_id) : [];
     const fict = fictionalEntries ? fictionalEntries.filter(e => e.user_id === selectedVtuber.user_id) : [];
-    return [...real, ...fict].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    return [...real, ...fict];
   }, [selectedVtuber?.user_id, entries, fictionalEntries]);
 
   // Switch entry from detail panel trait tabs — update panel + focus + camera
