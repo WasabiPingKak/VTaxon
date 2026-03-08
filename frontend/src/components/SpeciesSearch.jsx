@@ -29,6 +29,7 @@ if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-st
 }
 
 const HIGH_RANKS = new Set(['KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'SUBCLASS', 'INFRACLASS', 'ORDER', 'FAMILY', 'GENUS']);
+const BLOCKED_RANKS = new Set(['KINGDOM', 'PHYLUM', 'SUPERCLASS']);
 const BREED_COLOR = '#fb923c';
 
 const FAMILY_COLORS = [
@@ -238,7 +239,7 @@ function SpeciesRow({ sp, onSelect, indent, connector, familyColor }) {
           {!indent && <Breadcrumb sp={sp} />}
         </div>
       </div>
-      {onSelect && (
+      {onSelect && !BLOCKED_RANKS.has(rank) && (
         <button onClick={() => onSelect(sp)} style={{
           padding: '4px 12px', background: '#34d399', color: '#0d1526',
           border: 'none', borderRadius: '4px', cursor: 'pointer',
@@ -246,6 +247,14 @@ function SpeciesRow({ sp, onSelect, indent, connector, familyColor }) {
         }}>
           新增
         </button>
+      )}
+      {onSelect && BLOCKED_RANKS.has(rank) && (
+        <span style={{
+          padding: '4px 8px', color: 'rgba(255,255,255,0.3)',
+          fontSize: '0.8em', marginLeft: '8px', flexShrink: 0, marginTop: '2px',
+        }}>
+          階層過高
+        </span>
       )}
     </div>
   );
