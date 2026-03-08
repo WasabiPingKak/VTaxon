@@ -193,6 +193,7 @@ TAXONOMY_ZH = {
     'Araneidea': '園蛛科',
     'Theraphosidae': '捕鳥蛛科',
     'Nephilidae': '絡新婦科',
+    'Scorpionidae': '蠍科',
 
     # --- Genus 屬 (common ones) ---
     # Mammals - Carnivora
@@ -314,6 +315,7 @@ TAXONOMY_ZH = {
     'Papilio': '鳳蝶屬',
     'Octopus': '章魚屬',
     'Sepia': '烏賊屬',
+    'Gigantometrus': '雨林蠍屬',
 }
 
 
@@ -328,6 +330,7 @@ SPECIES_ZH_OVERRIDES = {
     8460871: '前突三角龍',     # Triceratops prorsus — extinct, no zh in Wikidata/TaiCOL
     5341748: '毒茄蔘',         # Mandragora officinarum — Wikidata has 茄蔘, 台灣常用 毒茄蔘
     2435023: '兔猻',           # Felis manul (Otocolobus manul) — Wikidata/TaiCOL 可能漏掉
+    11186113: '紅爪雨林蠍',   # Gigantometrus swammerdami — TaiCOL/Wikidata 均無收錄
 }
 
 
