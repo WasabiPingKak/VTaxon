@@ -125,6 +125,7 @@ function BreedAccordion({ section, user, addToast, navigate }) {
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                     placeholder="過濾品種名稱…"
+                    autoComplete="off"
                     style={{
                       width: '100%', padding: '6px 10px', boxSizing: 'border-box',
                       border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px',
@@ -485,6 +486,7 @@ function GlobalBreedSearch({ user, addToast, navigate }) {
           value={query}
           onChange={(e) => { setQuery(e.target.value); if (!e.target.value.trim()) { setResults([]); setSearched(false); } }}
           placeholder="搜尋品種名稱（如：柴犬、布偶貓、Shiba Inu）"
+          autoComplete="off"
           style={{
             flex: 1, padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '4px', background: '#1a2433', color: '#e2e8f0',

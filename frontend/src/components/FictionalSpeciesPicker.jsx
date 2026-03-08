@@ -128,6 +128,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder="搜尋虛構物種（例：狐、龍、AI）"
+        autoComplete="off"
         style={{
           width: '100%', padding: '10px 12px', border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: '6px', fontSize: '0.95em', boxSizing: 'border-box',

@@ -460,6 +460,7 @@ function BreedCategoryList({ category, onSelect, onBack }) {
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         placeholder="過濾品種名稱…"
+        autoComplete="off"
         autoFocus
         style={{
           width: '100%', padding: '8px', marginBottom: '8px', boxSizing: 'border-box',
@@ -605,6 +606,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
             value={query}
             onChange={handleQueryChange}
             placeholder="搜尋物種或品種（例如：柴犬、布偶貓、貓、狼）"
+            autoComplete="off"
             style={{
               flex: 1, padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: '4px', background: '#1a2433', color: '#e2e8f0',

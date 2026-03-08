@@ -82,6 +82,7 @@ export default function CountryPicker({ selected = [], onChange }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="搜尋國家…"
+              autoComplete="off"
               onClick={(e) => e.stopPropagation()}
               style={{
                 width: '100%', padding: '6px', border: '1px solid rgba(255,255,255,0.12)',
