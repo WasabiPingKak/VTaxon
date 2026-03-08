@@ -15,7 +15,7 @@ import FocusHUD from './FocusHUD';
 import { filterEntries, computeFacets, countActiveFilters, emptyFilters } from '../../lib/treeFilters';
 import useIsMobile from '../../hooks/useIsMobile';
 
-const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
+const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoading }, ref) {
   const canvasRef = useRef(null);
   const starFieldRef = useRef(null);
   const initialFitDone = useRef(false);
@@ -89,8 +89,11 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
     refetch: () => fetchTreeData({ refresh: true }),
   }), [fetchTreeData]);
 
-  // Initial load
+  // Initial load — wait for auth to resolve before fetching so we know
+  // whether to expand the user's paths or use guest defaults (avoids
+  // double-fetch and camera re-positioning race condition)
   useEffect(() => {
+    if (authLoading) return;
     let cancelled = false;
     fetchTreeData()
       .then(({ entries: e, fictionalEntries: fe }) => {
@@ -133,7 +136,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [currentUser?.id, fetchTreeData]);
+  }, [authLoading, currentUser?.id, fetchTreeData]);
 
   // Auto-focus logged-in user
   useEffect(() => {
