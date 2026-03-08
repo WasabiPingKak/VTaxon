@@ -435,10 +435,6 @@ def update_me():
     if 'org_type' in data:
         if data['org_type'] not in ('indie', 'corporate', 'club'):
             return jsonify({'error': 'org_type must be indie, corporate, or club'}), 400
-        if data['org_type'] == 'corporate':
-            org = data.get('organization', user.organization)
-            if not org or not org.strip():
-                return jsonify({'error': '企業勢必須填入組織名稱'}), 400
         if data['org_type'] == 'indie':
             data['organization'] = None
 
