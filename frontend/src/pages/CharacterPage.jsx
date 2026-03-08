@@ -3,6 +3,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import LinksRow from '../components/LinksRow';
+import OrgBadge from '../components/OrgBadge';
 import PreviewPanel from '../components/PreviewPanel';
 import SettingsProfile from '../components/settings/SettingsProfile';
 import SettingsSnsLinks from '../components/settings/SettingsSnsLinks';
@@ -87,11 +88,7 @@ export default function CharacterPage() {
         </h2>
 
         {/* Organization */}
-        {user.organization && (
-          <div style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '8px' }}>
-            {user.organization}
-          </div>
-        )}
+        <OrgBadge orgType={user.org_type} organization={user.organization} style={{ marginBottom: '8px' }} />
 
         {/* Links row (read-only OAuth + SNS + flags) */}
         <div style={{ marginBottom: '10px' }}>

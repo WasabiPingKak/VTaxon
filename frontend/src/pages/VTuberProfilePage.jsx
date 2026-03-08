@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import SEOHead, { SITE_URL } from '../components/SEOHead';
 import LinksRow from '../components/LinksRow';
+import OrgBadge from '../components/OrgBadge';
 import RankBadge from '../components/RankBadge';
 import ProfileInfoCard from '../components/ProfileInfoCard';
 import { displayScientificName } from '../lib/speciesName';
@@ -193,11 +194,7 @@ export default function VTuberProfilePage() {
         <h1 style={{ fontSize: '1.5em', margin: '0 0 4px', color: '#fff' }}>
           {user.display_name}
         </h1>
-        {user.organization && (
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9em', marginBottom: 8 }}>
-            {user.organization}
-          </div>
-        )}
+        <OrgBadge orgType={user.org_type} organization={user.organization} style={{ marginBottom: 8 }} />
 
         {/* Links */}
         <div style={{ marginTop: 8 }}>
