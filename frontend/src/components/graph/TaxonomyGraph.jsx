@@ -103,10 +103,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         const defaultExpanded = currentUser
           ? new Set()
           : collectPathsToDepth(e, 2);
-        if (fe.length > 0) {
-          const fictExpanded = collectFictionalPathsToDepth(fe, 1);
-          for (const p of fictExpanded) defaultExpanded.add(p);
-        }
+        // Fictional tree: no default expansion (only show origin-level orange nodes)
 
         // Also expand current user's paths (both trees)
         if (currentUser) {
@@ -118,13 +115,9 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
           }
         }
 
-        // Expand all single-child chains across the entire tree
+        // Expand all single-child chains across the real species tree only
         const tempTree = buildTree(e);
         expandAllSingleChildChains(tempTree, defaultExpanded);
-        if (fe.length > 0) {
-          const tempFictTree = buildFictionalTree(fe);
-          expandAllSingleChildChains(tempFictTree, defaultExpanded);
-        }
 
         setExpandedSet(defaultExpanded);
       })
