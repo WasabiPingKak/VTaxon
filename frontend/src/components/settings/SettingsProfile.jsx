@@ -170,11 +170,6 @@ export default function SettingsProfile() {
       addToast('名稱為必填欄位', { type: 'error' });
       return;
     }
-    if (orgType === 'corporate' && !organization.trim()) {
-      addToast('請輸入組織名稱', { type: 'error' });
-      return;
-    }
-
     // Build profile_data — only include non-empty values
     const profile_data = {};
     if (debutDate) profile_data.debut_date = debutDate;
@@ -268,7 +263,7 @@ export default function SettingsProfile() {
         )}
         {orgType === 'club' && (
           <input type="text" value={organization} onChange={(e) => setOrganization(e.target.value)}
-            placeholder="社團名稱（選填）" style={{ ...inputStyle, marginTop: '8px' }} />
+            placeholder="社團名稱" style={{ ...inputStyle, marginTop: '8px' }} />
         )}
       </div>
 
