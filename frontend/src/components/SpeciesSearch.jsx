@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
 import { breedEmoji } from '../lib/breedUtils';
 import { formatAltNamesFull, altNamesTooltip } from '../lib/altNames';
+import { displayScientificName } from '../lib/speciesName';
 import RankBadge from './RankBadge';
 
 // Inject pulse animation keyframes once
@@ -175,7 +176,7 @@ function Breadcrumb({ sp }) {
 
 function SpeciesRow({ sp, onSelect, indent, connector, familyColor }) {
   const zhName = sp.common_name_zh;
-  const binomial = sp.canonical_name || sp.scientific_name;
+  const binomial = displayScientificName(sp);
   const enName = sp.common_name_en;
   const hasChinese = !!zhName;
   const rank = (sp.taxon_rank || '').toUpperCase();
@@ -219,10 +220,15 @@ function SpeciesRow({ sp, onSelect, indent, connector, familyColor }) {
               <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9em' }}>({enName})</span>
             )}
           </div>
-          {sp.synonym_name && (
-            <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.35)', marginTop: '2px', fontStyle: 'italic' }}>
-              = {sp.synonym_name}
-            </div>
+          {(sp.display_name_override
+            ? <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.35)', marginTop: '2px', fontStyle: 'italic' }}>
+                = {sp.canonical_name || sp.scientific_name} [GBIF]
+              </div>
+            : sp.synonym_name
+              ? <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.35)', marginTop: '2px', fontStyle: 'italic' }}>
+                  = {sp.synonym_name}
+                </div>
+              : null
           )}
           {altFull && (
             <div title={altTitle} style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.35)', marginTop: '2px', lineHeight: 1.4 }}>

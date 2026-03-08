@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { displayScientificName } from '../../lib/speciesName';
 
 /**
  * Bottom HUD showing focused Vtuber info with multi-species navigation.
@@ -13,7 +14,7 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
   const total = focusedEntries.length;
   const speciesLabel = current.fictional_name_zh
     || current.breed_name_zh || current.breed_name
-    || current.common_name_zh || current.scientific_name || '?';
+    || current.common_name_zh || displayScientificName(current) || '?';
 
   if (isMobile) {
     return (

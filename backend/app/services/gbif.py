@@ -21,7 +21,8 @@ from sqlalchemy import func
 
 from ..extensions import db
 from ..models import Breed, SpeciesCache
-from .taxonomy_zh import get_taxonomy_zh, get_taxonomy_zh_for_ranks, get_species_zh_override
+from .taxonomy_zh import (get_taxonomy_zh, get_taxonomy_zh_for_ranks,
+                          get_species_zh_override, get_species_name_override)
 from .wikidata import get_chinese_name_by_gbif_id, get_aliases_by_gbif_id
 from .wikidata import clear_cache as wikidata_clear_cache
 from .taicol import get_chinese_name as taicol_get_chinese_name
@@ -597,6 +598,12 @@ def _enrich_chinese_names(species_list):
             if zh_key and sp.get(zh_key):
                 sp['common_name_zh'] = sp[zh_key]
                 sp['species_zh'] = sp[zh_key]
+
+    # Apply scientific name overrides (e.g. Felis manul → Otocolobus manul)
+    for sp in species_list:
+        name_override = get_species_name_override(sp.get('taxon_id'))
+        if name_override:
+            sp['display_name_override'] = name_override
 
     # Write enriched Chinese names back to DB cache
     _cache_enriched_species(species_list)

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import RankBadge from './RankBadge';
 import { YouTubeIcon, TwitchIcon } from './SnsIcons';
+import { displayScientificName } from '../lib/speciesName';
 
 export default function VtuberCard({ entry, isCurrentUser, onClick, activeFilterBadges, sortBadge }) {
   const [imgError, setImgError] = useState(false);
@@ -13,7 +14,7 @@ export default function VtuberCard({ entry, isCurrentUser, onClick, activeFilter
     })
     .join(' ');
 
-  const speciesLabel = entry.common_name_zh || entry.scientific_name;
+  const speciesLabel = entry.common_name_zh || displayScientificName(entry);
 
   return (
     <button

@@ -4,6 +4,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../lib/ToastContext';
 import { api } from '../../lib/api';
 import { formatAltNamesInline, altNamesTooltip } from '../../lib/altNames';
+import { displayScientificName } from '../../lib/speciesName';
 import SpeciesSearch from '../SpeciesSearch';
 import RankBadge from '../RankBadge';
 import AiPromptBlock from '../AiPromptBlock';
@@ -171,7 +172,7 @@ export default function SettingsRealSpecies() {
       ) : (
         <div style={{ marginBottom: '16px' }}>
           {traits.map(trait => {
-            const displayName = trait.species?.common_name_zh || trait.species?.scientific_name || trait.display_name;
+            const displayName = trait.species?.common_name_zh || displayScientificName(trait.species) || trait.display_name;
             const rank = (trait.species?.taxon_rank || '').toUpperCase() || null;
 
             return (
@@ -203,7 +204,7 @@ export default function SettingsRealSpecies() {
                     })()}
                     {trait.species && (
                       <span style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.5)' }}>
-                        {trait.species.scientific_name}
+                        {displayScientificName(trait.species)}
                       </span>
                     )}
                     {trait.species?.common_name_en && (

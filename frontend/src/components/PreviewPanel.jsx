@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import RankBadge from './RankBadge';
 import LinksRow from './LinksRow';
 import ProfileInfoCard from './ProfileInfoCard';
+import { displayScientificName } from '../lib/speciesName';
 
 const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
 const RANK_TO_UPPER = {
@@ -35,8 +36,8 @@ function TaxonomyPath({ species }) {
       ))}
       <div style={{ paddingLeft: ranks.length * 12, fontWeight: 600 }}>
         {species.common_name_zh
-          ? `${species.common_name_zh} (${species.scientific_name})`
-          : species.scientific_name}
+          ? `${species.common_name_zh} (${displayScientificName(species)})`
+          : displayScientificName(species)}
       </div>
     </div>
   );
@@ -142,7 +143,7 @@ export default function PreviewPanel({ user, oauthAccounts, traits, selectedTrai
           }}>
             {allTraits.map((t, i) => {
               const label = t.taxon_id
-                ? (t.species?.common_name_zh || t.species?.scientific_name || t.display_name)
+                ? (t.species?.common_name_zh || displayScientificName(t.species) || t.display_name)
                 : (t.fictional?.name_zh || t.fictional?.name || t.display_name);
               const active = i === (selectedTraitIdx ?? 0);
               return (
@@ -214,7 +215,7 @@ export default function PreviewPanel({ user, oauthAccounts, traits, selectedTrai
               <div style={{ fontSize: '0.9em', lineHeight: '1.8' }}>
                 <div>
                   <span style={{ ...previewLabelStyle }}>學名</span>
-                  {species.scientific_name}
+                  {displayScientificName(species)}
                 </div>
                 {species.common_name_zh && (
                   <div>

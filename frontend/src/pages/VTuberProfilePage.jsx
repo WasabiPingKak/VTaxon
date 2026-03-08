@@ -5,6 +5,7 @@ import SEOHead, { SITE_URL } from '../components/SEOHead';
 import LinksRow from '../components/LinksRow';
 import RankBadge from '../components/RankBadge';
 import ProfileInfoCard from '../components/ProfileInfoCard';
+import { displayScientificName } from '../lib/speciesName';
 
 const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
 const RANK_TO_UPPER = {
@@ -35,8 +36,8 @@ function TaxonomyPath({ trait }) {
       ))}
       <div style={{ paddingLeft: ranks.length * 12, fontWeight: 600 }}>
         {sp.common_name_zh
-          ? `${sp.common_name_zh} (${sp.scientific_name})`
-          : sp.scientific_name}
+          ? `${sp.common_name_zh} (${displayScientificName(sp)})`
+          : displayScientificName(sp)}
       </div>
       {trait.breed_name && (
         <div style={{ paddingLeft: (ranks.length + 1) * 12, color: '#fb923c' }}>
