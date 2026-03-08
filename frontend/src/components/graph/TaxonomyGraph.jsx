@@ -55,11 +55,11 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
   const breedPaths = useMemo(() => buildBreedPaths(entries || []), [entries]);
 
   // Camera insets: [padding, leftInset, rightInset, bottomInset, topInset]
-  // Desktop: left toolbar ~200px wide; Mobile: mini bar ~50px, HUD at bottom ~60px
+  // Desktop: left toolbar ~200px wide; Mobile: top horizontal bar, bottom HUD drawer
   const cameraInsetsRef = useRef([80, 220, 100, 80, 100]);
   useEffect(() => {
     cameraInsetsRef.current = isMobile
-      ? [40, 56, 16, 70, 56]
+      ? [40, 16, 16, 72, 60]
       : [80, 220, 100, 80, 100];
   }, [isMobile]);
 
@@ -838,6 +838,11 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
     if (entry) setFocusedEntryKey(entryToKey(entry));
   }, [focusedSpeciesIdx, focusedEntries]);
 
+  const handleJumpToSpecies = useCallback((index) => {
+    const entry = focusedEntries[index];
+    if (entry) setFocusedEntryKey(entryToKey(entry));
+  }, [focusedEntries]);
+
   const handleClearFocus = useCallback(() => {
     setFocusedUserId(null);
     setFocusedEntryKey(null);
@@ -1170,7 +1175,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
         </div>
       )}
 
-      <div style={{ position: 'absolute', left: isMobile ? 8 : 16, top: isMobile ? 52 : 60, display: 'flex',
+      <div style={{ position: 'absolute', left: isMobile ? 8 : 16, ...(isMobile ? { right: 8 } : {}), top: isMobile ? 52 : 60, display: 'flex',
         flexDirection: 'row', alignItems: 'flex-start', gap: 8, zIndex: 50, pointerEvents: 'none' }}>
         <FloatingToolbar
           canvasRef={canvasRef}
@@ -1254,13 +1259,14 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser }, ref) {
         </div>
       )}
 
-      {focusedUserId && focusedEntries.length > 0 && !(isMobile && toolbarExpanded) && (
+      {focusedUserId && focusedEntries.length > 0 && (
         <FocusHUD
           focusedEntries={focusedEntries}
           speciesIndex={focusedSpeciesIdx}
           onPrev={handleFocusPrev}
           onNext={handleFocusNext}
           onLocate={handleLocateFocused}
+          onJumpToSpecies={handleJumpToSpecies}
           isMobile={isMobile}
         />
       )}

@@ -1,103 +1,160 @@
 import { useState } from 'react';
 import { displayScientificName } from '../../lib/speciesName';
 
+const getSpeciesLabel = (entry) =>
+  entry.fictional_name_zh
+  || entry.breed_name_zh || entry.breed_name
+  || entry.common_name_zh || displayScientificName(entry) || '?';
+
 /**
  * Bottom HUD showing focused Vtuber info with multi-species navigation.
- * Uses CSS grid for fixed arrow positions.
+ * Mobile: drawer-style expandable card at bottom.
+ * Desktop: centered HUD with grid-based arrow navigation.
  */
-export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext, onLocate, isMobile }) {
+export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext, onLocate, onJumpToSpecies, isMobile }) {
   const [imgError, setImgError] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   if (!focusedEntries || focusedEntries.length === 0) return null;
 
   const current = focusedEntries[speciesIndex] || focusedEntries[0];
   const total = focusedEntries.length;
-  const speciesLabel = current.fictional_name_zh
-    || current.breed_name_zh || current.breed_name
-    || current.common_name_zh || displayScientificName(current) || '?';
+  const speciesLabel = getSpeciesLabel(current);
 
   if (isMobile) {
     return (
       <div style={{
         position: 'absolute',
-        bottom: 8,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 'calc(100% - 64px)',
-        maxWidth: 360,
+        bottom: 0,
+        left: 0,
+        right: 0,
         boxSizing: 'border-box',
         background: 'rgba(8,13,21,0.9)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
         border: '1px solid rgba(255,107,53,0.3)',
-        borderRadius: 10,
-        padding: '6px 10px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
+        borderBottom: 'none',
+        borderRadius: '12px 12px 0 0',
+        paddingBottom: 'env(safe-area-inset-bottom, 8px)',
         zIndex: 60,
         color: '#e2e8f0',
         userSelect: 'none',
+        maxHeight: drawerOpen ? '60vh' : 64,
+        overflow: 'hidden',
+        transition: 'max-height 300ms cubic-bezier(0.32, 0.72, 0, 1)',
       }}>
-        {/* Avatar */}
-        {current.avatar_url && !imgError ? (
-          <img
-            src={current.avatar_url} alt={current.display_name}
-            loading="lazy"
-            style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div style={{
-            width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-            background: 'rgba(255,255,255,0.1)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 13, color: 'rgba(255,255,255,0.4)',
-          }}>?</div>
-        )}
+        {/* ── Collapsed header (always visible) ── */}
+        <div
+          onClick={() => setDrawerOpen(o => !o)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 12px',
+            cursor: 'pointer',
+            minHeight: 48,
+          }}
+        >
+          {/* Avatar */}
+          {current.avatar_url && !imgError ? (
+            <img
+              src={current.avatar_url} alt={current.display_name}
+              loading="lazy"
+              style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+              background: 'rgba(255,255,255,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14, color: 'rgba(255,255,255,0.4)',
+            }}>?</div>
+          )}
 
-        {/* Name + species stacked */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <span style={{ fontWeight: 600, fontSize: '0.82em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {current.display_name}
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {total > 1 && (
-              <button type="button" onClick={onPrev} style={navBtnStyleMobile} title="上一個物種">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>
-              </button>
-            )}
-            <span style={{ fontSize: '0.75em', color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {speciesLabel}
-              {total > 1 && <span style={{ color: 'rgba(255,255,255,0.35)', marginLeft: 3 }}>({speciesIndex + 1}/{total})</span>}
+          {/* Name + current species */}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {current.display_name}
             </span>
-            {total > 1 && (
-              <button type="button" onClick={onNext} style={navBtnStyleMobile} title="下一個物種">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-              </button>
-            )}
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {speciesLabel}
+              {total > 1 && <span style={{ color: 'rgba(255,255,255,0.35)', marginLeft: 4 }}>({speciesIndex + 1}/{total})</span>}
+            </span>
           </div>
+
+          {/* Expand/collapse indicator */}
+          <span style={{
+            fontSize: 14, color: 'rgba(255,255,255,0.4)', flexShrink: 0,
+            transition: 'transform 300ms cubic-bezier(0.32, 0.72, 0, 1)',
+            transform: drawerOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+          }}>
+            &#x25B2;
+          </span>
         </div>
 
-        {/* Locate button — styled like Navbar, stretches to fill HUD height */}
-        <button type="button" onClick={onLocate} style={{
-          background: 'rgba(233,30,140,0.1)',
-          border: '1px solid rgba(233,30,140,0.3)',
-          borderRadius: 8, cursor: 'pointer',
-          padding: '6px 12px',
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          color: '#E91E8C', fontSize: 13, fontWeight: 500,
-          whiteSpace: 'nowrap', flexShrink: 0,
-          alignSelf: 'stretch',
-        }} title="定位回自己"
-          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.5)'; e.currentTarget.style.background = 'rgba(233,30,140,0.18)'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.3)'; e.currentTarget.style.background = 'rgba(233,30,140,0.1)'; }}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
-          </svg>
-          定位
-        </button>
+        {/* ── Expanded content ── */}
+        <div style={{
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          overflowY: 'auto',
+          maxHeight: 'calc(60vh - 100px)',
+        }}>
+          {/* Species list */}
+          <div style={{ padding: '4px 0' }}>
+            {focusedEntries.map((entry, idx) => {
+              const isActive = idx === speciesIndex;
+              const label = getSpeciesLabel(entry);
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    onJumpToSpecies?.(idx);
+                    setDrawerOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    minHeight: 44,
+                    padding: '8px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    background: isActive ? 'rgba(255,107,53,0.12)' : 'transparent',
+                    border: 'none',
+                    borderLeft: isActive ? '2px solid #FF6B35' : '2px solid transparent',
+                    color: isActive ? '#FF6B35' : 'rgba(255,255,255,0.7)',
+                    fontSize: 13,
+                    fontWeight: isActive ? 600 : 400,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  {isActive && <span style={{ fontSize: 8, flexShrink: 0 }}>&#x25CF;</span>}
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Locate button */}
+          <div style={{ padding: '8px 12px 12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <button type="button" onClick={onLocate} style={{
+              width: '100%',
+              background: 'rgba(233,30,140,0.1)',
+              border: '1px solid rgba(233,30,140,0.3)',
+              borderRadius: 8, cursor: 'pointer',
+              padding: '10px 0',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              color: '#E91E8C', fontSize: 13, fontWeight: 500,
+            }} title="定位回自己">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
+              </svg>
+              定位回自己
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -224,19 +281,4 @@ const navBtnStyle = {
   display: 'flex',
   alignItems: 'center',
   borderRadius: 4,
-};
-
-const navBtnStyleMobile = {
-  background: 'rgba(255,255,255,0.08)',
-  border: 'none',
-  cursor: 'pointer',
-  color: 'rgba(255,255,255,0.65)',
-  width: 28,
-  height: 28,
-  padding: 0,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderRadius: 6,
-  flexShrink: 0,
 };
