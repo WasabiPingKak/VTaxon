@@ -250,35 +250,42 @@ export function collectAllPaths(entries) {
 
 const AUTO_EXPAND_THRESHOLD = 5;
 
+/** Effective child count: taxonomy children + vtubers (visual children). */
+function effectiveChildCount(node) {
+  return node.children.size + node.vtubers.length;
+}
+
 /**
  * Recursively expand children into pathSet when a node has ≤ threshold children.
- * Each level independently checks children.size ≤ 5; stops drilling when exceeded.
+ * Each level independently checks effectiveChildCount ≤ 5; stops drilling when exceeded.
  */
 export function autoExpandPaths(node, pathSet) {
-  if (!node || node.children.size === 0) return;
-  if (node.children.size <= AUTO_EXPAND_THRESHOLD) {
-    // ≤5 子節點：全部展開 + 遞迴（含 size===1）
+  if (!node || effectiveChildCount(node) === 0) return;
+  if (effectiveChildCount(node) <= AUTO_EXPAND_THRESHOLD) {
+    // ≤5 有效子節點：全部展開 + 遞迴（含 size===1）
     for (const child of node.children.values()) {
       pathSet.add(child.pathKey);
       autoExpandPaths(child, pathSet);
     }
   } else {
-    // >5 子節點：仍檢查每個子節點是否為單子鏈，是則自動展開
+    // >5 有效子節點：仍檢查每個子節點是否為單子鏈，是則自動展開
     for (const child of node.children.values()) {
       expandSingleChildChain(child, pathSet);
     }
   }
 }
 
-/** 若節點只有 1 個子節點，展開它並遞迴向下直到分叉或葉 */
+/** 若節點只有 1 個有效子節點（含 vtuber），展開它並遞迴向下直到分叉或葉 */
 function expandSingleChildChain(node, pathSet) {
-  if (!node || node.children.size !== 1) return;
+  if (!node || effectiveChildCount(node) !== 1) return;
   pathSet.add(node.pathKey);
+  // 單一有效子節點是 vtuber（無分類子節點）→ 展開即可，不需遞迴
+  if (node.children.size === 0) return;
   const child = node.children.values().next().value;
   pathSet.add(child.pathKey);
-  if (child.children.size === 1) {
+  if (effectiveChildCount(child) === 1) {
     expandSingleChildChain(child, pathSet);
-  } else if (child.children.size <= AUTO_EXPAND_THRESHOLD) {
+  } else if (effectiveChildCount(child) <= AUTO_EXPAND_THRESHOLD) {
     autoExpandPaths(child, pathSet);
   } else {
     // 子節點 >5：再遞迴檢查孫節點的單子鏈
@@ -300,8 +307,8 @@ export function extendSingleChildChains(node, pathSet) {
       extendSingleChildChains(child, pathSet);
     }
   }
-  // If this node has exactly one child and that child is not yet expanded, expand it
-  if (node.children.size === 1) {
+  // If this node has exactly one effective child and that child is not yet expanded, expand it
+  if (effectiveChildCount(node) === 1 && node.children.size === 1) {
     const child = node.children.values().next().value;
     if (!pathSet.has(child.pathKey)) {
       pathSet.add(child.pathKey);
