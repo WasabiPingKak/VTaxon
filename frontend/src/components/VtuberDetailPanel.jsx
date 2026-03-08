@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import RankBadge from './RankBadge';
+import OrgBadge from './OrgBadge';
 import { YouTubeIcon, TwitchIcon, SNS_ICON_MAP, SNS_LABELS } from './SnsIcons';
 import ProfileInfoCard from './ProfileInfoCard';
 import { useAuth } from '../lib/AuthContext';
@@ -433,9 +434,10 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
           </div>
 
           {/* Display name */}
-          <div style={{ textAlign: 'center', fontSize: '1.2em', fontWeight: 600, marginBottom: '10px' }}>
+          <div style={{ textAlign: 'center', fontSize: '1.2em', fontWeight: 600, marginBottom: '4px' }}>
             {entry.display_name}
           </div>
+          <OrgBadge orgType={entry.org_type} organization={entry.organization} style={{ textAlign: 'center', marginBottom: '10px' }} />
 
           {/* Links row */}
           <div style={{ marginBottom: '16px' }}>
