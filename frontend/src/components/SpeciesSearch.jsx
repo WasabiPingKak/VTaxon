@@ -356,7 +356,7 @@ function BreedQuickButtons({ onPickCategory }) {
   useEffect(() => {
     api.getBreedCategories().then(data => {
       const all = data.categories || [];
-      setCategories(all.filter(c => c.breed_count >= 10));
+      setCategories(all);
     }).catch(() => {});
   }, []);
 

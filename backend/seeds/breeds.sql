@@ -6347,7 +6347,7 @@ ON CONFLICT (taxon_id, name_en) DO UPDATE SET wikidata_id = EXCLUDED.wikidata_id
 -- 花枝鼠 Rattus norvegicus (taxon_id=2439261): 8 品種
 -- ============================================================
 INSERT INTO species_cache (taxon_id, scientific_name, common_name_zh, taxon_rank, taxon_path, kingdom, phylum, class, order_, family, genus)
-VALUES (2439261, 'Rattus norvegicus', '花枝鼠', 'SPECIES',
+VALUES (2439261, 'Rattus norvegicus', '褐家鼠', 'SPECIES',
   'Animalia|Chordata|Mammalia|Rodentia|Muridae|Rattus|Rattus norvegicus',
   'Animalia', 'Chordata', 'Mammalia', 'Rodentia', 'Muridae', 'Rattus')
 ON CONFLICT (taxon_id) DO NOTHING;
