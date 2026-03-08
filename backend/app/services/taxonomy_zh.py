@@ -328,7 +328,6 @@ SPECIES_ZH_OVERRIDES = {
     8460871: '前突三角龍',     # Triceratops prorsus — extinct, no zh in Wikidata/TaiCOL
     5341748: '毒茄蔘',         # Mandragora officinarum — Wikidata has 茄蔘, 台灣常用 毒茄蔘
     2435023: '兔猻',           # Felis manul (Otocolobus manul) — Wikidata/TaiCOL 可能漏掉
-    2439261: '花枝鼠',         # Rattus norvegicus — 馴化型態俗稱花枝鼠/賞玩鼠
 }
 
 

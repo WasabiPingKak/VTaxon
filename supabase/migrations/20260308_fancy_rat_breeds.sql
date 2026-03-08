@@ -5,10 +5,10 @@
 -- Production (public)
 -- ============================================================
 INSERT INTO public.species_cache (taxon_id, scientific_name, common_name_zh, taxon_rank, taxon_path, kingdom, phylum, class, order_, family, genus)
-VALUES (2439261, 'Rattus norvegicus', '花枝鼠', 'SPECIES',
+VALUES (2439261, 'Rattus norvegicus', '褐家鼠', 'SPECIES',
   'Animalia|Chordata|Mammalia|Rodentia|Muridae|Rattus|Rattus norvegicus',
   'Animalia', 'Chordata', 'Mammalia', 'Rodentia', 'Muridae', 'Rattus')
-ON CONFLICT (taxon_id) DO UPDATE SET common_name_zh = EXCLUDED.common_name_zh;
+ON CONFLICT (taxon_id) DO NOTHING;
 
 INSERT INTO public.breeds (taxon_id, name_en, name_zh, source) VALUES (2439261, 'Fancy Rat', '花枝鼠', 'manual')
 ON CONFLICT (taxon_id, name_en) DO UPDATE SET name_zh = EXCLUDED.name_zh, source = EXCLUDED.source;
@@ -31,10 +31,10 @@ ON CONFLICT (taxon_id, name_en) DO UPDATE SET name_zh = EXCLUDED.name_zh, source
 -- Staging (staging)
 -- ============================================================
 INSERT INTO staging.species_cache (taxon_id, scientific_name, common_name_zh, taxon_rank, taxon_path, kingdom, phylum, class, order_, family, genus)
-VALUES (2439261, 'Rattus norvegicus', '花枝鼠', 'SPECIES',
+VALUES (2439261, 'Rattus norvegicus', '褐家鼠', 'SPECIES',
   'Animalia|Chordata|Mammalia|Rodentia|Muridae|Rattus|Rattus norvegicus',
   'Animalia', 'Chordata', 'Mammalia', 'Rodentia', 'Muridae', 'Rattus')
-ON CONFLICT (taxon_id) DO UPDATE SET common_name_zh = EXCLUDED.common_name_zh;
+ON CONFLICT (taxon_id) DO NOTHING;
 
 INSERT INTO staging.breeds (taxon_id, name_en, name_zh, source) VALUES (2439261, 'Fancy Rat', '花枝鼠', 'manual')
 ON CONFLICT (taxon_id, name_en) DO UPDATE SET name_zh = EXCLUDED.name_zh, source = EXCLUDED.source;
