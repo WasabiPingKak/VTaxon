@@ -84,11 +84,10 @@ def export_fictional():
             'total_requests': len(requests),
         },
         'instructions': (
-            '以下是已受理的虛構物種新增回報。請根據 reference_data 中的分類體系和'
-            '現有物種清單，判斷每筆回報應歸入哪個 origin / sub_origin，'
-            '並為每筆建立 fictional_species 記錄。'
-            '如果回報的物種已存在於 existing_fictional_species 中，請標註為重複。'
-            '完成後將每筆 request 的 status 更新為 completed。'
+            '以下是已受理的虛構物種回報。'
+            '請檢查這些物種是否有確切的文化來源或典故，使用者填的物種是否有具體可聯想的外型。'
+            '除了評估適合分類在目前系統中的哪個分類以外，也可以獨立為比較特殊的物種建立新的分類。'
+            '請跟我討論接下來的處理方式。'
         ),
         'requests': [
             {
@@ -159,11 +158,10 @@ def export_breeds():
             'total_requests': len(requests),
         },
         'instructions': (
-            '以下是已受理的品種新增回報。請根據每筆回報的 species_context 和'
-            ' existing_breeds_for_species，判斷品種名稱是否正確、是否已存在，'
-            '並為每筆建立 breeds 記錄（需指定 taxon_id、name_en、name_zh）。'
-            '如果回報的品種已存在於 existing_breeds_for_species 中，請標註為重複。'
-            '完成後將每筆 request 的 status 更新為 completed。'
+            '以下是已受理的品種新增回報。'
+            '請根據每筆回報，判斷品種名稱是否正確、是否已存在。'
+            '回報為什麼在系統中查不到指定的品種或物種名稱。'
+            '然後跟我討論接下來的處理方式。'
         ),
         'requests': result_requests,
     })
