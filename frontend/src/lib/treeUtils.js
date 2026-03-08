@@ -256,15 +256,33 @@ const AUTO_EXPAND_THRESHOLD = 5;
  */
 export function autoExpandPaths(node, pathSet) {
   if (!node || node.children.size === 0) return;
-  if (node.children.size === 1) {
-    // Special case: 只有一個子節點時無條件遞迴展開
-    const child = node.children.values().next().value;
-    pathSet.add(child.pathKey);
-    autoExpandPaths(child, pathSet);
-  } else if (node.children.size <= AUTO_EXPAND_THRESHOLD) {
+  if (node.children.size <= AUTO_EXPAND_THRESHOLD) {
+    // ≤5 子節點：全部展開 + 遞迴（含 size===1）
     for (const child of node.children.values()) {
       pathSet.add(child.pathKey);
       autoExpandPaths(child, pathSet);
+    }
+  } else {
+    // >5 子節點：仍檢查每個子節點是否為單子鏈，是則自動展開
+    for (const child of node.children.values()) {
+      expandSingleChildChain(child, pathSet);
+    }
+  }
+}
+
+/** 若節點只有 1 個子節點，展開它並遞迴向下直到分叉或葉 */
+function expandSingleChildChain(node, pathSet) {
+  if (!node || node.children.size !== 1) return;
+  const child = node.children.values().next().value;
+  pathSet.add(child.pathKey);
+  if (child.children.size === 1) {
+    expandSingleChildChain(child, pathSet);
+  } else if (child.children.size <= AUTO_EXPAND_THRESHOLD) {
+    autoExpandPaths(child, pathSet);
+  } else {
+    // 子節點 >5：再遞迴檢查孫節點的單子鏈
+    for (const grandchild of child.children.values()) {
+      expandSingleChildChain(grandchild, pathSet);
     }
   }
 }
