@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, extendSingleChildChains, expandAllSingleChildChains, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths, buildBreedPaths, entryToVtuberPathKey, buildTree, buildFictionalTree } from '../../lib/treeUtils';
+import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths, buildBreedPaths, entryToVtuberPathKey } from '../../lib/treeUtils';
 import GraphCanvas from './GraphCanvas';
 import { drawGraph, createStarField } from './renderers';
 import useTreeLayout from '../../hooks/useTreeLayout';
@@ -19,7 +19,6 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const canvasRef = useRef(null);
   const starFieldRef = useRef(null);
   const initialFitDone = useRef(false);
-  const expandedStable = useRef(false);
   const nodesRef = useRef([]);
   const cameraTimerRef = useRef(null);
 
@@ -116,7 +115,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
           }
         }
 
-        // Single-child chain expansion is handled by the normalize useEffect
+        // autoExpandPaths (called via handleToggle) handles single-child chains on demand
         setExpandedSet(defaultExpanded);
       })
       .catch(err => {
@@ -128,27 +127,6 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       });
     return () => { cancelled = true; };
   }, [authLoading, currentUser?.id, fetchTreeData]);
-
-  // Normalize expandedSet: ensure all single-child chains are expanded after any change.
-  // Real tree: expand ALL single-child chains (full tree scan).
-  // Fictional tree: only extend from already-expanded paths (keeps default collapsed).
-  useEffect(() => {
-    if (!entries?.length) return;
-    const next = new Set(expandedSet);
-    const sizeBefore = next.size;
-    const tempTree = buildTree(entries);
-    expandAllSingleChildChains(tempTree, next);
-    if (fictionalEntries?.length) {
-      const tempFictTree = buildFictionalTree(fictionalEntries);
-      extendSingleChildChains(tempFictTree, next);
-    }
-    if (next.size > sizeBefore) {
-      expandedStable.current = false;
-      setExpandedSet(next);
-    } else {
-      expandedStable.current = true;
-    }
-  }, [expandedSet, entries, fictionalEntries]);
 
   // Auto-focus logged-in user
   useEffect(() => {
@@ -633,11 +611,9 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     starFieldRef.current = createStarField(2000, 2000);
   }, []);
 
-  // Fit view on first layout — wait until expandedSet has stabilized
-  // (single-child chain expansion may change the layout after initial load)
+  // Fit view on first layout
   useEffect(() => {
     if (initialFitDone.current || !bounds || nodes.length === 0) return;
-    if (!expandedStable.current) return;
     initialFitDone.current = true;
 
     setTimeout(() => {
