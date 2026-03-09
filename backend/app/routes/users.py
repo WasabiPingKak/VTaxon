@@ -53,6 +53,7 @@ def recent_users():
                 VtuberTrait.user_id,
                 SpeciesCache.common_name_zh,
                 SpeciesCache.scientific_name,
+                SpeciesCache.taxon_rank,
                 Breed.name_zh.label('breed_zh'),
                 Breed.name_en.label('breed_en'),
                 FictionalSpecies.name_zh.label('fict_zh'),
@@ -66,7 +67,12 @@ def recent_users():
             .filter(VtuberTrait.created_at > since)
             .all()
         )
-        for uid, sp_zh, sp_sci, br_zh, br_en, fi_zh, fi_en in trait_rows:
+        for uid, sp_zh, sp_sci, sp_rank, br_zh, br_en, fi_zh, fi_en in trait_rows:
+            # Strip genus suffix "屬" from species-level Chinese names
+            if (sp_zh and sp_zh.endswith('屬') and len(sp_zh) >= 2
+                    and (sp_rank or '').upper() in
+                    ('SPECIES', 'SUBSPECIES', 'VARIETY')):
+                sp_zh = sp_zh[:-1]
             # Prefer breed name if present, then species name, then fictional
             if br_zh or br_en:
                 name = br_zh or br_en
