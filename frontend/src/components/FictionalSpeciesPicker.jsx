@@ -73,21 +73,41 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
     );
   }, [allSpecies, searchQuery]);
 
-  // Group filtered species by origin → sub_origin → { types, directSpecies }
-  const grouped = useMemo(() => {
-    // First pass: collect all type names from 4-segment paths
-    const typeNamesPerSub = new Map(); // key: "origin|sub_origin" → Set of type names
-    for (const sp of filteredSpecies) {
+  // Pre-compute type names from ALL species (not just filtered) so search doesn't break type grouping
+  const globalTypeNamesPerSub = useMemo(() => {
+    const m = new Map(); // key: "origin|sub_origin" → Set of type names
+    for (const sp of allSpecies) {
       if (!sp.category_path) continue;
       const segments = sp.category_path.split('|');
       if (segments.length === 4) {
         const subKey = `${segments[0]}|${segments[1]}`;
-        if (!typeNamesPerSub.has(subKey)) typeNamesPerSub.set(subKey, new Set());
-        typeNamesPerSub.get(subKey).add(segments[2]);
+        if (!m.has(subKey)) m.set(subKey, new Set());
+        m.get(subKey).add(segments[2]);
       }
     }
+    return m;
+  }, [allSpecies]);
 
-    // Second pass: group species
+  // Index type nodes by category_path for quick lookup when we need to inject them during search
+  const typeNodeByPath = useMemo(() => {
+    const m = new Map();
+    for (const sp of allSpecies) {
+      if (!sp.category_path) continue;
+      const segments = sp.category_path.split('|');
+      if (segments.length === 3) {
+        const subKey = `${segments[0]}|${segments[1]}`;
+        const knownTypes = globalTypeNamesPerSub.get(subKey);
+        if (knownTypes && knownTypes.has(segments[2])) {
+          m.set(sp.category_path, sp);
+        }
+      }
+    }
+    return m;
+  }, [allSpecies, globalTypeNamesPerSub]);
+
+  // Group filtered species by origin → sub_origin → { types, directSpecies }
+  const grouped = useMemo(() => {
+    // Group species
     const map = new Map();
     for (const sp of filteredSpecies) {
       const origin = sp.origin || '其他';
@@ -107,7 +127,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
       }
 
       const segments = sp.category_path.split('|');
-      const knownTypes = typeNamesPerSub.get(subKey);
+      const knownTypes = globalTypeNamesPerSub.get(subKey);
 
       if (segments.length === 4) {
         // Leaf species under a type
@@ -116,6 +136,13 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
           group.types.set(typeName, { typeNode: null, children: [] });
         }
         group.types.get(typeName).children.push(sp);
+        // Ensure the type node is always present when its children are shown
+        const entry = group.types.get(typeName);
+        if (!entry.typeNode) {
+          const typePath = `${segments[0]}|${segments[1]}|${typeName}`;
+          const tn = typeNodeByPath.get(typePath);
+          if (tn) entry.typeNode = tn;
+        }
       } else if (segments.length === 3 && knownTypes && knownTypes.has(segments[2])) {
         // This is a type node itself (3-segment path matching a known type name)
         const typeName = segments[2];
@@ -129,7 +156,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
       }
     }
     return map;
-  }, [filteredSpecies]);
+  }, [filteredSpecies, globalTypeNamesPerSub, typeNodeByPath]);
 
   // Auto-expand all when searching
   const isSearching = searchQuery.trim().length > 0;
