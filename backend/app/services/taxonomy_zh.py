@@ -331,6 +331,7 @@ SPECIES_ZH_OVERRIDES = {
     5341748: '毒茄蔘',         # Mandragora officinarum — Wikidata has 茄蔘, 台灣常用 毒茄蔘
     2435023: '兔猻',           # Felis manul (Otocolobus manul) — Wikidata/TaiCOL 可能漏掉
     11186113: '紅爪雨林蠍',   # Gigantometrus swammerdami — TaiCOL/Wikidata 均無收錄
+    5219672: '西部灰松鼠',   # Sciurus griseus — TaiCOL/Wikidata 均無收錄
 }
 
 
