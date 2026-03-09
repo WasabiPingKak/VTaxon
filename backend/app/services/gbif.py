@@ -638,7 +638,11 @@ def _cache_enriched_species(species_list):
                 override = get_species_zh_override(taxon_id)
                 if override and existing.common_name_zh != override:
                     existing.common_name_zh = override
-                elif sp.get('common_name_zh') and not existing.common_name_zh:
+                elif sp.get('common_name_zh') and (
+                    not existing.common_name_zh
+                    or (existing.common_name_zh.endswith('屬')
+                        and not sp['common_name_zh'].endswith('屬'))
+                ):
                     existing.common_name_zh = sp['common_name_zh']
                 # Backfill alternative_names_zh if empty
                 if sp.get('alternative_names_zh') and not existing.alternative_names_zh:

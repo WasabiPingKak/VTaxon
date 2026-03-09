@@ -22,6 +22,19 @@ _STANDARD_RANKS = ['KINGDOM', 'PHYLUM', 'CLASS', 'ORDER', 'FAMILY', 'GENUS', 'SP
 # Medusozoa classes: Cnidaria classes that belong under the Medusozoa subphylum
 _MEDUSOZOA_CLASSES = {'Scyphozoa', 'Cubozoa', 'Staurozoa', 'Hydrozoa'}
 
+_SPECIES_LEVEL_RANKS = {'SPECIES', 'SUBSPECIES', 'VARIETY'}
+
+
+def _strip_genus_suffix(name_zh, taxon_rank):
+    """Strip trailing '屬' from species-level Chinese names.
+
+    Wikidata sometimes returns genus-level names for species-level taxa.
+    """
+    if (name_zh and name_zh.endswith('屬') and len(name_zh) >= 2
+            and (taxon_rank or '').upper() in _SPECIES_LEVEL_RANKS):
+        return name_zh[:-1]
+    return name_zh
+
 
 def _compute_path_ranks(taxon_path, taxon_rank):
     """Compute a rank label array for each segment of taxon_path.
@@ -201,7 +214,7 @@ def get_taxonomy_tree():
             'taxon_path': taxon_path,
             'path_ranks': _compute_path_ranks(taxon_path, species.taxon_rank),
             'scientific_name': species.scientific_name,
-            'common_name_zh': species.common_name_zh,
+            'common_name_zh': _strip_genus_suffix(species.common_name_zh, species.taxon_rank),
             'alternative_names_zh': species.alternative_names_zh,
             'breed_name': breed_name,
             'breed_id': breed_id,
