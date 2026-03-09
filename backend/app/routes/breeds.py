@@ -114,7 +114,7 @@ def search_breeds():
     for b in breeds:
         d = b.to_dict()
         if b.species:
-            d['species_name_zh'] = b.species.common_name_zh
+            d['species_name_zh'] = b.species._effective_common_name_zh()
             d['species_scientific_name'] = b.species.scientific_name
         results.append(d)
 
