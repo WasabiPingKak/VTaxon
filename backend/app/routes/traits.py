@@ -110,11 +110,41 @@ def create_trait():
         if not fictional:
             return jsonify({'error': 'Fictional species not found'}), 404
 
-        existing = VtuberTrait.query.filter_by(
-            user_id=g.current_user_id,
-            fictional_species_id=fictional_species_id).first()
-        if existing:
-            return jsonify({'error': 'You already have this fictional species trait'}), 409
+        new_path = fictional.category_path
+
+        # Path conflict detection (same logic as real species)
+        if new_path:
+            existing_fictional_traits = VtuberTrait.query.filter_by(
+                user_id=g.current_user_id,
+            ).filter(
+                VtuberTrait.fictional_species_id.isnot(None),
+            ).all()
+
+            for et in existing_fictional_traits:
+                if et.fictional_species_id == fictional_species_id:
+                    return jsonify({'error': '你已經有這個虛構物種的特徵了'}), 409
+
+                ex_fictional = et.fictional
+                if not ex_fictional or not ex_fictional.category_path:
+                    continue
+                ex_path = ex_fictional.category_path
+
+                # New is descendant (more specific) → replace existing
+                if new_path.startswith(ex_path + '|'):
+                    replaced_info = {
+                        'replaced_trait_id': et.id,
+                        'replaced_display_name': ex_fictional.name_zh or ex_fictional.name,
+                    }
+                    db.session.delete(et)
+                    break
+
+                # New is ancestor (less specific) → block
+                if ex_path.startswith(new_path + '|'):
+                    return jsonify({
+                        'error': f'無法新增：你已經有「{ex_fictional.name_zh or ex_fictional.name}」，範圍比這個更小更準確',
+                        'code': 'ancestor_blocked',
+                        'existing_display_name': ex_fictional.name_zh or ex_fictional.name,
+                    }), 409
 
     # Validate breed_id if provided
     breed_id = data.get('breed_id')

@@ -37,6 +37,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrigins, setExpandedOrigins] = useState({});
   const [expandedSubs, setExpandedSubs] = useState({});
+  const [expandedTypes, setExpandedTypes] = useState({});
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [requestForm, setRequestForm] = useState({ name_zh: '', name_en: '', suggested_origin: '', description: '' });
   const [submitting, setSubmitting] = useState(false);
@@ -72,16 +73,60 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
     );
   }, [allSpecies, searchQuery]);
 
-  // Group filtered species by origin → sub_origin
+  // Group filtered species by origin → sub_origin → { types, directSpecies }
   const grouped = useMemo(() => {
+    // First pass: collect all type names from 4-segment paths
+    const typeNamesPerSub = new Map(); // key: "origin|sub_origin" → Set of type names
+    for (const sp of filteredSpecies) {
+      if (!sp.category_path) continue;
+      const segments = sp.category_path.split('|');
+      if (segments.length === 4) {
+        const subKey = `${segments[0]}|${segments[1]}`;
+        if (!typeNamesPerSub.has(subKey)) typeNamesPerSub.set(subKey, new Set());
+        typeNamesPerSub.get(subKey).add(segments[2]);
+      }
+    }
+
+    // Second pass: group species
     const map = new Map();
     for (const sp of filteredSpecies) {
       const origin = sp.origin || '其他';
       if (!map.has(origin)) map.set(origin, new Map());
       const subMap = map.get(origin);
       const sub = sp.sub_origin || null;
-      if (!subMap.has(sub)) subMap.set(sub, []);
-      subMap.get(sub).push(sp);
+      const subKey = `${origin}|${sub}`;
+
+      if (!subMap.has(sub)) {
+        subMap.set(sub, { types: new Map(), directSpecies: [] });
+      }
+      const group = subMap.get(sub);
+
+      if (!sp.category_path) {
+        group.directSpecies.push(sp);
+        continue;
+      }
+
+      const segments = sp.category_path.split('|');
+      const knownTypes = typeNamesPerSub.get(subKey);
+
+      if (segments.length === 4) {
+        // Leaf species under a type
+        const typeName = segments[2];
+        if (!group.types.has(typeName)) {
+          group.types.set(typeName, { typeNode: null, children: [] });
+        }
+        group.types.get(typeName).children.push(sp);
+      } else if (segments.length === 3 && knownTypes && knownTypes.has(segments[2])) {
+        // This is a type node itself (3-segment path matching a known type name)
+        const typeName = segments[2];
+        if (!group.types.has(typeName)) {
+          group.types.set(typeName, { typeNode: null, children: [] });
+        }
+        group.types.get(typeName).typeNode = sp;
+      } else {
+        // Direct species (3-segment path with no type children, or other)
+        group.directSpecies.push(sp);
+      }
     }
     return map;
   }, [filteredSpecies]);
@@ -95,6 +140,10 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
 
   const toggleSub = useCallback((key) => {
     setExpandedSubs(prev => ({ ...prev, [key]: !prev[key] }));
+  }, []);
+
+  const toggleType = useCallback((key) => {
+    setExpandedTypes(prev => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
   async function handleSubmitRequest(e) {
@@ -150,6 +199,15 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
         )}
         {sortedEntries(grouped, ORIGIN_ORDER).map(([origin, subMap]) => {
           const originExpanded = isSearching || !!expandedOrigins[origin];
+          // Count total species across all subs
+          let totalCount = 0;
+          for (const [, group] of subMap) {
+            totalCount += group.directSpecies.length;
+            for (const [, typeData] of group.types) {
+              totalCount += typeData.children.length;
+              if (typeData.typeNode) totalCount++;
+            }
+          }
           return (
             <div key={origin} style={{ marginBottom: '2px' }}>
               <button
@@ -166,26 +224,36 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
                 <span style={{ fontSize: '0.8em', width: '14px' }}>{originExpanded ? '▼' : '▶'}</span>
                 {origin}
                 <span style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>
-                  ({Array.from(subMap.values()).reduce((sum, arr) => sum + arr.length, 0)})
+                  ({totalCount})
                 </span>
               </button>
               {originExpanded && (
                 <div style={{ paddingLeft: '16px' }}>
-                  {sortedEntries(subMap, SUB_ORIGIN_ORDER[origin] || []).map(([sub, species]) => {
+                  {sortedEntries(subMap, SUB_ORIGIN_ORDER[origin] || []).map(([sub, group]) => {
                     const subKey = `${origin}|${sub}`;
                     const hasSubCategories = subMap.size > 1 || sub !== null;
                     const subExpanded = isSearching || !hasSubCategories || !!expandedSubs[subKey];
 
+                    // Count items in this sub
+                    let subCount = group.directSpecies.length;
+                    for (const [, typeData] of group.types) {
+                      subCount += typeData.children.length;
+                      if (typeData.typeNode) subCount++;
+                    }
+
                     if (!hasSubCategories) {
-                      // No sub_origin, render species directly
-                      return species.map(sp => (
-                        <SpeciesItem
-                          key={sp.id}
-                          species={sp}
-                          isAdded={existingSet.has(sp.id)}
+                      return (
+                        <SubContent
+                          key={subKey}
+                          subKey={subKey}
+                          group={group}
+                          existingSet={existingSet}
                           onAdd={onAdd}
+                          isSearching={isSearching}
+                          expandedTypes={expandedTypes}
+                          toggleType={toggleType}
                         />
-                      ));
+                      );
                     }
 
                     return (
@@ -204,19 +272,20 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
                           <span style={{ fontSize: '0.75em', width: '12px' }}>{subExpanded ? '▼' : '▶'}</span>
                           {sub || '（未分類）'}
                           <span style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.25)' }}>
-                            ({species.length})
+                            ({subCount})
                           </span>
                         </button>
                         {subExpanded && (
                           <div style={{ paddingLeft: '12px' }}>
-                            {species.map(sp => (
-                              <SpeciesItem
-                                key={sp.id}
-                                species={sp}
-                                isAdded={existingSet.has(sp.id)}
-                                onAdd={onAdd}
-                              />
-                            ))}
+                            <SubContent
+                              subKey={subKey}
+                              group={group}
+                              existingSet={existingSet}
+                              onAdd={onAdd}
+                              isSearching={isSearching}
+                              expandedTypes={expandedTypes}
+                              toggleType={toggleType}
+                            />
                           </div>
                         )}
                       </div>
@@ -406,6 +475,138 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+
+/** Renders type rows + direct species inside a sub_origin group */
+function SubContent({ subKey, group, existingSet, onAdd, isSearching, expandedTypes, toggleType }) {
+  return (
+    <>
+      {/* Type rows */}
+      {Array.from(group.types.entries()).map(([typeName, typeData]) => (
+        <TypeRow
+          key={`${subKey}|${typeName}`}
+          typeKey={`${subKey}|${typeName}`}
+          typeName={typeName}
+          typeNode={typeData.typeNode}
+          children={typeData.children}
+          existingSet={existingSet}
+          onAdd={onAdd}
+          isSearching={isSearching}
+          expanded={isSearching || !!expandedTypes[`${subKey}|${typeName}`]}
+          onToggle={() => toggleType(`${subKey}|${typeName}`)}
+        />
+      ))}
+      {/* Direct species (no type grouping) */}
+      {group.directSpecies.map(sp => (
+        <SpeciesItem
+          key={sp.id}
+          species={sp}
+          isAdded={existingSet.has(sp.id)}
+          onAdd={onAdd}
+        />
+      ))}
+    </>
+  );
+}
+
+
+/** A type-level row: expandable with optional "add" button */
+function TypeRow({ typeKey, typeName, typeNode, children, existingSet, onAdd, isSearching, expanded, onToggle }) {
+  const [adding, setAdding] = useState(false);
+  const isAdded = typeNode ? existingSet.has(typeNode.id) : false;
+  const hasChildren = children.length > 0;
+
+  async function handleAddType() {
+    if (!typeNode || isAdded || adding) return;
+    setAdding(true);
+    try {
+      await onAdd(typeNode);
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  return (
+    <div style={{ marginBottom: '1px' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        padding: '5px 8px',
+        background: 'rgba(168,85,247,0.04)',
+        borderRadius: '3px',
+      }}>
+        {/* Expand toggle */}
+        {hasChildren ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'rgba(255,255,255,0.5)', fontSize: '0.7em',
+              width: '16px', padding: 0, flexShrink: 0,
+            }}
+          >
+            {expanded ? '▼' : '▶'}
+          </button>
+        ) : (
+          <span style={{ width: '16px', flexShrink: 0 }} />
+        )}
+
+        {/* Type name + count */}
+        <button
+          type="button"
+          onClick={hasChildren ? onToggle : undefined}
+          style={{
+            flex: 1, minWidth: 0, textAlign: 'left',
+            background: 'none', border: 'none',
+            cursor: hasChildren ? 'pointer' : 'default',
+            color: 'rgba(255,255,255,0.65)', fontSize: '0.85em',
+            fontWeight: 600, padding: 0,
+            display: 'flex', alignItems: 'center', gap: '6px',
+          }}
+        >
+          {typeName}
+          {hasChildren && (
+            <span style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.25)', fontWeight: 400 }}>
+              ({children.length})
+            </span>
+          )}
+        </button>
+
+        {/* Add button for type node */}
+        {typeNode && (
+          <button
+            type="button"
+            onClick={handleAddType}
+            disabled={isAdded || adding}
+            style={{
+              padding: '2px 8px', borderRadius: '3px', fontSize: '0.75em',
+              fontWeight: 600, cursor: isAdded ? 'default' : 'pointer',
+              border: 'none', flexShrink: 0, marginLeft: '6px',
+              background: isAdded ? 'rgba(255,255,255,0.04)' : 'rgba(168,85,247,0.15)',
+              color: isAdded ? 'rgba(255,255,255,0.3)' : '#a855f7',
+            }}
+          >
+            {isAdded ? '已新增' : adding ? '…' : '新增'}
+          </button>
+        )}
+      </div>
+
+      {/* Expanded children */}
+      {expanded && hasChildren && (
+        <div style={{ paddingLeft: '16px' }}>
+          {children.map(sp => (
+            <SpeciesItem
+              key={sp.id}
+              species={sp}
+              isAdded={existingSet.has(sp.id)}
+              onAdd={onAdd}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
