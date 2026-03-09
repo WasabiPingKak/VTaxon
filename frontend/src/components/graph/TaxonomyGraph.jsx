@@ -19,6 +19,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const canvasRef = useRef(null);
   const starFieldRef = useRef(null);
   const initialFitDone = useRef(false);
+  const expandedStable = useRef(false);
   const nodesRef = useRef([]);
   const cameraTimerRef = useRef(null);
 
@@ -142,7 +143,10 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       extendSingleChildChains(tempFictTree, next);
     }
     if (next.size > sizeBefore) {
+      expandedStable.current = false;
       setExpandedSet(next);
+    } else {
+      expandedStable.current = true;
     }
   }, [expandedSet, entries, fictionalEntries]);
 
@@ -629,13 +633,12 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     starFieldRef.current = createStarField(2000, 2000);
   }, []);
 
-  // Fit view on first layout
+  // Fit view on first layout — wait until expandedSet has stabilized
+  // (single-child chain expansion may change the layout after initial load)
   useEffect(() => {
     if (initialFitDone.current || !bounds || nodes.length === 0) return;
+    if (!expandedStable.current) return;
     initialFitDone.current = true;
-
-    const centerX = (bounds.minX + bounds.maxX) / 2;
-    const centerY = (bounds.minY + bounds.maxY) / 2;
 
     setTimeout(() => {
       if (currentUser) {
@@ -655,8 +658,8 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
           canvasRef.current?.fitBounds(bounds.minX, bounds.minY, bounds.maxX, bounds.maxY, ...cameraInsetsRef.current);
         }
       } else {
-        // Guest: fit the tree overview
-        canvasRef.current?.fitView(centerX, centerY, 0.5);
+        // Guest: fit the whole tree with adaptive scale
+        canvasRef.current?.fitBounds(bounds.minX, bounds.minY, bounds.maxX, bounds.maxY, ...cameraInsetsRef.current);
       }
     }, 100);
   }, [bounds, nodes, currentUser, entries, fictionalEntries]);
