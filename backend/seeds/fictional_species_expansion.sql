@@ -10,16 +10,16 @@
 
 -- === 能量態生命 (Energy-based Life) ===
 INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
-('Elemental Spirit',  '元素精靈',   '非物質生命', '能量態生命', '非物質生命|能量態生命|Elemental Spirit',  '元素力量凝聚的生命泛稱'),
-('Fire Elemental',    '火元素精靈', '非物質生命', '能量態生命', '非物質生命|能量態生命|Fire Elemental',    '火焰型態的能量生命'),
-('Water Elemental',   '水元素精靈', '非物質生命', '能量態生命', '非物質生命|能量態生命|Water Elemental',   '水流型態的能量生命'),
-('Wind Elemental',    '風元素精靈', '非物質生命', '能量態生命', '非物質生命|能量態生命|Wind Elemental',    '氣流型態的能量生命'),
-('Earth Elemental',   '土元素精靈', '非物質生命', '能量態生命', '非物質生命|能量態生命|Earth Elemental',   '大地型態的能量生命'),
-('Lightning Being',   '雷電生命',   '非物質生命', '能量態生命', '非物質生命|能量態生命|Lightning Being',   '電弧型態的能量存在'),
-('Light Spirit',      '光靈',       '非物質生命', '能量態生命', '非物質生命|能量態生命|Light Spirit',      '光能凝聚的精神體'),
-('Shadow Elemental',  '暗影元素',   '非物質生命', '能量態生命', '非物質生命|能量態生命|Shadow Elemental',  '暗能量或虛空構成的生命'),
-('Will-o-the-Wisp',   '鬼火',       '非物質生命', '能量態生命', '非物質生命|能量態生命|Will-o-the-Wisp',  '漂浮的幽光能量體'),
-('Star Spirit',       '星靈',       '非物質生命', '能量態生命', '非物質生命|能量態生命|Star Spirit',       '宇宙能量凝聚的存在')
+('Elemental Spirit',  '元素精靈',   '非物質生命', '能量態生命', '非物質生命|能量態生命|元素精靈|Elemental Spirit',  '元素力量凝聚的生命泛稱'),
+('Fire Elemental',    '火元素精靈', '非物質生命', '能量態生命', '非物質生命|能量態生命|元素精靈|Fire Elemental',    '火焰型態的能量生命'),
+('Water Elemental',   '水元素精靈', '非物質生命', '能量態生命', '非物質生命|能量態生命|元素精靈|Water Elemental',   '水流型態的能量生命'),
+('Wind Elemental',    '風元素精靈', '非物質生命', '能量態生命', '非物質生命|能量態生命|元素精靈|Wind Elemental',    '氣流型態的能量生命'),
+('Earth Elemental',   '土元素精靈', '非物質生命', '能量態生命', '非物質生命|能量態生命|元素精靈|Earth Elemental',   '大地型態的能量生命'),
+('Lightning Being',   '雷電生命',   '非物質生命', '能量態生命', '非物質生命|能量態生命|能量存在|Lightning Being',   '電弧型態的能量存在'),
+('Light Spirit',      '光靈',       '非物質生命', '能量態生命', '非物質生命|能量態生命|能量存在|Light Spirit',      '光能凝聚的精神體'),
+('Shadow Elemental',  '暗影元素',   '非物質生命', '能量態生命', '非物質生命|能量態生命|能量存在|Shadow Elemental',  '暗能量或虛空構成的生命'),
+('Will-o-the-Wisp',   '鬼火',       '非物質生命', '能量態生命', '非物質生命|能量態生命|能量存在|Will-o-the-Wisp',  '漂浮的幽光能量體'),
+('Star Spirit',       '星靈',       '非物質生命', '能量態生命', '非物質生命|能量態生命|能量存在|Star Spirit',       '宇宙能量凝聚的存在')
 ON CONFLICT(name) DO NOTHING;
 
 -- === 意識態生命 (Consciousness-based Life) ===

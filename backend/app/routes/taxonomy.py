@@ -265,12 +265,18 @@ def get_fictional_tree():
 
     entries = []
     for trait, fictional, user in rows:
-        # Build fictional_path: origin|sub_origin|name
-        path_parts = [fictional.origin]
-        if fictional.sub_origin:
-            path_parts.append(fictional.sub_origin)
-        path_parts.append(fictional.name)
-        fictional_path = '|'.join(path_parts)
+        # Use category_path directly; fallback to legacy construction
+        fictional_path = fictional.category_path
+        if not fictional_path:
+            path_parts = [fictional.origin]
+            if fictional.sub_origin:
+                path_parts.append(fictional.sub_origin)
+            path_parts.append(fictional.name)
+            fictional_path = '|'.join(path_parts)
+
+        # Extract type from category_path (4-segment paths have type at index 2)
+        path_segments = fictional_path.split('|')
+        fictional_type = path_segments[2] if len(path_segments) >= 4 else None
 
         pd = user._computed_profile_data()
         entries.append({
@@ -291,6 +297,7 @@ def get_fictional_tree():
             'fictional_name_zh': fictional.name_zh or fictional.name,
             'origin': fictional.origin,
             'sub_origin': fictional.sub_origin,
+            'fictional_type': fictional_type,
         })
 
     result = {'entries': entries}

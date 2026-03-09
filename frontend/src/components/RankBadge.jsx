@@ -21,6 +21,7 @@ const RANK_CONFIG = {
   F_ROOT:       { label: '虛構',   bg: 'rgba(240,171,252,0.15)', color: '#f0abfc', border: 'rgba(240,171,252,0.3)' },
   F_ORIGIN:     { label: '來源',   bg: 'rgba(249,115,22,0.15)',  color: '#f97316', border: 'rgba(249,115,22,0.3)' },
   F_SUB_ORIGIN: { label: '子來源', bg: 'rgba(234,179,8,0.15)',   color: '#eab308', border: 'rgba(234,179,8,0.3)' },
+  F_TYPE:       { label: '類型',   bg: 'rgba(45,212,191,0.15)',  color: '#2dd4bf', border: 'rgba(45,212,191,0.3)' },
   F_SPECIES:    { label: '虛構種', bg: 'rgba(251,113,133,0.15)', color: '#fb7185', border: 'rgba(251,113,133,0.3)' },
 };
 

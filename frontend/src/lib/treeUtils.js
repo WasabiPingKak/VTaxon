@@ -492,7 +492,7 @@ export function collectPathsToDepth(entries, maxDepth) {
 
 const F_ORIGIN_IDX = 0;
 const F_PREFIX = '__F__';
-const F_RANK_NAMES = { 0: 'F_ORIGIN', 1: 'F_SUB_ORIGIN', 2: 'F_SPECIES' };
+const F_RANK_NAMES = { 0: 'F_ORIGIN', 1: 'F_SUB_ORIGIN', 2: 'F_TYPE' };
 
 /**
  * Build a tree structure from fictional entries based on fictional_path.
@@ -514,17 +514,20 @@ export function buildFictionalTree(entries) {
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
       const pathKey = F_PREFIX + '|' + parts.slice(0, i + 1).join('|');
+      const isLast = (i === parts.length - 1);
+      const rank = isLast ? 'F_SPECIES' : (F_RANK_NAMES[i] || 'F_SPECIES');
 
       if (!current.children.has(part)) {
         let nameZh = '';
         if (i === 0) nameZh = entry.origin || '';
         else if (i === 1) nameZh = entry.sub_origin || '';
-        else if (i === 2) nameZh = entry.fictional_name_zh || '';
+        else if (isLast) nameZh = entry.fictional_name_zh || '';
+        else nameZh = part; // type layer — segment text is already Chinese
 
         current.children.set(part, {
           name: part,
           nameZh,
-          rank: F_RANK_NAMES[i] || 'F_SPECIES',
+          rank,
           pathKey,
           count: 0,
           children: new Map(),
@@ -535,7 +538,13 @@ export function buildFictionalTree(entries) {
       const child = current.children.get(part);
       child.count++;
 
-      if (i === parts.length - 1) {
+      // If node was created as F_SPECIES but now appears as a non-last segment,
+      // upgrade to structural rank (handles Western Dragon type node case)
+      if (!isLast && child.rank === 'F_SPECIES' && F_RANK_NAMES[i]) {
+        child.rank = F_RANK_NAMES[i];
+      }
+
+      if (isLast) {
         child.vtubers.push(entry);
       }
 
