@@ -557,6 +557,15 @@ def _enrich_chinese_names(species_list):
         if zh and not _has_cjk(zh):
             sp['common_name_zh'] = None
 
+        # Fix: strip trailing "屬" (genus suffix) for species/subspecies ranks.
+        # Wikidata sometimes returns genus-level names for species-level taxa
+        # (e.g. "獰貓屬" instead of "獰貓" for Caracal caracal).
+        zh = sp.get('common_name_zh')
+        taxon_rank = (sp.get('taxon_rank') or '').upper()
+        if (zh and zh.endswith('屬') and len(zh) >= 2
+                and taxon_rank in ('SPECIES', 'SUBSPECIES', 'VARIETY')):
+            sp['common_name_zh'] = zh[:-1]
+
         # species_zh alias for breadcrumb consistency
         sp['species_zh'] = sp.get('common_name_zh')
 
