@@ -10,6 +10,7 @@ from ..cache import (get_tree_cache, set_tree_cache, invalidate_tree_cache,
 from ..extensions import db
 from ..models import User, VtuberTrait, SpeciesCache, FictionalSpecies, OAuthAccount
 from ..services.gbif import _build_path_zh, _realign_taxon_path
+from ..services.taxonomy_zh import get_species_zh_override
 
 log = logging.getLogger(__name__)
 
@@ -167,6 +168,12 @@ def get_taxonomy_tree():
             if path_zh:
                 needs_commit = True
 
+        # Apply species zh override to DB cache if needed
+        zh_override = get_species_zh_override(species.taxon_id)
+        if zh_override and species.common_name_zh != zh_override:
+            species.common_name_zh = zh_override
+            needs_commit = True
+
         # Realign taxon_path to include empty segments for missing ranks
         taxon_path, path_changed = _realign_taxon_path(species)
         if path_changed:
@@ -200,7 +207,7 @@ def get_taxonomy_tree():
             'taxon_path': taxon_path,
             'path_ranks': _compute_path_ranks(taxon_path, species.taxon_rank),
             'scientific_name': species.scientific_name,
-            'common_name_zh': species._effective_common_name_zh(),
+            'common_name_zh': get_species_zh_override(species.taxon_id) or species._effective_common_name_zh(),
             'alternative_names_zh': species.alternative_names_zh,
             'breed_name': breed_name,
             'breed_id': breed_id,
