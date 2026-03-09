@@ -276,9 +276,13 @@ function drawGridConnectors(ctx, nodes, scale, pm, vp, margin, state) {
     const minColX = colXs[0];
     const maxColX = colXs[colXs.length - 1];
 
-    // Viewport cull: check if parent or bar region is visible
-    const barMidX = (minColX + maxColX) / 2;
-    if (!isInViewport(px, py, vp, margin) && !isInViewport(barMidX, barY, vp, margin * 2)) continue;
+    // Viewport cull: check if the grid connector bounding box overlaps the viewport
+    const maxGridY = Math.max(...colMap.values());
+    const gridLeft = minColX, gridRight = maxColX;
+    const gridTop = Math.min(py, barY), gridBottom = maxGridY;
+    const vpLeft = vp.x - margin, vpRight = vp.x + vp.w + margin;
+    const vpTop = vp.y - margin, vpBottom = vp.y + vp.h + margin;
+    if (gridRight < vpLeft || gridLeft > vpRight || gridBottom < vpTop || gridTop > vpBottom) continue;
 
     // Check if any child in this group is highlighted (edge flash)
     let groupHighlighted = false;
