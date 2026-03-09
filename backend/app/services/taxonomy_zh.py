@@ -332,6 +332,8 @@ SPECIES_ZH_OVERRIDES = {
     2435023: '兔猻',           # Felis manul (Otocolobus manul) — Wikidata/TaiCOL 可能漏掉
     11186113: '紅爪雨林蠍',   # Gigantometrus swammerdami — TaiCOL/Wikidata 均無收錄
     5219672: '西部灰松鼠',   # Sciurus griseus — TaiCOL/Wikidata 均無收錄
+    # --- Subspecies / Variety ---
+    11374585: '家豬',           # Sus scrofa domesticus — common domestic pig
 }
 
 
