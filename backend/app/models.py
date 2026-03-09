@@ -134,6 +134,15 @@ class SpeciesCache(db.Model):
     cached_at = db.Column(db.DateTime(timezone=True), nullable=False,
                           default=lambda: datetime.now(timezone.utc))
 
+    def _effective_common_name_zh(self):
+        """Return common_name_zh with genus suffix '屬' stripped for species-level taxa."""
+        zh = self.common_name_zh
+        if (zh and zh.endswith('屬') and len(zh) >= 2
+                and (self.taxon_rank or '').upper() in
+                ('SPECIES', 'SUBSPECIES', 'VARIETY')):
+            return zh[:-1]
+        return zh
+
     def to_dict(self):
         from .services.taxonomy_zh import get_species_name_override
         path_zh = self.path_zh or {}
@@ -141,7 +150,7 @@ class SpeciesCache(db.Model):
             'taxon_id': self.taxon_id,
             'scientific_name': self.scientific_name,
             'common_name_en': self.common_name_en,
-            'common_name_zh': self.common_name_zh,
+            'common_name_zh': self._effective_common_name_zh(),
             'alternative_names_zh': self.alternative_names_zh,
             'taxon_rank': self.taxon_rank,
             'taxon_path': self.taxon_path,
@@ -460,7 +469,7 @@ class VtuberTrait(db.Model):
     def computed_display_name(self):
         """Compute display_name from related species/fictional for backward compat."""
         if self.species:
-            return (self.species.common_name_zh
+            return (self.species._effective_common_name_zh()
                     or self.species.scientific_name)
         if self.fictional:
             return self.fictional.name_zh or self.fictional.name
