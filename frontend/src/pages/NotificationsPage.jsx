@@ -17,7 +17,7 @@ const TYPE_ICONS = {
 };
 
 const STATUS_LABELS = {
-  received: '已受理',
+  received: '已排入待辦',
   in_progress: '處理中',
   completed: '已完成',
   rejected: '不處理',
