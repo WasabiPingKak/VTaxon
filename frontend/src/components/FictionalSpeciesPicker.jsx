@@ -513,21 +513,9 @@ function SubContent({ subKey, group, existingSet, onAdd, isSearching, expandedTy
 }
 
 
-/** A type-level row: expandable with optional "add" button */
+/** A type-level row: expandable grouping header (not selectable as trait) */
 function TypeRow({ typeKey, typeName, typeNode, children, existingSet, onAdd, isSearching, expanded, onToggle }) {
-  const [adding, setAdding] = useState(false);
-  const isAdded = typeNode ? existingSet.has(typeNode.id) : false;
   const hasChildren = children.length > 0;
-
-  async function handleAddType() {
-    if (!typeNode || isAdded || adding) return;
-    setAdding(true);
-    try {
-      await onAdd(typeNode);
-    } finally {
-      setAdding(false);
-    }
-  }
 
   return (
     <div style={{ marginBottom: '1px' }}>
@@ -574,24 +562,6 @@ function TypeRow({ typeKey, typeName, typeNode, children, existingSet, onAdd, is
             </span>
           )}
         </button>
-
-        {/* Add button for type node */}
-        {typeNode && (
-          <button
-            type="button"
-            onClick={handleAddType}
-            disabled={isAdded || adding}
-            style={{
-              padding: '2px 8px', borderRadius: '3px', fontSize: '0.75em',
-              fontWeight: 600, cursor: isAdded ? 'default' : 'pointer',
-              border: 'none', flexShrink: 0, marginLeft: '6px',
-              background: isAdded ? 'rgba(255,255,255,0.04)' : 'rgba(168,85,247,0.15)',
-              color: isAdded ? 'rgba(255,255,255,0.3)' : '#a855f7',
-            }}
-          >
-            {isAdded ? '已新增' : adding ? '…' : '新增'}
-          </button>
-        )}
       </div>
 
       {/* Expanded children */}
