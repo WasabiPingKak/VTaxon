@@ -64,13 +64,22 @@ export default function SettingsFictional() {
 
   async function handleAdd(species) {
     try {
-      await api.createTrait({ fictional_species_id: species.id });
-      addToast(`已新增虛構物種特徵：${species.name_zh || species.name}`, { type: 'success' });
+      const result = await api.createTrait({ fictional_species_id: species.id });
+      if (result.replaced) {
+        addToast(`已新增「${species.name_zh || species.name}」，取代了「${result.replaced.replaced_display_name}」`, { type: 'success' });
+      } else {
+        addToast(`已新增虛構物種特徵：${species.name_zh || species.name}`, { type: 'success' });
+      }
       setShowPicker(false);
       loadTraits();
     } catch (err) {
       if (err.status === 409) {
-        addToast('你已經有這個虛構物種特徵了', { type: 'warning' });
+        const data = err.data || {};
+        if (data.code === 'ancestor_blocked') {
+          addToast(`無法新增：你已經有「${data.existing_display_name}」，範圍更精確`, { type: 'warning' });
+        } else {
+          addToast('你已經有這個虛構物種特徵了', { type: 'warning' });
+        }
       } else {
         addToast(err.message, { type: 'error' });
       }
