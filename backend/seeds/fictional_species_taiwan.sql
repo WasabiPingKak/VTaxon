@@ -12,5 +12,6 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Girl in Red',         '紅衣小女孩',   '東方神話', '台灣民間傳說', '東方神話|台灣民間傳說|Girl in Red',         '1998年登山錄影帶中拍到的紅衣身影，台灣最著名的現代都市傳說'),
 ('Water Ghost',         '水鬼',         '東方神話', '台灣民間傳說', '東方神話|台灣民間傳說|Water Ghost',         '溺水身亡的亡魂，徘徊於水域尋找替死鬼以求超生輪迴'),
 ('Generals Qi and Ba',  '七爺八爺',     '東方神話', '台灣民間傳說', '東方神話|台灣民間傳說|Generals Qi and Ba',  '城隍廟前的高矮陰差將軍（謝必安、范無救），台灣廟會陣頭的超人氣形象'),
-('Carp Spirit',         '鯉魚精',       '東方神話', '台灣民間傳說', '東方神話|台灣民間傳說|Carp Spirit',         '日月潭傳說中的巨大鯉魚精怪，與潭中拉魯島的形成有關')
+('Carp Spirit',         '鯉魚精',       '東方神話', '台灣民間傳說', '東方神話|台灣民間傳說|Carp Spirit',         '日月潭傳說中的巨大鯉魚精怪，與潭中拉魯島的形成有關'),
+('Yam Monster',         '山藥怪物',     '東方神話', '台灣民間傳說', '東方神話|台灣民間傳說|Yam Monster',         '達悟族傳說中由山藥化為人形的怪物，能長出翅膀飛行並施展法術，出自蘭嶼紅頭部落的口傳故事')
 ON CONFLICT(name) DO NOTHING;

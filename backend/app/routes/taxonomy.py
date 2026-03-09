@@ -10,6 +10,7 @@ from ..cache import (get_tree_cache, set_tree_cache, invalidate_tree_cache,
 from ..extensions import db
 from ..models import User, VtuberTrait, SpeciesCache, FictionalSpecies, OAuthAccount
 from ..services.gbif import _build_path_zh, _realign_taxon_path
+from ..services.taxonomy_zh import get_species_zh_override
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +46,13 @@ def _compute_path_ranks(taxon_path, taxon_rank):
     if rank_upper == 'SUBCLASS' and n >= 3:
         ranks = list(_STANDARD_RANKS[:n - 1])
         ranks.append('SUBCLASS')
+        return ranks
+
+    # SUBSPECIES/VARIETY/FORM: 8-segment path (7 standard + sub-species rank)
+    _SUB_SPECIES_RANKS = {'SUBSPECIES', 'VARIETY', 'FORM'}
+    if rank_upper in _SUB_SPECIES_RANKS and n > len(_STANDARD_RANKS):
+        ranks = list(_STANDARD_RANKS)  # first 7 (KINGDOM→SPECIES)
+        ranks.append(rank_upper)       # 8th segment
         return ranks
 
     # Standard path: use positional mapping
@@ -115,7 +123,22 @@ def _rebuild_path_zh(species):
         'order': species.order_,
         'family': species.family,
         'genus': species.genus,
+        'taxon_rank': species.taxon_rank,
+        'scientific_name': species.scientific_name,
     }
+    rank = (species.taxon_rank or '').upper()
+    if rank in ('SUBSPECIES', 'VARIETY', 'FORM'):
+        # Derive parent species binomial and look up its taxon_id for zh resolution
+        parts = (species.scientific_name or '').split()
+        parent_binomial = ' '.join(parts[:2]) if len(parts) >= 2 else None
+        if parent_binomial:
+            parent = SpeciesCache.query.filter(
+                SpeciesCache.scientific_name.ilike(f'{parent_binomial}%'),
+                SpeciesCache.taxon_rank == 'SPECIES',
+            ).first()
+            if parent:
+                data['speciesKey'] = parent.taxon_id
+                data['species'] = parent_binomial
     result = _build_path_zh(data)
     if result:
         species.path_zh = result
@@ -167,6 +190,12 @@ def get_taxonomy_tree():
             if path_zh:
                 needs_commit = True
 
+        # Apply species zh override to DB cache if needed
+        zh_override = get_species_zh_override(species.taxon_id)
+        if zh_override and species.common_name_zh != zh_override:
+            species.common_name_zh = zh_override
+            needs_commit = True
+
         # Realign taxon_path to include empty segments for missing ranks
         taxon_path, path_changed = _realign_taxon_path(species)
         if path_changed:
@@ -200,7 +229,7 @@ def get_taxonomy_tree():
             'taxon_path': taxon_path,
             'path_ranks': _compute_path_ranks(taxon_path, species.taxon_rank),
             'scientific_name': species.scientific_name,
-            'common_name_zh': species._effective_common_name_zh(),
+            'common_name_zh': get_species_zh_override(species.taxon_id) or species._effective_common_name_zh(),
             'alternative_names_zh': species.alternative_names_zh,
             'breed_name': breed_name,
             'breed_id': breed_id,

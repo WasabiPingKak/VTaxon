@@ -10,6 +10,7 @@ const RANK_TO_UPPER = {
   kingdom: 'KINGDOM', phylum: 'PHYLUM', class: 'CLASS', order: 'ORDER',
   family: 'FAMILY', genus: 'GENUS',
 };
+const SUB_SPECIES_RANKS = new Set(['SUBSPECIES', 'VARIETY', 'FORM']);
 
 const previewLabelStyle = {
   display: 'inline-block', width: '50px',
@@ -19,6 +20,9 @@ const previewLabelStyle = {
 /** Indented taxonomy path (matching VtuberDetailPanel) */
 function TaxonomyPath({ species }) {
   const pathParts = (species.taxon_path || '').split('|');
+  const rankUpper = (species.taxon_rank || '').toUpperCase();
+  const isSubSpecies = SUB_SPECIES_RANKS.has(rankUpper);
+
   const ranks = RANK_ORDER.map((rank, i) => {
     const latin = pathParts[i];
     const zh = species[`${rank}_zh`];
@@ -35,11 +39,28 @@ function TaxonomyPath({ species }) {
           <span>{r.zh ? `${r.zh} (${r.latin})` : r.latin}</span>
         </div>
       ))}
-      <div style={{ paddingLeft: ranks.length * 12, fontWeight: 600 }}>
-        {species.common_name_zh
-          ? `${species.common_name_zh} (${displayScientificName(species)})`
-          : displayScientificName(species)}
-      </div>
+      {isSubSpecies && pathParts[6] ? (
+        <>
+          {/* Parent species row */}
+          <div style={{ paddingLeft: ranks.length * 12, display: 'flex', alignItems: 'center' }}>
+            <RankBadge rank="SPECIES" style={{ fontSize: '0.7em' }} />
+            <span>{species.species_zh ? `${species.species_zh} (${pathParts[6]})` : pathParts[6]}</span>
+          </div>
+          {/* Subspecies row */}
+          <div style={{ paddingLeft: (ranks.length + 1) * 12, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+            <RankBadge rank={rankUpper} style={{ fontSize: '0.7em' }} />
+            <span>{species.common_name_zh
+              ? `${species.common_name_zh} (${displayScientificName(species)})`
+              : displayScientificName(species)}</span>
+          </div>
+        </>
+      ) : (
+        <div style={{ paddingLeft: ranks.length * 12, fontWeight: 600 }}>
+          {species.common_name_zh
+            ? `${species.common_name_zh} (${displayScientificName(species)})`
+            : displayScientificName(species)}
+        </div>
+      )}
     </div>
   );
 }

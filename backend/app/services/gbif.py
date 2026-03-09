@@ -1022,6 +1022,14 @@ def _build_path_zh(data):
             zh = get_taxonomy_zh(canonical)
             if zh:
                 result['subclass'] = zh
+    elif taxon_rank in ('SUBSPECIES', 'VARIETY', 'FORM'):
+        # Resolve parent species Chinese name for the "species" row in path display
+        species_key = data.get('speciesKey') or data.get('species_key')
+        species_binomial = data.get('species') or data.get('species_binomial')
+        if species_key:
+            species_zh = _resolve_chinese_name(species_key, species_binomial)
+            if species_zh:
+                result['species'] = species_zh
 
     return result
 
@@ -1041,15 +1049,26 @@ def _realign_taxon_path(species):
         species.kingdom, species.phylum, species.class_,
         species.order_, species.family, species.genus,
     ]
-    # Include species-level name if the taxon is SPECIES/SUBSPECIES/VARIETY
+    # Include species-level name if the taxon is SPECIES or sub-species rank
     taxon_rank = (species.taxon_rank or '').upper()
-    if taxon_rank in ('SPECIES', 'SUBSPECIES', 'VARIETY', 'FORM'):
+    if taxon_rank == 'SPECIES':
         # Strip author citations (e.g. "Felis catus Linnaeus, 1758" → "Felis catus")
         name = re.sub(
             r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '',
             species.scientific_name or '',
         ).strip()
         rank_fields.append(name or species.scientific_name)
+    elif taxon_rank in ('SUBSPECIES', 'VARIETY', 'FORM'):
+        sci_name = re.sub(
+            r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '',
+            species.scientific_name or '',
+        ).strip()
+        # Extract parent binomial (first two words) as 7th segment
+        parts = sci_name.split()
+        parent_binomial = ' '.join(parts[:2]) if len(parts) >= 2 else sci_name
+        rank_fields.append(parent_binomial)   # 7th: parent species
+        if sci_name != parent_binomial:
+            rank_fields.append(sci_name)      # 8th: subspecies trinomial
 
     last_non_empty = -1
     for i, v in enumerate(rank_fields):
@@ -1157,6 +1176,16 @@ def _build_taxon_path(data):
         canonical = data.get('canonicalName') or data.get('scientificName', '')
         if canonical:
             # Strip author citation
+            canonical = re.sub(
+                r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '', canonical
+            ).strip()
+            if canonical and not path.endswith(canonical):
+                path = path + '|' + canonical
+    elif taxon_rank in ('SUBSPECIES', 'VARIETY', 'FORM'):
+        # species field (field_map) already provides the parent binomial (7th segment).
+        # Append the full trinomial (canonicalName) as the 8th segment.
+        canonical = data.get('canonicalName') or data.get('scientificName', '')
+        if canonical:
             canonical = re.sub(
                 r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '', canonical
             ).strip()

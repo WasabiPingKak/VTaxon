@@ -57,26 +57,6 @@ def export_fictional():
         .all()
     )
 
-    # Build classification tree from existing fictional species
-    all_fictional = FictionalSpecies.query.all()
-    tree = {}
-    for fs in all_fictional:
-        if fs.origin not in tree:
-            tree[fs.origin] = []
-        if fs.sub_origin and fs.sub_origin not in tree[fs.origin]:
-            tree[fs.origin].append(fs.sub_origin)
-
-    existing = [
-        {
-            'id': fs.id,
-            'name': fs.name,
-            'name_zh': fs.name_zh,
-            'origin': fs.origin,
-            'sub_origin': fs.sub_origin,
-        }
-        for fs in all_fictional
-    ]
-
     return jsonify({
         'export_metadata': {
             'exported_at': datetime.now(timezone.utc).isoformat(),
@@ -84,10 +64,11 @@ def export_fictional():
             'total_requests': len(requests),
         },
         'instructions': (
-            '以下是已受理的虛構物種回報。'
+            '以下是已排入待辦的虛構物種回報。'
             '請檢查這些物種是否有確切的文化來源或典故，使用者填的物種是否有具體可聯想的外型。'
             '除了評估適合分類在目前系統中的哪個分類以外，也可以獨立為比較特殊的物種建立新的分類。'
             '請跟我討論接下來的處理方式。'
+            '【重要】禁止自行呼叫 API 變更回報狀態或寫入管理員備註，所有狀態變更必須由管理員手動操作。'
         ),
         'requests': [
             {
@@ -102,10 +83,6 @@ def export_fictional():
             }
             for r in requests
         ],
-        'reference_data': {
-            'classification_tree': tree,
-            'existing_fictional_species': existing,
-        },
     })
 
 
@@ -158,10 +135,11 @@ def export_breeds():
             'total_requests': len(requests),
         },
         'instructions': (
-            '以下是已受理的品種新增回報。'
+            '以下是已排入待辦的品種新增回報。'
             '請根據每筆回報，判斷品種名稱是否正確、是否已存在。'
             '回報為什麼在系統中查不到指定的品種或物種名稱。'
             '然後跟我討論接下來的處理方式。'
+            '【重要】禁止自行呼叫 API 變更回報狀態或寫入管理員備註，所有狀態變更必須由管理員手動操作。'
         ),
         'requests': result_requests,
     })

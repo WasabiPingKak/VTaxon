@@ -6,7 +6,7 @@ import SEOHead from '../components/SEOHead';
 
 const REQUEST_STATUS_TABS = [
   { key: 'pending', label: '待審核' },
-  { key: 'received', label: '已受理' },
+  { key: 'received', label: '已排入待辦' },
   { key: 'in_progress', label: '處理中' },
   { key: 'completed', label: '已完成' },
   { key: 'rejected', label: '不處理' },
@@ -28,7 +28,7 @@ const SECTION_TABS = [
 // Status badge color mapping
 const STATUS_BADGE = {
   pending:       { bg: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', label: '待審核' },
-  received:      { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8', label: '已受理' },
+  received:      { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8', label: '已排入待辦' },
   in_progress:   { bg: 'rgba(234,179,8,0.15)', color: '#eab308', label: '處理中' },
   completed:     { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', label: '已完成' },
   approved:      { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', label: '已批准' },
@@ -41,7 +41,7 @@ const STATUS_BADGE = {
 // Next actions for request types (fictional/breed)
 const REQUEST_ACTIONS = {
   pending:     [
-    { status: 'received', label: '受理', style: 'primary' },
+    { status: 'received', label: '排入待辦', style: 'primary' },
     { status: 'rejected', label: '不處理', style: 'danger' },
   ],
   received:    [
