@@ -23,13 +23,14 @@ export const RANK_COLORS = {
   F_ROOT:       { node: '#f0abfc', glow: 'rgba(240,171,252,0.5)' },
   F_ORIGIN:     { node: '#f97316', glow: 'rgba(249,115,22,0.6)' },
   F_SUB_ORIGIN: { node: '#eab308', glow: 'rgba(234,179,8,0.6)' },
+  F_TYPE:       { node: '#2dd4bf', glow: 'rgba(45,212,191,0.6)' },
   F_SPECIES:    { node: '#fb7185', glow: 'rgba(251,113,133,0.6)' },
 };
 
 export const RANK_LABELS = {
   ROOT: '根', KINGDOM: '界', PHYLUM: '門', SUBPHYLUM: '亞門', CLASS: '綱', SUBCLASS: '亞綱', INFRACLASS: '下綱', ORDER: '目',
   FAMILY: '科', GENUS: '屬', SPECIES: '種', SUBSPECIES: '亞種', FORM: '變型', BREED: '品種',
-  F_ROOT: '虛構', F_ORIGIN: '來源', F_SUB_ORIGIN: '子來源', F_SPECIES: '虛構種',
+  F_ROOT: '虛構', F_ORIGIN: '來源', F_SUB_ORIGIN: '子來源', F_TYPE: '類型', F_SPECIES: '虛構種',
 };
 
 export const VTUBER_COLOR = '#64748b';
