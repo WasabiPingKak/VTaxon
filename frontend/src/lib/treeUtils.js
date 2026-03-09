@@ -268,9 +268,15 @@ export function autoExpandPaths(node, pathSet) {
       autoExpandPaths(child, pathSet);
     }
   } else {
-    // >5 有效子節點：仍檢查每個子節點是否為單子鏈，是則自動展開
+    // >5 有效子節點：逐一檢查子節點，≤5 的遞迴展開，>5 的只展開單子鏈
     for (const child of node.children.values()) {
-      expandSingleChildChain(child, pathSet);
+      const cc = effectiveChildCount(child);
+      if (cc > 0 && cc <= AUTO_EXPAND_THRESHOLD) {
+        pathSet.add(child.pathKey);
+        autoExpandPaths(child, pathSet);
+      } else {
+        expandSingleChildChain(child, pathSet);
+      }
     }
   }
 }
