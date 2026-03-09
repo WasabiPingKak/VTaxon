@@ -256,47 +256,30 @@ function effectiveChildCount(node) {
 }
 
 /**
- * Recursively expand children into pathSet when a node has ≤ threshold children.
- * Each level independently checks effectiveChildCount ≤ 5; stops drilling when exceeded.
+ * Recursively expand children into pathSet.
+ * Each child independently checks its own effectiveChildCount:
+ *   ≤ 5 → expand + recurse;  > 5 → only expand single-child chains inside.
  */
 export function autoExpandPaths(node, pathSet) {
   if (!node || effectiveChildCount(node) === 0) return;
-  if (effectiveChildCount(node) <= AUTO_EXPAND_THRESHOLD) {
-    // ≤5 有效子節點：全部展開 + 遞迴（含 size===1）
-    for (const child of node.children.values()) {
+  for (const child of node.children.values()) {
+    const cc = effectiveChildCount(child);
+    if (cc > 0 && cc <= AUTO_EXPAND_THRESHOLD) {
       pathSet.add(child.pathKey);
       autoExpandPaths(child, pathSet);
-    }
-  } else {
-    // >5 有效子節點：逐一檢查子節點，≤5 的遞迴展開，>5 的只展開單子鏈
-    for (const child of node.children.values()) {
-      const cc = effectiveChildCount(child);
-      if (cc > 0 && cc <= AUTO_EXPAND_THRESHOLD) {
-        pathSet.add(child.pathKey);
-        autoExpandPaths(child, pathSet);
-      } else {
-        expandSingleChildChain(child, pathSet);
-      }
+    } else {
+      expandSingleChildChain(child, pathSet);
     }
   }
 }
 
-/** 若節點只有 1 個有效子節點（含 vtuber），展開它並遞迴向下直到分叉或葉 */
+/** 若節點只有 1 個分類子節點，展開它並遞迴向下直到分叉或葉 */
 function expandSingleChildChain(node, pathSet) {
   if (!node || node.children.size !== 1) return;
   pathSet.add(node.pathKey);
   const child = node.children.values().next().value;
   pathSet.add(child.pathKey);
-  if (child.children.size === 1) {
-    expandSingleChildChain(child, pathSet);
-  } else if (effectiveChildCount(child) <= AUTO_EXPAND_THRESHOLD) {
-    autoExpandPaths(child, pathSet);
-  } else {
-    // 子節點 >5：再遞迴檢查孫節點的單子鏈
-    for (const grandchild of child.children.values()) {
-      expandSingleChildChain(grandchild, pathSet);
-    }
-  }
+  autoExpandPaths(child, pathSet);
 }
 
 /**
