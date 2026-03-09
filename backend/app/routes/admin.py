@@ -173,19 +173,23 @@ def transition_fictional():
     """Batch transition all received fictional requests to in_progress."""
     from ..services.notifications import create_notification
 
-    requests = (
+    reqs = (
         FictionalSpeciesRequest.query
         .filter_by(status='received')
         .all()
     )
-    for r in requests:
+    for r in reqs:
         r.status = 'in_progress'
         create_notification(
             r.user_id, 'fictional_request', r.id, 'in_progress',
             subject_name=r.name_zh,
         )
-    db.session.commit()
-    return jsonify({'updated': len(requests)})
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'批量轉移失敗：{e}'}), 500
+    return jsonify({'updated': len(reqs)})
 
 
 @admin_bp.route('/transition-breeds', methods=['POST'])
@@ -194,16 +198,20 @@ def transition_breeds():
     """Batch transition all received breed requests to in_progress."""
     from ..services.notifications import create_notification
 
-    requests = (
+    reqs = (
         BreedRequest.query
         .filter_by(status='received')
         .all()
     )
-    for r in requests:
+    for r in reqs:
         r.status = 'in_progress'
         create_notification(
             r.user_id, 'breed_request', r.id, 'in_progress',
             subject_name=r.name_zh or r.name_en,
         )
-    db.session.commit()
-    return jsonify({'updated': len(requests)})
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'批量轉移失敗：{e}'}), 500
+    return jsonify({'updated': len(reqs)})

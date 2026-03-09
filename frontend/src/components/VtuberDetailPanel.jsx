@@ -127,18 +127,32 @@ function TaxonomyPath({ taxonPath, pathZh, commonNameZh, scientificName }) {
   );
 }
 
-/** Indented fictional species path */
+/** Indented fictional species path — supports 3-segment and 4-segment paths */
 function FictionalPath({ entry }) {
-  const levels = [
-    { rank: 'F_ORIGIN', label: entry.origin },
-    entry.sub_origin ? { rank: 'F_SUB_ORIGIN', label: entry.sub_origin } : null,
-    { rank: 'F_SPECIES', label: entry.fictional_name_zh || entry.fictional_name },
-  ].filter(Boolean);
+  const parts = (entry.fictional_path || '').split('|');
+  const levels = parts.map((part, i) => {
+    const isLast = i === parts.length - 1;
+    let rank, label;
+    if (i === 0) {
+      rank = 'F_ORIGIN';
+      label = entry.origin || part;
+    } else if (i === 1) {
+      rank = 'F_SUB_ORIGIN';
+      label = entry.sub_origin || part;
+    } else if (isLast) {
+      rank = 'F_SPECIES';
+      label = entry.fictional_name_zh || entry.fictional_name || part;
+    } else {
+      rank = 'F_TYPE';
+      label = part; // type segment is already Chinese
+    }
+    return { rank, label };
+  });
 
   return (
     <div style={{ fontSize: '0.85em', lineHeight: '2' }}>
       {levels.map((lv, i) => (
-        <div key={lv.rank} style={{
+        <div key={`${lv.rank}-${i}`} style={{
           paddingLeft: i * 12, display: 'flex', alignItems: 'center',
           fontWeight: i === levels.length - 1 ? 600 : 400,
         }}>
