@@ -277,13 +277,11 @@ export function autoExpandPaths(node, pathSet) {
 
 /** 若節點只有 1 個有效子節點（含 vtuber），展開它並遞迴向下直到分叉或葉 */
 function expandSingleChildChain(node, pathSet) {
-  if (!node || effectiveChildCount(node) !== 1) return;
+  if (!node || node.children.size !== 1) return;
   pathSet.add(node.pathKey);
-  // 單一有效子節點是 vtuber（無分類子節點）→ 展開即可，不需遞迴
-  if (node.children.size === 0) return;
   const child = node.children.values().next().value;
   pathSet.add(child.pathKey);
-  if (effectiveChildCount(child) === 1) {
+  if (child.children.size === 1) {
     expandSingleChildChain(child, pathSet);
   } else if (effectiveChildCount(child) <= AUTO_EXPAND_THRESHOLD) {
     autoExpandPaths(child, pathSet);
@@ -308,7 +306,7 @@ export function extendSingleChildChains(node, pathSet) {
     }
   }
   // If this node has exactly one effective child and that child is not yet expanded, expand it
-  if (effectiveChildCount(node) === 1 && node.children.size === 1) {
+  if (node.children.size === 1) {
     const child = node.children.values().next().value;
     if (!pathSet.has(child.pathKey)) {
       pathSet.add(child.pathKey);
@@ -324,7 +322,7 @@ export function extendSingleChildChains(node, pathSet) {
 export function expandAllSingleChildChains(node, pathSet) {
   if (!node) return;
   for (const child of node.children.values()) {
-    if (effectiveChildCount(child) === 1 && child.children.size === 1) {
+    if (child.children.size === 1) {
       // Single-child chain: expand and recurse
       pathSet.add(child.pathKey);
       expandAllSingleChildChains(child, pathSet);

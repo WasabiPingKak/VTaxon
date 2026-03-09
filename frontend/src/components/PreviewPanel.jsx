@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import RankBadge from './RankBadge';
+import OrgBadge from './OrgBadge';
 import LinksRow from './LinksRow';
 import ProfileInfoCard from './ProfileInfoCard';
 import { displayScientificName } from '../lib/speciesName';
@@ -178,9 +179,10 @@ export default function PreviewPanel({ user, oauthAccounts, traits, selectedTrai
           </div>
 
           {/* Display name */}
-          <div style={{ textAlign: 'center', fontSize: '1.2em', fontWeight: 600, marginBottom: '10px' }}>
+          <div style={{ textAlign: 'center', fontSize: '1.2em', fontWeight: 600, marginBottom: '4px' }}>
             {user.display_name}
           </div>
+          <OrgBadge orgType={user.org_type} organization={user.organization} style={{ textAlign: 'center', marginBottom: '10px' }} />
 
           {/* Links row */}
           <div style={{ marginBottom: '16px' }}>

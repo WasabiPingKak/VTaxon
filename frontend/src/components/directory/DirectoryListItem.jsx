@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { formatDuration } from './DirectoryCard';
+import OrgBadge from '../OrgBadge';
 
 const STATUS_STYLES = {
   active: { label: '活動中', color: '#4ade80', bg: 'rgba(74,222,128,0.12)' },
@@ -110,10 +111,12 @@ export default function DirectoryListItem({ item, onClick }) {
 
       {/* Organization */}
       <div style={{
-        color: 'rgba(255,255,255,0.5)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>
-        {item.organization || '-'}
+        {(item.org_type === 'corporate' || item.org_type === 'club')
+          ? <OrgBadge orgType={item.org_type} organization={item.organization} />
+          : <span style={{ color: 'rgba(255,255,255,0.5)' }}>{item.organization || '-'}</span>
+        }
       </div>
 
       {/* Species */}
