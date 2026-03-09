@@ -1,6 +1,8 @@
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy.dialects.postgresql import UUID as pgUUID
+
 from .extensions import db
 
 
@@ -399,7 +401,7 @@ class Notification(db.Model):
     __tablename__ = 'notifications'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id',
+    user_id = db.Column(pgUUID(as_uuid=False), db.ForeignKey('users.id',
                         ondelete='CASCADE'), nullable=False)
     type = db.Column(db.Text, nullable=False)
     reference_id = db.Column(db.Integer, nullable=False)
