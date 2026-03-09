@@ -872,7 +872,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     const entry = focusedEntries[focusedSpeciesIdx];
     if (!entry) return;
 
-    // Ensure focused user's paths are expanded
+    // Ensure focused user's paths are expanded + auto-expand siblings
     setExpandedSet(prev => {
       const next = new Set(prev);
       const userPaths = computeHighlightPaths(entries || [], focusedUserId, breedPaths);
@@ -880,11 +880,29 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       for (const p of userPaths) {
         if (!next.has(p)) { next.add(p); changed = true; }
       }
+      // Auto-expand sibling nodes along the path (≤5 rule)
+      if (rootData) {
+        const sizeBefore = next.size;
+        for (const p of userPaths) {
+          const node = findNode(rootData, p);
+          if (node) autoExpandPaths(node, next);
+        }
+        if (next.size !== sizeBefore) changed = true;
+      }
+      let fictPaths;
       if (fictionalEntries) {
-        const fictPaths = computeFictionalHighlightPaths(fictionalEntries, focusedUserId);
+        fictPaths = computeFictionalHighlightPaths(fictionalEntries, focusedUserId);
         for (const p of fictPaths) {
           if (!next.has(p)) { next.add(p); changed = true; }
         }
+      }
+      if (fictionalRootData && fictPaths) {
+        const sizeBefore = next.size;
+        for (const p of fictPaths) {
+          const node = findNode(fictionalRootData, p);
+          if (node) autoExpandPaths(node, next);
+        }
+        if (next.size !== sizeBefore) changed = true;
       }
       return changed ? next : prev;
     });
@@ -897,7 +915,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
-  }, [focusedEntries, focusedSpeciesIdx, entries, fictionalEntries, focusedUserId, entryToPathKey, scheduleCamera]);
+  }, [focusedEntries, focusedSpeciesIdx, entries, fictionalEntries, focusedUserId, entryToPathKey, scheduleCamera, rootData, fictionalRootData, breedPaths]);
 
   const handleSetFocus = useCallback((entry) => {
     const userId = entry.user_id;

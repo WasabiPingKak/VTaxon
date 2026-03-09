@@ -9,7 +9,10 @@ export const RANK_COLORS = {
   ROOT:       { node: '#e2e8f0', glow: 'rgba(226,232,240,0.5)' },
   KINGDOM:    { node: '#c084fc', glow: 'rgba(192,132,252,0.6)' },
   PHYLUM:     { node: '#818cf8', glow: 'rgba(129,140,248,0.6)' },
+  SUBPHYLUM:  { node: '#a5b4fc', glow: 'rgba(165,180,252,0.6)' },
   CLASS:      { node: '#38bdf8', glow: 'rgba(56,189,248,0.6)' },
+  SUBCLASS:   { node: '#7dd3fc', glow: 'rgba(125,211,252,0.6)' },
+  INFRACLASS: { node: '#bae6fd', glow: 'rgba(186,230,253,0.5)' },
   ORDER:      { node: '#34d399', glow: 'rgba(52,211,153,0.6)' },
   FAMILY:     { node: '#60a5fa', glow: 'rgba(96,165,250,0.6)' },
   GENUS:      { node: '#fbbf24', glow: 'rgba(251,191,36,0.6)' },
@@ -24,7 +27,7 @@ export const RANK_COLORS = {
 };
 
 export const RANK_LABELS = {
-  ROOT: '根', KINGDOM: '界', PHYLUM: '門', CLASS: '綱', ORDER: '目',
+  ROOT: '根', KINGDOM: '界', PHYLUM: '門', SUBPHYLUM: '亞門', CLASS: '綱', SUBCLASS: '亞綱', INFRACLASS: '下綱', ORDER: '目',
   FAMILY: '科', GENUS: '屬', SPECIES: '種', SUBSPECIES: '亞種', FORM: '變型', BREED: '品種',
   F_ROOT: '虛構', F_ORIGIN: '來源', F_SUB_ORIGIN: '子來源', F_SPECIES: '虛構種',
 };
