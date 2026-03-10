@@ -685,6 +685,23 @@ def _cache_enriched_species(species_list):
                 continue
             existing = db.session.get(SpeciesCache, taxon_id)
             if existing:
+                # Core taxonomy fields — always update from fresh GBIF data
+                # so corrupted/stale cache entries get self-corrected.
+                if sp.get('scientific_name') and existing.scientific_name != sp['scientific_name']:
+                    existing.scientific_name = sp['scientific_name']
+                if sp.get('taxon_rank') and existing.taxon_rank != sp['taxon_rank']:
+                    existing.taxon_rank = sp['taxon_rank']
+                if sp.get('taxon_path') and existing.taxon_path != sp['taxon_path']:
+                    existing.taxon_path = sp['taxon_path']
+                for field, attr in [('kingdom', 'kingdom'), ('phylum', 'phylum'),
+                                    ('class', 'class_'), ('order', 'order_'),
+                                    ('family', 'family'), ('genus', 'genus')]:
+                    val = sp.get(field)
+                    if val and getattr(existing, attr) != val:
+                        setattr(existing, attr, val)
+                # Update common_name_en if available
+                if sp.get('common_name_en') and not existing.common_name_en:
+                    existing.common_name_en = sp['common_name_en']
                 # Update common_name_zh: override table wins; otherwise
                 # accept any freshly-resolved name that differs from cache
                 # so stale/wrong cached names get corrected over time.
@@ -696,11 +713,10 @@ def _cache_enriched_species(species_list):
                 # Backfill alternative_names_zh if empty
                 if sp.get('alternative_names_zh') and not existing.alternative_names_zh:
                     existing.alternative_names_zh = sp['alternative_names_zh']
-                # Backfill path_zh if empty
-                if not existing.path_zh or existing.path_zh == {}:
-                    pzh = _build_path_zh(sp)
-                    if pzh:
-                        existing.path_zh = pzh
+                # Update path_zh
+                pzh = _build_path_zh(sp)
+                if pzh and existing.path_zh != pzh:
+                    existing.path_zh = pzh
             else:
                 entry = SpeciesCache(
                     taxon_id=taxon_id,
@@ -1158,6 +1174,17 @@ def _cache_species(data, common_name_zh=None):
 
     existing = db.session.get(SpeciesCache, usage_key)
     if existing:
+        # Always refresh core taxonomy fields from authoritative GBIF data
+        sci_name = data.get('scientificName', data.get('canonicalName', ''))
+        if sci_name and existing.scientific_name != sci_name:
+            existing.scientific_name = sci_name
+        for gbif_key, attr in [('rank', 'taxon_rank'), ('kingdom', 'kingdom'),
+                                ('phylum', 'phylum'), ('class', 'class_'),
+                                ('order', 'order_'), ('family', 'family'),
+                                ('genus', 'genus')]:
+            val = data.get(gbif_key)
+            if val and getattr(existing, attr) != val:
+                setattr(existing, attr, val)
         existing.taxon_path = taxon_path
         if common_name_zh and not existing.common_name_zh:
             existing.common_name_zh = common_name_zh
