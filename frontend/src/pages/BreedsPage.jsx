@@ -183,7 +183,7 @@ function BreedRequestInline() {
   const [form, setForm] = useState({ name_zh: '', name_en: '', scientific_name: '', description: '' });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [guideOpen, setGuideOpen] = useState(true);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [confirmLatin, setConfirmLatin] = useState(false);
   const [confirmBreed, setConfirmBreed] = useState(false);
   const [speciesCheckResult, setSpeciesCheckResult] = useState(null);
@@ -305,7 +305,7 @@ function BreedRequestInline() {
           }}
         >
           <span style={{ fontSize: '0.8em', transform: guideOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s', display: 'inline-block' }}>▶</span>
-          送出回報前，請先確認以下事項
+          填寫說明
         </button>
         {guideOpen && (
           <div style={{
@@ -413,7 +413,7 @@ function BreedRequestInline() {
               <span style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.4)' }}>驗證中…</span>
             </div>
           )}
-          {!speciesChecking && speciesCheckResult?.found && (
+          {!speciesChecking && speciesCheckResult?.found && speciesCheckResult.species.common_name_zh && (
             <div style={{
               marginTop: '6px', padding: '10px 12px',
               background: 'rgba(52,211,153,0.08)', borderRadius: '4px',
@@ -421,10 +421,25 @@ function BreedRequestInline() {
               fontSize: '0.85em', lineHeight: 1.6,
             }}>
               <div style={{ color: '#34d399', fontWeight: 600 }}>
-                ✓ 找到物種：{speciesCheckResult.species.common_name_zh && `${speciesCheckResult.species.common_name_zh} `}<i>{speciesCheckResult.species.scientific_name}</i>
+                ✓ 找到物種：{speciesCheckResult.species.common_name_zh} <i>{speciesCheckResult.species.scientific_name}</i>
               </div>
               <div style={{ color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
                 此物種已存在於系統中，請回到<Link to="/profile" style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>角色設定頁</Link>直接用學名搜尋新增。
+              </div>
+            </div>
+          )}
+          {!speciesChecking && speciesCheckResult?.found && !speciesCheckResult.species.common_name_zh && (
+            <div style={{
+              marginTop: '6px', padding: '10px 12px',
+              background: 'rgba(251,191,36,0.08)', borderRadius: '4px',
+              border: '1px solid rgba(251,191,36,0.3)',
+              fontSize: '0.85em', lineHeight: 1.6,
+            }}>
+              <div style={{ color: '#fbbf24', fontWeight: 600 }}>
+                ⚠ 找到 <i>{speciesCheckResult.species.scientific_name}</i>，但系統中沒有中文名
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                可在下方補充說明填寫建議的中文名與參考來源
               </div>
             </div>
           )}
@@ -443,13 +458,18 @@ function BreedRequestInline() {
           />
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button type="submit" disabled={submitting || !confirmLatin || !confirmBreed || !form.name_zh.trim() || !form.name_en.trim() || !form.scientific_name.trim() || !form.description.trim() || speciesCheckResult?.found === true} style={{
+          {(() => {
+            const isDisabled = submitting || !confirmLatin || !confirmBreed || !form.name_zh.trim() || !form.name_en.trim() || !form.scientific_name.trim() || !form.description.trim() || (speciesCheckResult?.found === true && !!speciesCheckResult.species.common_name_zh);
+            return (
+          <button type="submit" disabled={isDisabled} style={{
             padding: '6px 14px', background: BREED_COLOR, color: '#0d1526',
-            border: 'none', borderRadius: '4px', cursor: 'pointer',
-            fontSize: '0.85em', fontWeight: 600,
+            border: 'none', borderRadius: '4px', cursor: isDisabled ? 'not-allowed' : 'pointer',
+            fontSize: '0.85em', fontWeight: 600, opacity: isDisabled ? 0.4 : 1,
           }}>
             {submitting ? '送出中…' : '送出回報'}
           </button>
+            );
+          })()}
           <button
             type="button"
             onClick={() => setShow(false)}
