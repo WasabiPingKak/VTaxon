@@ -180,6 +180,7 @@ def get_taxonomy_tree():
 
     needs_commit = False
     entries = []
+    _parent_override_cache = {}  # parent_binomial → override zh or None
     for trait, species, user in rows:
         # Read pre-computed path_zh from DB (written at cache-time by _cache_species)
         path_zh = species.path_zh or {}
@@ -195,6 +196,27 @@ def get_taxonomy_tree():
         if zh_override and species.common_name_zh != zh_override:
             species.common_name_zh = zh_override
             needs_commit = True
+
+        # For SUBSPECIES/VARIETY/FORM: apply parent species override to path_zh['species']
+        rank_upper = (species.taxon_rank or '').upper()
+        if rank_upper in ('SUBSPECIES', 'VARIETY', 'FORM') and path_zh.get('species'):
+            parts = (species.scientific_name or '').split()
+            if len(parts) >= 2:
+                parent_binomial = ' '.join(parts[:2])
+                if parent_binomial not in _parent_override_cache:
+                    parent = SpeciesCache.query.filter(
+                        SpeciesCache.scientific_name.ilike(f'{parent_binomial}%'),
+                        SpeciesCache.taxon_rank == 'SPECIES',
+                    ).first()
+                    _parent_override_cache[parent_binomial] = (
+                        get_species_zh_override(parent.taxon_id) if parent else None
+                    )
+                parent_zh = _parent_override_cache[parent_binomial]
+                if parent_zh and path_zh.get('species') != parent_zh:
+                    path_zh = dict(path_zh)
+                    path_zh['species'] = parent_zh
+                    species.path_zh = path_zh
+                    needs_commit = True
 
         # Realign taxon_path to include empty segments for missing ranks
         taxon_path, path_changed = _realign_taxon_path(species)
