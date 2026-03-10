@@ -407,6 +407,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const flashTimerRef = useRef(null);
   const [flashTick, setFlashTick] = useState(0);
   const FLASH_DURATION = 2800;
+  const MAX_FLASH_ENTRIES = 500;
 
   // Wrapper: always increments tick so re-clicking the same level triggers effects
   const handleTraceBackChange = useCallback((value) => {
@@ -594,6 +595,14 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     const now = performance.now();
     for (const [key, start] of flashMapRef.current) {
       if (now - start > FLASH_DURATION) flashMapRef.current.delete(key);
+    }
+    // Hard cap: evict oldest entries if map grows too large
+    if (flashMapRef.current.size > MAX_FLASH_ENTRIES) {
+      const iter = flashMapRef.current.keys();
+      const excess = flashMapRef.current.size - MAX_FLASH_ENTRIES;
+      for (let i = 0; i < excess; i++) {
+        flashMapRef.current.delete(iter.next().value);
+      }
     }
     return flashMapRef.current.size > 0;
   }, [flashTick]);

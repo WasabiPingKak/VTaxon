@@ -55,7 +55,7 @@ export default function useNodeAnimation(nodes) {
       }
     }
 
-    // Update previous positions for next time
+    // Update previous positions for next time (only keep current nodes, discarding stale entries)
     prevPosRef.current = targets;
 
     if (!hasMotion) {

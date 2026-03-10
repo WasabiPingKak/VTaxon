@@ -6,6 +6,8 @@ const LS_KEY = 'vtaxon_last_seen_new_user';
 const POLL_INTERVAL = 30_000;
 const STAGGER_DELAY = 1_000;
 const MOBILE_BP = 768;
+const MAX_SEEN_IDS = 500;
+const MAX_QUEUE_SIZE = 50;
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BP);
@@ -123,6 +125,7 @@ export default function WelcomeToast({ onNewUsers, visible = true }) {
   const processingRef = useRef(false);
   const mountedRef = useRef(true);
   const seenIdsRef = useRef(new Set());
+  const processTimerRef = useRef(null);
   const isMobile = useIsMobile();
 
   const processQueue = useCallback(() => {
@@ -134,7 +137,8 @@ export default function WelcomeToast({ onNewUsers, visible = true }) {
       setToasts(prev => [...prev, user]);
     }
 
-    setTimeout(() => {
+    processTimerRef.current = setTimeout(() => {
+      processTimerRef.current = null;
       processingRef.current = false;
       processQueue();
     }, STAGGER_DELAY);
@@ -154,6 +158,15 @@ export default function WelcomeToast({ onNewUsers, visible = true }) {
       if (newUsers.length === 0) return;
       for (const u of newUsers) seenIdsRef.current.add(u.id);
 
+      // Evict oldest entries if seenIds grows too large
+      if (seenIdsRef.current.size > MAX_SEEN_IDS) {
+        const iter = seenIdsRef.current.values();
+        const excess = seenIdsRef.current.size - MAX_SEEN_IDS;
+        for (let i = 0; i < excess; i++) {
+          seenIdsRef.current.delete(iter.next().value);
+        }
+      }
+
       // Clear tree cache so refetch gets fresh data, then wait for tree to refetch
       api.clearTreeCache();
       if (onNewUsers) {
@@ -162,7 +175,9 @@ export default function WelcomeToast({ onNewUsers, visible = true }) {
 
       // Queue in chronological order (oldest first so they pop in sequence)
       const chronological = [...newUsers].reverse();
-      queueRef.current.push(...chronological);
+      // Cap queue size to prevent unbounded growth
+      const available = MAX_QUEUE_SIZE - queueRef.current.length;
+      queueRef.current.push(...chronological.slice(0, Math.max(0, available)));
       processQueue();
     } catch {
       // Silently ignore — non-critical feature
@@ -187,6 +202,7 @@ export default function WelcomeToast({ onNewUsers, visible = true }) {
     return () => {
       mountedRef.current = false;
       clearInterval(interval);
+      if (processTimerRef.current) clearTimeout(processTimerRef.current);
     };
   }, [fetchRecent]);
 
