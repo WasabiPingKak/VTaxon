@@ -81,7 +81,7 @@ def notify_new_fictional_request(req):
       <tr><td><strong>建議子來源</strong></td><td>{req.suggested_sub_origin or '-'}</td></tr>
       <tr><td><strong>說明</strong></td><td>{req.description or '-'}</td></tr>
     </table>
-    <p><a href="{ADMIN_PANEL_URL}/fictional-requests">前往管理後台審核</a></p>
+    <p><a href="{ADMIN_PANEL_URL}">前往管理後台審核</a></p>
     """
     send_admin_notification(subject, html)
 
@@ -102,7 +102,7 @@ def notify_new_breed_request(req):
       <tr><td><strong>所屬物種</strong></td><td>{species_name} (taxon_id: {req.taxon_id or '-'})</td></tr>
       <tr><td><strong>說明</strong></td><td>{req.description or '-'}</td></tr>
     </table>
-    <p><a href="{ADMIN_PANEL_URL}/breed-requests">前往管理後台審核</a></p>
+    <p><a href="{ADMIN_PANEL_URL}">前往管理後台審核</a></p>
     """
     send_admin_notification(subject, html)
 
@@ -129,6 +129,6 @@ def notify_new_report(report):
       <tr><td><strong>理由</strong></td><td>{report.reason}</td></tr>
       <tr><td><strong>證據連結</strong></td><td>{report.evidence_url or '-'}</td></tr>
     </table>
-    <p><a href="{ADMIN_PANEL_URL}/reports">前往管理後台審核</a></p>
+    <p><a href="{ADMIN_PANEL_URL}">前往管理後台審核</a></p>
     """
     send_admin_notification(subject, html)
