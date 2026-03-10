@@ -547,7 +547,7 @@ function BreedCategoryList({ category, onSelect, onBack }) {
   );
 }
 
-export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
+export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchPerformed }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -607,8 +607,10 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
     setSearching(true);
     setSearched(false);
     setResults([]);
+    let count = 0;
     try {
       await api.searchSpeciesStream(query, (sp) => {
+        count++;
         setResults(prev => [...prev, sp]);
       });
     } catch (err) {
@@ -616,6 +618,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
     } finally {
       setSearching(false);
       setSearched(true);
+      onSearchPerformed?.({ query: query.trim(), resultCount: count });
     }
   }
 
@@ -793,17 +796,21 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!latinRetry.trim()) return;
-                  setQuery(latinRetry.trim());
+                  const retryQuery = latinRetry.trim();
+                  setQuery(retryQuery);
                   setLatinRetry('');
                   // trigger search
                   setSearching(true);
                   setSearched(false);
                   setResults([]);
-                  api.searchSpeciesStream(latinRetry.trim(), (sp) => {
+                  let retryCount = 0;
+                  api.searchSpeciesStream(retryQuery, (sp) => {
+                    retryCount++;
                     setResults(prev => [...prev, sp]);
                   }).catch(() => {}).finally(() => {
                     setSearching(false);
                     setSearched(true);
+                    onSearchPerformed?.({ query: retryQuery, resultCount: retryCount });
                   });
                 }}
                 style={{ display: 'flex', gap: '8px' }}
