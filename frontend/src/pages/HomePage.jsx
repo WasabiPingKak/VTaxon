@@ -76,6 +76,11 @@ export default function HomePage({ treeRefetchRef }) {
           onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
           onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.18)'}
         >關於本站</Link>
+        <span style={{ color: 'rgba(255,255,255,0.1)' }}>·</span>
+        <Link to="/changelog" style={{ color: 'rgba(255,255,255,0.18)', textDecoration: 'none', transition: 'color 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.18)'}
+        >更新日誌</Link>
       </div>
     </div>
   );
