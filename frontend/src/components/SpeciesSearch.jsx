@@ -759,6 +759,12 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
         </div>
       )}
 
+      {!searching && searched && results.length > 0 && /[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(query) && (
+        <div style={{ textAlign: 'center', fontSize: '0.82em', color: 'rgba(255,255,255,0.4)', marginTop: '8px', lineHeight: 1.6 }}>
+          找不到想要的結果？中文搜尋涵蓋有限，試試用拉丁文學名搜尋（Google「{query.trim()} 學名」即可查到）
+        </div>
+      )}
+
       {!searching && searched && results.length === 0 && query.trim() && (
         <div style={{
           marginTop: '8px', padding: '14px 16px',
