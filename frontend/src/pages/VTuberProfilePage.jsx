@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import SEOHead, { SITE_URL } from '../components/SEOHead';
 import LinksRow from '../components/LinksRow';
@@ -77,6 +77,7 @@ function FictionalPath({ trait }) {
 
 export default function VTuberProfilePage() {
   const { userId } = useParams();
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [traits, setTraits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -205,6 +206,31 @@ export default function VTuberProfilePage() {
           />
         </div>
       </div>
+
+      {/* Locate in tree */}
+      {traits.length > 0 && (
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <button
+            type="button"
+            onClick={() => navigate(`/?locate=${userId}`)}
+            style={{
+              background: 'rgba(233,30,140,0.08)',
+              border: '1px solid rgba(233,30,140,0.25)',
+              borderRadius: 8, padding: '8px 18px',
+              color: '#E91E8C', fontSize: '0.9em',
+              cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.5)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.25)'; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
+            </svg>
+            在樹狀圖中定位
+          </button>
+        </div>
+      )}
 
       {/* Bio */}
       {user.bio && (

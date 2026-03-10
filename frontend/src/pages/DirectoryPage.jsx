@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { api } from '../lib/api';
 import DirectoryFilters from '../components/directory/DirectoryFilters';
@@ -17,6 +17,7 @@ const DEFAULT_FILTERS = {
 };
 
 export default function DirectoryPage() {
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [data, setData] = useState(null);
@@ -195,6 +196,7 @@ export default function DirectoryPage() {
         <VtuberDetailPanel
           entry={selectedItem}
           onClose={() => setSelectedItem(null)}
+          onFocus={(entry) => navigate(`/?locate=${entry.user_id}`)}
         />
       )}
     </div>
