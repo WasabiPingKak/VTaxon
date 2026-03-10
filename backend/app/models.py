@@ -310,6 +310,52 @@ class BreedRequest(db.Model):
         return result
 
 
+class SpeciesNameReport(db.Model):
+    __tablename__ = 'species_name_reports'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id',
+                        ondelete='SET NULL'))
+    taxon_id = db.Column(db.Integer, db.ForeignKey('species_cache.taxon_id'))
+    report_type = db.Column(db.Text, nullable=False)  # 'missing_zh' | 'wrong_zh'
+    current_name_zh = db.Column(db.Text)
+    suggested_name_zh = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text)
+    status = db.Column(db.Text, nullable=False, default='pending')
+    admin_note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship('User', backref='species_name_reports',
+                           lazy='joined')
+    species = db.relationship('SpeciesCache', lazy='joined')
+
+    def to_dict(self):
+        result = {
+            'id': self.id,
+            'user_id': self.user_id,
+            'taxon_id': self.taxon_id,
+            'report_type': self.report_type,
+            'current_name_zh': self.current_name_zh,
+            'suggested_name_zh': self.suggested_name_zh,
+            'description': self.description,
+            'status': self.status,
+            'admin_note': self.admin_note,
+            'created_at': self.created_at.isoformat(),
+        }
+        if self.user:
+            result['user'] = {
+                'id': self.user.id,
+                'display_name': self.user.display_name,
+                'avatar_url': self.user.avatar_url,
+            }
+        if self.species:
+            result['species_name'] = (self.species.common_name_zh
+                                      or self.species.scientific_name)
+            result['scientific_name'] = self.species.scientific_name
+        return result
+
+
 class UserReport(db.Model):
     __tablename__ = 'user_reports'
 

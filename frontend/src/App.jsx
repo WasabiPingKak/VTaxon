@@ -11,7 +11,6 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const CharacterPage = lazy(() => import('./pages/CharacterPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
-const BreedsPage = lazy(() => import('./pages/BreedsPage'));
 const DirectoryPage = lazy(() => import('./pages/DirectoryPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'));
@@ -68,7 +67,7 @@ function AppContent() {
               <Route path="/profile/edit" element={<Navigate to="/profile" replace />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/directory" element={<DirectoryPage />} />
-              <Route path="/breeds" element={<BreedsPage />} />
+              <Route path="/breeds" element={<Navigate to="/profile?tab=species" replace />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/privacy" element={<PrivacyPolicyPage />} />

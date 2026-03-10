@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { api } from '../lib/api';
-import { breedEmoji } from '../lib/breedUtils';
 import { formatAltNamesFull, altNamesTooltip } from '../lib/altNames';
 import { displayScientificName } from '../lib/speciesName';
 import RankBadge from './RankBadge';
+import BreedInterceptPanel from './BreedInterceptPanel';
+import NameReportForm from './NameReportForm';
 
 // Inject pulse animation keyframes once
 if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-style')) {
@@ -37,6 +38,8 @@ const FAMILY_COLORS = [
   '#f87171', '#22d3ee', '#fbbf24', '#60a5fa',
   '#c084fc', '#2dd4bf', '#f97316', '#ef4444',
 ];
+
+const CJK_RE = /[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/;
 
 
 /** Loading skeleton — dark pulsing bars */
@@ -358,195 +361,6 @@ function SpeciesGroup({ group, onSelect, familyColor }) {
   );
 }
 
-/** Quick breed entry buttons — fully dynamic from /breeds/categories API */
-function BreedQuickButtons({ onPickCategory }) {
-  const [categories, setCategories] = useState([]);
-
-  useEffect(() => {
-    api.getBreedCategories().then(data => {
-      const all = data.categories || [];
-      setCategories(all);
-    }).catch(() => {});
-  }, []);
-
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-      {categories.map(cat => (
-        <button
-          key={cat.taxon_id}
-          onClick={() => onPickCategory({
-            taxon_id: cat.taxon_id,
-            label: `${cat.common_name_zh || cat.scientific_name}品種`,
-            emoji: breedEmoji(cat),
-          })}
-          style={{
-            padding: '5px 10px',
-            background: 'rgba(251,146,60,0.1)',
-            color: BREED_COLOR,
-            border: `1px solid rgba(251,146,60,0.25)`,
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '0.85em',
-            fontWeight: 600,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {breedEmoji(cat)} {cat.common_name_zh || cat.scientific_name} ({cat.breed_count})
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/** Breed category list view — shows all breeds for a species */
-function BreedCategoryList({ category, onSelect, onBack }) {
-  const [breeds, setBreeds] = useState([]);
-  const [species, setSpecies] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('');
-
-  useEffect(() => {
-    setLoading(true);
-    api.getBreeds(category.taxon_id).then(data => {
-      setBreeds(data.breeds || []);
-      setSpecies(data.species || null);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [category.taxon_id]);
-
-  const [debouncedFilter, setDebouncedFilter] = useState('');
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedFilter(filter), 300);
-    return () => clearTimeout(timer);
-  }, [filter]);
-
-  const filtered = useMemo(() => {
-    const q = debouncedFilter.trim();
-    if (!q) return breeds;
-    const isCJK = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(q);
-    return breeds.filter(b => {
-      if (isCJK) return b.name_zh && b.name_zh.includes(q);
-      return b.name_en && b.name_en.toLowerCase().includes(q.toLowerCase());
-    });
-  }, [breeds, debouncedFilter]);
-
-  function handleSelectBreed(breed) {
-    if (!species || !onSelect) return;
-    // Construct payload matching existing breed search result format
-    const payload = {
-      result_type: 'breed',
-      taxon_id: species.taxon_id,
-      scientific_name: species.scientific_name,
-      common_name_zh: species.common_name_zh,
-      common_name_en: species.common_name_en,
-      taxon_rank: species.taxon_rank,
-      taxon_path: species.taxon_path,
-      kingdom: species.kingdom,
-      phylum: species.phylum,
-      class: species.class,
-      order: species.order,
-      family: species.family,
-      genus: species.genus,
-      kingdom_zh: species.kingdom_zh,
-      phylum_zh: species.phylum_zh,
-      class_zh: species.class_zh,
-      order_zh: species.order_zh,
-      family_zh: species.family_zh,
-      genus_zh: species.genus_zh,
-      breed: breed,
-    };
-    onSelect(payload);
-  }
-
-  return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-        <button onClick={onBack} style={{
-          background: 'none', border: 'none', color: '#38bdf8',
-          cursor: 'pointer', fontSize: '0.95em', padding: '4px 0',
-        }}>
-          &larr; 返回
-        </button>
-        <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '1em' }}>
-          {category.emoji} {category.label}
-        </span>
-        {breeds.length > 0 && (
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85em' }}>
-            ({breeds.length})
-          </span>
-        )}
-      </div>
-
-      <input
-        type="search"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        placeholder="過濾品種名稱…"
-        autoComplete="new-password"
-        autoFocus
-        style={{
-          width: '100%', padding: '8px', marginBottom: '8px', boxSizing: 'border-box',
-          border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px',
-          background: '#1a2433', color: '#e2e8f0',
-        }}
-      />
-
-      {loading ? (
-        <LoadingSkeleton />
-      ) : filtered.length === 0 ? (
-        <p style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', fontSize: '0.9em' }}>
-          {filter ? '無匹配品種' : '此物種尚無品種資料'}
-        </p>
-      ) : (
-        <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', maxHeight: '420px', overflow: 'auto' }}>
-          {filtered.map(breed => (
-              <div
-                key={breed.id}
-                style={{
-                  padding: '8px 14px',
-                  borderBottom: '1px solid rgba(255,255,255,0.06)',
-                  borderLeft: `3px solid ${BREED_COLOR}`,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                    <RankBadge rank="BREED" />
-                    {breed.name_zh ? (
-                      <>
-                        <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{breed.name_zh}</span>
-                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9em' }}>{breed.name_en}</span>
-                      </>
-                    ) : (
-                      <span style={{ fontWeight: 700, color: '#e2e8f0' }}>{breed.name_en}</span>
-                    )}
-                  </div>
-                  {breed.breed_group && (
-                    <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.35)', marginTop: '1px' }}>
-                      {breed.breed_group}
-                    </div>
-                  )}
-                </div>
-                {onSelect && (
-                  <button onClick={() => handleSelectBreed(breed)} style={{
-                    padding: '4px 12px', background: '#34d399', color: '#0d1526',
-                    border: 'none', borderRadius: '4px', cursor: 'pointer',
-                    marginLeft: '8px', flexShrink: 0, fontWeight: 600,
-                  }}>
-                    新增
-                  </button>
-                )}
-              </div>
-          ))}
-        </div>
-      )}
-
-    </div>
-  );
-}
-
 export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchPerformed }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -554,8 +368,9 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
   const [searched, setSearched] = useState(false);
   const [showSourceInfo, setShowSourceInfo] = useState(false);
   const [latinRetry, setLatinRetry] = useState('');
-  const [view, setView] = useState('default'); // 'default' | 'breedList'
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [hasSearchedLatin, setHasSearchedLatin] = useState(false);
+  const [interceptSpecies, setInterceptSpecies] = useState(null);
+  const [showNameReport, setShowNameReport] = useState(false);
 
   const { breedResults, groups, familyColorMap } = useMemo(() => {
     const { breeds, speciesGroups } = groupBySpecies(results);
@@ -581,24 +396,33 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
     return { breedResults: breeds, groups: speciesGroups, familyColorMap: colorMap };
   }, [results]);
 
-  function handlePickCategory(entry) {
-    setSelectedCategory(entry);
-    setView('breedList');
-  }
-
-  function handleBackFromBreedList() {
-    setView('default');
-    setSelectedCategory(null);
-  }
-
-  function handleQueryChange(e) {
-    const val = e.target.value;
-    setQuery(val);
-    // Typing in search box while in breedList → switch back to default
-    if (view === 'breedList' && val.trim()) {
-      setView('default');
-      setSelectedCategory(null);
+  function markLatinIfApplicable(q) {
+    if (!CJK_RE.test(q)) {
+      setHasSearchedLatin(true);
     }
+  }
+
+  async function handleSpeciesSelect(species) {
+    // Breed results: pass through directly, no intercept
+    if (species.result_type === 'breed') {
+      onSelect(species);
+      return;
+    }
+    // Only intercept SPECIES/SUBSPECIES rank
+    const rank = (species.taxon_rank || '').toUpperCase();
+    if (rank !== 'SPECIES' && rank !== 'SUBSPECIES') {
+      onSelect(species);
+      return;
+    }
+    // Check if this species has breeds
+    try {
+      const data = await api.getBreeds(species.taxon_id);
+      if (data.breeds?.length > 0) {
+        setInterceptSpecies({ ...species, _breeds: data.breeds, _speciesInfo: data.species || species });
+        return;
+      }
+    } catch {}
+    onSelect(species);
   }
 
   async function handleSearch(e) {
@@ -607,6 +431,8 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
     setSearching(true);
     setSearched(false);
     setResults([]);
+    setInterceptSpecies(null);
+    markLatinIfApplicable(query.trim());
     let count = 0;
     try {
       await api.searchSpeciesStream(query, (sp) => {
@@ -622,50 +448,31 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
     }
   }
 
-  // Show breed list view
-  if (view === 'breedList' && selectedCategory) {
+  // Show breed intercept panel
+  if (interceptSpecies) {
     return (
       <div>
-        <form onSubmit={handleSearch} autoComplete="off" style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-          <input type="text" name="prevent_autofill" autoComplete="new-password" style={{ display: 'none' }} tabIndex={-1} />
-          <input
-            type="search"
-            value={query}
-            onChange={handleQueryChange}
-            placeholder="輸入學名最精確（如 Canis lupus）也可搜中文"
-            autoComplete="new-password"
-            style={{
-              flex: 1, padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: '4px', background: '#1a2433', color: '#e2e8f0',
-            }}
-          />
-          <button type="submit" disabled={searching} style={{
-            padding: '8px 16px', background: '#38bdf8', color: '#0d1526',
-            border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600,
-          }}>
-            搜尋
-          </button>
-          {onCancel && (
-            <button type="button" onClick={onCancel} style={{
-              padding: '8px 16px', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)',
-              border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px', cursor: 'pointer',
-            }}>
-              取消
-            </button>
-          )}
-        </form>
-        <BreedCategoryList
-          category={selectedCategory}
-          onSelect={onSelect}
-          onBack={handleBackFromBreedList}
+        <BreedInterceptPanel
+          species={interceptSpecies}
+          onSelectBreed={(payload) => {
+            setInterceptSpecies(null);
+            onSelect(payload);
+          }}
+          onSkip={() => {
+            const sp = interceptSpecies;
+            setInterceptSpecies(null);
+            // Pass original species without breed
+            const { _breeds, _speciesInfo, ...clean } = sp;
+            onSelect(clean);
+          }}
+          onCancel={() => setInterceptSpecies(null)}
+          hasSearchedLatin={hasSearchedLatin}
         />
       </div>
     );
   }
 
   // Default search view
-  const showQuickButtons = !query.trim() && !searched && results.length === 0 && !searching;
-
   return (
     <div>
       <form onSubmit={handleSearch} autoComplete="off" style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -673,7 +480,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
         <input
           type="search"
           value={query}
-          onChange={handleQueryChange}
+          onChange={(e) => setQuery(e.target.value)}
           placeholder="輸入學名最精確（如 Canis lupus）也可搜中文"
           autoFocus={autoFocus}
           autoComplete="new-password"
@@ -698,14 +505,10 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
         )}
       </form>
 
-      {showQuickButtons && (
-        <BreedQuickButtons onPickCategory={handlePickCategory} />
-      )}
-
       <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.4)', marginBottom: '16px', lineHeight: 1.7 }}>
-        上方按鈕為已收錄的品種（如柴犬、布偶貓），若沒有列出你要的品種，代表系統尚未收錄，建議先選好物種後再回報想要的品種。
-        <br />
         搜尋框<strong style={{ color: 'rgba(255,255,255,0.55)' }}>建議直接輸入學名（如 Canis lupus familiaris）</strong>，結果最精確。中文名因 GBIF 及 Wikidata 資料涵蓋有限，經常搜不到或不完整，英文俗名亦僅供參考。
+        <br />
+        若該物種有已收錄的品種（如柴犬、布偶貓），選擇物種後會自動出現品種選擇。
         <div style={{ marginTop: '6px' }}>
           <span
             onClick={() => setShowSourceInfo(!showSourceInfo)}
@@ -745,7 +548,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
             </div>
           )}
           {breedResults.map((sp) => (
-            <BreedRow key={`breed-${sp.breed?.id}`} sp={sp} onSelect={onSelect} />
+            <BreedRow key={`breed-${sp.breed?.id}`} sp={sp} onSelect={handleSpeciesSelect} />
           ))}
           {groups.map((g) => {
             const main = g.species || g.subspecies[0];
@@ -754,7 +557,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
               <SpeciesGroup
                 key={g.speciesKey}
                 group={g}
-                onSelect={onSelect}
+                onSelect={handleSpeciesSelect}
                 familyColor={familyColorMap.get(family)}
               />
             );
@@ -762,7 +565,23 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
         </div>
       )}
 
-      {!searching && searched && results.length > 0 && /[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(query) && (
+      {!searching && searched && results.length > 0 && hasSearchedLatin && !showNameReport && (
+        <div style={{ textAlign: 'center', fontSize: '0.82em', color: 'rgba(255,255,255,0.4)', marginTop: '8px' }}>
+          以上物種的中文名稱有誤？{' '}
+          <button
+            onClick={() => setShowNameReport(true)}
+            style={{ background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer', fontSize: '1em' }}
+          >
+            回報名稱問題
+          </button>
+        </div>
+      )}
+
+      {showNameReport && (
+        <NameReportForm results={results} onClose={() => setShowNameReport(false)} />
+      )}
+
+      {!searching && searched && results.length > 0 && CJK_RE.test(query) && (
         <div style={{ textAlign: 'center', fontSize: '0.82em', color: 'rgba(255,255,255,0.4)', marginTop: '8px', lineHeight: 1.6 }}>
           找不到想要的結果？中文搜尋涵蓋有限，試試用拉丁文學名搜尋（Google「{query.trim()} 學名」即可查到）
         </div>
@@ -787,7 +606,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
               例：搜「雞 學名」→ 得到 <i>Gallus gallus domesticus</i> → 在上方輸入 "Gallus" 就能找到
             </span>
           </div>
-          {/[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(query) && (
+          {CJK_RE.test(query) && (
             <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(56,189,248,0.15)' }}>
               <div style={{ fontSize: '0.82em', color: 'rgba(255,255,255,0.5)', marginBottom: '6px' }}>
                 查到學名了？直接貼上重新搜尋：
@@ -799,6 +618,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
                   const retryQuery = latinRetry.trim();
                   setQuery(retryQuery);
                   setLatinRetry('');
+                  markLatinIfApplicable(retryQuery);
                   // trigger search
                   setSearching(true);
                   setSearched(false);
