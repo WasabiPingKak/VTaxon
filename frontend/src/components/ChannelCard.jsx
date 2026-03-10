@@ -158,7 +158,7 @@ export default function ChannelCard({
               type="url" value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder="https://..."
-              autoComplete="nope"
+              autoComplete="new-password"
               style={{
                 flex: 1, padding: '6px 8px', border: '1px solid rgba(255,255,255,0.15)',
                 borderRadius: '4px', fontSize: '0.9em', boxSizing: 'border-box',

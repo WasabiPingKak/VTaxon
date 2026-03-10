@@ -125,7 +125,7 @@ function BreedAccordion({ section, user, addToast, navigate }) {
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                     placeholder="過濾品種名稱…"
-                    autoComplete="nope"
+                    autoComplete="new-password"
                     style={{
                       width: '100%', padding: '6px 10px', boxSizing: 'border-box',
                       border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px',
@@ -237,10 +237,11 @@ function BreedRequestInline() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{
+    <form onSubmit={handleSubmit} autoComplete="off" style={{
       marginBottom: '16px', padding: '14px 16px',
       background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)',
     }}>
+      <input type="text" name="prevent_autofill" autoComplete="new-password" style={{ display: 'none' }} tabIndex={-1} />
       <div style={{ marginBottom: '10px' }}>
         <button
           type="button"
@@ -300,7 +301,7 @@ function BreedRequestInline() {
           <input
             type="text" value={form.name_zh} required
             onChange={(e) => setForm(prev => ({ ...prev, name_zh: e.target.value }))}
-            placeholder="品種中文名稱" autoComplete="nope" style={breedRequestInputStyle}
+            placeholder="品種中文名稱" autoComplete="new-password" style={breedRequestInputStyle}
           />
         </div>
         <div>
@@ -311,7 +312,7 @@ function BreedRequestInline() {
           <input
             type="text" value={form.name_en} required
             onChange={(e) => setForm(prev => ({ ...prev, name_en: e.target.value }))}
-            placeholder="品種英文名稱" autoComplete="nope" style={breedRequestInputStyle}
+            placeholder="品種英文名稱" autoComplete="new-password" style={breedRequestInputStyle}
           />
         </div>
         <div>
@@ -323,7 +324,7 @@ function BreedRequestInline() {
             type="text" value={form.scientific_name} required
             onChange={(e) => setForm(prev => ({ ...prev, scientific_name: e.target.value }))}
             placeholder="該品種所屬物種的拉丁學名"
-            autoComplete="nope" style={{ ...breedRequestInputStyle, fontStyle: 'italic' }}
+            autoComplete="new-password" style={{ ...breedRequestInputStyle, fontStyle: 'italic' }}
           />
         </div>
         <div>
@@ -336,7 +337,7 @@ function BreedRequestInline() {
             onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
             placeholder="補充說明（必填，請附上參考來源的連結）"
             rows={2}
-            autoComplete="nope" style={{ ...breedRequestInputStyle, resize: 'vertical' }}
+            autoComplete="new-password" style={{ ...breedRequestInputStyle, resize: 'vertical' }}
           />
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -480,13 +481,14 @@ function GlobalBreedSearch({ user, addToast, navigate }) {
 
   return (
     <div style={{ marginBottom: '20px' }}>
-      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px' }}>
+      <form onSubmit={handleSearch} autoComplete="off" style={{ display: 'flex', gap: '8px' }}>
+        <input type="text" name="prevent_autofill" autoComplete="new-password" style={{ display: 'none' }} tabIndex={-1} />
         <input
           type="text"
           value={query}
           onChange={(e) => { setQuery(e.target.value); if (!e.target.value.trim()) { setResults([]); setSearched(false); } }}
           placeholder="搜尋品種名稱（如：柴犬、布偶貓、Shiba Inu）"
-          autoComplete="nope"
+          autoComplete="new-password"
           style={{
             flex: 1, padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '4px', background: '#1a2433', color: '#e2e8f0',

@@ -204,7 +204,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder="搜尋虛構物種（例：狐、龍、AI）"
-        autoComplete="nope"
+        autoComplete="new-password"
         style={{
           width: '100%', padding: '10px 12px', border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: '6px', fontSize: '0.95em', boxSizing: 'border-box',
@@ -342,7 +342,8 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
             </button>
           </div>
         ) : showRequestForm ? (
-          <form onSubmit={handleSubmitRequest}>
+          <form onSubmit={handleSubmitRequest} autoComplete="off">
+            <input type="text" name="prevent_autofill" autoComplete="new-password" style={{ display: 'none' }} tabIndex={-1} />
             <div style={{ fontSize: '0.9em', color: 'rgba(255,255,255,0.6)', marginBottom: '8px' }}>
               回報遺漏的虛構物種
             </div>
@@ -418,7 +419,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
                   onChange={(e) => setRequestForm(prev => ({ ...prev, name_zh: e.target.value }))}
                   placeholder="虛構物種中文名稱"
                   required
-                  autoComplete="nope"
+                  autoComplete="new-password"
                   style={formInputStyle}
                 />
                 <div style={formHintStyle}>（例：九尾狐、鳳凰、克拉肯）</div>
@@ -431,7 +432,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
                   onChange={(e) => setRequestForm(prev => ({ ...prev, name_en: e.target.value }))}
                   placeholder="虛構物種英文名稱"
                   required
-                  autoComplete="nope"
+                  autoComplete="new-password"
                   style={formInputStyle}
                 />
                 <div style={formHintStyle}>（例：Nine-tailed Fox、Phoenix、Kraken）</div>
@@ -444,7 +445,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
                   onChange={(e) => setRequestForm(prev => ({ ...prev, suggested_origin: e.target.value }))}
                   placeholder="希望歸入的分類（如：東方神話 → 日本神話）"
                   required
-                  autoComplete="nope"
+                  autoComplete="new-password"
                   style={formInputStyle}
                 />
                 <div style={formHintStyle}>（可自創階層，例：東方神話 → 日本神話）</div>
@@ -457,7 +458,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
                   placeholder="簡述物種形象特徵、來源典故或附上參考連結（必填）"
                   rows={2}
                   required
-                  autoComplete="nope"
+                  autoComplete="new-password"
                   style={{ ...formInputStyle, resize: 'vertical' }}
                 />
                 <div style={formHintStyle}>（請附上來源典故或參考連結）</div>

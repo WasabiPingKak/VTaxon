@@ -23,7 +23,7 @@ export default function CreatorListInput({ value = [], onChange }) {
             value={item.name}
             onChange={(e) => update(i, 'name', e.target.value)}
             placeholder="名稱"
-            autoComplete="nope"
+            autoComplete="new-password"
             style={{ ...fieldStyle, flex: '0 0 120px' }}
           />
           <input
@@ -31,7 +31,7 @@ export default function CreatorListInput({ value = [], onChange }) {
             value={item.url || ''}
             onChange={(e) => update(i, 'url', e.target.value)}
             placeholder="連結（選填）"
-            autoComplete="nope"
+            autoComplete="new-password"
             style={{ ...fieldStyle, flex: 1 }}
           />
           <button type="button" onClick={() => remove(i)} style={removeBtnStyle}>✕</button>

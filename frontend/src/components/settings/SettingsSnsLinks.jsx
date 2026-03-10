@@ -45,7 +45,8 @@ export default function SettingsSnsLinks() {
   }
 
   return (
-    <form onSubmit={handleSaveSns}>
+    <form onSubmit={handleSaveSns} autoComplete="off">
+      <input type="text" name="prevent_autofill" autoComplete="new-password" style={{ display: 'none' }} tabIndex={-1} />
       <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#e2e8f0' }}>
         SNS 連結
       </label>
@@ -67,7 +68,7 @@ export default function SettingsSnsLinks() {
               return next;
             })}
             placeholder={placeholder}
-            autoComplete="nope"
+            autoComplete="new-password"
             style={{
               width: '100%', padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: '4px', fontSize: '1em', boxSizing: 'border-box',

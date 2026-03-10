@@ -482,7 +482,7 @@ function BreedCategoryList({ category, onSelect, onBack }) {
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         placeholder="過濾品種名稱…"
-        autoComplete="nope"
+        autoComplete="new-password"
         autoFocus
         style={{
           width: '100%', padding: '8px', marginBottom: '8px', boxSizing: 'border-box',
@@ -622,13 +622,14 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
   if (view === 'breedList' && selectedCategory) {
     return (
       <div>
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+        <form onSubmit={handleSearch} autoComplete="off" style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+          <input type="text" name="prevent_autofill" autoComplete="new-password" style={{ display: 'none' }} tabIndex={-1} />
           <input
             type="text"
             value={query}
             onChange={handleQueryChange}
             placeholder="搜尋物種或品種（例如：柴犬、布偶貓、貓、狼）"
-            autoComplete="nope"
+            autoComplete="new-password"
             style={{
               flex: 1, padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: '4px', background: '#1a2433', color: '#e2e8f0',
@@ -663,14 +664,15 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
 
   return (
     <div>
-      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+      <form onSubmit={handleSearch} autoComplete="off" style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+        <input type="text" name="prevent_autofill" autoComplete="new-password" style={{ display: 'none' }} tabIndex={-1} />
         <input
           type="text"
           value={query}
           onChange={handleQueryChange}
           placeholder="搜尋物種或品種（例如：柴犬、布偶貓、貓、狼）"
           autoFocus={autoFocus}
-          autoComplete="nope"
+          autoComplete="new-password"
           style={{
             flex: 1, padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '4px', background: '#1a2433', color: '#e2e8f0',
