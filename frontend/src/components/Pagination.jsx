@@ -1,5 +1,7 @@
-export default function Pagination({ page, totalPages, onPageChange }) {
-  if (totalPages <= 1) return null;
+const PER_PAGE_OPTIONS = [12, 24, 48, 96];
+
+export default function Pagination({ page, totalPages, onPageChange, perPage, onPerPageChange }) {
+  if (totalPages <= 1 && !onPerPageChange) return null;
 
   const pages = [];
   const range = 2;
@@ -55,6 +57,25 @@ export default function Pagination({ page, totalPages, onPageChange }) {
           &gt;
         </button>
       </div>
+      {onPerPageChange && (
+        <select
+          value={perPage}
+          onChange={e => onPerPageChange(Number(e.target.value))}
+          style={{
+            marginLeft: 12,
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 6, padding: '4px 8px',
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: '0.85em',
+            cursor: 'pointer',
+          }}
+        >
+          {PER_PAGE_OPTIONS.map(n => (
+            <option key={n} value={n}>每頁 {n} 筆</option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }

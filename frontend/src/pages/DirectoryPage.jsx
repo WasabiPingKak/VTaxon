@@ -67,6 +67,10 @@ export default function DirectoryPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handlePerPageChange = (perPage) => {
+    setFilters(prev => ({ ...prev, per_page: perPage, page: 1 }));
+  };
+
   const items = data?.items || [];
 
   const handleItemClick = (item) => {
@@ -189,6 +193,8 @@ export default function DirectoryPage() {
           page={data.page}
           totalPages={data.total_pages}
           onPageChange={handlePageChange}
+          perPage={filters.per_page}
+          onPerPageChange={handlePerPageChange}
         />
       )}
 
