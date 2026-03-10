@@ -232,7 +232,6 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
             totalCount += group.directSpecies.length;
             for (const [, typeData] of group.types) {
               totalCount += typeData.children.length;
-              if (typeData.typeNode) totalCount++;
             }
           }
           return (
@@ -265,7 +264,6 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
                     let subCount = group.directSpecies.length;
                     for (const [, typeData] of group.types) {
                       subCount += typeData.children.length;
-                      if (typeData.typeNode) subCount++;
                     }
 
                     if (!hasSubCategories) {
