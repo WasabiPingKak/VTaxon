@@ -168,19 +168,18 @@ export const api = {
   },
 
   // Breeds
-  getBreedCategories: (() => {
-    let cached = null;
-    return async () => {
-      if (cached) return cached;
-      const data = await apiFetch('/breeds/categories');
-      cached = data;
-      return data;
-    };
-  })(),
   getBreeds: (taxonId) => apiFetch(`/breeds?taxon_id=${taxonId}`),
   searchBreeds: (q) => apiFetch(`/breeds/search?q=${encodeURIComponent(q)}`),
   createBreedRequest: (body) => apiFetch('/breeds/requests', {
     method: 'POST', body: JSON.stringify(body),
+  }),
+  createNameReport: (body) => apiFetch('/species/name-reports', {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+  getNameReports: (status = 'pending') =>
+    apiFetch(`/species/name-reports?status=${encodeURIComponent(status)}`),
+  updateNameReport: (id, body) => apiFetch(`/species/name-reports/${id}`, {
+    method: 'PATCH', body: JSON.stringify(body),
   }),
 
   // Admin: Breed Requests

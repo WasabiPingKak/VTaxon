@@ -6,7 +6,8 @@ from sqlalchemy import func
 from ..auth import admin_required
 from ..extensions import db
 from ..models import (Breed, BreedRequest, FictionalSpecies,
-                      FictionalSpeciesRequest, SpeciesCache, UserReport)
+                      FictionalSpeciesRequest, SpeciesCache,
+                      SpeciesNameReport, UserReport)
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -31,6 +32,14 @@ def get_request_counts():
     )
     breed = {status: count for status, count in breed_rows}
 
+    # Species name reports: group by status
+    name_report_rows = (
+        db.session.query(SpeciesNameReport.status, func.count())
+        .group_by(SpeciesNameReport.status)
+        .all()
+    )
+    name_report = {status: count for status, count in name_report_rows}
+
     # User reports: group by status
     report_rows = (
         db.session.query(UserReport.status, func.count())
@@ -42,6 +51,7 @@ def get_request_counts():
     return jsonify({
         'fictional': fictional,
         'breed': breed,
+        'name_report': name_report,
         'report': report,
     })
 

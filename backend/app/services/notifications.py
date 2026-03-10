@@ -16,6 +16,12 @@ TITLE_MAP = {
         'rejected':    '品種申請不處理',
         'approved':    '品種申請已批准',
     },
+    'species_name_report': {
+        'received':    '名稱回報已排入待辦',
+        'in_progress': '名稱回報處理中',
+        'completed':   '名稱回報已完成',
+        'rejected':    '名稱回報不處理',
+    },
     'report': {
         'investigating': '帳號檢舉調查中',
         'confirmed':     '帳號檢舉已確認處理',
