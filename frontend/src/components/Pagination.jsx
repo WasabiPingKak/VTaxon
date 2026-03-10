@@ -72,7 +72,7 @@ export default function Pagination({ page, totalPages, onPageChange, perPage, on
           }}
         >
           {PER_PAGE_OPTIONS.map(n => (
-            <option key={n} value={n}>每頁 {n} 筆</option>
+            <option key={n} value={n} style={{ background: '#1e293b', color: 'rgba(255,255,255,0.85)' }}>每頁 {n} 筆</option>
           ))}
         </select>
       )}
