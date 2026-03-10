@@ -229,17 +229,22 @@ export default function SettingsRealSpecies() {
         <div ref={searchRef} style={{ padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
           <AiPromptBlock />
           <SpeciesSearch onSelect={handleAddTrait} onCancel={() => setShowSearch(false)} autoFocus />
-          <Link to="/breeds" style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-            marginTop: '12px', padding: '10px 14px',
-            background: 'rgba(251,146,60,0.08)',
-            border: '1px dashed rgba(251,146,60,0.35)',
-            borderRadius: '6px', textDecoration: 'none',
-            color: '#fb923c', fontSize: '0.9em', fontWeight: 500,
-          }}>
-            <span style={{ fontSize: '1.1em' }}>+</span>
-            找不到想要的品種？回報遺漏
-          </Link>
+          <div style={{ marginTop: '12px' }}>
+            <Link to="/breeds" style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              padding: '10px 14px',
+              background: 'rgba(251,146,60,0.08)',
+              border: '1px dashed rgba(251,146,60,0.35)',
+              borderRadius: '6px', textDecoration: 'none',
+              color: '#fb923c', fontSize: '0.9em', fontWeight: 500,
+            }}>
+              <span style={{ fontSize: '1.1em' }}>+</span>
+              找不到想要的品種？回報遺漏
+            </Link>
+            <div style={{ fontSize: '0.78em', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: '6px', lineHeight: 1.5 }}>
+              回報前請先用學名搜尋確認（如 <i>Canis lupus</i>），中文搜不到不代表物種不存在
+            </div>
+          </div>
         </div>
       )}
     </div>
