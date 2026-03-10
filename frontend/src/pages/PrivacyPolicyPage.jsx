@@ -31,7 +31,7 @@ const headingEn = { ...heading, color: 'rgba(255,255,255,0.5)' };
 const paraEn = { ...para, color: 'rgba(255,255,255,0.45)' };
 const listStyleEn = { ...listStyle, color: 'rgba(255,255,255,0.42)' };
 
-const LAST_UPDATED = '2026-03-05';
+const LAST_UPDATED = '2026-03-10';
 
 export default function PrivacyPolicyPage() {
   return (
@@ -122,38 +122,59 @@ export default function PrivacyPolicyPage() {
         帳號刪除後，你的所有資料（包括角色檔案、物種標註）將被永久移除。
       </p>
 
-      {/* 8. 第三方服務 */}
-      <h2 style={heading}>8. 第三方服務</h2>
-      <p style={para}>本服務使用以下第三方服務：</p>
+      {/* 8. 資料分享與第三方服務 */}
+      <h2 style={heading}>8. 資料分享與第三方服務</h2>
+      <p style={para}>
+        我們<strong>不會出售、交易或轉讓</strong>你的個人資料給任何第三方用於行銷或其他與本服務無關的目的。
+        你的資料僅在以下情況下與第三方服務共享，且僅限於提供本服務所必需的範圍：
+      </p>
       <ul style={listStyle}>
-        <li><strong>Supabase</strong>：資料庫託管與認證服務</li>
-        <li><strong>Google OAuth</strong>：YouTube 帳號登入認證</li>
-        <li><strong>Twitch OAuth</strong>：Twitch 帳號登入認證</li>
-        <li><strong>GBIF（全球生物多樣性資訊機構）</strong>：生物分類學資料查詢</li>
-        <li><strong>Google Cloud Run</strong>：後端服務部署</li>
-        <li><strong>Firebase Hosting</strong>：前端網站託管</li>
-        <li><strong>Google Analytics</strong>：匿名網站使用統計分析</li>
+        <li><strong>Supabase</strong>（資料庫與認證託管）：儲存你的帳號資料（帳號 ID、顯示名稱、頭像 URL）與認證資訊。Supabase 作為資料處理者，依其安全政策保護資料。</li>
+        <li><strong>Google OAuth / YouTube API</strong>：登入時透過 OAuth 取得你的 YouTube 頻道公開資訊（頻道 ID、名稱、頭像）。我們僅使用 OAuth token 讀取你自己的公開頻道資料，不會將你的資料回傳給 Google。</li>
+        <li><strong>Twitch OAuth</strong>：登入時透過 OAuth 取得你的 Twitch 帳號公開資訊。同樣不會將你的資料回傳給 Twitch。</li>
+        <li><strong>Google Cloud Run</strong>（後端執行環境）與 <strong>Firebase Hosting</strong>（前端託管）：你的請求資料經過這些 Google Cloud 基礎設施處理，受 Google Cloud 安全措施保護。</li>
+        <li><strong>Google Analytics</strong>：收集匿名的網站瀏覽統計（頁面瀏覽次數、停留時間），不包含個人身份資訊。</li>
+        <li><strong>GBIF / Wikidata / TaiCOL</strong>（生物分類資料來源）：我們僅向這些服務傳送物種學名進行查詢，<strong>不會傳送任何使用者個人資料</strong>。</li>
       </ul>
       <p style={para}>
-        這些服務有各自的隱私權政策，建議你參閱相關文件以了解它們如何處理資料。
+        除上述情況外，我們不會向任何其他第三方揭露你的個人資料，除非法律要求或為保護使用者安全而必須配合。
       </p>
 
-      {/* 9. 兒童隱私 */}
-      <h2 style={heading}>9. 兒童隱私</h2>
+      {/* 9. 資料安全 */}
+      <h2 style={heading}>9. 資料安全</h2>
+      <p style={para}>
+        我們採取多項技術與組織措施來保護你的資料安全：
+      </p>
+      <ul style={listStyle}>
+        <li><strong>傳輸加密</strong>：所有資料傳輸均透過 HTTPS/TLS 加密，包括前端（Firebase Hosting）與後端（Google Cloud Run）之間的通訊。</li>
+        <li><strong>認證安全</strong>：採用 JWT 數位簽章驗證（ES256 公鑰演算法），確保認證 token 無法被偽造。</li>
+        <li><strong>資料庫存取控制</strong>：所有資料表均啟用行級安全策略（Row-Level Security），確保使用者只能存取自己的資料。</li>
+        <li><strong>安全標頭</strong>：後端設置多項安全 HTTP 標頭（包括 X-Content-Type-Options、X-Frame-Options、Referrer-Policy），防範常見的網路攻擊。</li>
+        <li><strong>跨域存取限制</strong>：CORS 政策僅允許白名單網域存取 API，防止未授權的跨域請求。</li>
+        <li><strong>最小權限原則</strong>：OAuth 僅請求運作所需的最小存取範圍（YouTube readonly、Twitch 預設範圍），不會請求超出服務需求的權限。</li>
+        <li><strong>託管平台安全</strong>：資料庫託管於 Supabase（具備加密儲存與自動備份），後端部署於 Google Cloud Run（符合 SOC 2、ISO 27001 等安全認證）。</li>
+      </ul>
+      <p style={para}>
+        儘管我們盡力保護你的資料，但沒有任何網路傳輸或電子儲存方式能保證 100% 安全。
+        如果你發現任何安全問題，請立即透過下方聯絡方式通知我們。
+      </p>
+
+      {/* 10. 兒童隱私 */}
+      <h2 style={heading}>10. 兒童隱私</h2>
       <p style={para}>
         本服務不以 13 歲以下的兒童為對象，也不會刻意收集兒童的個人資料。如果我們發現不慎收集了
         兒童的資料，將會盡速刪除。
       </p>
 
-      {/* 10. 政策變更 */}
-      <h2 style={heading}>10. 政策變更</h2>
+      {/* 11. 政策變更 */}
+      <h2 style={heading}>11. 政策變更</h2>
       <p style={para}>
         本隱私權政策可能會不定期更新。重大變更時，我們會在服務首頁公告。
         繼續使用本服務即表示你同意更新後的政策。
       </p>
 
-      {/* 11. 聯絡方式 */}
-      <h2 style={heading}>11. 聯絡方式</h2>
+      {/* 12. 聯絡方式 */}
+      <h2 style={heading}>12. 聯絡方式</h2>
       <p style={para}>如果你對本隱私權政策有任何疑問，歡迎透過以下方式聯繫：</p>
       <ul style={listStyle}>
         <li>Email：<a href="mailto:wasabi.pingkak@gmail.com" style={{ color: '#38bdf8' }}>wasabi.pingkak@gmail.com</a></li>
@@ -248,39 +269,62 @@ export default function PrivacyPolicyPage() {
       </p>
 
       {/* 8 */}
-      <h2 style={headingEn}>8. Third-Party Services</h2>
-      <p style={paraEn}>The Service uses the following third-party services:</p>
+      <h2 style={headingEn}>8. Data Sharing and Third-Party Services</h2>
+      <p style={paraEn}>
+        We do <strong>not sell, trade, or transfer</strong> your personal data to any third party for marketing
+        or any purpose unrelated to the Service. Your data is shared with third-party services only to the
+        extent necessary to operate the Service:
+      </p>
       <ul style={listStyleEn}>
-        <li><strong>Supabase</strong>: Database hosting and authentication</li>
-        <li><strong>Google OAuth</strong>: YouTube account login authentication</li>
-        <li><strong>Twitch OAuth</strong>: Twitch account login authentication</li>
-        <li><strong>GBIF (Global Biodiversity Information Facility)</strong>: Biological taxonomy data queries</li>
-        <li><strong>Google Cloud Run</strong>: Backend service deployment</li>
-        <li><strong>Firebase Hosting</strong>: Frontend website hosting</li>
-        <li><strong>Google Analytics</strong>: Anonymous website usage analytics</li>
+        <li><strong>Supabase</strong> (database and authentication hosting): Stores your account data (account ID, display name, avatar URL) and authentication information. Supabase acts as a data processor and protects data per its security policies.</li>
+        <li><strong>Google OAuth / YouTube API</strong>: During sign-in, we retrieve your YouTube channel's public information (channel ID, name, avatar) via OAuth. We only use OAuth tokens to read your own public channel data and do not transmit your data back to Google.</li>
+        <li><strong>Twitch OAuth</strong>: During sign-in, we retrieve your Twitch account's public information via OAuth. We do not transmit your data back to Twitch.</li>
+        <li><strong>Google Cloud Run</strong> (backend) and <strong>Firebase Hosting</strong> (frontend): Your request data is processed through these Google Cloud infrastructure services, protected by Google Cloud security measures.</li>
+        <li><strong>Google Analytics</strong>: Collects anonymous website usage statistics (page views, session duration) and does not include personally identifiable information.</li>
+        <li><strong>GBIF / Wikidata / TaiCOL</strong> (biological taxonomy data sources): We only send species scientific names to these services for queries. <strong>No user personal data is transmitted.</strong></li>
       </ul>
       <p style={paraEn}>
-        These services have their own privacy policies. We encourage you to review their documentation
-        to understand how they handle data.
+        Beyond the above, we do not disclose your personal data to any other third party unless required
+        by law or necessary to protect user safety.
       </p>
 
       {/* 9 */}
-      <h2 style={headingEn}>9. Children's Privacy</h2>
+      <h2 style={headingEn}>9. Data Security</h2>
+      <p style={paraEn}>
+        We implement multiple technical and organizational measures to protect your data:
+      </p>
+      <ul style={listStyleEn}>
+        <li><strong>Encryption in transit</strong>: All data transmission is encrypted via HTTPS/TLS, including communication between the frontend (Firebase Hosting) and backend (Google Cloud Run).</li>
+        <li><strong>Authentication security</strong>: We use JWT digital signature verification (ES256 public key algorithm) to ensure authentication tokens cannot be forged.</li>
+        <li><strong>Database access control</strong>: All database tables have Row-Level Security (RLS) policies enabled, ensuring users can only access their own data.</li>
+        <li><strong>Security headers</strong>: The backend sets multiple security HTTP headers (including X-Content-Type-Options, X-Frame-Options, Referrer-Policy) to defend against common web attacks.</li>
+        <li><strong>Cross-origin restrictions</strong>: CORS policies only allow whitelisted domains to access the API, preventing unauthorized cross-origin requests.</li>
+        <li><strong>Principle of least privilege</strong>: OAuth requests only the minimum scopes required (YouTube readonly, Twitch default scope), never requesting permissions beyond what the Service needs.</li>
+        <li><strong>Hosting platform security</strong>: The database is hosted on Supabase (with encrypted storage and automatic backups), and the backend runs on Google Cloud Run (compliant with SOC 2, ISO 27001, and other security certifications).</li>
+      </ul>
+      <p style={paraEn}>
+        While we strive to protect your data, no method of internet transmission or electronic storage
+        is 100% secure. If you discover any security issues, please notify us immediately via the
+        contact methods below.
+      </p>
+
+      {/* 10 */}
+      <h2 style={headingEn}>10. Children's Privacy</h2>
       <p style={paraEn}>
         The Service is not directed at children under 13 years of age, and we do not knowingly collect
         personal data from children. If we discover that we have inadvertently collected data from a
         child, we will delete it promptly.
       </p>
 
-      {/* 10 */}
-      <h2 style={headingEn}>10. Changes to This Policy</h2>
+      {/* 11 */}
+      <h2 style={headingEn}>11. Changes to This Policy</h2>
       <p style={paraEn}>
         This Privacy Policy may be updated from time to time. Significant changes will be announced
         on the Service's homepage. Continued use of the Service constitutes acceptance of the updated policy.
       </p>
 
-      {/* 11 */}
-      <h2 style={headingEn}>11. Contact Us</h2>
+      {/* 12 */}
+      <h2 style={headingEn}>12. Contact Us</h2>
       <p style={paraEn}>If you have any questions about this Privacy Policy, please reach out through:</p>
       <ul style={listStyleEn}>
         <li>Email: <a href="mailto:wasabi.pingkak@gmail.com" style={{ color: 'rgba(56,189,248,0.6)' }}>wasabi.pingkak@gmail.com</a></li>
