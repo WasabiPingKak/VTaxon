@@ -343,6 +343,20 @@ def get_species_zh_override(taxon_id):
     return SPECIES_ZH_OVERRIDES.get(taxon_id)
 
 
+# Parent species binomial → zh override for subspecies path_zh display.
+# Used when the parent species is NOT in species_cache (no DB entry to look up).
+# Keep in sync with SPECIES_ZH_OVERRIDES for species that have subspecies.
+PARENT_SPECIES_NAME_ZH = {
+    'Canis lupus': '狼',        # 5219173
+    'Sus scrofa': '野豬',       # parent of 家豬 (Sus scrofa domesticus)
+}
+
+
+def get_parent_species_zh_by_name(parent_binomial):
+    """Return overridden Chinese name for a parent species binomial, or None."""
+    return PARENT_SPECIES_NAME_ZH.get(parent_binomial)
+
+
 # ---------------------------------------------------------------------------
 # Scientific name overrides (keyed by GBIF taxon_id)
 #

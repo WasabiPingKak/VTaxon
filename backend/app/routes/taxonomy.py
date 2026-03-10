@@ -10,7 +10,7 @@ from ..cache import (get_tree_cache, set_tree_cache, invalidate_tree_cache,
 from ..extensions import db
 from ..models import User, VtuberTrait, SpeciesCache, FictionalSpecies, OAuthAccount
 from ..services.gbif import _build_path_zh, _realign_taxon_path
-from ..services.taxonomy_zh import get_species_zh_override
+from ..services.taxonomy_zh import get_species_zh_override, get_parent_species_zh_by_name
 
 log = logging.getLogger(__name__)
 
@@ -199,21 +199,23 @@ def get_taxonomy_tree():
 
         # For SUBSPECIES/VARIETY/FORM: apply parent species override to path_zh['species']
         rank_upper = (species.taxon_rank or '').upper()
-        if rank_upper in ('SUBSPECIES', 'VARIETY', 'FORM') and path_zh.get('species'):
+        if rank_upper in ('SUBSPECIES', 'VARIETY', 'FORM'):
             parts = (species.scientific_name or '').split()
             if len(parts) >= 2:
                 parent_binomial = ' '.join(parts[:2])
                 if parent_binomial not in _parent_override_cache:
+                    # Try DB lookup first, then static name-based fallback
                     parent = SpeciesCache.query.filter(
                         SpeciesCache.scientific_name.ilike(f'{parent_binomial}%'),
                         SpeciesCache.taxon_rank == 'SPECIES',
                     ).first()
                     _parent_override_cache[parent_binomial] = (
-                        get_species_zh_override(parent.taxon_id) if parent else None
+                        get_species_zh_override(parent.taxon_id) if parent
+                        else get_parent_species_zh_by_name(parent_binomial)
                     )
                 parent_zh = _parent_override_cache[parent_binomial]
                 if parent_zh and path_zh.get('species') != parent_zh:
-                    path_zh = dict(path_zh)
+                    path_zh = dict(path_zh) if path_zh else {}
                     path_zh['species'] = parent_zh
                     species.path_zh = path_zh
                     needs_commit = True
