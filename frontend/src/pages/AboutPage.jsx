@@ -101,6 +101,28 @@ export default function AboutPage() {
         ，歡迎參與討論或回報問題。
       </p>
 
+      {/* ── 更新日誌 ── */}
+      <div style={{
+        marginTop: 32,
+        padding: '18px 24px',
+        borderRadius: 12,
+        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'rgba(255,255,255,0.02)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+      }}>
+        <div>
+          <h3 style={{ color: '#fff', fontWeight: 600, fontSize: '0.95em', margin: '0 0 4px' }}>更新日誌</h3>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.82em', margin: 0 }}>查看歷次功能更新與改善內容</p>
+        </div>
+        <Link to="/changelog" style={pillBtn}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'; e.currentTarget.style.color = '#fff'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+        >查看 →</Link>
+      </div>
+
       {/* ── 支持專案 ── */}
       <div style={{
         marginTop: 36,

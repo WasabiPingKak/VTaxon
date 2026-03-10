@@ -16,6 +16,7 @@ const DirectoryPage = lazy(() => import('./pages/DirectoryPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
+const ChangelogPage = lazy(() => import('./pages/ChangelogPage'));
 const VTuberProfilePage = lazy(() => import('./pages/VTuberProfilePage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
@@ -73,12 +74,15 @@ function AppContent() {
               <Route path="/privacy" element={<PrivacyPolicyPage />} />
               <Route path="/terms" element={<TermsOfServicePage />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/changelog" element={<ChangelogPage />} />
               <Route path="/vtuber/:userId" element={<VTuberProfilePage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
 
             <footer className="vtaxon-footer" style={footerStyle}>
               <Link to="/about" className="vtaxon-footer-link">關於</Link>
+              {' · '}
+              <Link to="/changelog" className="vtaxon-footer-link">更新日誌</Link>
               {' · '}
               <Link to="/privacy" className="vtaxon-footer-link">隱私權政策</Link>
               {' · '}
