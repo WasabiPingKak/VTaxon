@@ -670,6 +670,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
           onChange={handleQueryChange}
           placeholder="搜尋物種或品種（例如：柴犬、布偶貓、貓、狼）"
           autoFocus={autoFocus}
+          autoComplete="off"
           style={{
             flex: 1, padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '4px', background: '#1a2433', color: '#e2e8f0',

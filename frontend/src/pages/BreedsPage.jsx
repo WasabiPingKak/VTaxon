@@ -300,7 +300,7 @@ function BreedRequestInline() {
           <input
             type="text" value={form.name_zh} required
             onChange={(e) => setForm(prev => ({ ...prev, name_zh: e.target.value }))}
-            placeholder="品種中文名稱" style={breedRequestInputStyle}
+            placeholder="品種中文名稱" autoComplete="off" style={breedRequestInputStyle}
           />
         </div>
         <div>
@@ -311,7 +311,7 @@ function BreedRequestInline() {
           <input
             type="text" value={form.name_en} required
             onChange={(e) => setForm(prev => ({ ...prev, name_en: e.target.value }))}
-            placeholder="品種英文名稱" style={breedRequestInputStyle}
+            placeholder="品種英文名稱" autoComplete="off" style={breedRequestInputStyle}
           />
         </div>
         <div>
@@ -323,7 +323,7 @@ function BreedRequestInline() {
             type="text" value={form.scientific_name} required
             onChange={(e) => setForm(prev => ({ ...prev, scientific_name: e.target.value }))}
             placeholder="該品種所屬物種的拉丁學名"
-            style={{ ...breedRequestInputStyle, fontStyle: 'italic' }}
+            autoComplete="off" style={{ ...breedRequestInputStyle, fontStyle: 'italic' }}
           />
         </div>
         <div>
@@ -336,7 +336,7 @@ function BreedRequestInline() {
             onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
             placeholder="補充說明（必填，請附上參考來源的連結）"
             rows={2}
-            style={{ ...breedRequestInputStyle, resize: 'vertical' }}
+            autoComplete="off" style={{ ...breedRequestInputStyle, resize: 'vertical' }}
           />
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>

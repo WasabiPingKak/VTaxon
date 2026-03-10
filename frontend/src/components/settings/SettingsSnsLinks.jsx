@@ -67,6 +67,7 @@ export default function SettingsSnsLinks() {
               return next;
             })}
             placeholder={placeholder}
+            autoComplete="off"
             style={{
               width: '100%', padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: '4px', fontSize: '1em', boxSizing: 'border-box',

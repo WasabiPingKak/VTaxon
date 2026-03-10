@@ -532,6 +532,7 @@ function ReportCard({ req, onUpdate }) {
           <textarea
             value={note} onChange={e => setNote(e.target.value)}
             placeholder="管理員備註（選填）" rows={2}
+            autoComplete="off"
             style={{
               width: '100%', boxSizing: 'border-box',
               background: 'rgba(255,255,255,0.04)',
@@ -744,6 +745,7 @@ function MultiStageActions({ actions, loading, note, setNote, onAction, adminNot
         onChange={e => setNote(e.target.value)}
         placeholder="管理員備註（選填）"
         rows={2}
+        autoComplete="off"
         style={{
           width: '100%', boxSizing: 'border-box',
           background: 'rgba(255,255,255,0.04)',

@@ -61,6 +61,7 @@ export default function TagInput({ value = [], onChange, placeholder }) {
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
+        autoComplete="off"
         placeholder={value.length === 0 ? placeholder : ''}
         style={{
           flex: 1, minWidth: '80px', border: 'none', outline: 'none',
