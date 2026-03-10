@@ -14,6 +14,7 @@ const RANK_TO_UPPER = {
   kingdom: 'KINGDOM', phylum: 'PHYLUM', class: 'CLASS', order: 'ORDER',
   family: 'FAMILY', genus: 'GENUS',
 };
+const SUB_SPECIES_RANKS = new Set(['SUBSPECIES', 'VARIETY', 'FORM']);
 
 const ANIM_DURATION_IN = 300;
 const ANIM_DURATION_OUT = 250;
@@ -100,8 +101,11 @@ function LinksRow({ oauthAccounts, socialLinks, countryFlags, loading }) {
 }
 
 /** Indented taxonomy path */
-function TaxonomyPath({ taxonPath, pathZh, commonNameZh, scientificName }) {
+function TaxonomyPath({ taxonPath, pathZh, commonNameZh, scientificName, taxonRank }) {
   const pathParts = (taxonPath || '').split('|');
+  const rankUpper = (taxonRank || '').toUpperCase();
+  const isSubSpecies = SUB_SPECIES_RANKS.has(rankUpper);
+
   const ranks = RANK_ORDER.map((rank, i) => {
     const latin = pathParts[i];
     const zh = pathZh ? pathZh[rank] : undefined;
@@ -118,11 +122,26 @@ function TaxonomyPath({ taxonPath, pathZh, commonNameZh, scientificName }) {
           <span>{r.zh ? `${r.zh} (${r.latin})` : r.latin}</span>
         </div>
       ))}
-      <div style={{ paddingLeft: ranks.length * 12, fontWeight: 600 }}>
-        {commonNameZh
-          ? `${commonNameZh} (${scientificName})`
-          : scientificName}
-      </div>
+      {isSubSpecies && pathParts[6] ? (
+        <>
+          {/* Parent species row */}
+          <div style={{ paddingLeft: ranks.length * 12, display: 'flex', alignItems: 'center' }}>
+            <RankBadge rank="SPECIES" style={{ fontSize: '0.7em' }} />
+            <span>{pathZh?.species ? `${pathZh.species} (${pathParts[6]})` : pathParts[6]}</span>
+          </div>
+          {/* Subspecies row */}
+          <div style={{ paddingLeft: (ranks.length + 1) * 12, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+            <RankBadge rank={rankUpper} style={{ fontSize: '0.7em' }} />
+            <span>{commonNameZh ? `${commonNameZh} (${scientificName})` : scientificName}</span>
+          </div>
+        </>
+      ) : (
+        <div style={{ paddingLeft: ranks.length * 12, fontWeight: 600 }}>
+          {commonNameZh
+            ? `${commonNameZh} (${scientificName})`
+            : scientificName}
+        </div>
+      )}
     </div>
   );
 }
@@ -599,6 +618,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
                 pathZh={entry.path_zh}
                 commonNameZh={entry.common_name_zh}
                 scientificName={displayScientificName(entry)}
+                taxonRank={entry.taxon_rank}
               />
             </div>
           )}
