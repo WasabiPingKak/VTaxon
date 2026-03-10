@@ -158,11 +158,17 @@ def search_species(query, limit=20):
 
     Includes local breed results first, then:
     - Latin/English queries → GBIF /species/suggest
-    - Chinese queries → TaiCOL taxon_group search → GBIF /species/match for full data
+    - Chinese queries → local species_cache → TaiCOL → GBIF /species/match
     """
     breed_results = _search_breeds(query, limit=limit)
     if _has_cjk(query):
-        species_results = _search_via_taicol(query, limit=limit)
+        local_results = _search_local_cache_chinese(query, limit=limit)
+        taicol_results = _search_via_taicol(query, limit=limit)
+        # Merge: local first, then TaiCOL (deduped by taxon_id)
+        seen = {sp['taxon_id'] for sp in local_results}
+        species_results = local_results + [
+            sp for sp in taicol_results if sp['taxon_id'] not in seen
+        ]
     else:
         species_results = suggest_species(query, limit=limit)
     return breed_results + species_results
@@ -172,6 +178,7 @@ def search_species_stream(query, limit=10):
     """Streaming version of search_species — yields one NDJSON line per result.
 
     Phase 1: Local breed search (instant, from DB)
+    Phase 1.5: Local species_cache Chinese name search (instant, CJK only)
     Phase 2: GBIF/TaiCOL species search (slower, from external APIs)
 
     Each result is enriched with Chinese names one at a time, so the frontend
@@ -182,9 +189,18 @@ def search_species_stream(query, limit=10):
     for br in breed_results:
         yield json.dumps(br, ensure_ascii=False) + '\n'
 
+    # Phase 1.5: Local species_cache Chinese name search (CJK queries only)
+    local_seen = set()
+    if _has_cjk(query):
+        local_results = _search_local_cache_chinese(query, limit=limit)
+        for sp in local_results:
+            local_seen.add(sp['taxon_id'])
+            yield json.dumps(sp, ensure_ascii=False) + '\n'
+
     # Phase 2: GBIF species search — streaming
     if _has_cjk(query):
-        yield from _search_via_taicol_stream(query, limit=limit)
+        yield from _search_via_taicol_stream(query, limit=limit,
+                                             exclude_ids=local_seen)
     else:
         yield from _suggest_species_stream(query, limit=limit)
 
@@ -248,6 +264,33 @@ def _search_breeds(query, limit=10):
     return results
 
 
+def _search_local_cache_chinese(query, limit=10):
+    """Search local species_cache by Chinese name (common_name_zh / alternative_names_zh).
+
+    This catches species that were previously cached via Latin-name searches
+    but would be missed by TaiCOL (which only covers Taiwan-native species).
+    """
+    query = query.strip()
+    if not query:
+        return []
+
+    # Search common_name_zh and alternative_names_zh with substring match
+    rows = (SpeciesCache.query
+            .filter(db.or_(
+                SpeciesCache.common_name_zh.like(f'%{query}%'),
+                SpeciesCache.alternative_names_zh.like(f'%{query}%'),
+            ))
+            .limit(limit)
+            .all())
+
+    results = []
+    for row in rows:
+        d = row.to_dict()
+        _fill_missing_rank_zh(d, row)
+        results.append(d)
+    return results
+
+
 def _suggest_species_stream(query, limit=10):
     """Generator: yield one NDJSON line per enriched GBIF suggest result."""
     fetch_limit = min(limit * 3, 60)
@@ -299,13 +342,18 @@ def _suggest_species_stream(query, limit=10):
         yield json.dumps(sp, ensure_ascii=False) + '\n'
 
 
-def _search_via_taicol_stream(query, limit=10):
-    """Streaming version of _search_via_taicol — yields one NDJSON line per result."""
+def _search_via_taicol_stream(query, limit=10, exclude_ids=None):
+    """Streaming version of _search_via_taicol — yields one NDJSON line per result.
+
+    Args:
+        exclude_ids: set of taxon_ids already returned by earlier phases
+                     (e.g. local cache), to avoid duplicate results.
+    """
     taicol_results = taicol_search_chinese(query, limit=limit)
     if not taicol_results:
         return
 
-    seen_keys = set()
+    seen_keys = set(exclude_ids or ())
     for tr in taicol_results:
         scientific_name = tr.get('scientific_name')
         if not scientific_name:
@@ -637,6 +685,23 @@ def _cache_enriched_species(species_list):
                 continue
             existing = db.session.get(SpeciesCache, taxon_id)
             if existing:
+                # Core taxonomy fields — always update from fresh GBIF data
+                # so corrupted/stale cache entries get self-corrected.
+                if sp.get('scientific_name') and existing.scientific_name != sp['scientific_name']:
+                    existing.scientific_name = sp['scientific_name']
+                if sp.get('taxon_rank') and existing.taxon_rank != sp['taxon_rank']:
+                    existing.taxon_rank = sp['taxon_rank']
+                if sp.get('taxon_path') and existing.taxon_path != sp['taxon_path']:
+                    existing.taxon_path = sp['taxon_path']
+                for field, attr in [('kingdom', 'kingdom'), ('phylum', 'phylum'),
+                                    ('class', 'class_'), ('order', 'order_'),
+                                    ('family', 'family'), ('genus', 'genus')]:
+                    val = sp.get(field)
+                    if val and getattr(existing, attr) != val:
+                        setattr(existing, attr, val)
+                # Update common_name_en if available
+                if sp.get('common_name_en') and not existing.common_name_en:
+                    existing.common_name_en = sp['common_name_en']
                 # Update common_name_zh: override table wins; otherwise
                 # accept any freshly-resolved name that differs from cache
                 # so stale/wrong cached names get corrected over time.
@@ -648,11 +713,10 @@ def _cache_enriched_species(species_list):
                 # Backfill alternative_names_zh if empty
                 if sp.get('alternative_names_zh') and not existing.alternative_names_zh:
                     existing.alternative_names_zh = sp['alternative_names_zh']
-                # Backfill path_zh if empty
-                if not existing.path_zh or existing.path_zh == {}:
-                    pzh = _build_path_zh(sp)
-                    if pzh:
-                        existing.path_zh = pzh
+                # Update path_zh
+                pzh = _build_path_zh(sp)
+                if pzh and existing.path_zh != pzh:
+                    existing.path_zh = pzh
             else:
                 entry = SpeciesCache(
                     taxon_id=taxon_id,
@@ -1110,6 +1174,17 @@ def _cache_species(data, common_name_zh=None):
 
     existing = db.session.get(SpeciesCache, usage_key)
     if existing:
+        # Always refresh core taxonomy fields from authoritative GBIF data
+        sci_name = data.get('scientificName', data.get('canonicalName', ''))
+        if sci_name and existing.scientific_name != sci_name:
+            existing.scientific_name = sci_name
+        for gbif_key, attr in [('rank', 'taxon_rank'), ('kingdom', 'kingdom'),
+                                ('phylum', 'phylum'), ('class', 'class_'),
+                                ('order', 'order_'), ('family', 'family'),
+                                ('genus', 'genus')]:
+            val = data.get(gbif_key)
+            if val and getattr(existing, attr) != val:
+                setattr(existing, attr, val)
         existing.taxon_path = taxon_path
         if common_name_zh and not existing.common_name_zh:
             existing.common_name_zh = common_name_zh
