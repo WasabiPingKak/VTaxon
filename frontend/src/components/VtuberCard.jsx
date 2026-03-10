@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
+import 'flag-icons/css/flag-icons.min.css';
 import RankBadge from './RankBadge';
 import { YouTubeIcon, TwitchIcon } from './SnsIcons';
 import { displayScientificName } from '../lib/speciesName';
 
-export default function VtuberCard({ entry, isCurrentUser, onClick, activeFilterBadges, sortBadge }) {
+const VtuberCard = memo(function VtuberCard({ entry, isCurrentUser, onClick, activeFilterBadges, sortBadge }) {
   const [imgError, setImgError] = useState(false);
 
   const flags = (entry.country_flags || [])
@@ -107,4 +108,6 @@ export default function VtuberCard({ entry, isCurrentUser, onClick, activeFilter
       </div>
     </button>
   );
-}
+});
+
+export default VtuberCard;

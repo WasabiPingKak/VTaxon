@@ -1,3 +1,4 @@
+import 'flag-icons/css/flag-icons.min.css';
 import { getCountryName } from '../lib/countries';
 
 export default function CountryFlag({ code, showName = true, size = 16 }) {

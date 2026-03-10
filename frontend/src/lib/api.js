@@ -29,6 +29,9 @@ async function apiFetch(path, options = {}) {
 const searchCache = new Map();
 const childrenCache = new Map();
 
+// Session-level cache for taxonomy trees
+const treeCache = new Map();
+
 export const api = {
   // Auth
   authCallback: (body) => apiFetch('/auth/callback', {
@@ -187,9 +190,22 @@ export const api = {
   }),
   deleteTrait: (id) => apiFetch(`/traits/${id}`, { method: 'DELETE' }),
 
-  // Taxonomy
-  getTaxonomyTree: (qs = '') => apiFetch(`/taxonomy/tree${qs}`),
-  getFictionalTree: (qs = '') => apiFetch(`/taxonomy/fictional-tree${qs}`),
+  // Taxonomy (session-cached)
+  getTaxonomyTree: async (qs = '') => {
+    const key = 'real' + qs;
+    if (treeCache.has(key)) return treeCache.get(key);
+    const data = await apiFetch(`/taxonomy/tree${qs}`);
+    treeCache.set(key, data);
+    return data;
+  },
+  getFictionalTree: async (qs = '') => {
+    const key = 'fictional' + qs;
+    if (treeCache.has(key)) return treeCache.get(key);
+    const data = await apiFetch(`/taxonomy/fictional-tree${qs}`);
+    treeCache.set(key, data);
+    return data;
+  },
+  clearTreeCache: () => { treeCache.clear(); },
 
   // Fictional Species
   getFictionalSpecies: () => apiFetch('/fictional-species'),

@@ -1,11 +1,27 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import VtuberCard from './VtuberCard';
 import RankBadge from './RankBadge';
 import { getActiveFilterBadges, getSortBadge } from '../lib/filterBadges';
 
 const SHOW_LIMIT = 20;
 
-export default function TreeNode({
+// Static style objects (avoid re-creating on each render)
+const arrowStyle = {
+  display: 'inline-block', width: '16px', textAlign: 'center',
+  transition: 'transform 0.15s', color: '#888',
+};
+const emptyArrowStyle = { display: 'inline-block', width: '16px' };
+const countBadgeStyle = {
+  marginLeft: '6px', padding: '0 6px',
+  background: '#e8e8e8', borderRadius: '10px',
+  fontSize: '0.8em', color: '#666',
+};
+const showMoreBtnStyle = {
+  background: 'none', border: '1px dashed #ccc', borderRadius: '4px',
+  padding: '4px 12px', cursor: 'pointer', color: '#666', fontSize: '0.85em',
+};
+
+const TreeNode = memo(function TreeNode({
   node, depth, expandedSet, onToggle,
   currentUserId, onSelectVtuber, highlightPaths, activeFilters, sortKey,
 }) {
@@ -28,34 +44,25 @@ export default function TreeNode({
       <button
         type="button"
         onClick={() => hasChildren && onToggle(node.pathKey)}
+        className={`vtaxon-tree-node${hasChildren ? ' vtaxon-tree-node--clickable' : ''}${isHighlighted ? ' vtaxon-tree-node--highlighted' : ''}`}
         style={{
           display: 'flex', alignItems: 'center', gap: '6px',
           padding: '4px 8px', margin: '2px 0',
-          background: isHighlighted ? '#FFF8E1' : 'transparent',
           border: 'none', borderRadius: '4px',
           cursor: hasChildren ? 'pointer' : 'default',
           fontSize: '0.95em', width: '100%', textAlign: 'left',
           transition: 'background 0.15s',
         }}
-        onMouseEnter={e => {
-          if (hasChildren && !isHighlighted) e.currentTarget.style.background = '#f5f5f5';
-        }}
-        onMouseLeave={e => {
-          if (!isHighlighted) e.currentTarget.style.background = 'transparent';
-          else e.currentTarget.style.background = '#FFF8E1';
-        }}
       >
         {hasChildren && (
           <span style={{
-            display: 'inline-block', width: '16px', textAlign: 'center',
-            transition: 'transform 0.15s',
+            ...arrowStyle,
             transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-            color: '#888',
           }}>
             ▶
           </span>
         )}
-        {!hasChildren && <span style={{ display: 'inline-block', width: '16px' }} />}
+        {!hasChildren && <span style={emptyArrowStyle} />}
 
         <RankBadge rank={node.rank} style={{ marginRight: '2px' }} />
 
@@ -66,11 +73,7 @@ export default function TreeNode({
           </span>
         </span>
 
-        <span style={{
-          marginLeft: '6px', padding: '0 6px',
-          background: '#e8e8e8', borderRadius: '10px',
-          fontSize: '0.8em', color: '#666',
-        }}>
+        <span style={countBadgeStyle}>
           {node.count}
         </span>
       </button>
@@ -120,10 +123,7 @@ export default function TreeNode({
               <button
                 type="button"
                 onClick={() => setShowAll(true)}
-                style={{
-                  background: 'none', border: '1px dashed #ccc', borderRadius: '4px',
-                  padding: '4px 12px', cursor: 'pointer', color: '#666', fontSize: '0.85em',
-                }}
+                style={showMoreBtnStyle}
               >
                 顯示更多 (剩餘 {remaining} 個)
               </button>
@@ -133,5 +133,6 @@ export default function TreeNode({
       )}
     </div>
   );
-}
+});
 
+export default TreeNode;

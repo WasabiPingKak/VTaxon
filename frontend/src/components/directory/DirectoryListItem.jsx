@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import 'flag-icons/css/flag-icons.min.css';
 import { formatDuration } from './DirectoryCard';
 import OrgBadge from '../OrgBadge';
 
@@ -25,7 +26,7 @@ const PLATFORM_ICONS = {
 // Shared grid template: avatar | name | platforms | org | species | debut | status | created | locate
 export const LIST_GRID = '36px 1fr 50px 100px 1.2fr 90px 80px 90px 60px';
 
-export default function DirectoryListItem({ item, onClick }) {
+const DirectoryListItem = memo(function DirectoryListItem({ item, onClick }) {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
 
@@ -195,4 +196,6 @@ export default function DirectoryListItem({ item, onClick }) {
       </div>
     </div>
   );
-}
+});
+
+export default DirectoryListItem;

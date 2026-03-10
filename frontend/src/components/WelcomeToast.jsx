@@ -154,7 +154,8 @@ export default function WelcomeToast({ onNewUsers, visible = true }) {
       if (newUsers.length === 0) return;
       for (const u of newUsers) seenIdsRef.current.add(u.id);
 
-      // Wait for tree to refetch so nodes exist before toast shows
+      // Clear tree cache so refetch gets fresh data, then wait for tree to refetch
+      api.clearTreeCache();
       if (onNewUsers) {
         await onNewUsers();
       }

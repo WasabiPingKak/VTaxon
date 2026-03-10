@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import 'flag-icons/css/flag-icons.min.css';
 import OrgBadge from '../OrgBadge';
 
 const STATUS_STYLES = {
@@ -42,7 +43,7 @@ export function formatDuration(dateStr) {
 
 const dimStyle = { color: 'rgba(255,255,255,0.35)', fontSize: '0.78em' };
 
-export default function DirectoryCard({ item, onClick }) {
+const DirectoryCard = memo(function DirectoryCard({ item, onClick }) {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
 
@@ -210,4 +211,6 @@ export default function DirectoryCard({ item, onClick }) {
       </div>
     </div>
   );
-}
+});
+
+export default DirectoryCard;

@@ -8,4 +8,15 @@ export default defineConfig({
       '/api': 'http://localhost:5000',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-d3': ['d3-hierarchy', 'd3-selection', 'd3-zoom'],
+        },
+      },
+    },
+  },
 });

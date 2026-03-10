@@ -35,6 +35,14 @@
       a { color: #38bdf8; }
       @keyframes vtaxonSpin { to { transform: rotate(360deg); } }
       @keyframes vtaxonPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+      /* TreeNode hover — CSS-only, replaces JS onMouseEnter/onMouseLeave */
+      .vtaxon-tree-node { background: transparent; }
+      .vtaxon-tree-node--highlighted { background: #FFF8E1; }
+      .vtaxon-tree-node--clickable:hover { background: #f5f5f5; }
+      .vtaxon-tree-node--highlighted.vtaxon-tree-node--clickable:hover { background: #FFF8E1; }
+      /* Footer link hover */
+      .vtaxon-footer-link { color: rgba(255,255,255,0.3); text-decoration: none; }
+      .vtaxon-footer-link:hover { color: rgba(255,255,255,0.5); }
     </style>
   </head>
   <body>

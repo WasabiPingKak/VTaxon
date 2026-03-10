@@ -413,15 +413,22 @@ function BreedCategoryList({ category, onSelect, onBack }) {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [category.taxon_id]);
 
+  const [debouncedFilter, setDebouncedFilter] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedFilter(filter), 300);
+    return () => clearTimeout(timer);
+  }, [filter]);
+
   const filtered = useMemo(() => {
-    const q = filter.trim();
+    const q = debouncedFilter.trim();
     if (!q) return breeds;
     const isCJK = /[\u4e00-\u9fff\u3400-\u4dbf]/.test(q);
     return breeds.filter(b => {
       if (isCJK) return b.name_zh && b.name_zh.includes(q);
       return b.name_en && b.name_en.toLowerCase().includes(q.toLowerCase());
     });
-  }, [breeds, filter]);
+  }, [breeds, debouncedFilter]);
 
   function handleSelectBreed(breed) {
     if (!species || !onSelect) return;

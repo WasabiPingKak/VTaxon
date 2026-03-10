@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import 'flag-icons/css/flag-icons.min.css';
 import COUNTRIES from '../lib/countries';
 
 export default function CountryPicker({ selected = [], onChange }) {

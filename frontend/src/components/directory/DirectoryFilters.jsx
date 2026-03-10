@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import 'flag-icons/css/flag-icons.min.css';
 import FilterDropdown from './FilterDropdown';
 import COUNTRIES, { getCountryName } from '../../lib/countries';
 import useIsMobile from '../../hooks/useIsMobile';

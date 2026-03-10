@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import 'flag-icons/css/flag-icons.min.css';
 import { getCountryName } from '../../lib/countries';
 import { countActiveFilters } from '../../lib/treeFilters';
 import { FILTER_BADGES } from '../../lib/filterBadges';

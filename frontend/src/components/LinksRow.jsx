@@ -1,3 +1,4 @@
+import 'flag-icons/css/flag-icons.min.css';
 import { YouTubeIcon, TwitchIcon, SNS_ICON_MAP, SNS_LABELS } from './SnsIcons';
 
 /** Links row: OAuth icons + SNS icons + flag icons */
