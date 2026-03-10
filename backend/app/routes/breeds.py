@@ -176,6 +176,9 @@ def create_breed_request():
     db.session.add(req)
     db.session.commit()
 
+    from ..services.email import notify_new_breed_request
+    notify_new_breed_request(req)
+
     return jsonify(req.to_dict()), 201
 
 

@@ -49,7 +49,10 @@ jobs:
           SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest,\
           SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,\
           SUPABASE_JWT_SECRET=SUPABASE_JWT_SECRET:latest,\
-          TWITCH_CLIENT_ID=TWITCH_CLIENT_ID:latest"
+          TWITCH_CLIENT_ID=TWITCH_CLIENT_ID:latest,\
+          RESEND_API_KEY=RESEND_API_KEY:latest,\
+          ADMIN_NOTIFY_EMAILS=ADMIN_NOTIFY_EMAILS:latest,\
+          EMAIL_FROM=EMAIL_FROM:latest"
 
   deploy-frontend:
     runs-on: ubuntu-latest
