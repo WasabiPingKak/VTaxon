@@ -20,6 +20,7 @@ if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-st
 }
 
 const BREED_COLOR = '#fb923c';
+const hasCJK = (s) => /[\u4e00-\u9fff\u3400-\u4dbf]/.test(s || '');
 
 function BreedAccordion({ section, user, addToast, navigate }) {
   const [expanded, setExpanded] = useState(false);
@@ -413,7 +414,7 @@ function BreedRequestInline() {
               <span style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.4)' }}>驗證中…</span>
             </div>
           )}
-          {!speciesChecking && speciesCheckResult?.found && speciesCheckResult.species.common_name_zh && (
+          {!speciesChecking && speciesCheckResult?.found && hasCJK(speciesCheckResult.species.common_name_zh) && (
             <div style={{
               marginTop: '6px', padding: '10px 12px',
               background: 'rgba(52,211,153,0.08)', borderRadius: '4px',
@@ -428,7 +429,7 @@ function BreedRequestInline() {
               </div>
             </div>
           )}
-          {!speciesChecking && speciesCheckResult?.found && !speciesCheckResult.species.common_name_zh && (
+          {!speciesChecking && speciesCheckResult?.found && !hasCJK(speciesCheckResult.species.common_name_zh) && (
             <div style={{
               marginTop: '6px', padding: '10px 12px',
               background: 'rgba(251,191,36,0.08)', borderRadius: '4px',
@@ -459,7 +460,7 @@ function BreedRequestInline() {
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           {(() => {
-            const isDisabled = submitting || !confirmLatin || !confirmBreed || !form.name_zh.trim() || !form.name_en.trim() || !form.scientific_name.trim() || !form.description.trim() || (speciesCheckResult?.found === true && !!speciesCheckResult.species.common_name_zh);
+            const isDisabled = submitting || !confirmLatin || !confirmBreed || !form.name_zh.trim() || !form.name_en.trim() || !form.scientific_name.trim() || !form.description.trim() || speciesChecking || (speciesCheckResult?.found === true && hasCJK(speciesCheckResult.species.common_name_zh));
             return (
           <button type="submit" disabled={isDisabled} style={{
             padding: '6px 14px', background: BREED_COLOR, color: '#0d1526',
