@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import SEOHead from '../components/SEOHead';
 
 import changelog_2026_03_10 from '../../../docs/changelogs/2026-03-10/changelog.md?raw';
@@ -122,7 +123,7 @@ export default function ChangelogPage() {
             </p>
           </div>
 
-          <ReactMarkdown components={mdComponents}>{v.content}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{v.content}</ReactMarkdown>
         </section>
       ))}
 
