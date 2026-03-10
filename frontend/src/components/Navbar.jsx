@@ -61,13 +61,18 @@ export default function Navbar() {
     if (user?.role !== 'admin') return;
     let cancelled = false;
     const fetchCounts = () => {
-      const fns = [api.getRequests('pending'), api.getBreedRequests('pending'), api.getReports('pending')];
-      Promise.all(fns.map(p => p.catch(() => ({ requests: [], reports: [] }))))
-        .then(([f, b, r]) => {
+      api.getAdminCounts()
+        .then(data => {
           if (cancelled) return;
-          const total = (f.requests?.length ?? 0) + (b.requests?.length ?? 0) + (r.reports?.length ?? 0);
+          const fc = data.fictional || {};
+          const bc = data.breed || {};
+          const rc = data.report || {};
+          const total = (fc.pending || 0) + (fc.received || 0) + (fc.in_progress || 0)
+                      + (bc.pending || 0) + (bc.received || 0) + (bc.in_progress || 0)
+                      + (rc.pending || 0) + (rc.investigating || 0);
           setAdminPendingTotal(total);
-        });
+        })
+        .catch(() => {});
     };
     fetchCounts();
     const interval = setInterval(fetchCounts, 60000);

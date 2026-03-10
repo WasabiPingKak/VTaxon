@@ -25,6 +25,12 @@ const SECTION_TABS = [
   { key: 'report', label: '帳號檢舉' },
 ];
 
+const SECTION_ACTIVE_STATUSES = {
+  fictional: ['pending', 'received', 'in_progress'],
+  breed: ['pending', 'received', 'in_progress'],
+  report: ['pending', 'investigating'],
+};
+
 // Status badge color mapping
 const STATUS_BADGE = {
   pending:       { bg: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', label: '待審核' },
@@ -885,7 +891,6 @@ export default function AdminPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [counts, setCounts] = useState({});
-  const [pendingCounts, setPendingCounts] = useState({});
 
   const fetchRequests = useCallback(async (status) => {
     setLoading(true);
@@ -921,12 +926,6 @@ export default function AdminPage() {
         const fc = data.fictional || {};
         const bc = data.breed || {};
         const rc = data.report || {};
-        setPendingCounts({
-          fictional: (fc.pending || 0) + (fc.received || 0) + (fc.in_progress || 0),
-          breed: (bc.pending || 0) + (bc.received || 0) + (bc.in_progress || 0),
-          report: (rc.pending || 0) + (rc.investigating || 0),
-        });
-        // Pre-fill sub-tab counts
         const newCounts = {};
         for (const [key, obj] of Object.entries({ fictional: fc, breed: bc, report: rc })) {
           for (const [status, count] of Object.entries(obj)) {
@@ -985,7 +984,6 @@ export default function AdminPage() {
         display: 'flex', gap: 8, marginBottom: 16,
       }}>
         {SECTION_TABS.map(tab => {
-          const pc = pendingCounts[tab.key];
           return (
             <button
               key={tab.key}
@@ -1003,19 +1001,20 @@ export default function AdminPage() {
               }}
             >
               {tab.label}
-              {pc > 0 && (
-                <span style={{
-                  marginLeft: 6,
-                  fontSize: '0.8em',
-                  padding: '1px 6px',
-                  borderRadius: 8,
-                  background: 'rgba(239,68,68,0.2)',
-                  color: '#f87171',
-                  fontWeight: 600,
-                }}>
-                  {pc}
-                </span>
-              )}
+              {SECTION_ACTIVE_STATUSES[tab.key].map(status => {
+                const c = counts[`${tab.key}_${status}`] ?? 0;
+                const isActive = c > 0;
+                return (
+                  <span key={status} style={{
+                    marginLeft: 4,
+                    fontSize: '0.75em',
+                    color: isActive ? (STATUS_BADGE[status]?.color || '#f87171') : 'rgba(255,255,255,0.3)',
+                    fontWeight: isActive ? 600 : 400,
+                  }}>
+                    ({c})
+                  </span>
+                );
+              })}
             </button>
           );
         })}
