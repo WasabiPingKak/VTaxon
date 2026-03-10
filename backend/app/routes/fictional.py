@@ -85,4 +85,7 @@ def create_request():
     db.session.add(req)
     db.session.commit()
 
+    from ..services.email import notify_new_fictional_request
+    notify_new_fictional_request(req)
+
     return jsonify(req.to_dict()), 201

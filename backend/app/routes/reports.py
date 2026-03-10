@@ -50,6 +50,9 @@ def create_report():
     db.session.add(report)
     db.session.commit()
 
+    from ..services.email import notify_new_report
+    notify_new_report(report)
+
     return jsonify(report.to_dict()), 201
 
 
