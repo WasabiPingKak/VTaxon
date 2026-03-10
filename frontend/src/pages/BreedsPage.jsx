@@ -121,7 +121,7 @@ function BreedAccordion({ section, user, addToast, navigate }) {
               {breeds.length > 10 && (
                 <div style={{ padding: '8px 16px' }}>
                   <input
-                    type="text"
+                    type="search"
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                     placeholder="過濾品種名稱…"
@@ -484,7 +484,7 @@ function GlobalBreedSearch({ user, addToast, navigate }) {
       <form onSubmit={handleSearch} autoComplete="off" style={{ display: 'flex', gap: '8px' }}>
         <input type="text" name="prevent_autofill" autoComplete="new-password" style={{ display: 'none' }} tabIndex={-1} />
         <input
-          type="text"
+          type="search"
           value={query}
           onChange={(e) => { setQuery(e.target.value); if (!e.target.value.trim()) { setResults([]); setSearched(false); } }}
           placeholder="搜尋品種名稱（如：柴犬、布偶貓、Shiba Inu）"

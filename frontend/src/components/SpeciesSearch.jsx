@@ -478,7 +478,7 @@ function BreedCategoryList({ category, onSelect, onBack }) {
       </div>
 
       <input
-        type="text"
+        type="search"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         placeholder="過濾品種名稱…"
@@ -625,7 +625,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
         <form onSubmit={handleSearch} autoComplete="off" style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
           <input type="text" name="prevent_autofill" autoComplete="new-password" style={{ display: 'none' }} tabIndex={-1} />
           <input
-            type="text"
+            type="search"
             value={query}
             onChange={handleQueryChange}
             placeholder="搜尋物種或品種（例如：柴犬、布偶貓、貓、狼）"
@@ -667,7 +667,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
       <form onSubmit={handleSearch} autoComplete="off" style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
         <input type="text" name="prevent_autofill" autoComplete="new-password" style={{ display: 'none' }} tabIndex={-1} />
         <input
-          type="text"
+          type="search"
           value={query}
           onChange={handleQueryChange}
           placeholder="搜尋物種或品種（例如：柴犬、布偶貓、貓、狼）"

@@ -79,7 +79,7 @@ export default function CountryPicker({ selected = [], onChange }) {
         }}>
           <div style={{ padding: '8px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             <input
-              type="text"
+              type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="搜尋國家…"

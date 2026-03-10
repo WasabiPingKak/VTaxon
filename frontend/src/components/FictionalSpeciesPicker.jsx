@@ -200,7 +200,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
     <div>
       {/* Search box */}
       <input
-        type="text"
+        type="search"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder="搜尋虛構物種（例：狐、龍、AI）"
