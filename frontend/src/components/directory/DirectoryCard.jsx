@@ -42,6 +42,29 @@ export function formatDuration(dateStr) {
 }
 
 const dimStyle = { color: 'rgba(255,255,255,0.35)', fontSize: '0.78em' };
+const creditLinkStyle = { color: 'rgba(255,255,255,0.55)', textDecoration: 'none' };
+
+function CreditLine({ label, items }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div style={{ ...dimStyle, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      <span>{label}：</span>
+      {items.map((p, i) => (
+        <span key={i}>
+          {p.url ? (
+            <a href={p.url} target="_blank" rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              style={creditLinkStyle}
+              onMouseEnter={e => { e.currentTarget.style.color = '#38bdf8'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; }}
+            >{p.name}</a>
+          ) : p.name}
+          {i < items.length - 1 && '、'}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 const DirectoryCard = memo(function DirectoryCard({ item, onClick }) {
   const navigate = useNavigate();
@@ -173,10 +196,16 @@ const DirectoryCard = memo(function DirectoryCard({ item, onClick }) {
         )}
       </div>
 
+      {/* Credits: illustrator / rigger / 3D modeler */}
+      <CreditLine label="繪師" items={pd.illustrators} />
+      <CreditLine label="建模" items={pd.riggers} />
+      <CreditLine label="3D 製作" items={pd.modelers_3d} />
+
       {/* Bottom: joined + platforms + locate */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.05)',
+        marginTop: 'auto',
       }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {(item.platforms || []).map(p => (
