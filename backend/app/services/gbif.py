@@ -524,7 +524,10 @@ def _enrich_chinese_names(species_list):
       - species_zh: alias for common_name_zh (for breadcrumb consistency)
       - kingdom_zh, phylum_zh, class_zh, order_zh, family_zh, genus_zh
 
-    Uses DB cache (species_cache) as first lookup before hitting external APIs.
+    Resolution order: override table → external APIs (with LRU cache) → DB cache.
+    External APIs are checked before DB cache so stale/wrong cached names get
+    corrected automatically.  The @lru_cache on _resolve_chinese_name keeps
+    repeated lookups fast within the same process.
     """
     for sp in species_list:
         # Static override takes highest priority (corrects known errors)
@@ -532,7 +535,15 @@ def _enrich_chinese_names(species_list):
         if override:
             sp['common_name_zh'] = override
 
-        # Species-level Chinese name + alternative names — check DB cache first
+        # Resolve via external APIs (TaiCOL → Wikidata, with LRU in-process cache)
+        # Prefer canonical_name (no author) — TaiCOL fails with author strings
+        if not sp.get('common_name_zh'):
+            sp['common_name_zh'] = _resolve_chinese_name(
+                sp['taxon_id'],
+                sp.get('canonical_name') or sp.get('scientific_name') or sp.get('canonicalName'),
+            )
+
+        # Fallback to DB cache when external APIs returned nothing
         if not sp.get('common_name_zh'):
             try:
                 cached = db.session.get(SpeciesCache, sp['taxon_id'])
@@ -543,14 +554,6 @@ def _enrich_chinese_names(species_list):
                         sp['alternative_names_zh'] = cached.alternative_names_zh
             except Exception:
                 pass
-
-        # Still no Chinese name → resolve via external APIs
-        # Prefer canonical_name (no author) — TaiCOL fails with author strings
-        if not sp.get('common_name_zh'):
-            sp['common_name_zh'] = _resolve_chinese_name(
-                sp['taxon_id'],
-                sp.get('canonical_name') or sp.get('scientific_name') or sp.get('canonicalName'),
-            )
 
         # Validate: common_name_zh must actually contain CJK characters
         zh = sp.get('common_name_zh')
@@ -634,15 +637,13 @@ def _cache_enriched_species(species_list):
                 continue
             existing = db.session.get(SpeciesCache, taxon_id)
             if existing:
-                # Override table corrections always win over cached values
+                # Update common_name_zh: override table wins; otherwise
+                # accept any freshly-resolved name that differs from cache
+                # so stale/wrong cached names get corrected over time.
                 override = get_species_zh_override(taxon_id)
                 if override and existing.common_name_zh != override:
                     existing.common_name_zh = override
-                elif sp.get('common_name_zh') and (
-                    not existing.common_name_zh
-                    or (existing.common_name_zh.endswith('屬')
-                        and not sp['common_name_zh'].endswith('屬'))
-                ):
+                elif sp.get('common_name_zh') and existing.common_name_zh != sp['common_name_zh']:
                     existing.common_name_zh = sp['common_name_zh']
                 # Backfill alternative_names_zh if empty
                 if sp.get('alternative_names_zh') and not existing.alternative_names_zh:
