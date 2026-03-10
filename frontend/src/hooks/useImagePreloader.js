@@ -28,19 +28,28 @@ export default function useImagePreloader(entries) {
       }
     }
 
-    // Evict oldest entries if cache is too large
+    const urls = new Set();
+    for (const entry of entries) {
+      if (entry.avatar_url) urls.add(entry.avatar_url);
+    }
+
+    // Evict entries no longer in current dataset first, then oldest if still over limit
     if (cache.size > MAX_CACHED_IMAGES) {
-      const excess = cache.size - MAX_CACHED_IMAGES + 50; // evict 50 extra to avoid frequent eviction
-      const iter = cache.keys();
-      for (let i = 0; i < excess; i++) {
-        const key = iter.next().value;
-        cache.delete(key);
+      for (const key of cache.keys()) {
+        if (!urls.has(key)) cache.delete(key);
+      }
+      // If still over, evict oldest
+      if (cache.size > MAX_CACHED_IMAGES) {
+        const excess = cache.size - MAX_CACHED_IMAGES + 50;
+        const iter = cache.keys();
+        for (let i = 0; i < excess; i++) {
+          cache.delete(iter.next().value);
+        }
       }
     }
 
-    for (const entry of entries) {
-      const url = entry.avatar_url;
-      if (!url || cache.has(url)) continue;
+    for (const url of urls) {
+      if (cache.has(url)) continue;
       queue.push(url);
     }
 

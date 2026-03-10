@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { useToast } from '../lib/ToastContext';
@@ -7,7 +7,20 @@ import { breedEmoji } from '../lib/breedUtils';
 import RankBadge from '../components/RankBadge';
 import SEOHead from '../components/SEOHead';
 
+// Ensure spinner keyframes exist
+if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-style')) {
+  const style = document.createElement('style');
+  style.id = 'vtaxon-pulse-style';
+  style.textContent = `
+    @keyframes vtaxonSpin {
+      to { transform: rotate(360deg); }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 const BREED_COLOR = '#fb923c';
+const hasCJK = (s) => /[\u4e00-\u9fff\u3400-\u4dbf]/.test(s || '');
 
 function BreedAccordion({ section, user, addToast, navigate }) {
   const [expanded, setExpanded] = useState(false);
@@ -171,7 +184,47 @@ function BreedRequestInline() {
   const [form, setForm] = useState({ name_zh: '', name_en: '', scientific_name: '', description: '' });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [guideOpen, setGuideOpen] = useState(true);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [confirmLatin, setConfirmLatin] = useState(false);
+  const [confirmBreed, setConfirmBreed] = useState(false);
+  const [speciesCheckResult, setSpeciesCheckResult] = useState(null);
+  const [speciesChecking, setSpeciesChecking] = useState(false);
+  const speciesCheckTimer = useRef(null);
+
+  // Debounce species check when scientific_name changes
+  useEffect(() => {
+    if (speciesCheckTimer.current) clearTimeout(speciesCheckTimer.current);
+    const name = form.scientific_name.trim();
+    if (!name || name.length < 2) {
+      setSpeciesCheckResult(null);
+      setSpeciesChecking(false);
+      return;
+    }
+    setSpeciesChecking(true);
+    speciesCheckTimer.current = setTimeout(() => {
+      let firstResult = null;
+      let cancelled = false;
+      api.searchSpeciesStream(name, (sp) => {
+        if (!firstResult && !cancelled) {
+          firstResult = sp;
+        }
+      }).then(() => {
+        if (!cancelled) {
+          setSpeciesCheckResult(firstResult ? { found: true, species: firstResult } : { found: false });
+          setSpeciesChecking(false);
+        }
+      }).catch(() => {
+        if (!cancelled) {
+          setSpeciesCheckResult(null);
+          setSpeciesChecking(false);
+        }
+      });
+      return () => { cancelled = true; };
+    }, 500);
+    return () => {
+      if (speciesCheckTimer.current) clearTimeout(speciesCheckTimer.current);
+    };
+  }, [form.scientific_name]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -253,7 +306,7 @@ function BreedRequestInline() {
           }}
         >
           <span style={{ fontSize: '0.8em', transform: guideOpen ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s', display: 'inline-block' }}>▶</span>
-          送出回報前，請先確認以下事項
+          填寫說明
         </button>
         {guideOpen && (
           <div style={{
@@ -292,6 +345,31 @@ function BreedRequestInline() {
           </div>
         )}
       </div>
+      <div style={{
+        marginBottom: '12px', padding: '10px 14px',
+        background: 'rgba(56,189,248,0.04)', borderRadius: '4px',
+        border: '1px solid rgba(56,189,248,0.15)',
+        display: 'flex', flexDirection: 'column', gap: '8px',
+      }}>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.85em', color: 'rgba(255,255,255,0.7)', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={confirmLatin}
+            onChange={(e) => setConfirmLatin(e.target.checked)}
+            style={{ marginTop: '2px', accentColor: '#38bdf8' }}
+          />
+          <span>我已經用<strong style={{ color: '#e2e8f0' }}>拉丁文學名</strong>在物種搜尋中搜過，確認找不到</span>
+        </label>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.85em', color: 'rgba(255,255,255,0.7)', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={confirmBreed}
+            onChange={(e) => setConfirmBreed(e.target.checked)}
+            style={{ marginTop: '2px', accentColor: '#38bdf8' }}
+          />
+          <span>我要回報的是<strong style={{ color: '#e2e8f0' }}>品種</strong>（物種底下的培育變種，如柴犬），不是缺少中文名的物種</span>
+        </label>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div>
           <label style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.5)', marginBottom: '3px', display: 'block' }}>
@@ -326,6 +404,46 @@ function BreedRequestInline() {
             placeholder="該品種所屬物種的拉丁學名"
             autoComplete="new-password" style={{ ...breedRequestInputStyle, fontStyle: 'italic' }}
           />
+          {speciesChecking && (
+            <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{
+                display: 'inline-block', width: '12px', height: '12px',
+                border: '2px solid #38bdf8', borderTopColor: 'transparent',
+                borderRadius: '50%', animation: 'vtaxonSpin 0.8s linear infinite',
+              }} />
+              <span style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.4)' }}>驗證中…</span>
+            </div>
+          )}
+          {!speciesChecking && speciesCheckResult?.found && hasCJK(speciesCheckResult.species.common_name_zh) && (
+            <div style={{
+              marginTop: '6px', padding: '10px 12px',
+              background: 'rgba(52,211,153,0.08)', borderRadius: '4px',
+              border: '1px solid rgba(52,211,153,0.3)',
+              fontSize: '0.85em', lineHeight: 1.6,
+            }}>
+              <div style={{ color: '#34d399', fontWeight: 600 }}>
+                ✓ 找到物種：{speciesCheckResult.species.common_name_zh} <i>{speciesCheckResult.species.scientific_name}</i>
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                此物種已存在於系統中，請回到<Link to="/profile" style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>角色設定頁</Link>直接用學名搜尋新增。
+              </div>
+            </div>
+          )}
+          {!speciesChecking && speciesCheckResult?.found && !hasCJK(speciesCheckResult.species.common_name_zh) && (
+            <div style={{
+              marginTop: '6px', padding: '10px 12px',
+              background: 'rgba(251,191,36,0.08)', borderRadius: '4px',
+              border: '1px solid rgba(251,191,36,0.3)',
+              fontSize: '0.85em', lineHeight: 1.6,
+            }}>
+              <div style={{ color: '#fbbf24', fontWeight: 600 }}>
+                ⚠ 找到 <i>{speciesCheckResult.species.scientific_name}</i>，但系統中沒有中文名
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                可在下方補充說明填寫建議的中文名與參考來源
+              </div>
+            </div>
+          )}
         </div>
         <div>
           <label style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.5)', marginBottom: '3px', display: 'block' }}>
@@ -341,13 +459,18 @@ function BreedRequestInline() {
           />
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button type="submit" disabled={submitting || !form.name_zh.trim() || !form.name_en.trim() || !form.scientific_name.trim() || !form.description.trim()} style={{
+          {(() => {
+            const isDisabled = submitting || !confirmLatin || !confirmBreed || !form.name_zh.trim() || !form.name_en.trim() || !form.scientific_name.trim() || !form.description.trim() || speciesChecking || (speciesCheckResult?.found === true && hasCJK(speciesCheckResult.species.common_name_zh));
+            return (
+          <button type="submit" disabled={isDisabled} style={{
             padding: '6px 14px', background: BREED_COLOR, color: '#0d1526',
-            border: 'none', borderRadius: '4px', cursor: 'pointer',
-            fontSize: '0.85em', fontWeight: 600,
+            border: 'none', borderRadius: '4px', cursor: isDisabled ? 'not-allowed' : 'pointer',
+            fontSize: '0.85em', fontWeight: 600, opacity: isDisabled ? 0.4 : 1,
           }}>
             {submitting ? '送出中…' : '送出回報'}
           </button>
+            );
+          })()}
           <button
             type="button"
             onClick={() => setShow(false)}

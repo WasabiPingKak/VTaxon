@@ -50,12 +50,21 @@ export default function DirectoryPage() {
     fetchData();
   }, [fetchData]);
 
-  // Auto-refresh every 30s when page is visible
+  // Auto-refresh every 30s, pausing when tab is hidden
   useEffect(() => {
-    const id = setInterval(() => {
-      if (document.visibilityState === 'visible') fetchData(true);
-    }, 30000);
-    return () => clearInterval(id);
+    let id = null;
+    const start = () => {
+      if (id) return;
+      id = setInterval(() => fetchData(true), 30000);
+    };
+    const stop = () => { clearInterval(id); id = null; };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') { fetchData(true); start(); }
+      else stop();
+    };
+    if (document.visibilityState === 'visible') start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility); };
   }, [fetchData]);
 
   const handleFiltersChange = (newFilters) => {
