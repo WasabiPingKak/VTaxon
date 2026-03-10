@@ -113,6 +113,8 @@ npm run dev
 | `/privacy` | PrivacyPolicyPage | 隱私權政策 |
 | `/terms` | TermsOfServicePage | 服務條款 |
 | `/about` | AboutPage | 關於本服務 |
+| `/changelog` | ChangelogPage | 更新日誌 |
+| `/notifications` | NotificationsPage | 通知中心 |
 | `*` | NotFoundPage | 404 頁面 |
 
 ## API 端點
@@ -130,6 +132,7 @@ npm run dev
 | Method | Path | 認證 | 說明 |
 |--------|------|------|------|
 | POST | `/api/auth/callback` | JWT | OAuth 完成後建立/更新使用者 |
+| POST | `/api/auth/link-token` | JWT | 跨 email OAuth 帳號綁定 token |
 | GET | `/api/users/recent` | — | 取得最近新增的使用者 |
 | GET | `/api/users/me` | JWT | 取得當前登入者資料 |
 | PATCH | `/api/users/me` | JWT | 更新個人資料 |
@@ -191,6 +194,25 @@ npm run dev
 | GET | `/api/breeds/requests` | Admin | 列出品種建議 |
 | PATCH | `/api/breeds/requests/<id>` | Admin | 審核品種建議 |
 
+### 通知
+
+| Method | Path | 認證 | 說明 |
+|--------|------|------|------|
+| GET | `/api/notifications` | JWT | 取得通知列表 |
+| GET | `/api/notifications/grouped` | JWT | 取得分組通知 |
+| GET | `/api/notifications/unread-count` | JWT | 未讀通知數量 |
+| POST | `/api/notifications/read` | JWT | 標記通知為已讀 |
+
+### 管理後台
+
+| Method | Path | 認證 | 說明 |
+|--------|------|------|------|
+| GET | `/api/admin/request-counts` | Admin | 待處理建議數量統計 |
+| GET | `/api/admin/export-fictional` | Admin | 匯出奇幻生物資料 |
+| GET | `/api/admin/export-breeds` | Admin | 匯出品種資料 |
+| POST | `/api/admin/transition-fictional` | Admin | 奇幻生物建議狀態轉換 |
+| POST | `/api/admin/transition-breeds` | Admin | 品種建議狀態轉換 |
+
 ### 檢舉 & 黑名單
 
 | Method | Path | 認證 | 說明 |
@@ -215,8 +237,8 @@ VTaxon/
 │   │   ├── extensions.py       # SQLAlchemy instance
 │   │   ├── auth.py             # JWT 驗證（JWKS ES256 + HS256 fallback）
 │   │   ├── models.py           # 10 張表的 ORM model
-│   │   ├── routes/             # API 路由（auth, users, species, traits, fictional, taxonomy, breeds, reports, seo）
-│   │   └── services/           # 業務邏輯（gbif, wikidata, taicol, taxonomy_zh）
+│   │   ├── routes/             # API 路由（auth, users, species, traits, fictional, taxonomy, breeds, reports, notifications, admin, seo）
+│   │   └── services/           # 業務邏輯（gbif, wikidata, taicol, taxonomy_zh, notifications）
 │   ├── seeds/                  # 種子資料（fictional_species, breeds）
 │   ├── Dockerfile              # Cloud Run 部署用
 │   └── requirements.txt
@@ -225,7 +247,7 @@ VTaxon/
 │   │   ├── lib/                # Supabase client、API wrapper、AuthContext
 │   │   ├── components/         # 共用元件（含 graph/ 分類樹視覺化）
 │   │   ├── hooks/              # 自訂 Hooks（useTreeLayout, useGraphInteraction 等）
-│   │   └── pages/              # 13 個頁面
+│   │   └── pages/              # 15 個頁面
 │   └── vite.config.js          # dev proxy → localhost:5000
 ├── scripts/
 │   ├── init_db.py              # DB 初始化腳本（staging / prod）

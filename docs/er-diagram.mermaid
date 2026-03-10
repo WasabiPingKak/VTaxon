@@ -8,6 +8,7 @@ erDiagram
     users ||--o{ user_reports : "reported"
     users ||--o{ blacklist : "banned"
     users ||--o{ blacklist : "banned by"
+    users ||--o{ notifications : "receives"
     species_cache ||--o{ vtuber_traits : "referenced by"
     species_cache ||--o{ breeds : "has"
     species_cache ||--o{ breed_requests : "for"
@@ -20,6 +21,7 @@ erDiagram
         text avatar_url
         text role "admin | user"
         text organization
+        varchar org_type "default indie"
         text bio
         jsonb country_flags "default []"
         jsonb social_links "default {}"
@@ -55,6 +57,7 @@ erDiagram
         text scientific_name
         text common_name_en
         text common_name_zh
+        text alternative_names_zh
         text taxon_rank
         text taxon_path "Materialized Path"
         text kingdom
@@ -136,6 +139,18 @@ erDiagram
         text report_type "default impersonation"
         text status "default pending"
         text admin_note
+        timestamptz created_at
+    }
+
+    notifications {
+        serial id PK
+        uuid user_id FK
+        text type
+        integer reference_id
+        text title
+        text message
+        text status
+        boolean is_read "default false"
         timestamptz created_at
     }
 
