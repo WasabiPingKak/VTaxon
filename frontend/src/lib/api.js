@@ -25,6 +25,16 @@ async function apiFetch(path, options = {}) {
   return data;
 }
 
+// Bounded session cache — evicts oldest entry when exceeding max size
+const MAX_CACHE = 100;
+function boundedSet(map, key, value) {
+  if (map.size >= MAX_CACHE) {
+    const first = map.keys().next().value;
+    map.delete(first);
+  }
+  map.set(key, value);
+}
+
 // Session-level cache for species search (cleared on page refresh)
 const searchCache = new Map();
 const childrenCache = new Map();
@@ -66,7 +76,7 @@ export const api = {
     const key = q.trim().toLowerCase();
     if (searchCache.has(key)) return searchCache.get(key);
     const data = await apiFetch(`/species/search?q=${encodeURIComponent(q)}`);
-    searchCache.set(key, data);
+    boundedSet(searchCache, key, data);
     return data;
   },
   searchSpeciesStream: async (q, onResult) => {
@@ -107,14 +117,14 @@ export const api = {
       all.push(sp);
       onResult(sp);
     }
-    searchCache.set(key, all);
+    boundedSet(searchCache, key, all);
   },
   matchSpecies: (name) => apiFetch(`/species/match?name=${encodeURIComponent(name)}`),
   getSpecies: (id) => apiFetch(`/species/${id}`),
   getSubspecies: async (taxonId) => {
     if (childrenCache.has(taxonId)) return childrenCache.get(taxonId);
     const data = await apiFetch(`/species/${taxonId}/children`);
-    childrenCache.set(taxonId, data);
+    boundedSet(childrenCache, taxonId, data);
     return data;
   },
   getSubspeciesStream: async (taxonId, onResult) => {
@@ -154,7 +164,7 @@ export const api = {
       all.push(sp);
       onResult(sp);
     }
-    childrenCache.set(taxonId, { results: all });
+    boundedSet(childrenCache, taxonId, { results: all });
   },
 
   // Breeds
@@ -195,14 +205,14 @@ export const api = {
     const key = 'real' + qs;
     if (treeCache.has(key)) return treeCache.get(key);
     const data = await apiFetch(`/taxonomy/tree${qs}`);
-    treeCache.set(key, data);
+    boundedSet(treeCache, key, data);
     return data;
   },
   getFictionalTree: async (qs = '') => {
     const key = 'fictional' + qs;
     if (treeCache.has(key)) return treeCache.get(key);
     const data = await apiFetch(`/taxonomy/fictional-tree${qs}`);
-    treeCache.set(key, data);
+    boundedSet(treeCache, key, data);
     return data;
   },
   clearTreeCache: () => { treeCache.clear(); },

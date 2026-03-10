@@ -404,6 +404,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const prevTickRef = useRef(0);
   const flashMapRef = useRef(new Map());
   const edgeFlashStartRef = useRef(null);
+  const flashTimerRef = useRef(null);
   const [flashTick, setFlashTick] = useState(0);
   const FLASH_DURATION = 2800;
 
@@ -507,10 +508,11 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     scheduleCameraFit(true, null);
 
     // Flash filtered nodes after camera settles (nodes only, no edge flash)
+    clearTimeout(flashTimerRef.current);
     if (hasAny) {
       const capturedReal = fr || [];
       const capturedFict = ff || [];
-      setTimeout(() => {
+      flashTimerRef.current = setTimeout(() => {
         const now = performance.now();
         flashMapRef.current.clear();
         // Do NOT set edgeFlashStartRef — edges should not flash for filters
@@ -573,8 +575,9 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     scheduleCameraFit();
 
     // Flash AFTER camera settles
+    clearTimeout(flashTimerRef.current);
     const capturedCloseIds = closeVtuberIds;
-    setTimeout(() => {
+    flashTimerRef.current = setTimeout(() => {
       const now = performance.now();
       flashMapRef.current.clear();
       edgeFlashStartRef.current = now;

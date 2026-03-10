@@ -97,10 +97,12 @@ const GraphCanvas = forwardRef(function GraphCanvas({
     const sel = select(canvas);
     sel.call(zoomBehavior);
 
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    const preventContext = (e) => e.preventDefault();
+    canvas.addEventListener('contextmenu', preventContext);
 
     return () => {
       sel.on('.zoom', null);
+      canvas.removeEventListener('contextmenu', preventContext);
     };
   }, [minZoom, maxZoom, requestRender]);
 
