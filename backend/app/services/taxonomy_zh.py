@@ -333,6 +333,7 @@ SPECIES_ZH_OVERRIDES = {
     11186113: '紅爪雨林蠍',   # Gigantometrus swammerdami — TaiCOL/Wikidata 均無收錄
     5219672: '西部灰松鼠',   # Sciurus griseus — TaiCOL/Wikidata 均無收錄
     5219173: '狼',             # Canis lupus — Wikidata zh-tw 誤回「家犬」，正確為狼
+    5219303: '北極狐',         # Vulpes lagopus — species_cache 誤存「非洲野犬」，正確為北極狐
     # --- Subspecies / Variety ---
     11374585: '家豬',           # Sus scrofa domesticus — common domestic pig
 }
