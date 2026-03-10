@@ -125,7 +125,7 @@ function BreedAccordion({ section, user, addToast, navigate }) {
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                     placeholder="過濾品種名稱…"
-                    autoComplete="off"
+                    autoComplete="nope"
                     style={{
                       width: '100%', padding: '6px 10px', boxSizing: 'border-box',
                       border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px',
@@ -300,7 +300,7 @@ function BreedRequestInline() {
           <input
             type="text" value={form.name_zh} required
             onChange={(e) => setForm(prev => ({ ...prev, name_zh: e.target.value }))}
-            placeholder="品種中文名稱" autoComplete="off" style={breedRequestInputStyle}
+            placeholder="品種中文名稱" autoComplete="nope" style={breedRequestInputStyle}
           />
         </div>
         <div>
@@ -311,7 +311,7 @@ function BreedRequestInline() {
           <input
             type="text" value={form.name_en} required
             onChange={(e) => setForm(prev => ({ ...prev, name_en: e.target.value }))}
-            placeholder="品種英文名稱" autoComplete="off" style={breedRequestInputStyle}
+            placeholder="品種英文名稱" autoComplete="nope" style={breedRequestInputStyle}
           />
         </div>
         <div>
@@ -323,7 +323,7 @@ function BreedRequestInline() {
             type="text" value={form.scientific_name} required
             onChange={(e) => setForm(prev => ({ ...prev, scientific_name: e.target.value }))}
             placeholder="該品種所屬物種的拉丁學名"
-            autoComplete="off" style={{ ...breedRequestInputStyle, fontStyle: 'italic' }}
+            autoComplete="nope" style={{ ...breedRequestInputStyle, fontStyle: 'italic' }}
           />
         </div>
         <div>
@@ -336,7 +336,7 @@ function BreedRequestInline() {
             onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
             placeholder="補充說明（必填，請附上參考來源的連結）"
             rows={2}
-            autoComplete="off" style={{ ...breedRequestInputStyle, resize: 'vertical' }}
+            autoComplete="nope" style={{ ...breedRequestInputStyle, resize: 'vertical' }}
           />
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -486,7 +486,7 @@ function GlobalBreedSearch({ user, addToast, navigate }) {
           value={query}
           onChange={(e) => { setQuery(e.target.value); if (!e.target.value.trim()) { setResults([]); setSearched(false); } }}
           placeholder="搜尋品種名稱（如：柴犬、布偶貓、Shiba Inu）"
-          autoComplete="off"
+          autoComplete="nope"
           style={{
             flex: 1, padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: '4px', background: '#1a2433', color: '#e2e8f0',

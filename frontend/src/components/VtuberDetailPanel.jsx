@@ -281,7 +281,7 @@ function ReportSection({ entry }) {
               ? '請說明為何認為此帳號為偽冒（必填）'
               : '請說明為何認為此帳號不屬於 VTuber 或 ACG 領域（必填）'}
             rows={3}
-            autoComplete="off"
+            autoComplete="nope"
             style={{
               width: '100%', boxSizing: 'border-box',
               background: 'rgba(255,255,255,0.04)',
@@ -296,7 +296,7 @@ function ReportSection({ entry }) {
             value={reportEvidence}
             onChange={e => setReportEvidence(e.target.value)}
             placeholder="證據連結（選填）"
-            autoComplete="off"
+            autoComplete="nope"
             style={{
               width: '100%', boxSizing: 'border-box',
               background: 'rgba(255,255,255,0.04)',

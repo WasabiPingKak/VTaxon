@@ -223,7 +223,7 @@ export default function SettingsProfile() {
       <div style={{ marginBottom: '20px' }}>
         <label style={labelStyle}>名稱 *</label>
         <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)}
-          required autoComplete="off" style={inputStyle} />
+          required autoComplete="nope" style={inputStyle} />
       </div>
 
       {/* === 選填欄位提示 === */}
@@ -259,11 +259,11 @@ export default function SettingsProfile() {
         </div>
         {orgType === 'corporate' && (
           <input type="text" value={organization} onChange={(e) => setOrganization(e.target.value)}
-            placeholder="組織名稱" autoComplete="off" style={{ ...inputStyle, marginTop: '8px' }} />
+            placeholder="組織名稱" autoComplete="nope" style={{ ...inputStyle, marginTop: '8px' }} />
         )}
         {orgType === 'club' && (
           <input type="text" value={organization} onChange={(e) => setOrganization(e.target.value)}
-            placeholder="社團名稱" autoComplete="off" style={{ ...inputStyle, marginTop: '8px' }} />
+            placeholder="社團名稱" autoComplete="nope" style={{ ...inputStyle, marginTop: '8px' }} />
         )}
       </div>
 
@@ -271,7 +271,7 @@ export default function SettingsProfile() {
         <label style={labelStyle}>自我介紹</label>
         <textarea value={bio} onChange={(e) => setBio(e.target.value)}
           placeholder="簡單介紹一下你的角色吧！（最多 500 字）" maxLength={500} rows={6}
-          autoComplete="off" style={{ ...inputStyle, resize: 'vertical', minHeight: '120px' }} />
+          autoComplete="nope" style={{ ...inputStyle, resize: 'vertical', minHeight: '120px' }} />
         <div style={{ textAlign: 'right', fontSize: '0.8em', color: 'rgba(255,255,255,0.3)', marginTop: '2px' }}>
           {bio.length}/500
         </div>
@@ -289,7 +289,7 @@ export default function SettingsProfile() {
         <label style={labelStyle}>初配信日期</label>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <input type="date" value={debutDate} onChange={(e) => setDebutDate(e.target.value)}
-            autoComplete="off" style={{ ...inputStyle, maxWidth: '220px', flex: 'none', colorScheme: 'dark' }} />
+            autoComplete="nope" style={{ ...inputStyle, maxWidth: '220px', flex: 'none', colorScheme: 'dark' }} />
           <button type="button" onClick={() => setDebutDate('')} style={clearBtnStyle}>清空</button>
         </div>
         <div style={hintStyle}>
@@ -360,7 +360,7 @@ export default function SettingsProfile() {
           </select>
           {gender === 'custom' && (
             <input type="text" value={genderCustom} onChange={(e) => setGenderCustom(e.target.value)}
-              placeholder="自由輸入…" autoComplete="off" style={{ ...inputStyle, flex: 1 }} />
+              placeholder="自由輸入…" autoComplete="nope" style={{ ...inputStyle, flex: 1 }} />
           )}
         </div>
       </div>
@@ -371,14 +371,14 @@ export default function SettingsProfile() {
         <input type="text" value={representativeEmoji}
           onChange={(e) => setRepresentativeEmoji(e.target.value)}
           placeholder="例如：🦊" maxLength={8}
-          autoComplete="off" style={{ ...inputStyle, maxWidth: '120px', fontSize: '1.2em', textAlign: 'center' }} />
+          autoComplete="nope" style={{ ...inputStyle, maxWidth: '120px', fontSize: '1.2em', textAlign: 'center' }} />
       </div>
 
       {/* === 粉絲名稱 === */}
       <div style={{ marginBottom: '20px' }}>
         <label style={labelStyle}>粉絲名稱</label>
         <input type="text" value={fanName} onChange={(e) => setFanName(e.target.value)}
-          placeholder="例如：VTaxon民" autoComplete="off" style={inputStyle} />
+          placeholder="例如：VTaxon民" autoComplete="nope" style={inputStyle} />
       </div>
 
       {/* === 活動狀態 === */}
@@ -424,14 +424,14 @@ export default function SettingsProfile() {
         <textarea value={hashtags} onChange={(e) => setHashtags(e.target.value)}
           placeholder="每行一個 Hashtag"
           rows={6}
-          autoComplete="off" style={{ ...inputStyle, resize: 'vertical', minHeight: '120px' }} />
+          autoComplete="nope" style={{ ...inputStyle, resize: 'vertical', minHeight: '120px' }} />
       </div>
 
       {/* === 初配信影片 === */}
       <div style={{ marginBottom: '24px' }}>
         <label style={labelStyle}>初配信影片</label>
         <input type="url" value={debutVideoUrl} onChange={(e) => setDebutVideoUrl(e.target.value)}
-          placeholder="YouTube 或 Twitch 影片網址" autoComplete="off" style={inputStyle} />
+          placeholder="YouTube 或 Twitch 影片網址" autoComplete="nope" style={inputStyle} />
         <div style={hintStyle}>
           支援 YouTube 或 Twitch 影片連結，將嵌入顯示於側邊資訊欄中。
         </div>

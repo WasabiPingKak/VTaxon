@@ -166,7 +166,7 @@ export default function DirectoryFilters({
           value={searchInput}
           onChange={handleSearchChange}
           placeholder="搜尋實況主名稱..."
-          autoComplete="off"
+          autoComplete="nope"
           style={{
             width: '100%', padding: '8px 12px 8px 36px',
             background: 'rgba(255,255,255,0.06)',
