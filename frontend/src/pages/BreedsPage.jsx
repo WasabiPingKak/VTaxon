@@ -172,6 +172,8 @@ function BreedRequestInline() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [guideOpen, setGuideOpen] = useState(true);
+  const [confirmLatin, setConfirmLatin] = useState(false);
+  const [confirmBreed, setConfirmBreed] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -292,6 +294,31 @@ function BreedRequestInline() {
           </div>
         )}
       </div>
+      <div style={{
+        marginBottom: '12px', padding: '10px 14px',
+        background: 'rgba(56,189,248,0.04)', borderRadius: '4px',
+        border: '1px solid rgba(56,189,248,0.15)',
+        display: 'flex', flexDirection: 'column', gap: '8px',
+      }}>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.85em', color: 'rgba(255,255,255,0.7)', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={confirmLatin}
+            onChange={(e) => setConfirmLatin(e.target.checked)}
+            style={{ marginTop: '2px', accentColor: '#38bdf8' }}
+          />
+          <span>我已經用<strong style={{ color: '#e2e8f0' }}>拉丁文學名</strong>在物種搜尋中搜過，確認找不到</span>
+        </label>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.85em', color: 'rgba(255,255,255,0.7)', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={confirmBreed}
+            onChange={(e) => setConfirmBreed(e.target.checked)}
+            style={{ marginTop: '2px', accentColor: '#38bdf8' }}
+          />
+          <span>我確定要回報的是<strong style={{ color: '#e2e8f0' }}>品種</strong>（如柴犬），不是物種（如狼）</span>
+        </label>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div>
           <label style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.5)', marginBottom: '3px', display: 'block' }}>
@@ -341,7 +368,7 @@ function BreedRequestInline() {
           />
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button type="submit" disabled={submitting || !form.name_zh.trim() || !form.name_en.trim() || !form.scientific_name.trim() || !form.description.trim()} style={{
+          <button type="submit" disabled={submitting || !confirmLatin || !confirmBreed || !form.name_zh.trim() || !form.name_en.trim() || !form.scientific_name.trim() || !form.description.trim()} style={{
             padding: '6px 14px', background: BREED_COLOR, color: '#0d1526',
             border: 'none', borderRadius: '4px', cursor: 'pointer',
             fontSize: '0.85em', fontWeight: 600,

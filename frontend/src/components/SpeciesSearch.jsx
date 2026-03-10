@@ -553,6 +553,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
   const [searching, setSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [showSourceInfo, setShowSourceInfo] = useState(false);
+  const [latinRetry, setLatinRetry] = useState('');
   const [view, setView] = useState('default'); // 'default' | 'breedList'
   const [selectedCategory, setSelectedCategory] = useState(null);
 
@@ -628,7 +629,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
             type="search"
             value={query}
             onChange={handleQueryChange}
-            placeholder="搜尋物種或品種（例如：柴犬、布偶貓、貓、狼）"
+            placeholder="輸入學名最精確（如 Canis lupus）也可搜中文"
             autoComplete="new-password"
             style={{
               flex: 1, padding: '8px', border: '1px solid rgba(255,255,255,0.12)',
@@ -670,7 +671,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
           type="search"
           value={query}
           onChange={handleQueryChange}
-          placeholder="搜尋物種或品種（例如：柴犬、布偶貓、貓、狼）"
+          placeholder="輸入學名最精確（如 Canis lupus）也可搜中文"
           autoFocus={autoFocus}
           autoComplete="new-password"
           style={{
@@ -759,9 +760,73 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus }) {
       )}
 
       {!searching && searched && results.length === 0 && query.trim() && (
-        <p style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-          找不到結果？試試輸入學名（如 <i>Canis lupus</i>），學名搜尋最精確
-        </p>
+        <div style={{
+          marginTop: '8px', padding: '14px 16px',
+          border: '1px solid rgba(56,189,248,0.3)',
+          borderRadius: '6px',
+          background: 'rgba(56,189,248,0.06)',
+        }}>
+          <div style={{ fontWeight: 700, color: '#38bdf8', marginBottom: '8px', fontSize: '0.95em' }}>
+            找不到「{query.trim()}」？
+          </div>
+          <div style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.6)', lineHeight: 1.7 }}>
+            中文搜尋覆蓋有限，但<strong style={{ color: '#e2e8f0' }}>用拉丁文學名幾乎一定找得到</strong>。
+            <br />
+            不知道學名？Google 搜尋「<strong style={{ color: '#e2e8f0' }}>{query.trim()} 學名</strong>」即可。
+            <br />
+            <span style={{ color: 'rgba(255,255,255,0.4)' }}>
+              例：搜「雞 學名」→ 得到 <i>Gallus gallus domesticus</i> → 在上方輸入 "Gallus" 就能找到
+            </span>
+          </div>
+          {/[\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(query) && (
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(56,189,248,0.15)' }}>
+              <div style={{ fontSize: '0.82em', color: 'rgba(255,255,255,0.5)', marginBottom: '6px' }}>
+                查到學名了？直接貼上重新搜尋：
+              </div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!latinRetry.trim()) return;
+                  setQuery(latinRetry.trim());
+                  setLatinRetry('');
+                  // trigger search
+                  setSearching(true);
+                  setSearched(false);
+                  setResults([]);
+                  api.searchSpeciesStream(latinRetry.trim(), (sp) => {
+                    setResults(prev => [...prev, sp]);
+                  }).catch(() => {}).finally(() => {
+                    setSearching(false);
+                    setSearched(true);
+                  });
+                }}
+                style={{ display: 'flex', gap: '8px' }}
+              >
+                <input
+                  type="search"
+                  value={latinRetry}
+                  onChange={(e) => setLatinRetry(e.target.value)}
+                  placeholder="貼上學名（如 Gallus gallus）"
+                  autoComplete="new-password"
+                  style={{
+                    flex: 1, padding: '7px 10px',
+                    border: '1px solid rgba(56,189,248,0.3)',
+                    borderRadius: '4px', background: '#1a2433', color: '#e2e8f0',
+                    fontSize: '0.9em', fontStyle: 'italic',
+                  }}
+                />
+                <button type="submit" disabled={!latinRetry.trim()} style={{
+                  padding: '7px 14px', background: '#38bdf8', color: '#0d1526',
+                  border: 'none', borderRadius: '4px', cursor: 'pointer',
+                  fontWeight: 600, fontSize: '0.85em',
+                  opacity: latinRetry.trim() ? 1 : 0.5,
+                }}>
+                  搜尋學名
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
