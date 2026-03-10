@@ -80,7 +80,7 @@ ON CONFLICT(name) DO NOTHING;
 
 -- 日耳曼傳說
 INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
-('Sandman', '睡魔', '西方神話', '日耳曼傳說', '西方神話|日耳曼傳說|睡魔|Sandman', '日耳曼民間傳說中的催眠精靈，夜晚往兒童眼中撒沙誘導睡眠並帶來夢境')
+('Sandman', '睡魔', '西方神話', '日耳曼傳說', '西方神話|日耳曼傳說|民間精怪|Sandman', '日耳曼民間傳說中的催眠精靈，夜晚往兒童眼中撒沙誘導睡眠並帶來夢境')
 ON CONFLICT(name) DO NOTHING;
 
 -- 歐洲民間傳說
