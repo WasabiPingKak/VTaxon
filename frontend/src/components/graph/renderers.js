@@ -419,10 +419,11 @@ function drawBreedGridConnectors(ctx, nodes, scale, pm, vp, margin, state) {
       return { rowIdx, rowChildren, minX, maxX, barY };
     });
 
-    // Trunk X = parent X (visual continuity from the bezier stem)
-    const trunkX = px;
+    // Trunk X = left of all breed columns (avoid overlapping subtrees)
+    const globalMinX = Math.min(...rowBars.map(r => r.minX));
+    const trunkX = globalMinX - 30;
 
-    // 1. Bezier stem: parent → first row's bar
+    // 1. Bezier stem: parent → trunk top (first row's bar Y)
     if (rowBars.length > 0) {
       const firstBar = rowBars[0];
       ctx.beginPath();
@@ -441,15 +442,11 @@ function drawBreedGridConnectors(ctx, nodes, scale, pm, vp, margin, state) {
       ctx.stroke();
     }
 
-    // 3. Per-row: horizontal bar + vertical drops
-    for (const { rowChildren, minX, maxX, barY } of rowBars) {
-      // Extend bar to include trunkX so the trunk visually connects
-      const effectiveMinX = Math.min(minX, trunkX);
-      const effectiveMaxX = Math.max(maxX, trunkX);
-
+    // 3. Per-row: horizontal bar from trunk to rightmost breed + vertical drops
+    for (const { rowChildren, maxX, barY } of rowBars) {
       ctx.beginPath();
-      ctx.moveTo(effectiveMinX, barY);
-      ctx.lineTo(effectiveMaxX, barY);
+      ctx.moveTo(trunkX, barY);
+      ctx.lineTo(maxX, barY);
       ctx.stroke();
 
       // Vertical drops to each breed
