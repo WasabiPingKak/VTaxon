@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { api } from '../lib/api';
 import { formatAltNamesFull, altNamesTooltip } from '../lib/altNames';
 import { displayScientificName } from '../lib/speciesName';
@@ -268,6 +268,8 @@ function SpeciesGroup({ group, onSelect, familyColor }) {
   const [childrenLoaded, setChildrenLoaded] = useState(false);
   const [loadingChildren, setLoadingChildren] = useState(false);
   const [allSubspecies, setAllSubspecies] = useState(group.subspecies);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const mainResult = group.species || group.subspecies[0];
   const isSpeciesRank = (mainResult?.taxon_rank || '').toUpperCase() === 'SPECIES';
@@ -293,6 +295,7 @@ function SpeciesGroup({ group, onSelect, familyColor }) {
         const speciesKey = group.species?.taxon_id || group.speciesKey;
         const existing = new Map(group.subspecies.map(s => [s.taxon_id, s]));
         await api.getSubspeciesStream(speciesKey, (sub) => {
+          if (!mountedRef.current) return;
           if (!existing.has(sub.taxon_id)) {
             existing.set(sub.taxon_id, sub);
             setAllSubspecies(Array.from(existing.values()));
@@ -301,6 +304,7 @@ function SpeciesGroup({ group, onSelect, familyColor }) {
       } catch (err) {
         console.error('Failed to load subspecies:', err);
       } finally {
+        if (!mountedRef.current) return;
         setLoadingChildren(false);
         setChildrenLoaded(true);
       }
