@@ -89,38 +89,40 @@ def _build_stats():
         'both': ratio_q.both,
     }
 
-    # ── Taxonomy distribution (kingdom → class) ──
-    taxonomy_q = (
-        db.session.query(
-            SpeciesCache.kingdom,
-            SpeciesCache.class_.label('class_name'),
-            SpeciesCache.path_zh,
-            func.count(distinct(VtuberTrait.user_id)).label('count'),
-        )
-        .join(VtuberTrait, VtuberTrait.taxon_id == SpeciesCache.taxon_id)
-        .filter(SpeciesCache.kingdom.isnot(None))
-        .group_by(SpeciesCache.kingdom, SpeciesCache.class_,
-                  SpeciesCache.path_zh)
-        .order_by(func.count(distinct(VtuberTrait.user_id)).desc())
-        .all()
-    )
-    # Aggregate by (kingdom, class) — path_zh varies per row, pick first
-    tax_map = {}
-    for r in taxonomy_q:
-        key = (r.kingdom, r.class_name)
-        pzh = r.path_zh or {}
-        if key not in tax_map:
-            tax_map[key] = {
-                'kingdom': r.kingdom,
-                'kingdom_zh': pzh.get('kingdom', r.kingdom),
-                'class': r.class_name,
-                'class_zh': pzh.get('class', r.class_name),
-                'count': 0,
-            }
-        tax_map[key]['count'] += r.count
-    taxonomy_distribution = sorted(
-        tax_map.values(), key=lambda x: x['count'], reverse=True
-    )
+    # ── Taxonomy distribution (kingdom → phylum → class → order → family → genus) ──
+    taxonomy_q = db.session.execute(db.text("""
+        SELECT sc.kingdom,
+               MAX(sc.path_zh->>'kingdom') AS kingdom_zh,
+               sc.phylum,
+               MAX(sc.path_zh->>'phylum') AS phylum_zh,
+               sc."class",
+               MAX(sc.path_zh->>'class') AS class_zh,
+               sc.order_,
+               MAX(sc.path_zh->>'order') AS order_zh,
+               sc.family,
+               MAX(sc.path_zh->>'family') AS family_zh,
+               sc.genus,
+               MAX(sc.path_zh->>'genus') AS genus_zh,
+               COUNT(DISTINCT vt.user_id) AS count
+        FROM species_cache sc
+        JOIN vtuber_traits vt ON vt.taxon_id = sc.taxon_id
+        WHERE sc.kingdom IS NOT NULL
+        GROUP BY sc.kingdom, sc.phylum, sc."class",
+                 sc.order_, sc.family, sc.genus
+        ORDER BY count DESC
+    """)).fetchall()
+    taxonomy_distribution = [
+        {
+            'kingdom': r[0], 'kingdom_zh': r[1] or r[0],
+            'phylum': r[2], 'phylum_zh': r[3] or r[2],
+            'class': r[4], 'class_zh': r[5] or r[4],
+            'order': r[6], 'order_zh': r[7] or r[6],
+            'family': r[8], 'family_zh': r[9] or r[8],
+            'genus': r[10], 'genus_zh': r[11] or r[10],
+            'count': r[12],
+        }
+        for r in taxonomy_q
+    ]
 
     # ── Platform distribution ──
     platform_q = (
