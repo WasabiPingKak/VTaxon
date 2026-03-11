@@ -409,26 +409,47 @@ function drawBreedGridConnectors(ctx, nodes, scale, pm, vp, margin, state) {
 
     const sortedRows = [...rowMap.keys()].sort((a, b) => a - b);
 
-    // Draw connectors for each row: bezier from parent → bar, horizontal bar, drops
-    for (const rowIdx of sortedRows) {
+    // Precompute each row's bar info
+    const rowBars = sortedRows.map(rowIdx => {
       const rowChildren = rowMap.get(rowIdx);
       const xs = rowChildren.map(c => c.x);
       const minX = Math.min(...xs);
       const maxX = Math.max(...xs);
       const barY = Math.min(...rowChildren.map(c => c.y)) - 25;
-      const barMidX = (minX + maxX) / 2;
+      return { rowIdx, rowChildren, minX, maxX, barY };
+    });
 
-      // Bezier stem from parent to this row's bar
+    // Trunk X = parent X (visual continuity from the bezier stem)
+    const trunkX = px;
+
+    // 1. Bezier stem: parent → first row's bar
+    if (rowBars.length > 0) {
+      const firstBar = rowBars[0];
       ctx.beginPath();
-      const midY = (py + barY) / 2;
+      const midY = (py + firstBar.barY) / 2;
       ctx.moveTo(px, py);
-      ctx.bezierCurveTo(px, midY, barMidX, midY, barMidX, barY);
+      ctx.bezierCurveTo(px, midY, trunkX, midY, trunkX, firstBar.barY);
       ctx.stroke();
+    }
 
-      // Horizontal bar
+    // 2. Vertical trunk connecting all rows' bars
+    if (rowBars.length > 1) {
+      const lastBar = rowBars[rowBars.length - 1];
       ctx.beginPath();
-      ctx.moveTo(minX, barY);
-      ctx.lineTo(maxX, barY);
+      ctx.moveTo(trunkX, rowBars[0].barY);
+      ctx.lineTo(trunkX, lastBar.barY);
+      ctx.stroke();
+    }
+
+    // 3. Per-row: horizontal bar + vertical drops
+    for (const { rowChildren, minX, maxX, barY } of rowBars) {
+      // Extend bar to include trunkX so the trunk visually connects
+      const effectiveMinX = Math.min(minX, trunkX);
+      const effectiveMaxX = Math.max(maxX, trunkX);
+
+      ctx.beginPath();
+      ctx.moveTo(effectiveMinX, barY);
+      ctx.lineTo(effectiveMaxX, barY);
       ctx.stroke();
 
       // Vertical drops to each breed
