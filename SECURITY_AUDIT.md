@@ -13,7 +13,7 @@
 | CRITICAL | ~~2~~ 0 | ~~帳號接管、JWT 算法降級~~ 已全數修復 |
 | HIGH | ~~3~~ 0 | ~~CORS 萬用字元、缺少 Rate Limiting、缺少安全標頭~~ 已全數修復 |
 | MEDIUM | ~~5~~ 0 | ~~快取刷新濫用、JWKS 無 TTL、SQL 字串拼接、Health 端點資訊洩漏、錯誤訊息洩漏~~ 已全數修復 |
-| LOW | 5 | 依賴未鎖定版本、localStorage 認證狀態、前端快取無上限、enum 未集中管理、provider 欄位無約束 |
+| LOW | ~~5~~ 0 | ~~依賴未鎖定版本、localStorage 認證狀態、前端快取無上限、SECRET_KEY 預設值、provider 欄位無約束~~ 已全數修復 |
 
 ---
 
@@ -123,65 +123,43 @@
 
 ---
 
-## LOW-1: 依賴版本未精確鎖定
+## ~~LOW-1: 依賴版本未精確鎖定~~ ✅ 已修復
 
-**檔案**: `backend/requirements.txt`
+**狀態**: 已修復（2026-03-11）
 
-**問題**: 使用 `>=` 而非精確版本鎖定（如 `==` 或 lock file），可能在部署時引入破壞性更新。
-
-```
-flask>=3.0
-PyJWT>=2.8
-cryptography>=42.0
-```
-
-**修復建議**: 使用 `pip freeze > requirements.lock` 或導入 `pip-tools` 進行依賴鎖定。
+**修復方式**: 將 `>=` 改為 `~=`（compatible release operator），限制在同一主版本內更新，避免引入破壞性變更。
 
 ---
 
-## LOW-2: localStorage 儲存認證狀態（風險已降低）
+## ~~LOW-2: localStorage 儲存認證狀態~~ ✅ 已修復
 
-**檔案**: `frontend/src/lib/AuthContext.jsx`
+**狀態**: 已修復（2026-03-11）
 
-**問題**: `vtaxon_pending_link` 儲存在 localStorage，如果遭受 XSS 攻擊可能被讀取。
-
-**目前狀態**: CRITICAL-1 修復後，localStorage 中存的是 HMAC 簽章的 link token（含 10 分鐘 TTL），而非裸 user UUID。即使被 XSS 讀取，token 也會在 10 分鐘後失效，且僅能用於綁定操作。風險已大幅降低。
-
-**進一步改善建議**: 可改用 sessionStorage（隨分頁關閉清除）。
+**修復方式**: `vtaxon_pending_link` 從 localStorage 改為 sessionStorage，隨分頁關閉自動清除。
 
 ---
 
-## LOW-3: 前端 API 快取無上限
+## ~~LOW-3: 前端 API 快取無上限~~ ✅ 已修復
 
-**檔案**: `frontend/src/lib/api.js`
+**狀態**: 已修復（先前版本）
 
-**問題**: Species search 和 taxonomy children 的記憶體快取（Map）沒有大小限制和 TTL，長時間使用可能導致記憶體成長。
-
-**修復建議**: 加入 TTL（1 小時）和最大筆數限制（500 筆）。
+**修復方式**: 已加入 `boundedSet` 機制，快取上限 100 筆，超出時自動淘汰最舊的 entry。
 
 ---
 
-## LOW-4: Flask SECRET_KEY 預設值
+## ~~LOW-4: Flask SECRET_KEY 預設值~~ ✅ 已修復
 
-**檔案**: `backend/app/config.py:5`
+**狀態**: 已修復（2026-03-11）
 
-**問題**: `SECRET_KEY` 有 hardcoded 預設值 `'dev-secret-key'`。雖然目前未用於 JWT 驗證（使用 Supabase JWKS），但如果未來啟用 Flask session，此預設值會成為嚴重風險。
-
-```python
-SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
-```
-
-**修復建議**: Production 環境移除預設值，改為 `os.environ['SECRET_KEY']`（缺少時直接報錯）。
+**修復方式**: `ProductionConfig` 覆寫 `SECRET_KEY` 為 `os.environ.get('SECRET_KEY')`（無預設值），`init_app()` 檢查缺少時啟動報錯。開發環境保留 fallback。
 
 ---
 
-## LOW-5: Provider 欄位缺少 DB 約束
+## ~~LOW-5: Provider 欄位缺少 DB 約束~~ ✅ 已修復
 
-**檔案**: `backend/app/models.py` (OAuthAccount.provider)
+**狀態**: 已修復（2026-03-11）
 
-**問題**: `provider` 欄位為 Text 類型，無 CHECK constraint 限制為 `'youtube'` / `'twitch'`。
-
-**修復建議**: 加入 `CheckConstraint("provider IN ('youtube', 'twitch')")`。
+**修復方式**: ORM model 加入 `CheckConstraint("provider IN ('youtube', 'twitch')")`，DB migration 腳本 `20260311_add_oauth_provider_check.sql` 同時更新 staging 和 public schema。
 
 ---
 
@@ -215,6 +193,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
 ### 後續改善
 9. ~~SQL parameterization 重構 — MEDIUM-3~~ ✅
-10. 依賴版本鎖定 — LOW-1
-11. 前端快取改善 — LOW-3
-12. SECRET_KEY 預設值移除 — LOW-4
+10. ~~依賴版本鎖定 — LOW-1~~ ✅
+11. ~~前端快取改善 — LOW-3~~ ✅
+12. ~~SECRET_KEY 預設值移除 — LOW-4~~ ✅
+13. ~~localStorage → sessionStorage — LOW-2~~ ✅
+14. ~~Provider CHECK constraint — LOW-5~~ ✅

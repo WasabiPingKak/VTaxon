@@ -64,7 +64,7 @@ export function AuthProvider({ children }) {
     if (syncingRef.current) return;
     syncingRef.current = true;
     try {
-      const pendingLink = localStorage.getItem('vtaxon_pending_link');
+      const pendingLink = sessionStorage.getItem('vtaxon_pending_link');
 
       const meta = session.user?.user_metadata || {};
       const loginProvider = sessionStorage.getItem('vtaxon_login_provider');
@@ -108,7 +108,7 @@ export function AuthProvider({ children }) {
 
       // Clear pending link regardless of outcome
       if (pendingLink) {
-        localStorage.removeItem('vtaxon_pending_link');
+        sessionStorage.removeItem('vtaxon_pending_link');
       }
 
       // Sync OAuth identities to backend
@@ -218,7 +218,7 @@ export function AuthProvider({ children }) {
     if (user) {
       try {
         const { link_token } = await api.createLinkToken();
-        localStorage.setItem('vtaxon_pending_link', link_token);
+        sessionStorage.setItem('vtaxon_pending_link', link_token);
       } catch (err) {
         console.error('Failed to create link token:', err);
         sessionStorage.removeItem('vtaxon_login_provider');
@@ -237,7 +237,7 @@ export function AuthProvider({ children }) {
     });
     if (error) {
       console.error(`linkProvider(${provider}) failed:`, error.message);
-      localStorage.removeItem('vtaxon_pending_link');
+      sessionStorage.removeItem('vtaxon_pending_link');
       alert(`綁定失敗：${error.message}`);
     }
   }
