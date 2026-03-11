@@ -70,17 +70,33 @@ def update_request(req_id):
 def create_request():
     data = request.get_json() or {}
 
+    FIELD_LIMITS = {
+        'name_zh': (1, 30),
+        'name_en': (1, 60),
+        'suggested_origin': (2, 60),
+        'description': (10, 500),
+    }
+
     name_zh = (data.get('name_zh') or '').strip()
+    name_en = (data.get('name_en') or '').strip()
+    suggested_origin = (data.get('suggested_origin') or '').strip()
+    description = (data.get('description') or '').strip()
+
     if not name_zh:
         return jsonify({'error': 'name_zh is required'}), 400
+
+    for field, (min_len, max_len) in FIELD_LIMITS.items():
+        val = locals().get(field, '')
+        if val and (len(val) < min_len or len(val) > max_len):
+            return jsonify({'error': f'{field} must be {min_len}-{max_len} characters'}), 400
 
     req = FictionalSpeciesRequest(
         user_id=g.current_user_id,
         name_zh=name_zh,
-        name_en=(data.get('name_en') or '').strip() or None,
-        suggested_origin=(data.get('suggested_origin') or '').strip() or None,
+        name_en=name_en or None,
+        suggested_origin=suggested_origin or None,
         suggested_sub_origin=(data.get('suggested_sub_origin') or '').strip() or None,
-        description=(data.get('description') or '').strip() or None,
+        description=description or None,
     )
     db.session.add(req)
     db.session.commit()
