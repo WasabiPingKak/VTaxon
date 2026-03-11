@@ -237,6 +237,9 @@ function layoutTree(h, activeFilterCount) {
   compactTree(h);
   resolveCollisions(h);
   applyBreedGridLayout(h);
+  // Re-compact after breed grid shrinks subtrees (ancestor extents are stale)
+  compactTree(h);
+  resolveCollisions(h);
 }
 
 const DUAL_TREE_GAP = 400;
@@ -507,7 +510,7 @@ function _compactNode(node) {
 
   // Compact non-grid children: ensure exactly LABEL_PADDING between subtree extents.
   // Handles both excess gaps (pull left) and overlaps (push right).
-  const nonGrid = node.children.filter(c => !c.data._inGrid);
+  const nonGrid = node.children.filter(c => !c.data._inGrid && !c.data._inBreedGrid);
   if (nonGrid.length > 1) {
     nonGrid.sort((a, b) => a.x - b.x);
     for (let i = 1; i < nonGrid.length; i++) {
@@ -547,7 +550,7 @@ function resolveCollisions(root) {
   // Group non-grid nodes by depth
   const levels = new Map();
   for (const node of root.descendants()) {
-    if (node.data._inGrid) continue;
+    if (node.data._inGrid || node.data._inBreedGrid) continue;
     const d = node.depth;
     if (!levels.has(d)) levels.set(d, []);
     levels.get(d).push(node);
