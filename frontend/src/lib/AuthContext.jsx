@@ -33,10 +33,14 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const syncingRef = useRef(false);
+  const mountedRef = useRef(true);
   const { addToast } = useToast();
 
   useEffect(() => {
+    mountedRef.current = true;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mountedRef.current) return;
       setSession(session);
       if (session) syncUser(session);
       else setLoading(false);
@@ -44,6 +48,7 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!mountedRef.current) return;
         setSession(session);
         // TOKEN_REFRESHED only updates the JWT — no need to re-sync user data,
         // which would cause unnecessary re-renders and UI flicker (e.g. AdminPage)
@@ -56,7 +61,10 @@ export function AuthProvider({ children }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mountedRef.current = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function syncUser(session) {
@@ -97,6 +105,7 @@ export function AuthProvider({ children }) {
         });
       } catch (err) {
         if (err.data?.error === 'account_banned') {
+          if (!mountedRef.current) return;
           addToast('此帳號已被停用，如有疑問請聯繫管理員', { duration: 8000 });
           await supabase.auth.signOut();
           setUser(null);
@@ -105,6 +114,7 @@ export function AuthProvider({ children }) {
         }
         throw err;
       }
+      if (!mountedRef.current) return;
 
       // Clear pending link regardless of outcome
       if (pendingLink) {
@@ -140,6 +150,7 @@ export function AuthProvider({ children }) {
           await api.syncOAuthAccounts(syncBody);
         } catch (err) {
           if (err.data?.error === 'account_banned') {
+            if (!mountedRef.current) return;
             addToast('此帳號已被停用，如有疑問請聯繫管理員', { duration: 8000 });
             await supabase.auth.signOut();
             setUser(null);
@@ -148,6 +159,7 @@ export function AuthProvider({ children }) {
           }
           console.error('Failed to sync OAuth accounts:', err);
         }
+        if (!mountedRef.current) return;
       }
 
       // Detect auto-linked providers that are NOT yet bound in our backend.
@@ -180,12 +192,13 @@ export function AuthProvider({ children }) {
       }
 
       const userData = await api.getMe();
+      if (!mountedRef.current) return;
       setUser(userData);
     } catch (err) {
       console.error('Failed to sync user:', err);
     } finally {
       syncingRef.current = false;
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }
 
