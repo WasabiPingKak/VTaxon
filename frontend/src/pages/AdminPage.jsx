@@ -237,7 +237,8 @@ function NameReportCard({ req, onUpdate }) {
     }
   };
 
-  const reportTypeLabel = req.report_type === 'missing_zh' ? '中文名缺漏' : '中文名錯誤';
+  const reportTypeLabel = req.report_type === 'missing_zh' ? '中文名缺漏'
+    : req.report_type === 'not_found' ? '搜尋不到物種' : '中文名錯誤';
 
   return (
     <RequestCardShell req={req}>
@@ -247,8 +248,10 @@ function NameReportCard({ req, onUpdate }) {
           <span style={{
             display: 'inline-block', padding: '1px 8px', borderRadius: 4,
             fontSize: '0.85em', fontWeight: 600,
-            background: req.report_type === 'missing_zh' ? 'rgba(56,189,248,0.15)' : 'rgba(251,146,60,0.15)',
-            color: req.report_type === 'missing_zh' ? '#38bdf8' : '#fb923c',
+            background: req.report_type === 'not_found' ? 'rgba(239,68,68,0.15)'
+              : req.report_type === 'missing_zh' ? 'rgba(56,189,248,0.15)' : 'rgba(251,146,60,0.15)',
+            color: req.report_type === 'not_found' ? '#f87171'
+              : req.report_type === 'missing_zh' ? '#38bdf8' : '#fb923c',
           }}>
             {reportTypeLabel}
           </span>

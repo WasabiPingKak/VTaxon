@@ -371,6 +371,10 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
   const [hasSearchedLatin, setHasSearchedLatin] = useState(false);
   const [interceptSpecies, setInterceptSpecies] = useState(null);
   const [showNameReport, setShowNameReport] = useState(false);
+  const [showNotFoundReport, setShowNotFoundReport] = useState(false);
+  const [notFoundForm, setNotFoundForm] = useState({ searched: '', expected: '', description: '' });
+  const [notFoundSubmitting, setNotFoundSubmitting] = useState(false);
+  const [notFoundSubmitted, setNotFoundSubmitted] = useState(false);
 
   const { breedResults, groups, familyColorMap } = useMemo(() => {
     const { breeds, speciesGroups } = groupBySpecies(results);
@@ -659,6 +663,130 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
               </form>
             </div>
           )}
+
+          {/* Not-found report */}
+          <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(56,189,248,0.15)' }}>
+            {notFoundSubmitted ? (
+              <div style={{ fontSize: '0.85em', color: '#34d399' }}>
+                回報已送出，等待管理員處理！
+              </div>
+            ) : !showNotFoundReport ? (
+              <div style={{ fontSize: '0.82em', color: 'rgba(255,255,255,0.4)' }}>
+                以上方法都試過了還是找不到？{' '}
+                <button
+                  onClick={() => {
+                    setShowNotFoundReport(true);
+                    setNotFoundForm(prev => ({ ...prev, searched: query.trim() }));
+                  }}
+                  style={{ background: 'none', border: 'none', color: '#38bdf8', cursor: 'pointer', fontSize: '1em' }}
+                >
+                  回報問題
+                </button>
+              </div>
+            ) : (
+              <form
+                autoComplete="off"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const s = notFoundForm.searched.trim();
+                  const ex = notFoundForm.expected.trim();
+                  const d = notFoundForm.description.trim();
+                  if (!s || !ex || !d) return;
+                  setNotFoundSubmitting(true);
+                  try {
+                    await api.createNameReport({
+                      report_type: 'not_found',
+                      suggested_name_zh: ex,
+                      description: `[搜尋內容: ${s}]\n${d}`,
+                    });
+                    setNotFoundSubmitted(true);
+                  } catch (err) {
+                    alert(err.message);
+                  } finally {
+                    setNotFoundSubmitting(false);
+                  }
+                }}
+              >
+                <input type="text" name="prevent_autofill" autoComplete="new-password" style={{ display: 'none' }} tabIndex={-1} />
+                <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '0.9em', marginBottom: '8px' }}>
+                  回報搜尋不到的物種
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.78em', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '2px' }}>
+                      搜尋了什麼 <span style={{ color: '#f87171' }}>*</span>
+                    </label>
+                    <input
+                      type="text" value={notFoundForm.searched} required
+                      onChange={(e) => setNotFoundForm(prev => ({ ...prev, searched: e.target.value }))}
+                      placeholder="例：T. prorsus"
+                      autoComplete="new-password"
+                      style={{
+                        width: '100%', padding: '6px 10px', boxSizing: 'border-box',
+                        border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px',
+                        background: '#1a2433', color: '#e2e8f0', fontSize: '0.85em',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.78em', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '2px' }}>
+                      期望找到的物種 <span style={{ color: '#f87171' }}>*</span>
+                    </label>
+                    <input
+                      type="text" value={notFoundForm.expected} required
+                      onChange={(e) => setNotFoundForm(prev => ({ ...prev, expected: e.target.value }))}
+                      placeholder="例：前突三角龍"
+                      autoComplete="new-password"
+                      style={{
+                        width: '100%', padding: '6px 10px', boxSizing: 'border-box',
+                        border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px',
+                        background: '#1a2433', color: '#e2e8f0', fontSize: '0.85em',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.78em', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '2px' }}>
+                      補充說明 <span style={{ color: '#f87171' }}>*</span>
+                    </label>
+                    <textarea
+                      value={notFoundForm.description} required
+                      onChange={(e) => setNotFoundForm(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="請說明你嘗試過哪些搜尋方式"
+                      rows={2} autoComplete="new-password"
+                      style={{
+                        width: '100%', padding: '6px 10px', boxSizing: 'border-box',
+                        border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px',
+                        background: '#1a2433', color: '#e2e8f0', fontSize: '0.85em',
+                        resize: 'vertical',
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {(() => {
+                      const dis = notFoundSubmitting || !notFoundForm.searched.trim() || !notFoundForm.expected.trim() || !notFoundForm.description.trim();
+                      return (
+                        <button type="submit" disabled={dis} style={{
+                          padding: '5px 12px', background: '#38bdf8', color: '#0d1526',
+                          border: 'none', borderRadius: '4px',
+                          cursor: dis ? 'not-allowed' : 'pointer',
+                          fontSize: '0.82em', fontWeight: 600, opacity: dis ? 0.4 : 1,
+                        }}>
+                          {notFoundSubmitting ? '送出中…' : '送出回報'}
+                        </button>
+                      );
+                    })()}
+                    <button type="button" onClick={() => setShowNotFoundReport(false)} style={{
+                      padding: '5px 12px', background: 'rgba(255,255,255,0.06)',
+                      color: 'rgba(255,255,255,0.6)', border: 'none',
+                      borderRadius: '4px', cursor: 'pointer', fontSize: '0.82em',
+                    }}>
+                      取消
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       )}
     </div>

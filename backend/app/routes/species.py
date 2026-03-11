@@ -179,15 +179,25 @@ def create_name_report():
     report_type = data.get('report_type')
     suggested_name_zh = (data.get('suggested_name_zh') or '').strip()
 
-    if not taxon_id or not report_type or not suggested_name_zh:
-        return jsonify({'error': 'taxon_id, report_type, suggested_name_zh 為必填'}), 400
+    if not report_type or not suggested_name_zh:
+        return jsonify({'error': 'report_type, suggested_name_zh 為必填'}), 400
 
-    if report_type not in ('missing_zh', 'wrong_zh'):
-        return jsonify({'error': 'report_type 必須為 missing_zh 或 wrong_zh'}), 400
+    if report_type not in ('missing_zh', 'wrong_zh', 'not_found'):
+        return jsonify({'error': 'report_type 必須為 missing_zh、wrong_zh 或 not_found'}), 400
+
+    if report_type != 'not_found' and not taxon_id:
+        return jsonify({'error': 'taxon_id 為必填（not_found 類型除外）'}), 400
+
+    if report_type == 'not_found':
+        description = (data.get('description') or '').strip()
+        if not description:
+            return jsonify({'error': 'not_found 類型必須填寫補充說明'}), 400
 
     # Look up current name from cache
-    species = db.session.get(SpeciesCache, taxon_id)
-    current_name_zh = species.common_name_zh if species else None
+    current_name_zh = None
+    if taxon_id:
+        species = db.session.get(SpeciesCache, taxon_id)
+        current_name_zh = species.common_name_zh if species else None
 
     report = SpeciesNameReport(
         user_id=g.current_user_id,
