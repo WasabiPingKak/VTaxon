@@ -1,10 +1,9 @@
-from flask import Blueprint, Response, jsonify, request, stream_with_context
+from flask import Blueprint, Response, g, jsonify, request, stream_with_context
 
 from ..auth import admin_required, login_required
 from ..extensions import db
 from ..limiter import limiter
 from ..models import SpeciesCache, SpeciesNameReport
-from ..services.notifications import create_notification
 from ..services.gbif import (
     clear_chinese_name_caches,
     get_species,
@@ -191,7 +190,7 @@ def create_name_report():
     current_name_zh = species.common_name_zh if species else None
 
     report = SpeciesNameReport(
-        user_id=request.user_id,
+        user_id=g.current_user_id,
         taxon_id=taxon_id,
         report_type=report_type,
         current_name_zh=current_name_zh,
@@ -199,11 +198,6 @@ def create_name_report():
         description=(data.get('description') or '').strip() or None,
     )
     db.session.add(report)
-    create_notification(
-        request.user_id, 'species_name_report', report.id,
-        'received',
-        subject_name=suggested_name_zh,
-    )
     db.session.commit()
     return jsonify(report.to_dict()), 201
 
@@ -237,6 +231,7 @@ def update_name_report(report_id):
         report.admin_note = data['admin_note']
 
     if report.status != old_status:
+        from ..services.notifications import create_notification
         create_notification(
             report.user_id, 'species_name_report', report.id,
             report.status,
