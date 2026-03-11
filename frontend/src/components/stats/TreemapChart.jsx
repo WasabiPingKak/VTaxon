@@ -50,8 +50,20 @@ export default function TreemapChart({ data }) {
   const isMobile = useIsMobile();
   const [containerWidth, setContainerWidth] = useState(0);
   const chartHeight = isMobile ? 280 : 340;
+  const prevPathLenRef = useRef(0);
 
   const levelIdx = path.length;
+
+  // Determine animation direction when path changes
+  const animDir = useMemo(() => {
+    const prev = prevPathLenRef.current;
+    const curr = path.length;
+    prevPathLenRef.current = curr;
+    if (curr > prev) return 'in';
+    if (curr < prev) return 'out';
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path]);
 
   // Measure container width
   useEffect(() => {
@@ -150,8 +162,22 @@ export default function TreemapChart({ data }) {
     WebkitBackdropFilter: 'blur(8px)',
   } : null;
 
+  const svgKey = path.map(p => p.key).join('/') || 'root';
+  const animName = animDir === 'in' ? 'tmZoomIn 0.3s ease-out'
+    : animDir === 'out' ? 'tmZoomOut 0.3s ease-out' : 'none';
+
   return (
     <div>
+      <style>{`
+        @keyframes tmZoomIn {
+          from { opacity: 0; transform: scale(0.88); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes tmZoomOut {
+          from { opacity: 0; transform: scale(1.1); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
       {/* Breadcrumb */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 2,
@@ -199,8 +225,14 @@ export default function TreemapChart({ data }) {
         onMouseLeave={() => setTooltip(null)}
       >
         {containerWidth > 0 && (
+          <div
+            key={svgKey}
+            style={{
+              animation: animName,
+              transformOrigin: 'center center',
+            }}
+          >
           <svg
-            key={path.map(p => p.key).join('/')}
             width={containerWidth}
             height={chartHeight}
             style={{ display: 'block' }}
@@ -272,6 +304,7 @@ export default function TreemapChart({ data }) {
               );
             })}
           </svg>
+          </div>
         )}
 
         {/* Tooltip */}
