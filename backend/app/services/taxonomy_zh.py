@@ -336,6 +336,7 @@ SPECIES_ZH_OVERRIDES = {
     5219303: '北極狐',         # Vulpes lagopus — species_cache 誤存「非洲野犬」，正確為北極狐
     # --- Subspecies / Variety ---
     11374585: '家豬',           # Sus scrofa domesticus — common domestic pig
+    9577769: '家鴨',            # Anas platyrhynchos f. domesticus — domestic duck
 }
 
 
@@ -350,6 +351,7 @@ def get_species_zh_override(taxon_id):
 PARENT_SPECIES_NAME_ZH = {
     'Canis lupus': '狼',        # 5219173
     'Sus scrofa': '野豬',       # parent of 家豬 (Sus scrofa domesticus)
+    'Anas platyrhynchos': '綠頭鴨',  # parent of 家鴨 (Anas platyrhynchos f. domesticus)
 }
 
 
