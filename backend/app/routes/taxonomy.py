@@ -1,8 +1,8 @@
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 
-from ..auth import admin_required
+from ..auth import admin_required, login_required
 from ..limiter import limiter
 from ..cache import (get_tree_cache, set_tree_cache, invalidate_tree_cache,
                      get_fictional_tree_cache, set_fictional_tree_cache,
@@ -152,7 +152,23 @@ def get_taxonomy_tree():
     Frontend builds the tree structure from the flat list using taxon_path.
     Uses in-process cache (TTL 5 min) to avoid repeated DB queries.
     """
-    if not request.args.get('refresh'):
+    # refresh=1 requires admin authentication
+    use_cache = True
+    if request.args.get('refresh'):
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            from ..auth import get_current_user
+            from ..models import AuthIdAlias
+            uid = get_current_user()
+            if uid:
+                alias = db.session.get(AuthIdAlias, uid)
+                if alias:
+                    uid = alias.user_id
+                user = db.session.get(User, str(uid))
+                if user and user.role == 'admin':
+                    use_cache = False
+
+    if use_cache:
         cached = get_tree_cache()
         if cached:
             return jsonify(cached)
@@ -289,7 +305,23 @@ def clear_cache():
 @taxonomy_bp.route('/fictional-tree', methods=['GET'])
 def get_fictional_tree():
     """Return all vtuber traits with fictional species, joined with user and fictional_species data."""
-    if not request.args.get('refresh'):
+    # refresh=1 requires admin authentication
+    use_cache = True
+    if request.args.get('refresh'):
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            from ..auth import get_current_user
+            from ..models import AuthIdAlias
+            uid = get_current_user()
+            if uid:
+                alias = db.session.get(AuthIdAlias, uid)
+                if alias:
+                    uid = alias.user_id
+                user = db.session.get(User, str(uid))
+                if user and user.role == 'admin':
+                    use_cache = False
+
+    if use_cache:
         cached = get_fictional_tree_cache()
         if cached:
             return jsonify(cached)

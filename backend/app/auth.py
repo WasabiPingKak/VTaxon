@@ -1,4 +1,5 @@
 import logging
+import time
 from functools import wraps
 
 import jwt
@@ -9,13 +10,17 @@ from .models import AuthIdAlias, User
 
 logger = logging.getLogger(__name__)
 
-# Module-level cache for JWKS
-_jwks_cache = {'keys': None}
+# Module-level cache for JWKS with TTL (1 hour)
+_JWKS_TTL = 3600
+_jwks_cache = {'keys': None, 'fetched_at': 0}
 
 
-def _get_jwks():
-    """Fetch and cache JWKS from Supabase."""
-    if _jwks_cache['keys'] is not None:
+def _get_jwks(force_refresh=False):
+    """Fetch and cache JWKS from Supabase with 1-hour TTL."""
+    now = time.monotonic()
+    if (not force_refresh
+            and _jwks_cache['keys'] is not None
+            and (now - _jwks_cache['fetched_at']) < _JWKS_TTL):
         return _jwks_cache['keys']
 
     supabase_url = current_app.config.get('SUPABASE_URL', '')
@@ -25,10 +30,12 @@ def _get_jwks():
         resp.raise_for_status()
         jwks_data = resp.json()
         _jwks_cache['keys'] = jwks_data['keys']
+        _jwks_cache['fetched_at'] = now
         return _jwks_cache['keys']
     except Exception as e:
         logger.error('Failed to fetch JWKS from %s: %s', jwks_url, e)
-        return None
+        # Return stale cache if available
+        return _jwks_cache['keys']
 
 
 def _get_signing_key(token):
@@ -67,6 +74,7 @@ def get_current_user():
     token = auth_header[7:]
 
     # Try JWKS-based verification (Supabase ES256 signing keys)
+    # On failure, refresh JWKS once and retry (handles key rotation)
     public_key = _get_signing_key(token)
     if public_key:
         try:
@@ -80,7 +88,22 @@ def get_current_user():
             if user_id:
                 return user_id
         except jwt.InvalidTokenError as e:
-            logger.warning('JWKS verification failed: %s', e)
+            logger.warning('JWKS verification failed, retrying with refreshed keys: %s', e)
+            _get_jwks(force_refresh=True)
+            public_key = _get_signing_key(token)
+            if public_key:
+                try:
+                    payload = jwt.decode(
+                        token,
+                        public_key,
+                        algorithms=['ES256'],
+                        audience='authenticated',
+                    )
+                    user_id = payload.get('sub')
+                    if user_id:
+                        return user_id
+                except jwt.InvalidTokenError:
+                    pass
 
     # HS256 fallback — disabled by default, enable only for emergencies
     if current_app.config.get('ALLOW_HS256_FALLBACK'):

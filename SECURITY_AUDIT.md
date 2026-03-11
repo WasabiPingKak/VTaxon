@@ -12,7 +12,7 @@
 |--------|------|------|
 | CRITICAL | ~~2~~ 0 | ~~帳號接管、JWT 算法降級~~ 已全數修復 |
 | HIGH | ~~3~~ 0 | ~~CORS 萬用字元、缺少 Rate Limiting、缺少安全標頭~~ 已全數修復 |
-| MEDIUM | 5 | 快取刷新濫用、JWKS 無 TTL、SQL 字串拼接、Health 端點資訊洩漏、錯誤訊息洩漏 |
+| MEDIUM | ~~5~~ 0 | ~~快取刷新濫用、JWKS 無 TTL、SQL 字串拼接、Health 端點資訊洩漏、錯誤訊息洩漏~~ 已全數修復 |
 | LOW | 5 | 依賴未鎖定版本、localStorage 認證狀態、前端快取無上限、enum 未集中管理、provider 欄位無約束 |
 
 ---
@@ -77,83 +77,49 @@
 
 ---
 
-## MEDIUM-1: 快取刷新無權限控制
+## ~~MEDIUM-1: 快取刷新無權限控制~~ ✅ 已修復
 
-**檔案**: `backend/app/routes/taxonomy.py`
+**狀態**: 已修復（2026-03-11）
 
-**問題**: 任何使用者（甚至未登入）都可以透過 `?refresh=1` 參數強制繞過快取，觸發昂貴的資料庫查詢。
-
-**修復建議**: 將 `refresh` 參數限制為 admin 使用者，或加入 rate limiting。
+**修復方式**: `?refresh=1` 參數現在需要 admin 身份驗證。非 admin 使用者或未登入者的 refresh 請求會被忽略，直接返回快取。同時適用於 `/tree` 和 `/fictional-tree` 端點。
 
 ---
 
-## MEDIUM-2: JWKS 快取無 TTL / 無失敗重試
+## ~~MEDIUM-2: JWKS 快取無 TTL / 無失敗重試~~ ✅ 已修復
 
-**檔案**: `backend/app/auth.py:12-31`
+**狀態**: 已修復（2026-03-11）
 
-**問題**: JWKS 快取永遠不過期——一旦載入就永久使用。如果 Supabase 輪替 signing key，VTaxon 不會取得新的 key。
-
-```python
-_jwks_cache = {'keys': None}  # 沒有 TTL，沒有失效機制
-
-def _get_jwks():
-    if _jwks_cache['keys'] is not None:  # 永遠返回快取
-        return _jwks_cache['keys']
-```
-
-**修復建議**:
-- 加入 TTL（建議 1 小時）
-- 當 JWKS 驗證失敗時，嘗試重新載入 JWKS 一次
+**修復方式**:
+- JWKS 快取加入 1 小時 TTL（使用 `time.monotonic()` 計時）
+- TTL 過期後自動重新拉取 JWKS
+- JWT 驗證失敗時，自動 force refresh JWKS 並重試一次（處理 key rotation 場景）
+- 拉取失敗時仍返回過期快取（graceful degradation）
 
 ---
 
-## MEDIUM-3: SQL 字串拼接（Country Filter）
+## ~~MEDIUM-3: SQL 字串拼接（Country Filter）~~ ✅ 已修復
 
-**檔案**: `backend/app/routes/users.py:105-121`
+**狀態**: 已修復（2026-03-11）
 
-**問題**: country code 雖然有基本驗證（2 字母 alpha），但使用 f-string 拼接到 raw SQL：
-
-```python
-sql_parts.append(
-    f"(users.country_flags @> '[\"{lo}\"]'::jsonb"
-    f" OR users.country_flags @> '[\"{up}\"]'::jsonb)"
-)
-query = query.filter(text("(" + " OR ".join(sql_parts) + ")"))
-```
-
-目前因為 `len(c) == 2 and c.isalpha()` 驗證，注入風險極低。但這是反模式，應改為 parameterized query。
-
-**修復建議**: 使用 SQLAlchemy 的 `bindparams()` 或 ORM JSONB containment operator。
+**修復方式**: 將 f-string SQL 拼接改為 SQLAlchemy `text().bindparams()` 參數化查詢。country code 值透過 bind parameters 傳入，消除 SQL injection 反模式。
 
 ---
 
-## MEDIUM-4: Health 端點資訊洩漏
+## ~~MEDIUM-4: Health 端點資訊洩漏~~ ✅ 已修復
 
-**檔案**: `backend/app/__init__.py:57-69`
+**狀態**: 已修復（2026-03-11）
 
-**問題**: Health check 回傳環境名稱和資料庫錯誤詳細資訊：
-
-```python
-return jsonify({
-    'status': 'ok',
-    'database': f'error: {e}',  # 可能包含 DB 連線資訊
-    'environment': config_name,  # 洩漏 production/staging
-})
-```
-
-**修復建議**: 錯誤時只回傳 `"database": "error"`，移除 `environment` 欄位。
+**修復方式**:
+- 移除 `environment` 欄位
+- DB 錯誤時只回傳 `"database": "error"`，詳細錯誤記錄到 server log
 
 ---
 
-## MEDIUM-5: 例外訊息洩漏到前端
+## ~~MEDIUM-5: 例外訊息洩漏到前端~~ ✅ 已修復
 
-**檔案**: 多個後端路由
+**狀態**: 已修復（2026-03-11）
 
-**問題**: 多處直接將 Python exception 訊息回傳給使用者：
-- `backend/app/routes/species.py`: `'GBIF search failed: {e}'`（洩漏外部 API 細節）
-- `backend/app/routes/users.py:792`: `'同步失敗：{str(e)}'`（洩漏 HTTP 錯誤）
-
-**修復建議**: 記錄詳細錯誤到 server log，回傳通用錯誤訊息給使用者。
+**修復方式**: 所有外部 API 錯誤（GBIF search/match/children、OAuth sync）改為記錄詳細錯誤到 server log，回傳通用中文錯誤訊息給使用者。
 
 ---
 
@@ -222,7 +188,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
 ## 正面發現（已做好的安全措施）
 
 - JWT Bearer token 認證（非 cookie），天然免疫 CSRF
-- SQLAlchemy ORM 查詢普遍使用參數化（除上述 country filter）
+- SQLAlchemy ORM 查詢普遍使用參數化（country filter 已改為 bindparams）
 - 分頁結果有上限限制（100/50）
 - OAuth account 有 ownership 驗證（`account.user_id != current_user_id` 檢查）
 - IntegrityError race condition 處理
@@ -243,12 +209,12 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
 
 ### 上線後第一週
 5. ~~加入 HTTP 安全標頭 — HIGH-3~~ ✅
-6. 限制 cache refresh 為 admin — MEDIUM-1
-7. 加入 JWKS TTL — MEDIUM-2
-8. 清理錯誤訊息洩漏 — MEDIUM-4, MEDIUM-5
+6. ~~限制 cache refresh 為 admin — MEDIUM-1~~ ✅
+7. ~~加入 JWKS TTL — MEDIUM-2~~ ✅
+8. ~~清理錯誤訊息洩漏 — MEDIUM-4, MEDIUM-5~~ ✅
 
 ### 後續改善
-9. SQL parameterization 重構 — MEDIUM-3
+9. ~~SQL parameterization 重構 — MEDIUM-3~~ ✅
 10. 依賴版本鎖定 — LOW-1
 11. 前端快取改善 — LOW-3
 12. SECRET_KEY 預設值移除 — LOW-4

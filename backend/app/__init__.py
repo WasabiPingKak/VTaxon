@@ -83,11 +83,11 @@ def create_app(config_name=None):
             db.session.execute(db.text('SELECT 1'))
             db_status = 'connected'
         except Exception as e:
-            db_status = f'error: {e}'
+            app.logger.error('Health check DB error: %s', e)
+            db_status = 'error'
         return jsonify({
             'status': 'ok',
             'database': db_status,
-            'environment': config_name,
         })
 
     return app
