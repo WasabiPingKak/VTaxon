@@ -409,19 +409,37 @@ function drawBreedGridConnectors(ctx, nodes, scale, pm, vp, margin, state) {
 
     const sortedRows = [...rowMap.keys()].sort((a, b) => a - b);
 
-    // Precompute each row's bar info
+    // Estimate breed box half-height from label lines at current scale
+    const breedBoxHalfH = (node) => {
+      const lines = node.data._labelLines || [''];
+      const fs = scaledFontSize(11, scale);
+      const lh = fs * 1.25;
+      const textH = fs + (lines.length - 1) * lh;
+      return Math.max(24, textH + 10) / 2;
+    };
+
+    // Precompute each row's bar info — barY clears the tallest breed box in the row
     const rowBars = sortedRows.map(rowIdx => {
       const rowChildren = rowMap.get(rowIdx);
       const xs = rowChildren.map(c => c.x);
       const minX = Math.min(...xs);
       const maxX = Math.max(...xs);
-      const barY = Math.min(...rowChildren.map(c => c.y)) - 25;
+      const maxHalfH = Math.max(...rowChildren.map(c => breedBoxHalfH(c.node)));
+      const barY = Math.min(...rowChildren.map(c => c.y)) - maxHalfH - 8;
       return { rowIdx, rowChildren, minX, maxX, barY };
     });
 
-    // Trunk X = left of all breed columns (avoid overlapping subtrees)
+    // Trunk X = left of leftmost breed label edge (avoid overlapping labels)
+    let maxLeftLabelW = 0;
+    for (const { rowChildren, minX } of rowBars) {
+      for (const c of rowChildren) {
+        if (c.x === minX) {
+          maxLeftLabelW = Math.max(maxLeftLabelW, c.node.data._labelHalfW || 40);
+        }
+      }
+    }
     const globalMinX = Math.min(...rowBars.map(r => r.minX));
-    const trunkX = globalMinX - 30;
+    const trunkX = globalMinX - maxLeftLabelW - 15;
 
     // 1. Bezier stem: parent → trunk top (first row's bar Y)
     if (rowBars.length > 0) {
