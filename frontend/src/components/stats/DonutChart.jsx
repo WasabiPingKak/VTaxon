@@ -81,6 +81,10 @@ export default function DonutChart({
           .text(centerLabel);
       }
     }
+
+    return () => {
+      svg.selectAll('*').remove();
+    };
   }, [segments, size, thickness, centerLabel, centerValue]);
 
   if (!segments?.length) {
