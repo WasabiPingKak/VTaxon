@@ -115,6 +115,19 @@ export default function BreedInterceptPanel({ species, onSelectBreed, onSkip, on
         </div>
       </div>
 
+      <button
+        onClick={onSkip}
+        style={{
+          width: '100%', marginBottom: '8px', padding: '10px 14px',
+          background: BREED_COLOR,
+          border: 'none',
+          borderRadius: '6px', cursor: 'pointer',
+          color: '#0d1526', fontSize: '0.9em', fontWeight: 700,
+        }}
+      >
+        不指定品種，直接新增物種
+      </button>
+
       <input
         type="search"
         value={filter}
@@ -177,18 +190,6 @@ export default function BreedInterceptPanel({ species, onSelectBreed, onSkip, on
         </div>
       )}
 
-      <button
-        onClick={onSkip}
-        style={{
-          width: '100%', marginTop: '10px', padding: '10px 14px',
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: '6px', cursor: 'pointer',
-          color: 'rgba(255,255,255,0.6)', fontSize: '0.9em',
-        }}
-      >
-        不指定品種，直接新增物種
-      </button>
 
       {hasSearchedLatin && (
         <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
