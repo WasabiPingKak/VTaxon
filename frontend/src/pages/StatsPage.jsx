@@ -104,38 +104,12 @@ export default function StatsPage() {
         gap: 16,
         marginTop: 16,
       }}>
-        <ChartCard title="最熱門物種 Top 10">
+        <ChartCard title="最熱門科別 Top 10">
           <HorizontalBarChart data={data?.top_species} />
         </ChartCard>
 
         <ChartCard title="最熱門奇幻物種 Top 10">
           <HorizontalBarChart data={data?.top_fictional} variant="fictional" />
-        </ChartCard>
-      </div>
-
-      {/* Row: Donut + Country */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: twoCol ? '280px 1fr' : '1fr',
-        gap: 16,
-        marginTop: 16,
-      }}>
-        <ChartCard title="現實 vs 奇幻">
-          <DonutChart
-            segments={ratioSegments}
-            size={isMobile ? 140 : 150}
-            centerValue={ratioTotal}
-            centerLabel="位 VTuber"
-          />
-        </ChartCard>
-
-        <ChartCard title="國家/地區分佈">
-          <HorizontalBarChart
-            data={data?.by_country?.map(c => ({
-              name: c.code,
-              count: c.count,
-            }))}
-          />
         </ChartCard>
       </div>
 
@@ -146,13 +120,22 @@ export default function StatsPage() {
         </ChartCard>
       </div>
 
-      {/* Row: 3 small donuts */}
+      {/* Row: 4 donuts */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: twoCol ? 'repeat(3, 1fr)' : '1fr',
+        gridTemplateColumns: twoCol ? 'repeat(4, 1fr)' : 'repeat(2, 1fr)',
         gap: 16,
         marginTop: 16,
       }}>
+        <ChartCard title="現實 vs 奇幻">
+          <DonutChart
+            segments={ratioSegments}
+            size={120}
+            thickness={18}
+            centerValue={ratioTotal}
+            centerLabel="VTuber"
+          />
+        </ChartCard>
         <ChartCard title="平台分佈">
           <DonutChart segments={platformSegments} size={120} thickness={18} />
         </ChartCard>

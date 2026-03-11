@@ -25,25 +25,24 @@ def _build_stats():
         func.count(distinct(VtuberTrait.fictional_species_id))
     ).filter(VtuberTrait.fictional_species_id.isnot(None)).scalar()
 
-    # ── Top 10 species ──
+    # ── Top 10 species (by family, excluding Hominidae) ──
     top_species_q = (
         db.session.query(
-            SpeciesCache.taxon_id,
-            func.coalesce(SpeciesCache.common_name_zh,
-                          SpeciesCache.scientific_name).label('name'),
-            SpeciesCache.scientific_name,
+            SpeciesCache.family.label('family'),
+            func.max(SpeciesCache.path_zh['family'].astext).label('family_zh'),
             func.count(distinct(VtuberTrait.user_id)).label('count'),
         )
         .join(VtuberTrait, VtuberTrait.taxon_id == SpeciesCache.taxon_id)
-        .group_by(SpeciesCache.taxon_id, SpeciesCache.common_name_zh,
-                  SpeciesCache.scientific_name)
+        .filter(SpeciesCache.family.isnot(None))
+        .filter(SpeciesCache.family != 'Hominidae')
+        .group_by(SpeciesCache.family)
         .order_by(func.count(distinct(VtuberTrait.user_id)).desc())
         .limit(10)
         .all()
     )
     top_species = [
-        {'taxon_id': r.taxon_id, 'name': r.name,
-         'scientific_name': r.scientific_name, 'count': r.count}
+        {'name': r.family_zh or r.family,
+         'scientific_name': r.family, 'count': r.count}
         for r in top_species_q
     ]
 
@@ -125,35 +124,6 @@ def _build_stats():
         tax_map.values(), key=lambda x: x['count'], reverse=True
     )
 
-    # ── Country distribution ──
-    country_q = db.session.execute(db.text("""
-        SELECT flag, COUNT(*) AS cnt
-        FROM users, jsonb_array_elements_text(country_flags) AS flag
-        WHERE jsonb_array_length(country_flags) > 0
-        GROUP BY flag
-        ORDER BY cnt DESC
-        LIMIT 15
-    """)).fetchall()
-    by_country = [{'code': r[0], 'count': r[1]} for r in country_q]
-
-    # ── Monthly growth ──
-    growth_q = db.session.execute(db.text("""
-        SELECT TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month,
-               COUNT(*) AS new_users
-        FROM users
-        GROUP BY DATE_TRUNC('month', created_at)
-        ORDER BY DATE_TRUNC('month', created_at)
-    """)).fetchall()
-    cumulative = 0
-    growth_monthly = []
-    for r in growth_q:
-        cumulative += r[1]
-        growth_monthly.append({
-            'month': r[0],
-            'new_users': r[1],
-            'cumulative': cumulative,
-        })
-
     # ── Platform distribution ──
     platform_q = (
         db.session.query(
@@ -203,8 +173,6 @@ def _build_stats():
         'top_fictional': top_fictional,
         'trait_type_ratio': trait_type_ratio,
         'taxonomy_distribution': taxonomy_distribution,
-        'by_country': by_country,
-        'growth_monthly': growth_monthly,
         'by_platform': by_platform,
         'by_org_type': by_org_type,
         'by_status': by_status,
