@@ -635,6 +635,9 @@ function applyBreedGridLayout(root) {
       return { node: child, width: relMaxX - relMinX, height: relMaxY };
     });
 
+    // Sort by subtree height ascending — fewer children → top rows
+    infos.sort((a, b) => a.height - b.height);
+
     const cols = Math.min(BREED_GRID_COLS, infos.length);
     const rowCount = Math.ceil(infos.length / cols);
 
