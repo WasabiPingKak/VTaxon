@@ -15,10 +15,29 @@ export default function NameReportForm({ results, onClose }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Filter to species/subspecies results only (not breeds)
-  const speciesResults = (results || []).filter(r =>
-    r.result_type !== 'breed' && r.taxon_id
-  );
+  // Collect unique species from results (including parent species from breed results)
+  const speciesResults = (() => {
+    const seen = new Set();
+    const out = [];
+    for (const r of (results || [])) {
+      if (r.result_type === 'breed') {
+        // Extract parent species from breed result
+        if (r.taxon_id && !seen.has(r.taxon_id)) {
+          seen.add(r.taxon_id);
+          out.push({
+            taxon_id: r.taxon_id,
+            scientific_name: r.scientific_name,
+            common_name_zh: r.common_name_zh,
+            common_name_en: r.common_name_en,
+          });
+        }
+      } else if (r.taxon_id && !seen.has(r.taxon_id)) {
+        seen.add(r.taxon_id);
+        out.push(r);
+      }
+    }
+    return out;
+  })();
 
   const selected = speciesResults.find(r => String(r.taxon_id) === selectedTaxonId);
 
