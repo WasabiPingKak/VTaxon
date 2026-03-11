@@ -42,13 +42,13 @@ def _get_signing_key(token):
     """Get the correct public key from JWKS to verify the token."""
     keys = _get_jwks()
     if not keys:
-        return None, None
+        return None
 
     # Get the kid from the token header
     try:
         header = jwt.get_unverified_header(token)
     except jwt.DecodeError:
-        return None, None
+        return None
 
     kid = header.get('kid')
 

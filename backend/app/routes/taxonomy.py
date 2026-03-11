@@ -1,8 +1,8 @@
 import logging
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, jsonify, request
 
-from ..auth import admin_required, login_required
+from ..auth import admin_required
 from ..limiter import limiter
 from ..cache import (get_tree_cache, set_tree_cache, invalidate_tree_cache,
                      get_fictional_tree_cache, set_fictional_tree_cache,
