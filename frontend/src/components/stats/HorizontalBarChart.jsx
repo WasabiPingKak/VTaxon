@@ -58,15 +58,17 @@ export default function HorizontalBarChart({
       .attr('rx', 4)
       .attr('fill', 'rgba(255,255,255,0.04)');
 
-    // Bar fill
-    rows.append('rect')
+    // Bar fill (with transition)
+    const barFills = rows.append('rect')
       .attr('x', labelW)
       .attr('y', 2)
       .attr('width', 0)
       .attr('height', barH - 4)
       .attr('rx', 4)
       .attr('fill', color)
-      .attr('opacity', 0.8)
+      .attr('opacity', 0.8);
+
+    const transitions = barFills
       .transition()
       .duration(600)
       .delay((_, i) => i * 50)
@@ -85,6 +87,10 @@ export default function HorizontalBarChart({
       .attr('font-weight', 600)
       .text(d => d.count);
 
+    return () => {
+      transitions.selection().interrupt();
+      svg.selectAll('*').remove();
+    };
   }, [data, variant, barH, gap]);
 
   if (!data?.length) {

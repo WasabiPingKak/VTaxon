@@ -22,6 +22,26 @@ function getCellColor(kingdomKey, index, total) {
   return `hsl(${hue}, ${sat}%, ${lit}%)`;
 }
 
+const KEYFRAMES_STYLE = `
+@keyframes tmZoomIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes tmZoomOut {
+  from { opacity: 0; transform: scale(1.1); }
+  to   { opacity: 1; transform: scale(1); }
+}`;
+
+// Inject once
+let styleInjected = false;
+function ensureStyles() {
+  if (styleInjected) return;
+  const el = document.createElement('style');
+  el.textContent = KEYFRAMES_STYLE;
+  document.head.appendChild(el);
+  styleInjected = true;
+}
+
 function groupByLevel(data, path, levelIdx) {
   let filtered = data;
   for (let i = 0; i < path.length; i++) {
@@ -34,7 +54,7 @@ function groupByLevel(data, path, levelIdx) {
   const zhKey = lvl + '_zh';
   const groups = {};
   filtered.forEach(d => {
-    const key = d[lvl] || 'Unknown';
+    const key = d[lvl] || '未分類';
     if (!groups[key]) {
       groups[key] = { key, name_zh: d[zhKey] || key, count: 0, kingdom: d.kingdom };
     }
@@ -46,6 +66,7 @@ function groupByLevel(data, path, levelIdx) {
 export default function TreemapChart({ data }) {
   const containerRef = useRef(null);
   const [tooltip, setTooltip] = useState(null);
+  const [hoveredKey, setHoveredKey] = useState(null);
   const [path, setPath] = useState([]);
   const isMobile = useIsMobile();
   const [containerWidth, setContainerWidth] = useState(0);
@@ -111,11 +132,13 @@ export default function TreemapChart({ data }) {
       label: group.name_zh,
     }]);
     setTooltip(null);
+    setHoveredKey(null);
   }, [levelIdx]);
 
   const handleBreadcrumbClick = useCallback((idx) => {
     setPath(prev => prev.slice(0, idx));
     setTooltip(null);
+    setHoveredKey(null);
   }, []);
 
   const handleMouseEnter = useCallback((e, leaf) => {
@@ -137,6 +160,8 @@ export default function TreemapChart({ data }) {
       y: e.clientY - rect.top,
     } : null);
   }, []);
+
+  useEffect(ensureStyles, []);
 
   if (!data?.length) {
     return <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85em' }}>暫無資料</div>;
@@ -168,16 +193,6 @@ export default function TreemapChart({ data }) {
 
   return (
     <div>
-      <style>{`
-        @keyframes tmZoomIn {
-          from { opacity: 0; transform: scale(0.88); }
-          to   { opacity: 1; transform: scale(1); }
-        }
-        @keyframes tmZoomOut {
-          from { opacity: 0; transform: scale(1.1); }
-          to   { opacity: 1; transform: scale(1); }
-        }
-      `}</style>
       {/* Breadcrumb */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 2,
@@ -254,7 +269,8 @@ export default function TreemapChart({ data }) {
                   key={leaf.data.key}
                   transform={`translate(${leaf.x0},${leaf.y0})`}
                   onClick={() => canDrill && handleCellClick(leaf.data)}
-                  onMouseEnter={(e) => handleMouseEnter(e, leaf)}
+                  onMouseEnter={(e) => { setHoveredKey(leaf.data.key); handleMouseEnter(e, leaf); }}
+                  onMouseLeave={() => setHoveredKey(null)}
                   style={{ cursor: canDrill ? 'pointer' : 'default' }}
                 >
                   <rect
@@ -263,21 +279,9 @@ export default function TreemapChart({ data }) {
                     rx={4}
                     fill={color}
                     opacity={0.85}
-                  />
-                  <rect
-                    width={Math.max(0, w)}
-                    height={Math.max(0, h)}
-                    rx={4}
-                    fill="transparent"
-                    stroke="transparent"
+                    stroke={hoveredKey === leaf.data.key ? 'rgba(255,255,255,0.4)' : 'transparent'}
                     strokeWidth={2}
                     style={{ transition: 'stroke 0.15s' }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.setAttribute('stroke', 'rgba(255,255,255,0.4)');
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.setAttribute('stroke', 'transparent');
-                    }}
                   />
                   {w > 36 && h > 24 && (
                     <text
