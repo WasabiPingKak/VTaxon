@@ -22,16 +22,40 @@ function sortByOrder(keys, order) {
 }
 
 function buildFictionalTree(speciesList) {
+  // Collect known type names from 4-segment paths
+  const typeNamesPerSub = {};
+  for (const sp of speciesList) {
+    const segs = (sp.category_path || '').split('|');
+    if (segs.length === 4) {
+      const subKey = `${sp.origin}|${sp.sub_origin}`;
+      if (!typeNamesPerSub[subKey]) typeNamesPerSub[subKey] = new Set();
+      typeNamesPerSub[subKey].add(segs[2]);
+    }
+  }
+
+  // grouped[origin][sub] = { types: { typeName: [labels] }, direct: [labels] }
   const grouped = {};
   for (const sp of speciesList) {
     const origin = sp.origin || '其他';
     const sub = sp.sub_origin || '（未分類）';
+    const segs = (sp.category_path || '').split('|');
+    const subKey = `${origin}|${sub}`;
+    const knownTypes = typeNamesPerSub[subKey];
+
+    // Skip type nodes (3-segment paths whose last segment is a known type name)
+    if (segs.length === 3 && knownTypes && knownTypes.has(segs[2])) continue;
+
     if (!grouped[origin]) grouped[origin] = {};
-    if (!grouped[origin][sub]) grouped[origin][sub] = [];
-    const label = sp.name_zh
-      ? `${sp.name_zh}（${sp.name}）`
-      : sp.name;
-    grouped[origin][sub].push(label);
+    if (!grouped[origin][sub]) grouped[origin][sub] = { types: {}, direct: [] };
+
+    const label = sp.name_zh ? `${sp.name_zh}（${sp.name}）` : sp.name;
+    if (segs.length === 4) {
+      const typeName = segs[2];
+      if (!grouped[origin][sub].types[typeName]) grouped[origin][sub].types[typeName] = [];
+      grouped[origin][sub].types[typeName].push(label);
+    } else {
+      grouped[origin][sub].direct.push(label);
+    }
   }
 
   let body = '';
@@ -39,7 +63,19 @@ function buildFictionalTree(speciesList) {
     body += `### ${origin}\n`;
     const subs = grouped[origin];
     for (const sub of sortByOrder(Object.keys(subs), SUB_ORIGIN_ORDER[origin] || [])) {
-      body += `- ${sub}：${subs[sub].join('、')}\n`;
+      const { types, direct } = subs[sub];
+      const typeNames = Object.keys(types);
+      if (typeNames.length > 0) {
+        body += `**${sub}**\n`;
+        for (const t of typeNames) {
+          body += `- ${t}：${types[t].join('、')}\n`;
+        }
+        if (direct.length > 0) {
+          body += `- 其他：${direct.join('、')}\n`;
+        }
+      } else {
+        body += `- ${sub}：${direct.join('、')}\n`;
+      }
     }
     body += '\n';
   }
@@ -102,15 +138,29 @@ VTaxon 將 Vtuber 角色對應到生物分類體系。
 | 角色特徵 | 建議搜尋 |
 |---------|---------|
 | 貓耳、貓娘 | Felis catus（家貓）→ 可選品種如 Ragdoll（布偶貓） |
-| 犬系、狼系 | Canis lupus familiaris（家犬）→ 可選品種如 Shiba Inu（柴犬） |
-| 狐耳 | Vulpes vulpes（赤狐） |
+| 犬系 | Canis lupus familiaris（家犬）→ 可選品種如 Shiba Inu（柴犬） |
+| 狼系 | Canis lupus（灰狼）；若偏家犬則用 Canis lupus familiaris |
+| 狐耳 | Vulpes vulpes（赤狐）；銀狐同種，北極狐用 Vulpes lagopus |
 | 兔耳 | Oryctolagus cuniculus（穴兔）→ 可選品種如 Holland Lop（荷蘭垂耳兔） |
-| 鹿角 | Cervus（鹿屬） |
-| 龍蝦、蝦 | Homarus（龍蝦屬）或 Decapoda（十足目） |
+| 鹿角 | Cervus（鹿屬）；具體如 Cervus nippon（梅花鹿）或 Rangifer tarandus（馴鹿） |
+| 熊 | Ursidae（熊科）；如 Ursus arctos（棕熊）、Ailuropoda melanoleuca（大貓熊） |
+| 浣熊 | Procyon lotor（浣熊）；小熊貓用 Ailurus fulgens |
+| 水獺 | Lutra lutra（歐亞水獺）或 Enhydra lutris（海獺） |
+| 鳥、小鳥 | 具體種最佳；如 Passer montanus（麻雀）、Corvus（鴉屬） |
+| 鷹、猛禽 | Accipitridae（鷹科）或具體種如 Aquila chrysaetos（金鵰） |
+| 烏鴉、鴉 | Corvus（鴉屬）；如 Corvus corax（渡鴉） |
+| 鴨 | Anas platyrhynchos（綠頭鴨）；家鴨用 Anas platyrhynchos f. domesticus |
+| 鸚鵡 | Psittaciformes（鸚形目）；如 Melopsittacus undulatus（虎皮鸚鵡） |
+| 蝙蝠 | Chiroptera（翼手目）；如 Pteropus（狐蝠屬） |
+| 章魚 | Octopus（章魚屬）；如 Octopus vulgaris（普通章魚） |
+| 水母 | Aurelia aurita（海月水母）或 Scyphozoa（缽水母綱） |
 | 鯊魚 | Carcharodon carcharias（大白鯊）或 Selachimorpha |
 | 蛇 | Serpentes（蛇亞目）或具體種如 Naja atra（眼鏡蛇） |
-| 鷹、猛禽 | Accipitridae（鷹科）或具體種 |
+| 蜘蛛 | Araneae（蜘蛛目）；如 Nephila（人面蜘蛛屬） |
 | 蝴蝶 | Papilio（鳳蝶屬）或具體種 |
+| 龍蝦、蝦 | Homarus（龍蝦屬）或 Decapoda（十足目） |
+| 倉鼠 | Cricetinae（倉鼠亞科）；如 Mesocricetus auratus（黃金鼠） |
+| 松鼠 | Sciuridae（松鼠科）；如 Sciurus（松鼠屬） |
 | 馬、馬娘 | Equus caballus（家馬）→ 可選品種如 Thoroughbred（純血馬） |
 | 牛 | Bos taurus（家牛）→ 可選品種如 Holstein（荷斯坦牛） |
 | 羊 | Ovis aries（家羊）→ 可選品種如 Merino（美利諾羊） |
@@ -139,14 +189,14 @@ ${tree}---
 - 提供拉丁學名（我需要直接複製到系統搜尋）
 - 格式：\`學名\` — 中文說明（階層）
 - 範例：\`Vulpes vulpes\` — 赤狐（Species）
-- 如果該物種有品種系統（家犬、家貓、家馬、家牛、家羊、家山羊、家兔、天竺鼠、褐家鼠），請額外推薦品種
+- 如果該物種有品種系統（家犬、家貓、家馬、家牛、家羊、家山羊、穴兔、天竺鼠、褐家鼠），請額外推薦品種
 - 品種格式：\`品種英文名\` — 中文名
 - 範例：\`Ragdoll\` — 布偶貓
 
 ### 虛構物種（如適用）
 - 只在角色有神話/奇幻/超自然元素時才需要
 - 從上方列表中選擇（可多個）
-- 格式：大分類 → 子分類 → 物種名
+- 格式：大分類 → 子分類 → 類型 → 物種名（如有類型層）
 - 如果列表中沒有適合的，直接說「無適合的虛構物種」即可，不需要硬選
 
 ### 綜合建議
