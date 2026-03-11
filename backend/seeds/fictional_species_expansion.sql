@@ -19,7 +19,10 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Light Spirit',      '光靈',       '非物質生命', '能量態生命', '非物質生命|能量態生命|能量存在|Light Spirit',      '光能凝聚的精神體'),
 ('Shadow Elemental',  '暗影元素',   '非物質生命', '能量態生命', '非物質生命|能量態生命|能量存在|Shadow Elemental',  '暗能量或虛空構成的生命'),
 ('Will-o-the-Wisp',   '鬼火',       '非物質生命', '能量態生命', '非物質生命|能量態生命|能量存在|Will-o-the-Wisp',  '漂浮的幽光能量體'),
-('Star Spirit',       '星靈',       '非物質生命', '能量態生命', '非物質生命|能量態生命|能量存在|Star Spirit',       '宇宙能量凝聚的存在')
+('Star Spirit',       '星靈',       '非物質生命', '能量態生命', '非物質生命|能量態生命|能量存在|Star Spirit',       '宇宙能量凝聚的存在'),
+('Blue Flame Kin',   '藍焰族',     '非物質生命', '能量態生命', '非物質生命|能量態生命|能量存在|Blue Flame Kin',   '以藍色靈焰為本體的高維能量生命，能降維轉生為其他物種或擬態人形，藍焰象徵最高階的靈性淨化能量'),
+('Plant Spirit',     '植物精靈',   '非物質生命', '能量態生命', '非物質生命|能量態生命|自然精靈|Plant Spirit',     '由植物的生命力凝聚而成的精靈體，是自然能量的具現化存在。與元素精靈類似，但特別與植物和森林的生長力量相連。'),
+('Chrono Spirit',    '時間精靈',   '非物質生命', '能量態生命', '非物質生命|能量態生命|自然精靈|Chrono Spirit',    '誕生於時間洪流中的精靈體，擁有感知或穿梭時間的能力。作為時間這一抽象概念的具現化存在。')
 ON CONFLICT(name) DO NOTHING;
 
 -- === 意識態生命 (Consciousness-based Life) ===
@@ -49,16 +52,13 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Android',   '仿生人',   '人造生命', '機械生命', '人造生命|機械生命|Android',   '外觀高度仿人的機械生命'),
 ('Cyborg',    '改造人',   '人造生命', '機械生命', '人造生命|機械生命|Cyborg',    '生物體與機械融合的存在'),
 ('Automaton', '自動機械', '人造生命', '機械生命', '人造生命|機械生命|Automaton', '發條或蒸氣驅動的古典機械生命'),
+('Mechanical Bird', '機械鳥', '人造生命', '機械生命', '人造生命|機械生命|Mechanical Bird', '以鳥類為原型的精密機械裝置，如音樂盒上的自動鳥或發條鳥。結合工藝美學與機械構造的人造生命體。'),
 ('Doll', '人偶', '人造生命', '附魂體', '人造生命|附魂體|Doll', '被賦予生命的人形玩偶')
 ON CONFLICT(name) DO NOTHING;
 
 -- === 附魂體 (Soul-bound) ===
 INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
-('Cursed Doll', '詛咒娃娃', '人造生命', '附魂體', '人造生命|附魂體|Cursed Doll', '靈魂因詛咒而寄宿於娃娃中的存在')
-ON CONFLICT(name) DO NOTHING;
-
--- === 附魂體 (Soul-bound) ===
-INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
+('Cursed Doll', '詛咒娃娃', '人造生命', '附魂體', '人造生命|附魂體|Cursed Doll', '靈魂因詛咒而寄宿於娃娃中的存在'),
 ('Teddy Bear', '泰迪熊', '人造生命', '附魂體', '人造生命|附魂體|Teddy Bear', '被賦予生命的填充熊玩偶，玩具熊型態的附魂存在')
 ON CONFLICT(name) DO NOTHING;
 
@@ -80,7 +80,8 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Mi-go',                '米戈',       '現代虛構', '克蘇魯神話', '現代虛構|克蘇魯神話|Mi-go',                '真菌型外星生物，擅長外科手術'),
 ('Elder Thing',          '古老者',     '現代虛構', '克蘇魯神話', '現代虛構|克蘇魯神話|Elder Thing',          '地球最古老的智慧種族'),
 ('Ghoul (Lovecraftian)', '食屍鬼',     '現代虛構', '克蘇魯神話', '現代虛構|克蘇魯神話|Ghoul (Lovecraftian)', '穴居的食腐種族，曾為人類'),
-('Star-spawn',           '星之眷族',   '現代虛構', '克蘇魯神話', '現代虛構|克蘇魯神話|Star-spawn',           '追隨舊日支配者的宇宙生物')
+('Star-spawn',           '星之眷族',   '現代虛構', '克蘇魯神話', '現代虛構|克蘇魯神話|Star-spawn',           '追隨舊日支配者的宇宙生物'),
+('Outer God',            '外神',       '現代虛構', '克蘇魯神話', '現代虛構|克蘇魯神話|Outer God',             '克蘇魯神話體系中超越人類理解的至高存在，如阿撒托斯（Azathoth）、猶格·索托斯（Yog-Sothoth）。居於宇宙之外，凡人目睹即陷入瘋狂。')
 ON CONFLICT(name) DO NOTHING;
 
 -- === 都市傳說 (Urban Legends) ===
