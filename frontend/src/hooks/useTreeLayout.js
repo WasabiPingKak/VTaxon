@@ -10,6 +10,13 @@ const GRID_COLS = 5;
 const GRID_CELL_W = 90;   // minimum grid cell width
 const GRID_CELL_H = 80;
 
+// ── Breed grid constants (multi-row arrangement for high-fanout species) ──
+const BREED_GRID_THRESHOLD = 5;   // non-vtuber child count above which breed grid kicks in
+const BREED_GRID_COLS = 4;        // max breeds per row
+const BREED_GRID_GAP_X = 40;     // horizontal gap between breed subtree columns
+const BREED_GRID_GAP_Y = 60;     // vertical gap between breed grid rows
+const BREED_GRID_VISUAL_BOTTOM = 100; // approx visual space below lowest node in a breed subtree
+
 // ── Text measurement constants (mirror renderers.js) ──
 const FONT_MIN_SCALE = 0.55;
 const FONT_FAMILY = '"Microsoft JhengHei", "Noto Sans TC", sans-serif';
@@ -229,6 +236,7 @@ function layoutTree(h, activeFilterCount) {
   applyGridLayout(h, activeFilterCount);
   compactTree(h);
   resolveCollisions(h);
+  applyBreedGridLayout(h);
 }
 
 const DUAL_TREE_GAP = 400;
@@ -583,6 +591,104 @@ function shiftSubtree(node, dx) {
     for (const child of node.children) {
       shiftSubtree(child, dx);
     }
+  }
+}
+
+/** Recursively shift a node and all its descendants by dx, dy. Also updates _gridBarY. */
+function shiftSubtreeXY(node, dx, dy) {
+  node.x += dx;
+  node.y += dy;
+  if (node.data._gridBarY != null) {
+    node.data._gridBarY += dy;
+  }
+  if (node.children) {
+    for (const child of node.children) {
+      shiftSubtreeXY(child, dx, dy);
+    }
+  }
+}
+
+/**
+ * When a parent has more than BREED_GRID_THRESHOLD non-vtuber children
+ * (e.g. a species with many breeds), rearrange them into a multi-row grid
+ * so the tree doesn't grow infinitely wide.
+ * Runs AFTER compactTree + resolveCollisions so subtree extents are final.
+ */
+function applyBreedGridLayout(root) {
+  for (const node of root.descendants()) {
+    if (!node.children) continue;
+
+    const nonVtubers = node.children.filter(c => !c.data._vtuber);
+    if (nonVtubers.length <= BREED_GRID_THRESHOLD) continue;
+
+    // Compute subtree extent for each non-vtuber child (relative to child root)
+    const infos = nonVtubers.map(child => {
+      let relMinX = -(child.data._labelHalfW || 40);
+      let relMaxX = (child.data._labelHalfW || 40);
+      let relMaxY = 0;
+      for (const d of child.descendants()) {
+        const hw = d.data._labelHalfW || 40;
+        relMinX = Math.min(relMinX, d.x - child.x - hw);
+        relMaxX = Math.max(relMaxX, d.x - child.x + hw);
+        relMaxY = Math.max(relMaxY, d.y - child.y);
+      }
+      return { node: child, width: relMaxX - relMinX, height: relMaxY };
+    });
+
+    const cols = Math.min(BREED_GRID_COLS, infos.length);
+    const rowCount = Math.ceil(infos.length / cols);
+
+    // Column widths & row heights (max per column/row)
+    const colWidths = new Array(cols).fill(0);
+    const rowHeights = new Array(rowCount).fill(0);
+    for (let i = 0; i < infos.length; i++) {
+      const c = i % cols;
+      const r = Math.floor(i / cols);
+      colWidths[c] = Math.max(colWidths[c], infos[i].width);
+      rowHeights[r] = Math.max(rowHeights[r], infos[i].height);
+    }
+
+    // Column X centers (centered on parent node)
+    const totalW = colWidths.reduce((s, w) => s + w, 0) + (cols - 1) * BREED_GRID_GAP_X;
+    const colXs = [];
+    let accX = node.x - totalW / 2;
+    for (let c = 0; c < cols; c++) {
+      colXs.push(accX + colWidths[c] / 2);
+      accX += colWidths[c] + BREED_GRID_GAP_X;
+    }
+
+    // Row Y positions
+    const baseY = nonVtubers[0].y;
+    const rowYs = [baseY];
+    for (let r = 1; r < rowCount; r++) {
+      rowYs.push(rowYs[r - 1] + rowHeights[r - 1] + BREED_GRID_VISUAL_BOTTOM + BREED_GRID_GAP_Y);
+    }
+
+    // Move each breed subtree to its grid cell position
+    for (let i = 0; i < infos.length; i++) {
+      const child = infos[i].node;
+      const c = i % cols;
+      const r = Math.floor(i / cols);
+      const dx = colXs[c] - child.x;
+      const dy = rowYs[r] - child.y;
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+        shiftSubtreeXY(child, dx, dy);
+      }
+      child.data._inBreedGrid = true;
+      child.data._breedGridRow = r;
+    }
+
+    // Update parent subtree extent after rearrangement
+    let minX = Infinity, maxX = -Infinity;
+    for (const child of node.children) {
+      for (const d of child.descendants()) {
+        const hw = d.data._labelHalfW || 40;
+        minX = Math.min(minX, d.x - hw);
+        maxX = Math.max(maxX, d.x + hw);
+      }
+    }
+    node.data._extLeft = minX - node.x;
+    node.data._extRight = maxX - node.x;
   }
 }
 
