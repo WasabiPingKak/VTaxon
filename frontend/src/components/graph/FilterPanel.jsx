@@ -8,7 +8,7 @@ import BottomSheet from '../BottomSheet';
 
 const GENDER_LABELS = { '男': '男', '女': '女', 'other': '自訂', unset: '未設定' };
 const STATUS_LABELS = { active: '活動中', hiatus: '活動休止', preparing: '準備中', unset: '未設定' };
-const ORG_LABELS = { corporate: '企業勢', indie: '個人勢' };
+const ORG_LABELS = { corporate: '企業勢', indie: '個人勢', club: '社團勢' };
 const PLATFORM_LABELS = { youtube: 'YouTube', twitch: 'Twitch' };
 
 /**
@@ -64,11 +64,14 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
   // Build options
   const countryOpts = useMemo(() => {
     if (!facets?.country) return [];
+    let noneItem = null;
     const items = [];
     for (const [code, count] of facets.country) {
-      if (code === 'none') items.unshift({ value: 'none', label: '無國旗', count });
+      if (code === 'none') noneItem = { value: 'none', label: '無國旗', count };
       else items.push({ value: code, label: getCountryName(code) || code, flagClass: `fi fi-${code.toLowerCase()}`, count });
     }
+    items.sort((a, b) => b.count - a.count);
+    if (noneItem) items.unshift(noneItem);
     return items;
   }, [facets?.country]);
 
