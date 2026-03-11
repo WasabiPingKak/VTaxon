@@ -91,34 +91,38 @@ def _build_stats():
 
     # ── Taxonomy distribution (kingdom → phylum → class → order → family → genus) ──
     taxonomy_q = db.session.execute(db.text("""
-        SELECT sc.kingdom,
-               MAX(sc.path_zh->>'kingdom') AS kingdom_zh,
-               sc.phylum,
-               MAX(sc.path_zh->>'phylum') AS phylum_zh,
-               sc."class",
-               MAX(sc.path_zh->>'class') AS class_zh,
-               sc.order_,
-               MAX(sc.path_zh->>'order') AS order_zh,
-               sc.family,
-               MAX(sc.path_zh->>'family') AS family_zh,
-               sc.genus,
-               MAX(sc.path_zh->>'genus') AS genus_zh,
+        SELECT COALESCE(sc.kingdom, '未分類'),
+               COALESCE(MAX(sc.path_zh->>'kingdom'), sc.kingdom, '未分類'),
+               COALESCE(sc.phylum, '未分類'),
+               COALESCE(MAX(sc.path_zh->>'phylum'), sc.phylum, '未分類'),
+               COALESCE(sc."class", '未分類'),
+               COALESCE(MAX(sc.path_zh->>'class'), sc."class", '未分類'),
+               COALESCE(sc.order_, '未分類'),
+               COALESCE(MAX(sc.path_zh->>'order'), sc.order_, '未分類'),
+               COALESCE(sc.family, '未分類'),
+               COALESCE(MAX(sc.path_zh->>'family'), sc.family, '未分類'),
+               COALESCE(sc.genus, '未分類'),
+               COALESCE(MAX(sc.path_zh->>'genus'), sc.genus, '未分類'),
                COUNT(DISTINCT vt.user_id) AS count
         FROM species_cache sc
         JOIN vtuber_traits vt ON vt.taxon_id = sc.taxon_id
         WHERE sc.kingdom IS NOT NULL
-        GROUP BY sc.kingdom, sc.phylum, sc."class",
-                 sc.order_, sc.family, sc.genus
+        GROUP BY COALESCE(sc.kingdom, '未分類'),
+                 COALESCE(sc.phylum, '未分類'),
+                 COALESCE(sc."class", '未分類'),
+                 COALESCE(sc.order_, '未分類'),
+                 COALESCE(sc.family, '未分類'),
+                 COALESCE(sc.genus, '未分類')
         ORDER BY count DESC
     """)).fetchall()
     taxonomy_distribution = [
         {
-            'kingdom': r[0], 'kingdom_zh': r[1] or r[0],
-            'phylum': r[2], 'phylum_zh': r[3] or r[2],
-            'class': r[4], 'class_zh': r[5] or r[4],
-            'order': r[6], 'order_zh': r[7] or r[6],
-            'family': r[8], 'family_zh': r[9] or r[8],
-            'genus': r[10], 'genus_zh': r[11] or r[10],
+            'kingdom': r[0], 'kingdom_zh': r[1],
+            'phylum': r[2], 'phylum_zh': r[3],
+            'class': r[4], 'class_zh': r[5],
+            'order': r[6], 'order_zh': r[7],
+            'family': r[8], 'family_zh': r[9],
+            'genus': r[10], 'genus_zh': r[11],
             'count': r[12],
         }
         for r in taxonomy_q
