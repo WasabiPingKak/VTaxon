@@ -26,23 +26,21 @@ def _build_stats():
     ).filter(VtuberTrait.fictional_species_id.isnot(None)).scalar()
 
     # ── Top 10 species (by family, excluding Hominidae) ──
-    top_species_q = (
-        db.session.query(
-            SpeciesCache.family.label('family'),
-            func.max(SpeciesCache.path_zh['family'].astext).label('family_zh'),
-            func.count(distinct(VtuberTrait.user_id)).label('count'),
-        )
-        .join(VtuberTrait, VtuberTrait.taxon_id == SpeciesCache.taxon_id)
-        .filter(SpeciesCache.family.isnot(None))
-        .filter(SpeciesCache.family != 'Hominidae')
-        .group_by(SpeciesCache.family)
-        .order_by(func.count(distinct(VtuberTrait.user_id)).desc())
-        .limit(10)
-        .all()
-    )
+    top_species_q = db.session.execute(db.text("""
+        SELECT sc.family,
+               MAX(sc.path_zh->>'family') AS family_zh,
+               COUNT(DISTINCT vt.user_id) AS count
+        FROM species_cache sc
+        JOIN vtuber_traits vt ON vt.taxon_id = sc.taxon_id
+        WHERE sc.family IS NOT NULL
+          AND sc.family != 'Hominidae'
+        GROUP BY sc.family
+        ORDER BY count DESC
+        LIMIT 10
+    """)).fetchall()
     top_species = [
-        {'name': r.family_zh or r.family,
-         'scientific_name': r.family, 'count': r.count}
+        {'name': r[1] or r[0],
+         'scientific_name': r[0], 'count': r[2]}
         for r in top_species_q
     ]
 
