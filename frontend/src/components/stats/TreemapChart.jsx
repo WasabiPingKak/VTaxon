@@ -34,7 +34,7 @@ function groupByLevel(data, path, levelIdx) {
   const zhKey = lvl + '_zh';
   const groups = {};
   filtered.forEach(d => {
-    const key = d[lvl] || 'Unknown';
+    const key = d[lvl] || '未分類';
     if (!groups[key]) {
       groups[key] = { key, name_zh: d[zhKey] || key, count: 0, kingdom: d.kingdom };
     }
