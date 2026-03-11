@@ -4,7 +4,6 @@ const cards = [
   { key: 'tagged_users', label: '已建檔 VTuber' },
   { key: 'species_used', label: '現實物種數' },
   { key: 'fictional_used', label: '奇幻生物數' },
-  { key: 'avg_traits_per_user', label: '平均物種特徵數' },
 ];
 
 export default function HeroCards({ totals }) {
@@ -13,7 +12,7 @@ export default function HeroCards({ totals }) {
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+      gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)',
       gap: 16,
     }}>
       {cards.map(({ key, label }) => (

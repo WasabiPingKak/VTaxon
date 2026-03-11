@@ -96,7 +96,7 @@ export default function StatsPage() {
       </h1>
 
       {/* Hero cards */}
-      <HeroCards totals={{ ...data?.totals, avg_traits_per_user: data?.avg_traits_per_user }} />
+      <HeroCards totals={data?.totals} />
 
       {/* Row: Top species + Donut */}
       <div style={{
@@ -114,7 +114,7 @@ export default function StatsPage() {
             segments={ratioSegments}
             size={isMobile ? 140 : 150}
             centerValue={ratioTotal}
-            centerLabel="traits"
+            centerLabel="位 VTuber"
           />
         </ChartCard>
       </div>
