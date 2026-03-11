@@ -618,11 +618,11 @@ function applyBreedGridLayout(root) {
   for (const node of root.descendants()) {
     if (!node.children) continue;
 
-    const nonVtubers = node.children.filter(c => !c.data._vtuber);
-    if (nonVtubers.length <= BREED_GRID_THRESHOLD) continue;
+    const breeds = node.children.filter(c => c.data._rank === 'BREED');
+    if (breeds.length <= BREED_GRID_THRESHOLD) continue;
 
-    // Compute subtree extent for each non-vtuber child (relative to child root)
-    const infos = nonVtubers.map(child => {
+    // Compute subtree extent for each breed child (relative to child root)
+    const infos = breeds.map(child => {
       let relMinX = -(child.data._labelHalfW || 40);
       let relMaxX = (child.data._labelHalfW || 40);
       let relMaxY = 0;
@@ -658,7 +658,7 @@ function applyBreedGridLayout(root) {
     }
 
     // Row Y positions
-    const baseY = nonVtubers[0].y;
+    const baseY = breeds[0].y;
     const rowYs = [baseY];
     for (let r = 1; r < rowCount; r++) {
       rowYs.push(rowYs[r - 1] + rowHeights[r - 1] + BREED_GRID_VISUAL_BOTTOM + BREED_GRID_GAP_Y);
