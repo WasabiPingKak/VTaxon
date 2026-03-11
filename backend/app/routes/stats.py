@@ -69,21 +69,23 @@ def _build_stats():
         for r in top_fictional_q
     ]
 
-    # ── Real vs Fictional ratio ──
-    ratio_q = db.session.query(
-        func.count(case(
-            (db.and_(VtuberTrait.taxon_id.isnot(None),
-                     VtuberTrait.fictional_species_id.is_(None)), 1)
-        )).label('real_only'),
-        func.count(case(
-            (db.and_(VtuberTrait.taxon_id.is_(None),
-                     VtuberTrait.fictional_species_id.isnot(None)), 1)
-        )).label('fictional_only'),
-        func.count(case(
-            (db.and_(VtuberTrait.taxon_id.isnot(None),
-                     VtuberTrait.fictional_species_id.isnot(None)), 1)
-        )).label('both'),
-    ).one()
+    # ── Real vs Fictional ratio (per user) ──
+    # A user who has at least one real trait AND at least one fictional trait
+    # counts as "both"; otherwise "real_only" or "fictional_only".
+    ratio_q = db.session.execute(db.text("""
+        WITH user_types AS (
+            SELECT user_id,
+                   bool_or(taxon_id IS NOT NULL) AS has_real,
+                   bool_or(fictional_species_id IS NOT NULL) AS has_fictional
+            FROM vtuber_traits
+            GROUP BY user_id
+        )
+        SELECT
+            COUNT(*) FILTER (WHERE has_real AND NOT has_fictional) AS real_only,
+            COUNT(*) FILTER (WHERE NOT has_real AND has_fictional) AS fictional_only,
+            COUNT(*) FILTER (WHERE has_real AND has_fictional) AS both
+        FROM user_types
+    """)).one()
     trait_type_ratio = {
         'real_only': ratio_q.real_only,
         'fictional_only': ratio_q.fictional_only,
