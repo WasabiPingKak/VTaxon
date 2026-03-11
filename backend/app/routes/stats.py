@@ -1,0 +1,221 @@
+"""Public statistics endpoint."""
+
+from flask import Blueprint, jsonify
+from sqlalchemy import func, case, distinct, extract
+
+from ..extensions import db
+from ..models import User, VtuberTrait, SpeciesCache, FictionalSpecies, OAuthAccount
+from ..cache import get_stats_cache, set_stats_cache
+
+stats_bp = Blueprint('stats', __name__)
+
+
+def _build_stats():
+    """Build all statistics in a single function, cached server-side."""
+
+    # ── Totals ──
+    total_users = db.session.query(func.count(User.id)).scalar()
+    tagged_users = db.session.query(
+        func.count(distinct(VtuberTrait.user_id))
+    ).scalar()
+    species_used = db.session.query(
+        func.count(distinct(VtuberTrait.taxon_id))
+    ).filter(VtuberTrait.taxon_id.isnot(None)).scalar()
+    fictional_used = db.session.query(
+        func.count(distinct(VtuberTrait.fictional_species_id))
+    ).filter(VtuberTrait.fictional_species_id.isnot(None)).scalar()
+
+    # ── Top 10 species ──
+    top_species_q = (
+        db.session.query(
+            SpeciesCache.taxon_id,
+            func.coalesce(SpeciesCache.common_name_zh,
+                          SpeciesCache.scientific_name).label('name'),
+            SpeciesCache.scientific_name,
+            func.count(distinct(VtuberTrait.user_id)).label('count'),
+        )
+        .join(VtuberTrait, VtuberTrait.taxon_id == SpeciesCache.taxon_id)
+        .group_by(SpeciesCache.taxon_id, SpeciesCache.common_name_zh,
+                  SpeciesCache.scientific_name)
+        .order_by(func.count(distinct(VtuberTrait.user_id)).desc())
+        .limit(10)
+        .all()
+    )
+    top_species = [
+        {'taxon_id': r.taxon_id, 'name': r.name,
+         'scientific_name': r.scientific_name, 'count': r.count}
+        for r in top_species_q
+    ]
+
+    # ── Top 10 fictional ──
+    top_fictional_q = (
+        db.session.query(
+            FictionalSpecies.id,
+            func.coalesce(FictionalSpecies.name_zh,
+                          FictionalSpecies.name).label('name'),
+            FictionalSpecies.origin,
+            func.count(distinct(VtuberTrait.user_id)).label('count'),
+        )
+        .join(VtuberTrait,
+              VtuberTrait.fictional_species_id == FictionalSpecies.id)
+        .group_by(FictionalSpecies.id, FictionalSpecies.name_zh,
+                  FictionalSpecies.name, FictionalSpecies.origin)
+        .order_by(func.count(distinct(VtuberTrait.user_id)).desc())
+        .limit(10)
+        .all()
+    )
+    top_fictional = [
+        {'id': r.id, 'name': r.name, 'origin': r.origin, 'count': r.count}
+        for r in top_fictional_q
+    ]
+
+    # ── Real vs Fictional ratio ──
+    ratio_q = db.session.query(
+        func.count(case(
+            (db.and_(VtuberTrait.taxon_id.isnot(None),
+                     VtuberTrait.fictional_species_id.is_(None)), 1)
+        )).label('real_only'),
+        func.count(case(
+            (db.and_(VtuberTrait.taxon_id.is_(None),
+                     VtuberTrait.fictional_species_id.isnot(None)), 1)
+        )).label('fictional_only'),
+        func.count(case(
+            (db.and_(VtuberTrait.taxon_id.isnot(None),
+                     VtuberTrait.fictional_species_id.isnot(None)), 1)
+        )).label('both'),
+    ).one()
+    trait_type_ratio = {
+        'real_only': ratio_q.real_only,
+        'fictional_only': ratio_q.fictional_only,
+        'both': ratio_q.both,
+    }
+
+    # ── Taxonomy distribution (kingdom → class) ──
+    taxonomy_q = (
+        db.session.query(
+            SpeciesCache.kingdom,
+            SpeciesCache.class_.label('class_name'),
+            SpeciesCache.path_zh,
+            func.count(distinct(VtuberTrait.user_id)).label('count'),
+        )
+        .join(VtuberTrait, VtuberTrait.taxon_id == SpeciesCache.taxon_id)
+        .filter(SpeciesCache.kingdom.isnot(None))
+        .group_by(SpeciesCache.kingdom, SpeciesCache.class_,
+                  SpeciesCache.path_zh)
+        .order_by(func.count(distinct(VtuberTrait.user_id)).desc())
+        .all()
+    )
+    # Aggregate by (kingdom, class) — path_zh varies per row, pick first
+    tax_map = {}
+    for r in taxonomy_q:
+        key = (r.kingdom, r.class_name)
+        pzh = r.path_zh or {}
+        if key not in tax_map:
+            tax_map[key] = {
+                'kingdom': r.kingdom,
+                'kingdom_zh': pzh.get('kingdom', r.kingdom),
+                'class': r.class_name,
+                'class_zh': pzh.get('class', r.class_name),
+                'count': 0,
+            }
+        tax_map[key]['count'] += r.count
+    taxonomy_distribution = sorted(
+        tax_map.values(), key=lambda x: x['count'], reverse=True
+    )
+
+    # ── Country distribution ──
+    country_q = db.session.execute(db.text("""
+        SELECT flag, COUNT(*) AS cnt
+        FROM users, jsonb_array_elements_text(country_flags) AS flag
+        WHERE jsonb_array_length(country_flags) > 0
+        GROUP BY flag
+        ORDER BY cnt DESC
+        LIMIT 15
+    """)).fetchall()
+    by_country = [{'code': r[0], 'count': r[1]} for r in country_q]
+
+    # ── Monthly growth ──
+    growth_q = db.session.execute(db.text("""
+        SELECT TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS month,
+               COUNT(*) AS new_users
+        FROM users
+        GROUP BY DATE_TRUNC('month', created_at)
+        ORDER BY DATE_TRUNC('month', created_at)
+    """)).fetchall()
+    cumulative = 0
+    growth_monthly = []
+    for r in growth_q:
+        cumulative += r[1]
+        growth_monthly.append({
+            'month': r[0],
+            'new_users': r[1],
+            'cumulative': cumulative,
+        })
+
+    # ── Platform distribution ──
+    platform_q = (
+        db.session.query(
+            OAuthAccount.provider,
+            func.count(distinct(OAuthAccount.user_id)).label('count'),
+        )
+        .group_by(OAuthAccount.provider)
+        .all()
+    )
+    by_platform = {r.provider: r.count for r in platform_q}
+
+    # ── Org type distribution ──
+    org_q = (
+        db.session.query(
+            func.coalesce(User.org_type, 'unknown').label('org_type'),
+            func.count().label('count'),
+        )
+        .group_by(func.coalesce(User.org_type, 'unknown'))
+        .all()
+    )
+    by_org_type = {r.org_type: r.count for r in org_q}
+
+    # ── Activity status distribution ──
+    status_q = db.session.execute(db.text("""
+        SELECT COALESCE(profile_data->>'activity_status', 'unknown') AS status,
+               COUNT(*) AS cnt
+        FROM users
+        GROUP BY profile_data->>'activity_status'
+    """)).fetchall()
+    by_status = {r[0]: r[1] for r in status_q}
+
+    # ── Average traits per user ──
+    avg_q = db.session.query(
+        func.count(VtuberTrait.id),
+        func.count(distinct(VtuberTrait.user_id)),
+    ).one()
+    avg_traits = round(avg_q[0] / avg_q[1], 1) if avg_q[1] > 0 else 0
+
+    return {
+        'totals': {
+            'users': total_users,
+            'tagged_users': tagged_users,
+            'species_used': species_used,
+            'fictional_used': fictional_used,
+        },
+        'top_species': top_species,
+        'top_fictional': top_fictional,
+        'trait_type_ratio': trait_type_ratio,
+        'taxonomy_distribution': taxonomy_distribution,
+        'by_country': by_country,
+        'growth_monthly': growth_monthly,
+        'by_platform': by_platform,
+        'by_org_type': by_org_type,
+        'by_status': by_status,
+        'avg_traits_per_user': avg_traits,
+    }
+
+
+@stats_bp.route('/overview')
+def overview():
+    cached = get_stats_cache()
+    if cached:
+        return jsonify(cached)
+
+    data = _build_stats()
+    set_stats_cache(data)
+    return jsonify(data)

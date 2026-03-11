@@ -43,3 +43,23 @@ def set_fictional_tree_cache(data):
 def invalidate_fictional_tree_cache():
     _fictional_tree_cache["data"] = None
     _fictional_tree_cache["ts"] = 0
+
+
+# ── Stats cache ──
+_stats_cache = {"data": None, "ts": 0, "ttl": 300}
+
+
+def get_stats_cache():
+    if _stats_cache["data"] and (time.time() - _stats_cache["ts"]) < _stats_cache["ttl"]:
+        return _stats_cache["data"]
+    return None
+
+
+def set_stats_cache(data):
+    _stats_cache["data"] = data
+    _stats_cache["ts"] = time.time()
+
+
+def invalidate_stats_cache():
+    _stats_cache["data"] = None
+    _stats_cache["ts"] = 0

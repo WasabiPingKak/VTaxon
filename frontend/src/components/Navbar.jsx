@@ -140,6 +140,23 @@ export default function Navbar() {
             </span>
           )}
         </Link>
+        <Link to="/stats" title="統計" style={{
+          textDecoration: 'none',
+          fontSize: '0.8em',
+          padding: isMobile ? '5px 7px' : '4px 10px',
+          borderRadius: 6,
+          color: location.pathname === '/stats' ? '#38bdf8' : 'rgba(255,255,255,0.65)',
+          border: `1px solid ${location.pathname === '/stats' ? 'rgba(56,189,248,0.3)' : 'rgba(255,255,255,0.12)'}`,
+          background: location.pathname === '/stats' ? 'rgba(56,189,248,0.08)' : 'rgba(255,255,255,0.04)',
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="18" y="3" width="4" height="18" rx="1" />
+            <rect x="10" y="8" width="4" height="13" rx="1" />
+            <rect x="2" y="13" width="4" height="8" rx="1" />
+          </svg>
+          {!isMobile && '統計'}
+        </Link>
         {!loading && (
           user ? (
             <>
