@@ -49,7 +49,12 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Android',   '仿生人',   '人造生命', '機械生命', '人造生命|機械生命|Android',   '外觀高度仿人的機械生命'),
 ('Cyborg',    '改造人',   '人造生命', '機械生命', '人造生命|機械生命|Cyborg',    '生物體與機械融合的存在'),
 ('Automaton', '自動機械', '人造生命', '機械生命', '人造生命|機械生命|Automaton', '發條或蒸氣驅動的古典機械生命'),
-('Doll', '人偶', '人造生命', '機械生命', '人造生命|機械生命|Doll', '被賦予生命的人形玩偶')
+('Doll', '人偶', '人造生命', '附魂體', '人造生命|附魂體|Doll', '被賦予生命的人形玩偶')
+ON CONFLICT(name) DO NOTHING;
+
+-- === 附魂體 (Soul-bound) ===
+INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
+('Cursed Doll', '詛咒娃娃', '人造生命', '附魂體', '人造生命|附魂體|Cursed Doll', '靈魂因詛咒而寄宿於娃娃中的存在')
 ON CONFLICT(name) DO NOTHING;
 
 -- === 生物合成 (Bio-synthetic Life) ===
