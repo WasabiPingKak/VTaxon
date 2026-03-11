@@ -13,7 +13,7 @@
 | CRITICAL | ~~2~~ 0 | ~~帳號接管、JWT 算法降級~~ 已全數修復 |
 | HIGH | ~~3~~ 0 | ~~CORS 萬用字元、缺少 Rate Limiting、缺少安全標頭~~ 已全數修復 |
 | MEDIUM | ~~5~~ 0 | ~~快取刷新濫用、JWKS 無 TTL、SQL 字串拼接、Health 端點資訊洩漏、錯誤訊息洩漏~~ 已全數修復 |
-| LOW | ~~5~~ 1 | ~~依賴未鎖定版本、localStorage 認證狀態、前端快取無上限、provider 欄位無約束~~ 已修復；SECRET_KEY 預設值暫緩 |
+| LOW | ~~5~~ 0 | ~~依賴未鎖定版本、localStorage 認證狀態、前端快取無上限、SECRET_KEY 預設值、provider 欄位無約束~~ 已全數修復 |
 
 ---
 
@@ -147,13 +147,11 @@
 
 ---
 
-## LOW-4: Flask SECRET_KEY 預設值
+## ~~LOW-4: Flask SECRET_KEY 預設值~~ ✅ 已修復
 
-**檔案**: `backend/app/config.py:5`
+**狀態**: 已修復（2026-03-11）
 
-**問題**: `SECRET_KEY` 有 hardcoded 預設值 `'dev-secret-key'`。目前 VTaxon 未使用 Flask session 或 CSRF，此值實質上未被任何功能使用。如果未來啟用 Flask session，此預設值會成為風險。
-
-**現狀**: 暫不修復。Production 環境未設定 `SECRET_KEY` 環境變數，強制檢查會導致啟動失敗。待實際使用 Flask session 時再處理。
+**修復方式**: VTaxon 未使用 Flask session，`SECRET_KEY` 完全無用。直接移除 config.py 設定、.env.example、CI/CD workflow 中的 Secret Manager 注入。
 
 ---
 
@@ -197,6 +195,6 @@
 9. ~~SQL parameterization 重構 — MEDIUM-3~~ ✅
 10. ~~依賴版本鎖定 — LOW-1~~ ✅
 11. ~~前端快取改善 — LOW-3~~ ✅
-12. SECRET_KEY 預設值移除 — LOW-4（暫緩，目前未使用 Flask session）
+12. ~~SECRET_KEY 完全移除 — LOW-4~~ ✅
 13. ~~localStorage → sessionStorage — LOW-2~~ ✅
 14. ~~Provider CHECK constraint — LOW-5~~ ✅

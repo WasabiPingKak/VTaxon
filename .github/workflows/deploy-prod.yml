@@ -44,7 +44,6 @@ jobs:
             --set-env-vars "^||^FLASK_ENV=production||ALLOWED_ORIGINS=https://vtaxon.com,https://vtaxon.web.app" \
             --set-secrets "\
           DATABASE_URL=DATABASE_URL_PROD:latest,\
-          SECRET_KEY=SECRET_KEY_PROD:latest,\
           SUPABASE_URL=SUPABASE_URL:latest,\
           SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest,\
           SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,\
