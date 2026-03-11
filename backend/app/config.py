@@ -28,14 +28,9 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
-    SECRET_KEY = os.environ.get('SECRET_KEY')
 
     @classmethod
     def init_app(cls, app):
-        if not app.config.get('SECRET_KEY'):
-            raise RuntimeError(
-                'SECRET_KEY must be set in production.'
-            )
         origins = app.config.get('ALLOWED_ORIGINS', '')
         if not origins:
             raise RuntimeError(
