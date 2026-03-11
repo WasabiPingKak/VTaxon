@@ -95,6 +95,8 @@ class OAuthAccount(db.Model):
     __table_args__ = (
         db.UniqueConstraint('provider', 'provider_account_id',
                             name='uq_provider_account'),
+        db.CheckConstraint("provider IN ('youtube', 'twitch')",
+                           name='ck_oauth_provider'),
     )
 
     def to_dict(self, public=False):

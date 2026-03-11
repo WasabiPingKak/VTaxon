@@ -1,4 +1,8 @@
+import logging
+
 from flask import Blueprint, Response, g, jsonify, request, stream_with_context
+
+log = logging.getLogger(__name__)
 
 from ..auth import admin_required, login_required
 from ..extensions import db
@@ -30,7 +34,8 @@ def search():
     try:
         results = search_species(q, limit=limit)
     except Exception as e:
-        return jsonify({'error': f'GBIF search failed: {e}'}), 502
+        log.error('GBIF search failed: %s', e)
+        return jsonify({'error': '物種搜尋暫時無法使用，請稍後再試'}), 502
 
     return jsonify({'results': results})
 
@@ -80,7 +85,8 @@ def match():
     try:
         result = match_species(name)
     except Exception as e:
-        return jsonify({'error': f'GBIF match failed: {e}'}), 502
+        log.error('GBIF match failed: %s', e)
+        return jsonify({'error': '物種比對暫時無法使用，請稍後再試'}), 502
 
     if not result:
         return jsonify({'error': 'No match found'}), 404
@@ -102,7 +108,8 @@ def get_children(taxon_id):
     try:
         subspecies = get_subspecies(taxon_id)
     except Exception as e:
-        return jsonify({'error': f'Failed to fetch children: {e}'}), 502
+        log.error('Failed to fetch children for taxon %s: %s', taxon_id, e)
+        return jsonify({'error': '子分類查詢暫時無法使用，請稍後再試'}), 502
     return jsonify({'results': subspecies})
 
 

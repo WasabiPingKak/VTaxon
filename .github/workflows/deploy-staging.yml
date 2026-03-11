@@ -44,7 +44,6 @@ jobs:
             --set-env-vars "FLASK_ENV=staging,DB_SCHEMA=staging,ALLOWED_ORIGINS=https://vtaxon-staging.web.app" \
             --set-secrets "\
           DATABASE_URL=DATABASE_URL_STAGING:latest,\
-          SECRET_KEY=SECRET_KEY_STAGING:latest,\
           SUPABASE_URL=SUPABASE_URL:latest,\
           SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest,\
           SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,\
