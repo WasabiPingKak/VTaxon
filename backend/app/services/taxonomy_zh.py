@@ -268,6 +268,7 @@ TAXONOMY_ZH = {
     'Buteo': '鵟屬',
     'Accipiter': '鷹屬',
     'Falco': '隼屬',
+    'Otus': '角鴞屬',
     'Strix': '林鴞屬',
     'Bubo': '鵰鴞屬',
     'Corvus': '鴉屬',

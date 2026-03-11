@@ -547,6 +547,9 @@ def _resolve_rank_zh(taxon_name, rank=None):
                             params=params, timeout=10)
         resp.raise_for_status()
         data = resp.json()
+        match_type = data.get('matchType', '')
+        if match_type in ('HIGHERRANK', 'NONE'):
+            return None
         usage_key = data.get('usageKey')
         if usage_key:
             zh_name, _en = get_chinese_name_by_gbif_id(usage_key)
