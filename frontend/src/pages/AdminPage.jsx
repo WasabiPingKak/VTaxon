@@ -22,12 +22,14 @@ const REPORT_STATUS_TABS = [
 const SECTION_TABS = [
   { key: 'fictional', label: '虛構物種回報' },
   { key: 'breed', label: '品種回報' },
+  { key: 'name_report', label: '名稱回報' },
   { key: 'report', label: '帳號檢舉' },
 ];
 
 const SECTION_ACTIVE_STATUSES = {
   fictional: ['pending', 'received', 'in_progress'],
   breed: ['pending', 'received', 'in_progress'],
+  name_report: ['pending', 'received', 'in_progress'],
   report: ['pending', 'investigating'],
 };
 
@@ -198,6 +200,91 @@ function BreedRequestCard({ req, onUpdate }) {
         {req.description && (
           <div>
             <span style={{ color: 'rgba(255,255,255,0.4)' }}>描述：</span>
+            <span style={{ color: 'rgba(255,255,255,0.7)' }}>{req.description}</span>
+          </div>
+        )}
+      </div>
+
+      <MultiStageActions
+        actions={actions}
+        loading={loading}
+        note={note}
+        setNote={setNote}
+        onAction={handleAction}
+        adminNote={req.admin_note}
+      />
+    </RequestCardShell>
+  );
+}
+
+// ── Name Report Card ──────────────────
+
+function NameReportCard({ req, onUpdate }) {
+  const [note, setNote] = useState(req.admin_note || '');
+  const [loading, setLoading] = useState(false);
+  const actions = REQUEST_ACTIONS[req.status];
+
+  const handleAction = async (status) => {
+    setLoading(true);
+    try {
+      const body = { status, admin_note: note || undefined };
+      await api.updateNameReport(req.id, body);
+      onUpdate();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reportTypeLabel = req.report_type === 'missing_zh' ? '中文名缺漏'
+    : req.report_type === 'not_found' ? '搜尋不到物種' : '中文名錯誤';
+
+  return (
+    <RequestCardShell req={req}>
+      <div style={{ display: 'grid', gap: 6, fontSize: '0.9em' }}>
+        <div>
+          <span style={{ color: 'rgba(255,255,255,0.4)' }}>問題類型：</span>
+          <span style={{
+            display: 'inline-block', padding: '1px 8px', borderRadius: 4,
+            fontSize: '0.85em', fontWeight: 600,
+            background: req.report_type === 'not_found' ? 'rgba(239,68,68,0.15)'
+              : req.report_type === 'missing_zh' ? 'rgba(56,189,248,0.15)' : 'rgba(251,146,60,0.15)',
+            color: req.report_type === 'not_found' ? '#f87171'
+              : req.report_type === 'missing_zh' ? '#38bdf8' : '#fb923c',
+          }}>
+            {reportTypeLabel}
+          </span>
+        </div>
+        {req.species_name && (
+          <div>
+            <span style={{ color: 'rgba(255,255,255,0.4)' }}>物種：</span>
+            <span style={{ color: 'rgba(255,255,255,0.8)' }}>{req.species_name}</span>
+            {req.scientific_name && (
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', marginLeft: 4 }}>
+                {req.scientific_name}
+              </span>
+            )}
+            {req.taxon_id && (
+              <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.85em', marginLeft: 4 }}>
+                (#{req.taxon_id})
+              </span>
+            )}
+          </div>
+        )}
+        {req.current_name_zh && (
+          <div>
+            <span style={{ color: 'rgba(255,255,255,0.4)' }}>目前中文名：</span>
+            <span style={{ color: 'rgba(255,255,255,0.7)' }}>{req.current_name_zh}</span>
+          </div>
+        )}
+        <div>
+          <span style={{ color: 'rgba(255,255,255,0.4)' }}>建議中文名：</span>
+          <span style={{ color: '#fff', fontWeight: 500 }}>{req.suggested_name_zh}</span>
+        </div>
+        {req.description && (
+          <div>
+            <span style={{ color: 'rgba(255,255,255,0.4)' }}>補充說明：</span>
             <span style={{ color: 'rgba(255,255,255,0.7)' }}>{req.description}</span>
           </div>
         )}
@@ -897,6 +984,7 @@ export default function AdminPage() {
     try {
       const fn = section === 'fictional' ? api.getRequests
         : section === 'breed' ? api.getBreedRequests
+        : section === 'name_report' ? api.getNameReports
         : api.getReports;
       const data = await fn(status);
       const items = data.requests ?? data.reports ?? [];
@@ -917,7 +1005,9 @@ export default function AdminPage() {
     }
   }, [activeTab, isAdmin, fetchRequests]);
 
-  const currentStatusTabs = section === 'report' ? REPORT_STATUS_TABS : REQUEST_STATUS_TABS;
+  const currentStatusTabs = section === 'report' ? REPORT_STATUS_TABS
+    : section === 'name_report' ? REQUEST_STATUS_TABS
+    : REQUEST_STATUS_TABS;
 
   const fetchAllPendingCounts = useCallback(() => {
     if (!isAdmin) return;
@@ -925,9 +1015,10 @@ export default function AdminPage() {
       .then(data => {
         const fc = data.fictional || {};
         const bc = data.breed || {};
+        const nc = data.name_report || {};
         const rc = data.report || {};
         const newCounts = {};
-        for (const [key, obj] of Object.entries({ fictional: fc, breed: bc, report: rc })) {
+        for (const [key, obj] of Object.entries({ fictional: fc, breed: bc, name_report: nc, report: rc })) {
           for (const [status, count] of Object.entries(obj)) {
             newCounts[`${key}_${status}`] = count;
           }
@@ -972,6 +1063,7 @@ export default function AdminPage() {
 
   const CardComponent = section === 'fictional' ? FictionalRequestCard
     : section === 'breed' ? BreedRequestCard
+    : section === 'name_report' ? NameReportCard
     : ReportCard;
 
   return (

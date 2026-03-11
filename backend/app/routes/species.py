@@ -1,9 +1,9 @@
-from flask import Blueprint, Response, jsonify, request, stream_with_context
+from flask import Blueprint, Response, g, jsonify, request, stream_with_context
 
-from ..auth import admin_required
+from ..auth import admin_required, login_required
 from ..extensions import db
 from ..limiter import limiter
-from ..models import SpeciesCache
+from ..models import SpeciesCache, SpeciesNameReport
 from ..services.gbif import (
     clear_chinese_name_caches,
     get_species,
@@ -166,3 +166,88 @@ def clear_cache():
         'lru_caches_cleared': True,
         'scope': 'specific' if taxon_ids else 'all',
     })
+
+
+# ── Name Reports ──────────────────────────────────────────────────
+
+@species_bp.route('/name-reports', methods=['POST'])
+@login_required
+def create_name_report():
+    """Submit a species name report (missing or wrong Chinese name)."""
+    data = request.get_json() or {}
+    taxon_id = data.get('taxon_id')
+    report_type = data.get('report_type')
+    suggested_name_zh = (data.get('suggested_name_zh') or '').strip()
+
+    if not report_type or not suggested_name_zh:
+        return jsonify({'error': 'report_type, suggested_name_zh 為必填'}), 400
+
+    if report_type not in ('missing_zh', 'wrong_zh', 'not_found'):
+        return jsonify({'error': 'report_type 必須為 missing_zh、wrong_zh 或 not_found'}), 400
+
+    if report_type != 'not_found' and not taxon_id:
+        return jsonify({'error': 'taxon_id 為必填（not_found 類型除外）'}), 400
+
+    if report_type == 'not_found':
+        description = (data.get('description') or '').strip()
+        if not description:
+            return jsonify({'error': 'not_found 類型必須填寫補充說明'}), 400
+
+    # Look up current name from cache
+    current_name_zh = None
+    if taxon_id:
+        species = db.session.get(SpeciesCache, taxon_id)
+        current_name_zh = species.common_name_zh if species else None
+
+    report = SpeciesNameReport(
+        user_id=g.current_user_id,
+        taxon_id=taxon_id,
+        report_type=report_type,
+        current_name_zh=current_name_zh,
+        suggested_name_zh=suggested_name_zh,
+        description=(data.get('description') or '').strip() or None,
+    )
+    db.session.add(report)
+    db.session.commit()
+    return jsonify(report.to_dict()), 201
+
+
+@species_bp.route('/name-reports', methods=['GET'])
+@admin_required
+def list_name_reports():
+    """List species name reports (admin only)."""
+    status = request.args.get('status', 'pending')
+    reports = (SpeciesNameReport.query
+               .filter_by(status=status)
+               .order_by(SpeciesNameReport.created_at.desc())
+               .all())
+    return jsonify({'reports': [r.to_dict() for r in reports]})
+
+
+@species_bp.route('/name-reports/<int:report_id>', methods=['PATCH'])
+@admin_required
+def update_name_report(report_id):
+    """Update a species name report (admin only)."""
+    report = db.session.get(SpeciesNameReport, report_id)
+    if not report:
+        return jsonify({'error': 'Report not found'}), 404
+
+    data = request.get_json() or {}
+    old_status = report.status
+
+    if 'status' in data:
+        report.status = data['status']
+    if 'admin_note' in data:
+        report.admin_note = data['admin_note']
+
+    if report.status != old_status:
+        from ..services.notifications import create_notification
+        create_notification(
+            report.user_id, 'species_name_report', report.id,
+            report.status,
+            admin_note=report.admin_note,
+            subject_name=report.suggested_name_zh,
+        )
+
+    db.session.commit()
+    return jsonify(report.to_dict())

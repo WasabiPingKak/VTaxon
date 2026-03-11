@@ -1,7 +1,7 @@
 -- ============================================================
 -- Fictional Species — 埃及神話 (Egyptian Mythology)
 -- Run this in Supabase SQL Editor after fictional_species.sql
--- 新增 20 筆資料
+-- 新增 21 筆資料
 -- ============================================================
 
 -- === 神獸 / 混合獸 (Mythical Beasts) ===
@@ -34,7 +34,8 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Horus Falcon',        '荷魯斯之鷹',     '西方神話', '埃及神話', '西方神話|埃及神話|神靈|Horus Falcon',     '鷹首人身的天空與王權之神化身，鷹眼象徵全知之眼'),
 ('Thoth Ibis',          '托特聖䴉',       '西方神話', '埃及神話', '西方神話|埃及神話|神靈|Thoth Ibis',       '朱鷺首人身的智慧與書寫之神化身，月亮與知識的守護者'),
 ('Sobek Crocodile',     '索貝克聖鱷',     '西方神話', '埃及神話', '西方神話|埃及神話|神靈|Sobek Crocodile',  '鱷魚首人身的尼羅河與力量之神化身，象徵法老的軍事力量'),
-('Sekhmet Lioness',     '塞赫邁特獅',     '西方神話', '埃及神話', '西方神話|埃及神話|神靈|Sekhmet Lioness',  '獅首人身的戰爭與治癒女神化身，太陽神之眼的怒焰化身')
+('Sekhmet Lioness',     '塞赫邁特獅',     '西方神話', '埃及神話', '西方神話|埃及神話|神靈|Sekhmet Lioness',  '獅首人身的戰爭與治癒女神化身，太陽神之眼的怒焰化身'),
+('Sopdet',              '索普德特',       '西方神話', '埃及神話', '西方神話|埃及神話|神靈|Sopdet',            '天狼星（Sirius）的神格化身，古埃及的豐饒與新年女神。天狼星偕日升標誌尼羅河汛期來臨，與伊西斯（Isis）形象相連，常見的形象為頭戴星冠的女性或犬狼耳飾的神靈')
 ON CONFLICT(name) DO NOTHING;
 
 -- === 亡靈 / 其他 (Undead & Others) ===

@@ -165,9 +165,10 @@ export function drawGraph(ctx, nodes, edges, transform, canvasSize, state) {
 
   const pm = state.positionMap;
 
-  // ── Edges (skip grid children — they use drawGridConnectors) ──
+  // ── Edges (skip grid children — they use drawGridConnectors / drawBreedGridConnectors) ──
   for (const edge of edges) {
     if (edge.target.data._inGrid) continue;
+    if (edge.target.data._inBreedGrid) continue;
 
     // Use animated positions if available
     const sp = pm?.get(edge.source.data._pathKey);
@@ -191,6 +192,9 @@ export function drawGraph(ctx, nodes, edges, transform, canvasSize, state) {
 
   // ── Grid connectors (stem + bar + columns) ──
   drawGridConnectors(ctx, nodes, scale, pm, vp, margin, state);
+
+  // ── Breed grid connectors (per-row bars for multi-row breed arrangement) ──
+  drawBreedGridConnectors(ctx, nodes, scale, pm, vp, margin, state);
 
   // ── Nodes ──
   for (const node of nodes) {
@@ -331,6 +335,109 @@ function drawGridConnectors(ctx, nodes, scale, pm, vp, margin, state) {
       ctx.moveTo(colX, barY);
       ctx.lineTo(colX, maxY);
       ctx.stroke();
+    }
+
+    ctx.shadowBlur = 0;
+  }
+}
+
+// ── Breed grid connectors: per-row horizontal bars for multi-row breed layout ──
+function drawBreedGridConnectors(ctx, nodes, scale, pm, vp, margin, state) {
+  // Group breed-grid nodes by parent
+  const groups = new Map();
+  for (const node of nodes) {
+    if (!node.data._inBreedGrid || !node.parent) continue;
+    const pk = node.parent.data._pathKey;
+    if (!groups.has(pk)) groups.set(pk, { parent: node.parent, children: [] });
+    groups.get(pk).children.push(node);
+  }
+
+  for (const [, { parent, children }] of groups) {
+    if (children.length === 0) continue;
+
+    // Resolve animated positions
+    const pp = pm?.get(parent.data._pathKey);
+    const px = pp ? pp.x : parent.x;
+    const py = pp ? pp.y : parent.y;
+
+    // Group children by row
+    const rowMap = new Map();
+    for (const child of children) {
+      const row = child.data._breedGridRow || 0;
+      const cp = pm?.get(child.data._pathKey);
+      const cx = cp ? cp.x : child.x;
+      const cy = cp ? cp.y : child.y;
+      if (!rowMap.has(row)) rowMap.set(row, []);
+      rowMap.get(row).push({ x: cx, y: cy, node: child });
+    }
+
+    // Viewport culling
+    let allMinX = Infinity, allMaxX = -Infinity, allMinY = py, allMaxY = -Infinity;
+    for (const [, rowChildren] of rowMap) {
+      for (const c of rowChildren) {
+        allMinX = Math.min(allMinX, c.x);
+        allMaxX = Math.max(allMaxX, c.x);
+        allMaxY = Math.max(allMaxY, c.y);
+      }
+    }
+    if (allMaxX < vp.x - margin || allMinX > vp.x + vp.w + margin ||
+        allMaxY < vp.y - margin || allMinY > vp.y + vp.h + margin) continue;
+
+    // Check flash state
+    let groupHighlighted = false;
+    if (state.closeEdgePaths) {
+      for (const child of children) {
+        if (state.closeEdgePaths.has(child.data._pathKey)) {
+          groupHighlighted = true;
+          break;
+        }
+      }
+    }
+    const flashA = groupHighlighted ? edgeFlashAlpha(state) : 0;
+
+    const rc = RANK_COLORS[parent.data._rank] || RANK_COLORS.ROOT;
+    if (flashA > 0) {
+      ctx.strokeStyle = hexToRgba('#FF6B35', 0.3 + 0.45 * flashA);
+      ctx.lineWidth = (1.2 + 1.8 * flashA) / Math.max(scale, 0.3);
+      ctx.shadowBlur = 10 * flashA;
+      ctx.shadowColor = 'rgba(255,107,53,0.7)';
+    } else {
+      ctx.strokeStyle = hexToRgba(rc.node, 0.15);
+      ctx.lineWidth = 1.2 / Math.max(scale, 0.3);
+      ctx.shadowBlur = 0;
+    }
+
+    const sortedRows = [...rowMap.keys()].sort((a, b) => a - b);
+
+    // Draw connectors for each row: bezier from parent → bar, horizontal bar, drops
+    for (const rowIdx of sortedRows) {
+      const rowChildren = rowMap.get(rowIdx);
+      const xs = rowChildren.map(c => c.x);
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const barY = Math.min(...rowChildren.map(c => c.y)) - 25;
+      const barMidX = (minX + maxX) / 2;
+
+      // Bezier stem from parent to this row's bar
+      ctx.beginPath();
+      const midY = (py + barY) / 2;
+      ctx.moveTo(px, py);
+      ctx.bezierCurveTo(px, midY, barMidX, midY, barMidX, barY);
+      ctx.stroke();
+
+      // Horizontal bar
+      ctx.beginPath();
+      ctx.moveTo(minX, barY);
+      ctx.lineTo(maxX, barY);
+      ctx.stroke();
+
+      // Vertical drops to each breed
+      for (const child of rowChildren) {
+        ctx.beginPath();
+        ctx.moveTo(child.x, barY);
+        ctx.lineTo(child.x, child.y);
+        ctx.stroke();
+      }
     }
 
     ctx.shadowBlur = 0;

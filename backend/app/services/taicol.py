@@ -49,6 +49,8 @@ def search_by_chinese(query, limit=10):
         pass
 
     # Supplement: search by taxon_group (broader, includes partial matches)
+    # NOTE: TaiCOL returns ALL records (~124k) when taxon_group is unrecognised,
+    # so we check info.total and discard if suspiciously large.
     if len(results) < limit:
         try:
             resp = requests.get(f'{TAICOL_BASE}/taxon', params={
@@ -56,7 +58,10 @@ def search_by_chinese(query, limit=10):
                 'limit': limit,
             }, timeout=10)
             if resp.status_code == 200:
-                _collect(resp.json().get('data', []))
+                body = resp.json()
+                total = (body.get('info') or {}).get('total', 0)
+                if total <= 5000:
+                    _collect(body.get('data', []))
         except Exception:
             pass
 
