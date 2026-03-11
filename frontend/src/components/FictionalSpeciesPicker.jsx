@@ -175,7 +175,7 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
 
   async function handleSubmitRequest(e) {
     e.preventDefault();
-    if (!requestForm.name_zh.trim() || !requestForm.name_en.trim() || !requestForm.suggested_origin.trim() || !requestForm.description.trim()) return;
+    if (!requestForm.name_zh.trim() || !requestForm.name_en.trim() || !requestForm.suggested_origin.trim() || requestForm.description.trim().length < 10) return;
     setSubmitting(true);
     try {
       await api.createFictionalRequest(requestForm);
@@ -417,10 +417,14 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
                   onChange={(e) => setRequestForm(prev => ({ ...prev, name_zh: e.target.value }))}
                   placeholder="虛構物種中文名稱"
                   required
+                  maxLength={30}
                   autoComplete="new-password"
                   style={formInputStyle}
                 />
-                <div style={formHintStyle}>（例：九尾狐、鳳凰、克拉肯）</div>
+                <div style={formHintStyle}>
+                  （例：九尾狐、鳳凰、克拉肯）
+                  <span style={charCountStyle}>{requestForm.name_zh.length}/30</span>
+                </div>
               </div>
               <div>
                 <label style={formLabelStyle}>物種英文名稱 *</label>
@@ -430,10 +434,14 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
                   onChange={(e) => setRequestForm(prev => ({ ...prev, name_en: e.target.value }))}
                   placeholder="虛構物種英文名稱"
                   required
+                  maxLength={60}
                   autoComplete="new-password"
                   style={formInputStyle}
                 />
-                <div style={formHintStyle}>（例：Nine-tailed Fox、Phoenix、Kraken）</div>
+                <div style={formHintStyle}>
+                  （例：Nine-tailed Fox、Phoenix、Kraken）
+                  <span style={charCountStyle}>{requestForm.name_en.length}/60</span>
+                </div>
               </div>
               <div>
                 <label style={formLabelStyle}>希望分類 *</label>
@@ -443,33 +451,46 @@ export default function FictionalSpeciesPicker({ existingTraitIds = [], onAdd })
                   onChange={(e) => setRequestForm(prev => ({ ...prev, suggested_origin: e.target.value }))}
                   placeholder="希望歸入的分類（如：東方神話 → 日本神話）"
                   required
+                  maxLength={60}
                   autoComplete="new-password"
                   style={formInputStyle}
                 />
-                <div style={formHintStyle}>（可自創階層，例：東方神話 → 日本神話）</div>
+                <div style={formHintStyle}>
+                  （可自創階層，例：東方神話 → 日本神話）
+                  <span style={charCountStyle}>{requestForm.suggested_origin.length}/60</span>
+                </div>
               </div>
               <div>
-                <label style={formLabelStyle}>補充說明 *</label>
+                <label style={formLabelStyle}>補充說明 *<span style={{ fontWeight: 400 }}>（至少 10 字）</span></label>
                 <textarea
                   value={requestForm.description}
                   onChange={(e) => setRequestForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="簡述物種形象特徵、來源典故或附上參考連結（必填）"
+                  placeholder="簡述物種形象特徵、來源典故或附上參考連結（必填，至少 10 字）"
                   rows={2}
                   required
+                  minLength={10}
+                  maxLength={500}
                   autoComplete="new-password"
                   style={{ ...formInputStyle, resize: 'vertical' }}
                 />
-                <div style={formHintStyle}>（請附上來源典故或參考連結）</div>
+                <div style={formHintStyle}>
+                  （請附上來源典故或參考連結）
+                  <span style={{
+                    ...charCountStyle,
+                    color: requestForm.description.length > 0 && requestForm.description.length < 10
+                      ? 'rgba(239,68,68,0.7)' : charCountStyle.color,
+                  }}>{requestForm.description.length}/500</span>
+                </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   type="submit"
-                  disabled={submitting || !requestForm.name_zh.trim() || !requestForm.name_en.trim() || !requestForm.suggested_origin.trim() || !requestForm.description.trim()}
+                  disabled={submitting || !requestForm.name_zh.trim() || !requestForm.name_en.trim() || !requestForm.suggested_origin.trim() || requestForm.description.trim().length < 10}
                   style={{
                     padding: '6px 14px', background: '#38bdf8', color: '#0d1526',
                     border: 'none', borderRadius: '4px', cursor: 'pointer',
                     fontSize: '0.85em', fontWeight: 600,
-                    opacity: (submitting || !requestForm.name_zh.trim() || !requestForm.name_en.trim() || !requestForm.suggested_origin.trim() || !requestForm.description.trim()) ? 0.5 : 1,
+                    opacity: (submitting || !requestForm.name_zh.trim() || !requestForm.name_en.trim() || !requestForm.suggested_origin.trim() || requestForm.description.trim().length < 10) ? 0.5 : 1,
                   }}>
                   {submitting ? '送出中…' : '送出回報'}
                 </button>
@@ -705,4 +726,9 @@ const formLabelStyle = {
 
 const formHintStyle = {
   fontSize: '0.75em', color: 'rgba(255,255,255,0.3)', marginTop: '2px',
+  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+};
+
+const charCountStyle = {
+  fontSize: '1em', color: 'rgba(255,255,255,0.25)', fontVariantNumeric: 'tabular-nums',
 };
