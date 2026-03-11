@@ -52,6 +52,11 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Doll', '人偶', '人造生命', '機械生命', '人造生命|機械生命|Doll', '被賦予生命的人形玩偶')
 ON CONFLICT(name) DO NOTHING;
 
+-- === 附魂體 (Soul-bound) ===
+INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
+('Teddy Bear', '泰迪熊', '人造生命', '附魂體', '人造生命|附魂體|Teddy Bear', '被賦予生命的填充熊玩偶，玩具熊型態的附魂存在')
+ON CONFLICT(name) DO NOTHING;
+
 -- === 生物合成 (Bio-synthetic Life) ===
 INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
 ('Homunculus',            '人造人',     '人造生命', '生物合成', '人造生命|生物合成|Homunculus',            '鍊金術創造的人工生命'),
