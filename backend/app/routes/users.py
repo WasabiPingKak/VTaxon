@@ -1,6 +1,9 @@
+import logging
 import math
 import os
 from datetime import date as _date, datetime, timezone
+
+log = logging.getLogger(__name__)
 
 import requests
 from flask import Blueprint, g, jsonify, request
@@ -129,23 +132,27 @@ def directory():
         # Strict validation: 2-letter alpha codes or 'NONE'
         codes = [c for c in raw if c.upper() == 'NONE' or (len(c) == 2 and c.isalpha())]
         if codes:
-            sql_parts = []
-            for code in codes:
+            conditions = []
+            bind_params = {}
+            for i, code in enumerate(codes):
                 if code.upper() == 'NONE':
-                    sql_parts.append(
+                    conditions.append(
                         "(users.country_flags IS NULL"
                         " OR users.country_flags = '[]'::jsonb"
                         " OR users.country_flags::text = 'null')"
                     )
                 else:
-                    lo = code.lower()
-                    up = code.upper()
-                    # Match both cases since DB may store either
-                    sql_parts.append(
-                        f"(users.country_flags @> '[\"{lo}\"]'::jsonb"
-                        f" OR users.country_flags @> '[\"{up}\"]'::jsonb)"
+                    lo_key = f'cc_lo_{i}'
+                    up_key = f'cc_up_{i}'
+                    bind_params[lo_key] = f'["{code.lower()}"]'
+                    bind_params[up_key] = f'["{code.upper()}"]'
+                    conditions.append(
+                        f"(users.country_flags @> :{lo_key}::jsonb"
+                        f" OR users.country_flags @> :{up_key}::jsonb)"
                     )
-            query = query.filter(text("(" + " OR ".join(sql_parts) + ")"))
+            query = query.filter(
+                text("(" + " OR ".join(conditions) + ")").bindparams(**bind_params)
+            )
 
     # Gender filter
     if gender:
@@ -814,7 +821,8 @@ def refresh_oauth_account(account_id):
         return jsonify(account.to_dict())
 
     except requests.RequestException as e:
-        return jsonify({'error': f'同步失敗：{str(e)}'}), 502
+        log.error('OAuth account sync failed: %s', e)
+        return jsonify({'error': '同步失敗，請稍後再試'}), 502
 
 
 @users_bp.route('/me/oauth-accounts/<account_id>', methods=['PATCH'])
