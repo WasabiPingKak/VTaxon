@@ -7,7 +7,6 @@ import ChartCard from '../components/stats/ChartCard';
 import HorizontalBarChart from '../components/stats/HorizontalBarChart';
 import DonutChart from '../components/stats/DonutChart';
 import TreemapChart from '../components/stats/TreemapChart';
-import GrowthChart from '../components/stats/GrowthChart';
 
 export default function StatsPage() {
   const [data, setData] = useState(null);
@@ -98,10 +97,10 @@ export default function StatsPage() {
       {/* Hero cards */}
       <HeroCards totals={data?.totals} />
 
-      {/* Row: Top species + Donut */}
+      {/* Row: Top species + Top fictional */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: twoCol ? '1fr 280px' : '1fr',
+        gridTemplateColumns: twoCol ? '1fr 1fr' : '1fr',
         gap: 16,
         marginTop: 16,
       }}>
@@ -109,6 +108,18 @@ export default function StatsPage() {
           <HorizontalBarChart data={data?.top_species} />
         </ChartCard>
 
+        <ChartCard title="最熱門奇幻物種 Top 10">
+          <HorizontalBarChart data={data?.top_fictional} variant="fictional" />
+        </ChartCard>
+      </div>
+
+      {/* Row: Donut + Country */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: twoCol ? '280px 1fr' : '1fr',
+        gap: 16,
+        marginTop: 16,
+      }}>
         <ChartCard title="現實 vs 奇幻">
           <DonutChart
             segments={ratioSegments}
@@ -116,32 +127,6 @@ export default function StatsPage() {
             centerValue={ratioTotal}
             centerLabel="位 VTuber"
           />
-        </ChartCard>
-      </div>
-
-      {/* Treemap */}
-      <div style={{ marginTop: 16 }}>
-        <ChartCard title="分類階層分佈">
-          <TreemapChart data={data?.taxonomy_distribution} />
-        </ChartCard>
-      </div>
-
-      {/* Growth */}
-      <div style={{ marginTop: 16 }}>
-        <ChartCard title="用戶成長趨勢">
-          <GrowthChart data={data?.growth_monthly} />
-        </ChartCard>
-      </div>
-
-      {/* Row: Top fictional + Country */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: twoCol ? '1fr 1fr' : '1fr',
-        gap: 16,
-        marginTop: 16,
-      }}>
-        <ChartCard title="最熱門奇幻物種 Top 10">
-          <HorizontalBarChart data={data?.top_fictional} variant="fictional" />
         </ChartCard>
 
         <ChartCard title="國家/地區分佈">
@@ -151,6 +136,13 @@ export default function StatsPage() {
               count: c.count,
             }))}
           />
+        </ChartCard>
+      </div>
+
+      {/* Treemap */}
+      <div style={{ marginTop: 16 }}>
+        <ChartCard title="分類階層分佈">
+          <TreemapChart data={data?.taxonomy_distribution} />
         </ChartCard>
       </div>
 
