@@ -638,47 +638,63 @@ function applyBreedGridLayout(root) {
     // Sort by VTuber count ascending — fewer VTubers → top rows
     infos.sort((a, b) => (a.node.data._count || 0) - (b.node.data._count || 0));
 
-    const cols = Math.min(BREED_GRID_COLS, infos.length);
-    const rowCount = Math.ceil(infos.length / cols);
+    // ── Balanced row assignment: greedy fill by subtree width ──
+    const nominalCols = Math.min(BREED_GRID_COLS, infos.length);
+    const targetRowCount = Math.ceil(infos.length / nominalCols);
+    const totalWidth = infos.reduce((s, info) => s + info.width, 0);
+    const targetWidthPerRow = totalWidth / targetRowCount;
 
-    // Column widths & row heights (max per column/row)
-    const colWidths = new Array(cols).fill(0);
-    const rowHeights = new Array(rowCount).fill(0);
-    for (let i = 0; i < infos.length; i++) {
-      const c = i % cols;
-      const r = Math.floor(i / cols);
-      colWidths[c] = Math.max(colWidths[c], infos[i].width);
-      rowHeights[r] = Math.max(rowHeights[r], infos[i].height);
-    }
-
-    // Column X centers (centered on parent node)
-    const totalW = colWidths.reduce((s, w) => s + w, 0) + (cols - 1) * BREED_GRID_GAP_X;
-    const colXs = [];
-    let accX = node.x - totalW / 2;
-    for (let c = 0; c < cols; c++) {
-      colXs.push(accX + colWidths[c] / 2);
-      accX += colWidths[c] + BREED_GRID_GAP_X;
-    }
-
-    // Row Y positions
-    const baseY = breeds[0].y;
-    const rowYs = [baseY];
-    for (let r = 1; r < rowCount; r++) {
-      rowYs.push(rowYs[r - 1] + rowHeights[r - 1] + BREED_GRID_VISUAL_BOTTOM + BREED_GRID_GAP_Y);
-    }
-
-    // Move each breed subtree to its grid cell position
-    for (let i = 0; i < infos.length; i++) {
-      const child = infos[i].node;
-      const c = i % cols;
-      const r = Math.floor(i / cols);
-      const dx = colXs[c] - child.x;
-      const dy = rowYs[r] - child.y;
-      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
-        shiftSubtreeXY(child, dx, dy);
+    const rows = [[]];  // rows[r] = array of infos
+    let curRowWidth = 0;
+    for (const info of infos) {
+      // Start a new row if adding this breed exceeds the target
+      // (but never leave the current row empty, and respect max row count)
+      if (rows[rows.length - 1].length > 0 &&
+          curRowWidth + info.width > targetWidthPerRow * 1.15 &&
+          rows.length < targetRowCount) {
+        rows.push([]);
+        curRowWidth = 0;
       }
-      child.data._inBreedGrid = true;
-      child.data._breedGridRow = r;
+      rows[rows.length - 1].push(info);
+      curRowWidth += info.width;
+    }
+
+    // ── Per-row layout: each row has its own column count & widths ──
+    const baseY = breeds[0].y;
+    let curY = baseY;
+
+    for (let r = 0; r < rows.length; r++) {
+      const rowInfos = rows[r];
+      const rowCols = rowInfos.length;
+
+      // Column widths for this row
+      const rowColWidths = rowInfos.map(info => info.width);
+      const rowTotalW = rowColWidths.reduce((s, w) => s + w, 0) + (rowCols - 1) * BREED_GRID_GAP_X;
+
+      // Column X centers (centered on parent node)
+      const rowColXs = [];
+      let accX = node.x - rowTotalW / 2;
+      for (let c = 0; c < rowCols; c++) {
+        rowColXs.push(accX + rowColWidths[c] / 2);
+        accX += rowColWidths[c] + BREED_GRID_GAP_X;
+      }
+
+      // Row height = tallest subtree in this row
+      const rowHeight = Math.max(...rowInfos.map(info => info.height));
+
+      // Position each breed in this row
+      for (let c = 0; c < rowInfos.length; c++) {
+        const child = rowInfos[c].node;
+        const dx = rowColXs[c] - child.x;
+        const dy = curY - child.y;
+        if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+          shiftSubtreeXY(child, dx, dy);
+        }
+        child.data._inBreedGrid = true;
+        child.data._breedGridRow = r;
+      }
+
+      curY += rowHeight + BREED_GRID_VISUAL_BOTTOM + BREED_GRID_GAP_Y;
     }
 
     // Update parent subtree extent after rearrangement
