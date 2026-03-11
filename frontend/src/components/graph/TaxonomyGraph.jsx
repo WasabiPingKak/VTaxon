@@ -334,12 +334,18 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
 
     if (activeFocusedIsFictional) {
       const segs = (activeFocusedEntries[0].fictional_path || '').split('|').length;
-      // 3-segment (has sub_origin): 同來源(value=2) → 同子來源(value=1) → 同種(value=0)
-      // 2-segment (no sub_origin):  同來源(value=1) → 同種(value=0)
+      // 4-segment (origin|sub_origin|type|name): 同來源(3) → 同體系(2) → 同類型(1) → 同種(0)
+      // 3-segment (origin|sub_origin|name):      同來源(2) → 同體系(1) → 同種(0)
+      // 2-segment (origin|name):                 同來源(1) → 同種(0)
       const levels = [];
-      if (segs === 3) {
+      if (segs >= 4) {
+        levels.push({ label: '同來源', value: 3, available: 3 <= maxTraceBack });
+        levels.push({ label: '同體系', value: 2, available: 2 <= maxTraceBack });
+        levels.push({ label: '同類型', value: 1, available: 1 <= maxTraceBack });
+        levels.push({ label: '同種', value: 0, available: true });
+      } else if (segs === 3) {
         levels.push({ label: '同來源', value: 2, available: 2 <= maxTraceBack });
-        levels.push({ label: '同子來源', value: 1, available: 1 <= maxTraceBack });
+        levels.push({ label: '同體系', value: 1, available: 1 <= maxTraceBack });
         levels.push({ label: '同種', value: 0, available: true });
       } else {
         levels.push({ label: '同來源', value: 1, available: 1 <= maxTraceBack });
@@ -368,7 +374,8 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     if (!activeFocusedEntries.length) return null;
     if (activeFocusedIsFictional) {
       const segs = (activeFocusedEntries[0].fictional_path || '').split('|').length;
-      if (segs === 3) return { 3: '同種', 2: '同子來源', 1: '同來源' };
+      if (segs >= 4) return { 4: '同種', 3: '同類型', 2: '同體系', 1: '同來源' };
+      if (segs === 3) return { 3: '同種', 2: '同體系', 1: '同來源' };
       return { 2: '同種', 1: '同來源' };
     }
     return { 8: '同亞種', 7: '同種', 6: '同屬', 5: '同科', 4: '同目', 3: '同綱', 2: '同門', 1: '同界' };
