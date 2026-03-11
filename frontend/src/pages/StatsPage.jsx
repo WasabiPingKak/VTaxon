@@ -96,7 +96,7 @@ export default function StatsPage() {
       </h1>
 
       {/* Hero cards */}
-      <HeroCards totals={data?.totals} />
+      <HeroCards totals={{ ...data?.totals, avg_traits_per_user: data?.avg_traits_per_user }} />
 
       {/* Row: Top species + Donut */}
       <div style={{
@@ -172,18 +172,6 @@ export default function StatsPage() {
         </ChartCard>
       </div>
 
-      {/* Footer stat */}
-      {data?.avg_traits_per_user != null && (
-        <div style={{
-          textAlign: 'center',
-          marginTop: 24,
-          padding: '16px 0',
-          color: 'rgba(255,255,255,0.4)',
-          fontSize: '0.82em',
-        }}>
-          平均每位 VTuber 擁有 <span style={{ color: '#38bdf8', fontWeight: 600 }}>{data.avg_traits_per_user}</span> 個物種特徵
-        </div>
-      )}
     </div>
   );
 }

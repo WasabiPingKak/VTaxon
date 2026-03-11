@@ -1,10 +1,10 @@
 import useIsMobile from '../../hooks/useIsMobile';
 
 const cards = [
-  { key: 'users', label: 'VTuber 總數' },
-  { key: 'tagged_users', label: '已標註物種' },
+  { key: 'tagged_users', label: '已建檔 VTuber' },
   { key: 'species_used', label: '現實物種數' },
   { key: 'fictional_used', label: '奇幻生物數' },
+  { key: 'avg_traits_per_user', label: '平均物種特徵數' },
 ];
 
 export default function HeroCards({ totals }) {
