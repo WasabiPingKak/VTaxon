@@ -111,6 +111,7 @@ export default function Navbar() {
 
       {/* Right section */}
       <div style={{ display: 'flex', gap: isMobile ? '8px' : '14px', alignItems: 'center' }}>
+        {/* 統計按鈕暫時隱藏，路由 /stats 仍可直接訪問 */}
         <Link to="/directory" title="圖鑑" style={{
           textDecoration: 'none',
           fontSize: '0.8em',
