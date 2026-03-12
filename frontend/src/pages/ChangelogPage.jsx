@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import SEOHead from '../components/SEOHead';
 
 import changelog_v2 from '../../../docs/changelogs/changelog-v2/changelog.md?raw';
-import changelog_2026_03_10 from '../../../docs/changelogs/2026-03-10/changelog.md?raw';
+import changelog_2026_03_10 from '../../../docs/changelogs/changelog-v1/changelog.md?raw';
 
 const versions = [
   {
