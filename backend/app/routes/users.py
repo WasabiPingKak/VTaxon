@@ -852,6 +852,20 @@ def refresh_oauth_account(account_id):
 
         db.session.commit()
         invalidate_tree_cache()
+
+        # Subscribe live detection if channel_url was set/updated
+        if account.channel_url:
+            try:
+                if account.provider == 'youtube':
+                    from .livestream import subscribe_youtube_user
+                    subscribe_youtube_user(account.channel_url)
+                elif account.provider == 'twitch' and account.provider_account_id:
+                    from .livestream import subscribe_twitch_user
+                    subscribe_twitch_user(account.provider_account_id)
+            except Exception as e:
+                log.warning('Failed to subscribe %s after refresh: %s',
+                            account.provider, e)
+
         return jsonify(account.to_dict())
 
     except requests.RequestException as e:
@@ -873,6 +887,20 @@ def update_oauth_account(account_id):
         account.channel_url = data['channel_url'] or None
 
     db.session.commit()
+
+    # Re-subscribe live detection when channel_url is updated
+    if 'channel_url' in data and account.channel_url:
+        try:
+            if account.provider == 'youtube':
+                from .livestream import subscribe_youtube_user
+                subscribe_youtube_user(account.channel_url)
+            elif account.provider == 'twitch' and account.provider_account_id:
+                from .livestream import subscribe_twitch_user
+                subscribe_twitch_user(account.provider_account_id)
+        except Exception as e:
+            log.warning('Failed to re-subscribe %s for %s: %s',
+                        account.provider, account.channel_url, e)
+
     return jsonify(account.to_dict())
 
 
