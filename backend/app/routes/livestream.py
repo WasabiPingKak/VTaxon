@@ -185,7 +185,7 @@ def youtube_webhook_notify():
 
 # ── Admin endpoints for Twitch subscription management ──
 
-@livestream_bp.route('/admin/twitch-subs', methods=['GET'])
+@livestream_bp.route('/livestream/twitch-subs', methods=['GET'])
 @admin_required
 def list_twitch_subs():
     """List all Twitch EventSub subscriptions."""
@@ -204,7 +204,7 @@ def list_twitch_subs():
         return jsonify({'error': str(e)}), 502
 
 
-@livestream_bp.route('/admin/rebuild-twitch-subs', methods=['POST'])
+@livestream_bp.route('/livestream/rebuild-twitch-subs', methods=['POST'])
 @admin_required
 def rebuild_twitch_subs():
     """Batch rebuild Twitch EventSub subscriptions for all Twitch users."""

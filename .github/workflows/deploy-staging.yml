@@ -41,7 +41,7 @@ jobs:
             --allow-unauthenticated \
             --min-instances 0 \
             --max-instances 3 \
-            --set-env-vars "FLASK_ENV=staging,DB_SCHEMA=staging,ALLOWED_ORIGINS=https://vtaxon-staging.web.app" \
+            --set-env-vars "^||^FLASK_ENV=staging||DB_SCHEMA=staging||ALLOWED_ORIGINS=https://vtaxon-staging.web.app||WEBHOOK_BASE_URL=https://vtaxon-api-staging-135773662063.asia-east1.run.app" \
             --set-secrets "\
           DATABASE_URL=DATABASE_URL_STAGING:latest,\
           SUPABASE_URL=SUPABASE_URL:latest,\
@@ -49,6 +49,8 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,\
           SUPABASE_JWT_SECRET=SUPABASE_JWT_SECRET:latest,\
           TWITCH_CLIENT_ID=TWITCH_CLIENT_ID:latest,\
+          TWITCH_CLIENT_SECRET=TWITCH_CLIENT_SECRET:latest,\
+          TWITCH_WEBHOOK_SECRET=TWITCH_WEBHOOK_SECRET:latest,\
           RESEND_API_KEY=RESEND_API_KEY:latest,\
           ADMIN_NOTIFY_EMAILS=ADMIN_NOTIFY_EMAILS:latest,\
           EMAIL_FROM=EMAIL_FROM:latest"
