@@ -118,6 +118,14 @@ def _handle_stream_online(event):
     broadcaster_login = event.get('broadcaster_user_login', '')
     stream_url = f'https://twitch.tv/{broadcaster_login}' if broadcaster_login else account.channel_url
 
+    # Fetch stream title from Helix API (best-effort)
+    from ..services.twitch import get_stream_title
+    client_id = os.environ.get('TWITCH_CLIENT_ID', '')
+    client_secret = os.environ.get('TWITCH_CLIENT_SECRET', '')
+    stream_title = None
+    if client_id and client_secret:
+        stream_title = get_stream_title(client_id, client_secret, broadcaster_id)
+
     # Upsert: INSERT or UPDATE on conflict
     existing = LiveStream.query.filter_by(
         user_id=account.user_id, provider='twitch'
@@ -125,6 +133,7 @@ def _handle_stream_online(event):
     if existing:
         existing.stream_id = event.get('id')
         existing.stream_url = stream_url
+        existing.stream_title = stream_title
         existing.started_at = datetime.now(timezone.utc)
     else:
         stream = LiveStream(
@@ -132,13 +141,15 @@ def _handle_stream_online(event):
             provider='twitch',
             stream_id=event.get('id'),
             stream_url=stream_url,
+            stream_title=stream_title,
             started_at=datetime.now(timezone.utc),
         )
         db.session.add(stream)
 
     db.session.commit()
     invalidate_live_cache()
-    log.info('Twitch stream.online: user_id=%s, broadcaster=%s', account.user_id, broadcaster_id)
+    log.info('Twitch stream.online: user_id=%s, broadcaster=%s, title=%s',
+             account.user_id, broadcaster_id, stream_title)
 
 
 def _handle_stream_offline(event):
