@@ -833,6 +833,45 @@ function drawVtuberNode(ctx, node, scale, state) {
     const startY = node.y + hexR + vFs * 0.3;
     drawWrappedText(ctx, lines, node.x, startY, lineHeight);
 
+    // LIVE badge below name
+    let liveBadgeBottomY = startY + lines.length * lineHeight;
+    if (isLive) {
+      const liveFs = scaledFontSize(9, scale);
+      const livePadX = 5 / Math.max(scale, FONT_MIN_SCALE);
+      const livePadY = 2 / Math.max(scale, FONT_MIN_SCALE);
+      const liveR = 3 / Math.max(scale, FONT_MIN_SCALE);
+      const liveY = liveBadgeBottomY + liveFs * 0.2;
+      ctx.font = fontStr(9, scale, 'bold');
+      const liveText = 'LIVE';
+      const liveW = ctx.measureText(liveText).width + livePadX * 2;
+      const dotR = 3 / Math.max(scale, FONT_MIN_SCALE);
+      const dotGap = 3 / Math.max(scale, FONT_MIN_SCALE);
+      const totalW = dotR * 2 + dotGap + liveW;
+      const liveH = liveFs + livePadY * 2;
+      const bx = node.x - totalW / 2;
+
+      // Background
+      ctx.beginPath();
+      roundedRect(ctx, bx, liveY, totalW, liveH, liveR);
+      ctx.fillStyle = 'rgba(239,68,68,0.9)';
+      ctx.fill();
+
+      // Pulsing dot
+      const dotAlpha = 0.6 + 0.4 * Math.sin(performance.now() / 600);
+      ctx.beginPath();
+      ctx.arc(bx + dotR + dotGap * 0.5, liveY + liveH / 2, dotR, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${dotAlpha})`;
+      ctx.fill();
+
+      // Text
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(liveText, bx + dotR * 2 + dotGap + (liveW / 2), liveY + livePadY);
+
+      liveBadgeBottomY = liveY + liveH;
+    }
+
     // Badges below name (filter badges + sort badge)
     if (d._entry) {
       const badges = state.activeFilters ? getActiveFilterBadges(d._entry, state.activeFilters) : [];
@@ -841,7 +880,7 @@ function drawVtuberNode(ctx, node, scale, state) {
       else if (sortBadge) badges.push(sortBadge);
       if (badges.length > 0) {
         const badgeFs = scaledFontSize(9, scale);
-        const badgeY = startY + lines.length * lineHeight + badgeFs * 0.3;
+        const badgeY = liveBadgeBottomY + badgeFs * 0.3;
         const padX = 3 / Math.max(scale, FONT_MIN_SCALE);
         const padY = 1 / Math.max(scale, FONT_MIN_SCALE);
         const gap = 3 / Math.max(scale, FONT_MIN_SCALE);
