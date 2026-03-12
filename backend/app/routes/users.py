@@ -653,10 +653,18 @@ def sync_oauth_accounts():
         # fallback — identity_data contains the Google account avatar, not
         # the YouTube channel avatar, and we don't want to overwrite a
         # previously-stored correct YT avatar with a Google one.
+        # Exception: if the account has NO avatar at all, use Google avatar
+        # as a last resort (better than showing nothing).  The actual
+        # fallback check is deferred until after the account query below
+        # (google_avatar_fallback flag).
+        google_avatar_fallback = None
         if db_provider == avatar_for_provider and avatar_url_input:
             avatar_url = avatar_url_input
         elif db_provider == 'youtube':
-            avatar_url = None  # don't use Google avatar for youtube provider
+            avatar_url = None  # don't overwrite existing YT avatar
+            google_avatar_fallback = (identity_data.get('picture')
+                                      or identity_data.get('avatar_url')
+                                      or None)
         else:
             avatar_url = (identity_data.get('avatar_url')
                           or identity_data.get('picture', ''))
@@ -685,6 +693,8 @@ def sync_oauth_accounts():
                 account.provider_display_name = display_name
             if avatar_url:
                 account.provider_avatar_url = avatar_url
+            elif google_avatar_fallback and not account.provider_avatar_url:
+                account.provider_avatar_url = google_avatar_fallback
             if channel_url:
                 account.channel_url = channel_url
             # Store provider token for later refresh
@@ -714,7 +724,7 @@ def sync_oauth_accounts():
                 provider=db_provider,
                 provider_account_id=provider_id,
                 provider_display_name=display_name or None,
-                provider_avatar_url=avatar_url or None,
+                provider_avatar_url=avatar_url or google_avatar_fallback or None,
                 channel_url=channel_url,
                 access_token=(provider_token
                               if provider_token and token_provider == db_provider
