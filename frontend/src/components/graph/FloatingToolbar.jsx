@@ -44,6 +44,9 @@ export default function FloatingToolbar({
   filters,
   filterPanelOpen,
   onFilterToggle,
+  liveCount,
+  liveFilterActive,
+  onLiveFilterToggle,
   isMobile,
   expanded,
   onExpandedChange,
@@ -245,8 +248,22 @@ export default function FloatingToolbar({
         </div>
       )}
 
-      {/* ── Action buttons: 篩選 + 打亂排序 ── */}
+      {/* ── Action buttons: 直播中 + 篩選 + 打亂排序 ── */}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 6, padding: '6px 4px 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {/* 直播中 */}
+        {liveCount > 0 && actionBtn('live-filter-btn', '直播中',
+          () => { onLiveFilterToggle(); if (isMobile) setExpanded(false); },
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444',
+            animation: 'vtaxonPulse 1.5s ease-in-out infinite', display: 'inline-block' }} />,
+          {
+            active: liveFilterActive,
+            badge: <span style={{
+              background: '#ef4444', color: '#fff', borderRadius: 7, padding: '0 4px',
+              fontSize: F.badge, fontWeight: 700, lineHeight: '14px', minWidth: 14, textAlign: 'center',
+            }}>{liveCount}</span>,
+          },
+        )}
+
         {/* 篩選 */}
         {hasFilters && actionBtn('filter-btn', '篩選', () => { onFilterToggle(); if (isMobile) setExpanded(false); },
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -350,6 +367,22 @@ export default function FloatingToolbar({
           })}
         </div>
       )}
+
+      {/* ── 直播中 + 打亂排序 ── */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 6, padding: '6px 4px 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {liveCount > 0 && actionBtn('live-filter-btn', '直播中',
+          () => { onLiveFilterToggle(); setExpanded(false); },
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444',
+            animation: 'vtaxonPulse 1.5s ease-in-out infinite', display: 'inline-block' }} />,
+          {
+            active: liveFilterActive,
+            badge: <span style={{
+              background: '#ef4444', color: '#fff', borderRadius: 7, padding: '0 4px',
+              fontSize: F.badge, fontWeight: 700, lineHeight: '14px', minWidth: 14, textAlign: 'center',
+            }}>{liveCount}</span>,
+          },
+        )}
+      </div>
 
       {/* ── 打亂排序 ── */}
       {onShuffle && (
@@ -550,7 +583,29 @@ export default function FloatingToolbar({
             </div>
           )}
 
-          {/* 5. Filter button + badge */}
+          {/* 5. Live filter button */}
+          {liveCount > 0 && (
+            <button type="button" title="直播中"
+              onClick={() => { onLiveFilterToggle(); setSortDropdownOpen(false); }}
+              style={{
+                minWidth: 34, height: 34, padding: 0, position: 'relative', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: liveFilterActive ? 'rgba(239,68,68,0.15)' : 'transparent',
+                border: 'none', borderRadius: 6,
+                color: liveFilterActive ? '#ef4444' : 'rgba(255,255,255,0.7)', cursor: 'pointer',
+              }}
+            >
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444',
+                animation: 'vtaxonPulse 1.5s ease-in-out infinite', display: 'inline-block' }} />
+              <span style={{
+                position: 'absolute', top: 0, right: -2,
+                background: '#ef4444', color: '#fff', borderRadius: 7, padding: '0 3px',
+                fontSize: 9, fontWeight: 700, lineHeight: '13px', minWidth: 13, textAlign: 'center',
+              }}>{liveCount}</span>
+            </button>
+          )}
+
+          {/* 6. Filter button + badge */}
           {hasFilters && (
             <button type="button" title="篩選" data-filter-toggle
               onClick={() => { onFilterToggle(); setSortDropdownOpen(false); }}
