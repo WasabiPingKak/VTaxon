@@ -85,11 +85,12 @@ export function AuthProvider({ children }) {
       const googleIdentity = identities.find(i => i.provider === 'google');
       if (googleIdentity && session.provider_token) {
         ytChannel = await fetchYouTubeChannel(session.provider_token);
-        // Show modal on fresh OAuth login if YouTube API failed — likely the
-        // user didn't grant the "查看您的 YouTube 帳戶" permission checkbox.
-        if (!ytChannel && loginProvider === 'google') {
-          setYtPermissionModal(true);
-        }
+      }
+      // Show modal on fresh Google login if YouTube data couldn't be fetched.
+      // Covers both: provider_token missing (getSession() race) and API failure
+      // (user didn't grant youtube.readonly scope).
+      if (!ytChannel && loginProvider === 'google' && googleIdentity) {
+        setYtPermissionModal(true);
       }
 
       // Use YouTube channel title if available; for Twitch use nickname (display name),
