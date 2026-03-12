@@ -735,6 +735,18 @@ def sync_oauth_accounts():
             user_id=g.current_user_id
         ).all()
 
+    # Subscribe new Twitch accounts to EventSub (non-blocking)
+    for account in synced:
+        if (account.provider == 'twitch' and account.provider_account_id
+                and account.created_at and
+                (datetime.now(timezone.utc) - account.created_at).total_seconds() < 30):
+            try:
+                from .livestream import subscribe_twitch_user
+                subscribe_twitch_user(account.provider_account_id)
+            except Exception as e:
+                log.warning('Failed to subscribe Twitch EventSub for %s: %s',
+                            account.provider_account_id, e)
+
     # Sync avatar_url from primary platform account
     user = db.session.get(User, g.current_user_id)
     if user and user.primary_platform:
@@ -856,6 +868,21 @@ def delete_oauth_account(account_id):
         return jsonify({'error': '無法解除最後一個綁定帳號'}), 400
 
     deleted_provider = account.provider
+    deleted_provider_id = account.provider_account_id
+
+    # Clean up EventSub + live_streams for Twitch accounts
+    if deleted_provider == 'twitch' and deleted_provider_id:
+        try:
+            from .livestream import unsubscribe_twitch_user
+            unsubscribe_twitch_user(deleted_provider_id)
+        except Exception as e:
+            log.warning('Failed to unsubscribe Twitch EventSub for %s: %s',
+                        deleted_provider_id, e)
+    from ..models import LiveStream
+    LiveStream.query.filter_by(
+        user_id=g.current_user_id, provider=deleted_provider
+    ).delete()
+
     db.session.delete(account)
 
     # If deleting the primary platform account, switch to remaining account

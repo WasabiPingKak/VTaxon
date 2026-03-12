@@ -23,7 +23,7 @@ const showMoreBtnStyle = {
 
 const TreeNode = memo(function TreeNode({
   node, depth, expandedSet, onToggle,
-  currentUserId, onSelectVtuber, highlightPaths, activeFilters, sortKey,
+  currentUserId, onSelectVtuber, highlightPaths, activeFilters, sortKey, liveUserIds,
 }) {
   const [showAll, setShowAll] = useState(false);
 
@@ -93,6 +93,7 @@ const TreeNode = memo(function TreeNode({
                   key={`${v.user_id}-${v.taxon_id}`}
                   entry={v}
                   isCurrentUser={currentUserId && v.user_id === currentUserId}
+                  isLive={liveUserIds && liveUserIds.has(v.user_id)}
                   onClick={() => onSelectVtuber(v)}
                   activeFilterBadges={activeFilters ? getActiveFilterBadges(v, activeFilters) : undefined}
                   sortBadge={sortKey ? getSortBadge(v, sortKey) : undefined}
@@ -114,6 +115,7 @@ const TreeNode = memo(function TreeNode({
               highlightPaths={highlightPaths}
               activeFilters={activeFilters}
               sortKey={sortKey}
+              liveUserIds={liveUserIds}
             />
           ))}
 

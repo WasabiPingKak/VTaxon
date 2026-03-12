@@ -43,6 +43,9 @@ export const FOCUSED_GLOW = 'rgba(233,30,140,0.8)';
 export const CLOSE_COLOR = '#FF6B35';
 export const CLOSE_GLOW = 'rgba(255,107,53,0.7)';
 
+export const LIVE_COLOR = '#22c55e';
+export const LIVE_GLOW = 'rgba(34,197,94,0.6)';
+
 export const EDGE_ALPHA = 0.18;
 export const EDGE_GLOW_BLUR = 4;
 

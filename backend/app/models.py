@@ -482,6 +482,39 @@ class Notification(db.Model):
         }
 
 
+class LiveStream(db.Model):
+    __tablename__ = 'live_streams'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id',
+                        ondelete='CASCADE'), nullable=False)
+    provider = db.Column(db.Text, nullable=False)
+    stream_id = db.Column(db.Text)
+    stream_title = db.Column(db.Text)
+    stream_url = db.Column(db.Text)
+    started_at = db.Column(db.DateTime(timezone=True), nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False,
+                           default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'provider',
+                            name='uq_live_stream_user_provider'),
+        db.CheckConstraint("provider IN ('youtube', 'twitch')",
+                           name='ck_live_stream_provider'),
+    )
+
+    def to_dict(self):
+        return {
+            'user_id': self.user_id,
+            'provider': self.provider,
+            'stream_id': self.stream_id,
+            'stream_title': self.stream_title,
+            'stream_url': self.stream_url,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+        }
+
+
 class VtuberTrait(db.Model):
     __tablename__ = 'vtuber_traits'
 

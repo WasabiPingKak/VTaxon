@@ -295,4 +295,7 @@ export const api = {
     method: 'DELETE',
   }),
 
+  // Live status (no session cache — always fresh)
+  getLiveStatus: () => apiFetch('/live-status'),
+
 };
