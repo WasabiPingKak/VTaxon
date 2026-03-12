@@ -9,7 +9,7 @@ const POLL_INTERVAL = 60_000; // 60 seconds
  *
  * Returns:
  *   liveUserIds: Set<string>  — set of user IDs currently live
- *   liveStreams: Map<string, { provider, stream_title, stream_url, started_at }>
+ *   liveStreams: Map<string, Array<{ provider, stream_title, stream_url, started_at }>>
  */
 export default function useLiveStatus() {
   const [liveUserIds, setLiveUserIds] = useState(() => new Set());
@@ -24,12 +24,10 @@ export default function useLiveStatus() {
       const streams = new Map();
       for (const s of data.live || []) {
         ids.add(s.user_id);
-        streams.set(s.user_id, {
-          provider: s.provider,
-          stream_title: s.stream_title,
-          stream_url: s.stream_url,
-          started_at: s.started_at,
-        });
+        const info = { provider: s.provider, stream_title: s.stream_title, stream_url: s.stream_url, started_at: s.started_at };
+        const arr = streams.get(s.user_id);
+        if (arr) arr.push(info);
+        else streams.set(s.user_id, [info]);
       }
       setLiveUserIds(ids);
       setLiveStreams(streams);
