@@ -130,10 +130,11 @@ export default function SettingsAccounts() {
 
   // Show YouTube permission warning if:
   // 1) Fresh login detected missing YouTube data (ytPermissionFailed from AuthContext), OR
-  // 2) YouTube account exists but has no avatar AND no channel_url (persistent state)
+  // 2) YouTube account exists but has no channel_url (only set when YouTube API succeeds;
+  //    provider_avatar_url may be non-null due to Google account avatar fallback)
   const ytAccount = oauthAccounts.find(a => a.provider === 'youtube');
   const showYtWarning = ytPermissionFailed
-    || (ytAccount && !ytAccount.provider_avatar_url && !ytAccount.channel_url);
+    || (ytAccount && !ytAccount.channel_url);
 
   if (loadingAccounts) {
     return <p style={{ color: 'rgba(255,255,255,0.4)' }}>載入中…</p>;
