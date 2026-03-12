@@ -32,6 +32,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [ytPermissionModal, setYtPermissionModal] = useState(false);
   const syncingRef = useRef(false);
   const mountedRef = useRef(true);
   const { addToast } = useToast();
@@ -84,6 +85,11 @@ export function AuthProvider({ children }) {
       const googleIdentity = identities.find(i => i.provider === 'google');
       if (googleIdentity && session.provider_token) {
         ytChannel = await fetchYouTubeChannel(session.provider_token);
+        // Show modal on fresh OAuth login if YouTube API failed — likely the
+        // user didn't grant the "查看您的 YouTube 帳戶" permission checkbox.
+        if (!ytChannel && loginProvider === 'google') {
+          setYtPermissionModal(true);
+        }
       }
 
       // Use YouTube channel title if available; for Twitch use nickname (display name),
@@ -281,6 +287,100 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={contextValue}>
       {children}
+
+      {/* YouTube permission modal — shown when user didn't grant youtube.readonly */}
+      {ytPermissionModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => setYtPermissionModal(false)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#1a1f2e', borderRadius: 16, maxWidth: 480, width: '100%',
+              padding: '28px 24px', color: '#fff', position: 'relative',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }}
+          >
+            <button
+              onClick={() => setYtPermissionModal(false)}
+              style={{
+                position: 'absolute', top: 12, right: 12, background: 'none',
+                border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 20,
+                cursor: 'pointer', lineHeight: 1,
+              }}
+            >
+              ✕
+            </button>
+
+            <div style={{
+              background: 'rgba(234,179,8,0.15)', border: '1px solid rgba(234,179,8,0.3)',
+              borderRadius: 10, padding: '14px 16px', marginBottom: 18,
+            }}>
+              <div style={{ fontSize: '1.05em', fontWeight: 700, color: '#eab308', marginBottom: 4 }}>
+                無法取得 YouTube 頻道資料
+              </div>
+              <div style={{ fontSize: '0.9em', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
+                登入時需要勾選「查看您的 YouTube 帳戶」權限，VTaxon 才能自動抓取您的頻道名稱與頭像。
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 14, fontSize: '0.88em', color: 'rgba(255,255,255,0.6)' }}>
+              請確認登入畫面中的這個選項有打勾：
+            </div>
+
+            <img
+              src="/help/yt-permission.png"
+              alt="Google OAuth 授權畫面 — 勾選「查看您的 YouTube 帳戶」"
+              style={{
+                width: '100%', borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.1)',
+                marginBottom: 18,
+              }}
+            />
+
+            <div style={{
+              fontSize: '0.9em', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6,
+              marginBottom: 20,
+            }}>
+              請<strong style={{ color: '#fff' }}>登出後重新登入</strong>，並在 Google 授權畫面中勾選此權限。
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setYtPermissionModal(false)}
+                style={{
+                  padding: '8px 18px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)',
+                  background: 'transparent', color: 'rgba(255,255,255,0.7)',
+                  cursor: 'pointer', fontSize: '0.9em',
+                }}
+              >
+                稍後再說
+              </button>
+              <button
+                onClick={async () => {
+                  setYtPermissionModal(false);
+                  await supabase.auth.signOut();
+                  setUser(null);
+                  setSession(null);
+                }}
+                style={{
+                  padding: '8px 18px', borderRadius: 8, border: 'none',
+                  background: '#ef4444', color: '#fff', cursor: 'pointer',
+                  fontSize: '0.9em', fontWeight: 600,
+                }}
+              >
+                立即登出
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 }
