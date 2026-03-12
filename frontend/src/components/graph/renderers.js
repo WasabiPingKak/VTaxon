@@ -6,6 +6,7 @@ import {
   BG_COLOR, BG_CENTER, RANK_COLORS, RANK_LABELS,
   VTUBER_COLOR, VTUBER_GLOW, CURRENT_USER_COLOR, CURRENT_USER_GLOW,
   FOCUSED_COLOR, FOCUSED_GLOW, CLOSE_COLOR, CLOSE_GLOW,
+  LIVE_COLOR, LIVE_GLOW,
   EDGE_ALPHA, EDGE_GLOW_BLUR,
   LABEL_COLOR, LABEL_DIM, COUNT_BADGE_BG, COUNT_BADGE_TEXT,
 } from './colors.js';
@@ -633,6 +634,7 @@ function drawVtuberNode(ctx, node, scale, state) {
   const isCurrentUser = d._isCurrentUser;
   const isFocused = state.focusedUserId && d._userId === state.focusedUserId;
   const isClose = state.closeVtuberIds && state.closeVtuberIds.get(d._userId)?.has(d._entry?.fictional_path || d._entry?.taxon_path);
+  const isLive = state.liveUserIds && state.liveUserIds.has(d._userId);
   const hovered = state.hoveredNode === node;
   const hexR = 21;
 
@@ -693,6 +695,12 @@ function drawVtuberNode(ctx, node, scale, state) {
   // ── 4B. Close: static outer hex ring ──
   if (isClose && !isFocused) {
     drawHexRing(ctx, node.x, node.y, hexR + 5, 'rgba(255,107,53,0.5)', 1.5);
+  }
+
+  // ── 5. Live: pulsing green hex ring (lowest priority — only when not focused/close) ──
+  if (isLive && !isFocused && !isClose) {
+    const liveAlpha = 0.3 + 0.35 * Math.sin(performance.now() / 1200);
+    drawHexRing(ctx, node.x, node.y, hexR + 5, `rgba(34,197,94,${liveAlpha})`, 2.0);
   }
 
   // ── Flash: dramatic double-pulse burst (traceBack change or filter match) ──
@@ -790,6 +798,18 @@ function drawVtuberNode(ctx, node, scale, state) {
       ctx.drawImage(img, node.x - 15, node.y - 15, 30, 30);
       ctx.restore();
     }
+  }
+
+  // LIVE red dot (upper-left of hexagon)
+  if (isLive && scale > LOD_DOTS_ONLY) {
+    const dotR = 4;
+    const dotX = node.x - hexR + 2;
+    const dotY = node.y - hexR + 2;
+    const dotAlpha = 0.6 + 0.4 * Math.sin(performance.now() / 600);
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(239,68,68,${dotAlpha})`;
+    ctx.fill();
   }
 
   // Name label (multi-line via _labelLines from layout)

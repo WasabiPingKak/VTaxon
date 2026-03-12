@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { buildTree, computeHighlightPaths, collectAllPaths, findNode, autoExpandPaths } from '../lib/treeUtils';
 import TreeNode from './TreeNode';
 import VtuberDetailPanel from './VtuberDetailPanel';
+import useLiveStatus from '../hooks/useLiveStatus';
 
 // Inject shared animation keyframes once
 if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-style')) {
@@ -28,6 +29,7 @@ if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-st
 }
 
 export default function TaxonomyTree({ currentUser, filters }) {
+  const { liveUserIds } = useLiveStatus();
   const [entries, setEntries] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -178,6 +180,7 @@ export default function TaxonomyTree({ currentUser, filters }) {
           onSelectVtuber={setSelectedVtuber}
           highlightPaths={highlightPaths}
           activeFilters={filters}
+          liveUserIds={liveUserIds}
         />
       ))}
 

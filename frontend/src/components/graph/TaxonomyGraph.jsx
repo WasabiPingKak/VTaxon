@@ -14,6 +14,7 @@ import FilterPanel from './FilterPanel';
 import FocusHUD from './FocusHUD';
 import { filterEntries, computeFacets, countActiveFilters, emptyFilters } from '../../lib/treeFilters';
 import useIsMobile from '../../hooks/useIsMobile';
+import useLiveStatus from '../../hooks/useLiveStatus';
 
 const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoading }, ref) {
   const canvasRef = useRef(null);
@@ -50,6 +51,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
   const [showDescription, setShowDescription] = useState(true);
   const isMobile = useIsMobile();
+  const { liveUserIds } = useLiveStatus();
 
   // Precompute which taxon_paths have breed entries (for __breed__unspecified logic)
   const breedPaths = useMemo(() => buildBreedPaths(entries || []), [entries]);
@@ -1072,14 +1074,15 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     maxCount,
     activeFilters: activeFiltersForRender,
     sortKey,
-  }), [hoveredNode, imageCacheRef, focusedUserId, closeVtuberIds, closeEdgePaths, positionMap, flashTick, maxCount, activeFiltersForRender, sortKey]);
+    liveUserIds,
+  }), [hoveredNode, imageCacheRef, focusedUserId, closeVtuberIds, closeEdgePaths, positionMap, flashTick, maxCount, activeFiltersForRender, sortKey, liveUserIds]);
 
   const onRender = useCallback((ctx, transform, canvasSize) => {
     drawGraph(ctx, nodes, edges, transform, canvasSize, renderState);
   }, [nodes, edges, renderState]);
 
   // Continuous animation loop (focus pulse + node animation)
-  const needsAnimLoop = !!focusedUserId || isAnimating || hasActiveFlash;
+  const needsAnimLoop = !!focusedUserId || isAnimating || hasActiveFlash || liveUserIds.size > 0;
   useEffect(() => {
     if (!needsAnimLoop) return;
     let running = true;

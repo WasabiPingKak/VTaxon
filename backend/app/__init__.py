@@ -56,6 +56,7 @@ def create_app(config_name=None):
     from .routes.notifications import notifications_bp
     from .routes.admin import admin_bp
     from .routes.stats import stats_bp
+    from .routes.livestream import livestream_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(users_bp, url_prefix='/api/users')
@@ -68,6 +69,7 @@ def create_app(config_name=None):
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(stats_bp, url_prefix='/api/stats')
+    app.register_blueprint(livestream_bp, url_prefix='/api')
     app.register_blueprint(seo_bp, url_prefix='/api')
 
     # Security headers for all API responses

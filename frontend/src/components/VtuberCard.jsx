@@ -4,7 +4,18 @@ import RankBadge from './RankBadge';
 import { YouTubeIcon, TwitchIcon } from './SnsIcons';
 import { displayScientificName } from '../lib/speciesName';
 
-const VtuberCard = memo(function VtuberCard({ entry, isCurrentUser, onClick, activeFilterBadges, sortBadge }) {
+// Inject live-pulse keyframe once
+let _livePulseInjected = false;
+function ensureLivePulseKeyframe() {
+  if (_livePulseInjected || typeof document === 'undefined') return;
+  _livePulseInjected = true;
+  const style = document.createElement('style');
+  style.textContent = `@keyframes vtaxon-live-pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}`;
+  document.head.appendChild(style);
+}
+
+const VtuberCard = memo(function VtuberCard({ entry, isCurrentUser, isLive, onClick, activeFilterBadges, sortBadge }) {
+  if (isLive) ensureLivePulseKeyframe();
   const [imgError, setImgError] = useState(false);
 
   const flags = (entry.country_flags || [])
@@ -53,6 +64,21 @@ const VtuberCard = memo(function VtuberCard({ entry, isCurrentUser, onClick, act
       <div style={{ minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 600, fontSize: '0.9em', color: '#e2e8f0' }}>{entry.display_name}</span>
+          {isLive && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: '3px',
+              fontSize: '0.65em', fontWeight: 700, color: '#ef4444',
+              lineHeight: 1,
+            }}>
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: '#ef4444',
+                animation: 'vtaxon-live-pulse 1.5s ease-in-out infinite',
+                flexShrink: 0,
+              }} />
+              直播中
+            </span>
+          )}
           {flags && <span style={{ fontSize: '0.85em' }}>{flags}</span>}
         </div>
         <div style={{ fontSize: '0.78em', color: 'rgba(255,255,255,0.5)', marginTop: '1px' }}>

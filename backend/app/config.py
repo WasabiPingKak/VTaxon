@@ -11,6 +11,12 @@ class Config:
     SUPABASE_JWT_SECRET = os.environ.get('SUPABASE_JWT_SECRET')
     ALLOW_HS256_FALLBACK = os.environ.get('ALLOW_HS256_FALLBACK', '').lower() in ('1', 'true', 'yes')
 
+    # Twitch EventSub
+    TWITCH_CLIENT_ID = os.environ.get('TWITCH_CLIENT_ID', '')
+    TWITCH_CLIENT_SECRET = os.environ.get('TWITCH_CLIENT_SECRET', '')
+    TWITCH_WEBHOOK_SECRET = os.environ.get('TWITCH_WEBHOOK_SECRET', '')
+    WEBHOOK_BASE_URL = os.environ.get('WEBHOOK_BASE_URL', '')
+
     # CORS — default empty (no wildcard); CI/CD sets explicit whitelist
     ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', '')
 
