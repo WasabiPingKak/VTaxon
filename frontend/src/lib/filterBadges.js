@@ -155,14 +155,14 @@ export function getSortBadge(entry, sortKey) {
     const now = new Date();
     const diffMs = now - created;
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    let label, opacity;
-    if (diffDays < 1)        { label = '今天';                                opacity = 1;    }
-    else if (diffDays < 7)   { label = `${diffDays}天前`;                     opacity = 0.85; }
-    else if (diffDays < 30)  { label = `${Math.floor(diffDays / 7)}週前`;     opacity = 0.65; }
-    else if (diffDays < 180) { label = `${Math.floor(diffDays / 30)}月前`;    opacity = 0.45; }
-    else if (diffDays < 365) { label = `${Math.floor(diffDays / 30)}月前`;    opacity = 0.3;  }
-    else                     { label = `${Math.floor(diffDays / 365)}年前`;   opacity = 0.2;  }
-    return { label, color: `rgba(103,232,249,${opacity})`, bg: `rgba(103,232,249,${opacity * 0.15})` };
+    let label, color, bg;
+    if (diffDays < 1)        { label = '今天';                              color = '#67e8f9'; bg = 'rgba(103,232,249,0.15)'; }
+    else if (diffDays < 7)   { label = `${diffDays}天前`;                   color = '#67e8f9'; bg = 'rgba(103,232,249,0.12)'; }
+    else if (diffDays < 30)  { label = `${Math.floor(diffDays / 7)}週前`;   color = '#93c5fd'; bg = 'rgba(147,197,253,0.10)'; }
+    else if (diffDays < 180) { label = `${Math.floor(diffDays / 30)}月前`;  color = '#a5b4c8'; bg = 'rgba(165,180,200,0.08)'; }
+    else if (diffDays < 365) { label = `${Math.floor(diffDays / 30)}月前`;  color = '#7a8596'; bg = 'rgba(122,133,150,0.08)'; }
+    else                     { label = `${Math.floor(diffDays / 365)}年前`; color = '#586472'; bg = 'rgba(88,100,114,0.08)';  }
+    return { label, color, bg };
   }
 
   return null;
