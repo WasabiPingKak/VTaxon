@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { buildTree, computeHighlightPaths, collectAllPaths, findNode, autoExpandPaths } from '../lib/treeUtils';
 import TreeNode from './TreeNode';
+import VtuberCard from './VtuberCard';
 import VtuberDetailPanel from './VtuberDetailPanel';
 import useLiveStatus from '../hooks/useLiveStatus';
 
@@ -29,7 +30,7 @@ if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-st
 }
 
 export default function TaxonomyTree({ currentUser, filters }) {
-  const { liveUserIds } = useLiveStatus();
+  const { liveUserIds, liveStreams } = useLiveStatus();
   const [entries, setEntries] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -149,6 +150,20 @@ export default function TaxonomyTree({ currentUser, filters }) {
     );
   }
 
+  // Collect live entries (deduplicated by user_id, pick first entry per user)
+  const liveEntries = useMemo(() => {
+    if (!entries || liveUserIds.size === 0) return [];
+    const seen = new Set();
+    const result = [];
+    for (const e of entries) {
+      if (liveUserIds.has(e.user_id) && !seen.has(e.user_id)) {
+        seen.add(e.user_id);
+        result.push(e);
+      }
+    }
+    return result;
+  }, [entries, liveUserIds]);
+
   // Render top-level children (kingdoms)
   const topNodes = [...tree.children.values()].sort((a, b) => b.count - a.count);
 
@@ -167,6 +182,35 @@ export default function TaxonomyTree({ currentUser, filters }) {
           <button type="button" onClick={handleCollapseAll} style={toolBtn}>全部收合</button>
         </div>
       </div>
+
+      {/* Live banner */}
+      {liveEntries.length > 0 && (
+        <div style={liveBannerStyle}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            marginBottom: '8px', fontSize: '0.85em', fontWeight: 600, color: '#ef4444',
+          }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: '#ef4444',
+              animation: 'vtaxonPulse 1.5s ease-in-out infinite',
+              flexShrink: 0,
+            }} />
+            {liveEntries.length} 位正在直播
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {liveEntries.map(v => (
+              <VtuberCard
+                key={v.user_id}
+                entry={v}
+                isCurrentUser={currentUser?.id === v.user_id}
+                isLive
+                onClick={() => setSelectedVtuber(v)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tree */}
       {topNodes.map(node => (
@@ -196,6 +240,13 @@ export default function TaxonomyTree({ currentUser, filters }) {
     </div>
   );
 }
+
+const liveBannerStyle = {
+  marginBottom: '16px', padding: '12px',
+  borderRadius: '8px',
+  border: '1px solid rgba(239,68,68,0.2)',
+  background: 'rgba(239,68,68,0.05)',
+};
 
 const toolBtn = {
   background: 'none', border: '1px solid #ddd', borderRadius: '4px',

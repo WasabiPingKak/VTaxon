@@ -697,10 +697,15 @@ function drawVtuberNode(ctx, node, scale, state) {
     drawHexRing(ctx, node.x, node.y, hexR + 5, 'rgba(255,107,53,0.5)', 1.5);
   }
 
-  // ── 5. Live: pulsing green hex ring (lowest priority — only when not focused/close) ──
+  // ── 5. Live: pulsing green hex ring + outer glow ──
   if (isLive && !isFocused && !isClose) {
-    const liveAlpha = 0.3 + 0.35 * Math.sin(performance.now() / 1200);
-    drawHexRing(ctx, node.x, node.y, hexR + 5, `rgba(34,197,94,${liveAlpha})`, 2.0);
+    const liveAlpha = 0.4 + 0.4 * Math.sin(performance.now() / 1000);
+    // Outer glow
+    ctx.save();
+    ctx.shadowColor = `rgba(34,197,94,${liveAlpha * 0.6})`;
+    ctx.shadowBlur = 12;
+    drawHexRing(ctx, node.x, node.y, hexR + 6, `rgba(34,197,94,${liveAlpha})`, 3.0);
+    ctx.restore();
   }
 
   // ── Flash: dramatic double-pulse burst (traceBack change or filter match) ──
@@ -800,16 +805,20 @@ function drawVtuberNode(ctx, node, scale, state) {
     }
   }
 
-  // LIVE red dot (upper-left of hexagon)
+  // LIVE red dot (upper-left of hexagon) with glow
   if (isLive && scale > LOD_DOTS_ONLY) {
-    const dotR = 4;
+    const dotR = 5;
     const dotX = node.x - hexR + 2;
     const dotY = node.y - hexR + 2;
-    const dotAlpha = 0.6 + 0.4 * Math.sin(performance.now() / 600);
+    const dotAlpha = 0.7 + 0.3 * Math.sin(performance.now() / 600);
+    ctx.save();
+    ctx.shadowColor = 'rgba(239,68,68,0.6)';
+    ctx.shadowBlur = 6;
     ctx.beginPath();
     ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(239,68,68,${dotAlpha})`;
     ctx.fill();
+    ctx.restore();
   }
 
   // Name label (multi-line via _labelLines from layout)
