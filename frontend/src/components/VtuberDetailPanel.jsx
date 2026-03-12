@@ -9,6 +9,7 @@ import ProfileInfoCard from './ProfileInfoCard';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import { displayScientificName } from '../lib/speciesName';
+import useLiveStatus from '../hooks/useLiveStatus';
 
 const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
 const RANK_TO_UPPER = {
@@ -341,6 +342,9 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
   const [closing, setClosing] = useState(false);
   const [userDetail, setUserDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const { liveUserIds, liveStreams } = useLiveStatus();
+  const isLive = entry && liveUserIds.has(entry.user_id);
+  const liveInfo = isLive ? liveStreams.get(entry.user_id) : null;
 
   useEffect(() => {
     if (!entry?.user_id) return;
@@ -384,6 +388,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
         @keyframes vtaxonSlideOut { from { transform: translateX(0); } to { transform: translateX(100%); } }
         @keyframes vtaxonFadeIn   { from { opacity: 0; } to { opacity: 1; } }
         @keyframes vtaxonFadeOut  { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes vtaxon-live-pulse { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
       `}</style>
 
       {/* Backdrop */}
@@ -453,26 +458,64 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
         <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
           {/* Avatar */}
           <div style={{ textAlign: 'center', marginBottom: '6px' }}>
-            {entry.avatar_url && !imgError ? (
-              <img src={entry.avatar_url} alt={entry.display_name}
-                loading="lazy"
-                style={{ width: 80, height: 80, borderRadius: '50%' }}
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <div style={{
-                width: 80, height: 80, borderRadius: '50%', margin: '0 auto',
-                background: 'rgba(255,255,255,0.1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '32px', color: 'rgba(255,255,255,0.4)',
-              }}>?</div>
-            )}
+            <div style={{
+              position: 'relative', display: 'inline-block',
+              padding: isLive ? 3 : 0,
+              borderRadius: '50%',
+              border: isLive ? '3px solid #ef4444' : 'none',
+              boxShadow: isLive ? '0 0 12px rgba(239,68,68,0.4)' : 'none',
+            }}>
+              {entry.avatar_url && !imgError ? (
+                <img src={entry.avatar_url} alt={entry.display_name}
+                  loading="lazy"
+                  style={{ width: 80, height: 80, borderRadius: '50%', display: 'block' }}
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <div style={{
+                  width: 80, height: 80, borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '32px', color: 'rgba(255,255,255,0.4)',
+                }}>?</div>
+              )}
+              {isLive && (
+                <span style={{
+                  position: 'absolute', bottom: -2, left: '50%', transform: 'translateX(-50%)',
+                  padding: '1px 8px', borderRadius: '4px',
+                  background: '#ef4444', color: '#fff',
+                  fontSize: '0.6em', fontWeight: 700, letterSpacing: '0.5px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                }}>LIVE</span>
+              )}
+            </div>
           </div>
 
           {/* Display name */}
           <div style={{ textAlign: 'center', fontSize: '1.2em', fontWeight: 600, marginBottom: '4px' }}>
             {entry.display_name}
           </div>
+
+          {/* Live stream link */}
+          {isLive && liveInfo?.stream_url && (
+            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+              <a href={liveInfo.stream_url} target="_blank" rel="noopener noreferrer" style={{
+                display: 'inline-flex', alignItems: 'center', gap: '5px',
+                padding: '4px 12px', borderRadius: '6px',
+                background: 'rgba(239,68,68,0.12)', color: '#ef4444',
+                border: '1px solid rgba(239,68,68,0.25)',
+                fontSize: '0.8em', fontWeight: 600, textDecoration: 'none',
+              }}>
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: '#ef4444',
+                  animation: 'vtaxon-live-pulse 1.5s ease-in-out infinite',
+                  flexShrink: 0,
+                }} />
+                {liveInfo.stream_title || '正在直播'}
+              </a>
+            </div>
+          )}
           <OrgBadge orgType={entry.org_type} organization={entry.organization} style={{ textAlign: 'center', marginBottom: '10px' }} />
 
           {/* Links row */}
