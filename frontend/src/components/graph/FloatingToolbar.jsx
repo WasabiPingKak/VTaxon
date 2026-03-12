@@ -650,7 +650,7 @@ export default function FloatingToolbar({
 
   // ═══════ Desktop: full sidebar panel ═══════
   return (
-    <div style={{
+    <div className="vtaxon-scroll" style={{
       background: 'rgba(8,13,21,0.75)',
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
