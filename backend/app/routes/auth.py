@@ -153,7 +153,13 @@ def auth_callback():
         # Existing user: update avatar_url if frontend provides a fresh
         # YouTube channel avatar (indicated by yt_avatar flag).
         # This ensures YT avatar replaces stale Google avatar on re-login.
+        # Also backfill when avatar_url is currently null (e.g. YouTube API
+        # failed on first registration and Google meta had no picture).
         if data.get('yt_avatar') and data.get('avatar_url'):
+            user.avatar_url = data['avatar_url']
+            db.session.commit()
+            invalidate_tree_cache()
+        elif not user.avatar_url and data.get('avatar_url'):
             user.avatar_url = data['avatar_url']
             db.session.commit()
             invalidate_tree_cache()
