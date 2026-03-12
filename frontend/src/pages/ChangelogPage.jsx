@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -25,7 +26,7 @@ const heading = {
   fontSize: '1.05em',
   borderBottom: '1px solid rgba(255,255,255,0.1)',
   paddingBottom: 8,
-  marginTop: 32,
+  marginTop: 24,
   marginBottom: 12,
 };
 
@@ -39,7 +40,7 @@ const para = {
 const listStyle = {
   color: 'rgba(255,255,255,0.6)',
   fontSize: '0.85em',
-  lineHeight: 1.8,
+  lineHeight: 1.7,
   paddingLeft: 22,
   margin: '6px 0',
 };
@@ -80,7 +81,7 @@ const mdComponents = {
   h3: ({ children }) => <h3 style={subHeading}>{children}</h3>,
   p: ({ children }) => <p style={para}>{children}</p>,
   ul: ({ children }) => <ul style={listStyle}>{children}</ul>,
-  li: ({ children }) => <li>{children}</li>,
+  li: ({ children }) => <li style={{ marginBottom: 4 }}>{children}</li>,
   strong: ({ children }) => <strong style={{ color: '#fff' }}>{children}</strong>,
   hr: () => <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', margin: '24px 0' }} />,
   table: ({ children }) => <table style={tableStyle}>{children}</table>,
@@ -92,6 +93,10 @@ const mdComponents = {
 };
 
 export default function ChangelogPage() {
+  const [expanded, setExpanded] = useState({ 0: true });
+
+  const toggle = (i) => setExpanded((prev) => ({ ...prev, [i]: !prev[i] }));
+
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 20px 80px' }}>
       <SEOHead
@@ -112,26 +117,62 @@ export default function ChangelogPage() {
         VTaxon 歷次更新內容紀錄
       </p>
 
-      {versions.map((v, i) => (
-        <section key={i}>
-          <div style={{
-            padding: '20px 24px',
-            borderRadius: 12,
-            border: '1px solid rgba(255,255,255,0.08)',
-            background: 'rgba(255,255,255,0.02)',
-            marginBottom: 32,
-          }}>
-            <h2 style={{ color: '#fff', fontWeight: 600, fontSize: '1.1em', margin: '0 0 4px' }}>
-              {v.date} 更新
-            </h2>
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.82em', margin: 0 }}>
-              {v.title}
-            </p>
-          </div>
+      {versions.map((v, i) => {
+        const isOpen = !!expanded[i];
+        return (
+          <section key={i} style={{ marginBottom: 40 }}>
+            <div
+              style={{
+                padding: '20px 24px',
+                borderRadius: isOpen ? '12px 12px 0 0' : 12,
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.02)',
+                cursor: 'pointer',
+                userSelect: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+              onClick={() => toggle(i)}
+            >
+              <div>
+                <h2 style={{ color: '#fff', fontWeight: 600, fontSize: '1.1em', margin: '0 0 4px' }}>
+                  {v.date} 更新
+                </h2>
+                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.82em', margin: 0 }}>
+                  {v.title}
+                </p>
+              </div>
+              <span style={{
+                color: 'rgba(255,255,255,0.3)',
+                fontSize: '0.85em',
+                marginLeft: 16,
+                transition: 'transform 0.2s ease',
+                transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+              }}>
+                ▼
+              </span>
+            </div>
 
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{v.content}</ReactMarkdown>
-        </section>
-      ))}
+            <div style={{
+              maxHeight: isOpen ? 5000 : 0,
+              overflow: 'hidden',
+              transition: 'max-height 0.3s ease',
+              borderLeft: '1px solid rgba(255,255,255,0.08)',
+              borderRight: '1px solid rgba(255,255,255,0.08)',
+              borderBottom: isOpen ? '1px solid rgba(255,255,255,0.08)' : 'none',
+              borderRadius: '0 0 12px 12px',
+              background: 'rgba(255,255,255,0.01)',
+            }}>
+              <div style={{ padding: '4px 24px 20px' }}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                  {v.content}
+                </ReactMarkdown>
+              </div>
+            </div>
+          </section>
+        );
+      })}
 
       <div style={{ marginTop: 48, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <Link to="/" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85em', textDecoration: 'none' }}>
