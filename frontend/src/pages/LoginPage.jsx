@@ -169,31 +169,7 @@ export default function LoginPage() {
           登入時會跳轉至認證平台 <span style={{ color: 'rgba(255,255,255,0.45)' }}>Supabase</span>，網址可能顯示 supabase.co 網域，此為正常現象。
         </p>
 
-        {/* Section 5: Google OAuth suspension notice */}
-        <div style={{
-          background: 'rgba(239,68,68,0.10)',
-          border: '1px solid rgba(239,68,68,0.35)',
-          borderRadius: 10,
-          padding: '12px 14px',
-          ...sectionGap,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-            <span style={{ fontSize: '1.1em', lineHeight: 1, flexShrink: 0, marginTop: 2 }}>🔴</span>
-            <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.8em', lineHeight: 1.7 }}>
-              <strong style={{ color: '#f87171' }}>Google 登入暫時無法接受新用戶</strong>
-              <br />
-              因意外狀況，Google 驗證需重新審核，預計 1–2 天內恢復。
-              <br />
-              <span style={{ color: 'rgba(255,255,255,0.45)' }}>✅ 已使用過 Google 登入的用戶不受影響，可正常登入。</span>
-              <br />
-              新用戶請暫時使用{' '}
-              <strong style={{ color: '#a970ff' }}>Twitch 帳號</strong>{' '}
-              登入，未來可合併綁定帳號，不影響任何資料。
-            </div>
-          </div>
-        </div>
-
-        {/* Section 6: OAuth buttons */}
+        {/* Section 5: OAuth buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
           <button
             disabled={disabled}
