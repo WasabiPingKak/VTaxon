@@ -92,6 +92,29 @@ def list_eventsub_subscriptions(client_id, client_secret):
     return subs
 
 
+def get_stream_title(client_id, client_secret, broadcaster_id):
+    """Fetch current stream title via Helix GET /streams.
+
+    Returns title string or None. Rate limit: 800 req/min — only called on
+    stream.online events so well within budget.
+    """
+    try:
+        token = get_app_access_token(client_id, client_secret)
+        resp = requests.get('https://api.twitch.tv/helix/streams',
+                            params={'user_id': broadcaster_id},
+                            headers={
+                                'Authorization': f'Bearer {token}',
+                                'Client-Id': client_id,
+                            }, timeout=10)
+        resp.raise_for_status()
+        data = resp.json().get('data', [])
+        if data:
+            return data[0].get('title')
+    except Exception as e:
+        log.warning('Failed to fetch Twitch stream title for %s: %s', broadcaster_id, e)
+    return None
+
+
 def verify_webhook_signature(headers, body, secret):
     """Verify Twitch EventSub webhook HMAC-SHA256 signature.
 
