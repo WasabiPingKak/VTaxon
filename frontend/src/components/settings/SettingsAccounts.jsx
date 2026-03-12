@@ -10,7 +10,7 @@ const PROVIDER_COLORS = { youtube: '#FF0000', twitch: '#9146FF' };
 const SUPABASE_PROVIDER_MAP = { youtube: 'google', twitch: 'twitch' };
 
 export default function SettingsAccounts() {
-  const { user, setUser, linkProvider } = useAuth();
+  const { user, setUser, linkProvider, ytPermissionFailed, signOut } = useAuth();
   const { addToast } = useToast();
 
   const [oauthAccounts, setOauthAccounts] = useState([]);
@@ -128,6 +128,13 @@ export default function SettingsAccounts() {
   const unboundProviders = ['youtube', 'twitch'].filter(p => !boundProviders.has(p));
   const isLastAccount = oauthAccounts.length <= 1;
 
+  // Show YouTube permission warning if:
+  // 1) Fresh login detected missing YouTube data (ytPermissionFailed from AuthContext), OR
+  // 2) YouTube account exists but has no avatar AND no channel_url (persistent state)
+  const ytAccount = oauthAccounts.find(a => a.provider === 'youtube');
+  const showYtWarning = ytPermissionFailed
+    || (ytAccount && !ytAccount.provider_avatar_url && !ytAccount.channel_url);
+
   if (loadingAccounts) {
     return <p style={{ color: 'rgba(255,255,255,0.4)' }}>載入中…</p>;
   }
@@ -155,6 +162,58 @@ export default function SettingsAccounts() {
           settingPrimary={accountLoading[account.id] === 'settingPrimary'}
         />
       ))}
+
+      {showYtWarning && (
+        <div style={{
+          marginTop: 12, borderRadius: 10, overflow: 'hidden',
+          border: '1px solid rgba(234,179,8,0.35)',
+          background: 'rgba(234,179,8,0.08)',
+        }}>
+          <div style={{ padding: '16px 18px' }}>
+            <div style={{ fontSize: '1em', fontWeight: 700, color: '#eab308', marginBottom: 6 }}>
+              YouTube 頻道資料未授權
+            </div>
+            <div style={{ fontSize: '0.9em', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6 }}>
+              VTaxon 無法取得您的 YouTube 頻道名稱與頭像。這通常是因為登入時未勾選「查看您的 YouTube 帳戶」權限。
+            </div>
+          </div>
+
+          <div style={{ padding: '0 18px 16px' }}>
+            <div style={{ fontSize: '0.85em', color: 'rgba(255,255,255,0.5)', marginBottom: 10 }}>
+              請在登入畫面中勾選以下選項：
+            </div>
+            <img
+              src="/help/yt-permission.png"
+              alt="Google OAuth 授權畫面 — 勾選「查看您的 YouTube 帳戶」"
+              style={{
+                width: '100%', borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}
+            />
+          </div>
+
+          <div style={{
+            padding: '14px 18px',
+            borderTop: '1px solid rgba(234,179,8,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 12, flexWrap: 'wrap',
+          }}>
+            <div style={{ fontSize: '0.88em', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+              請登出後重新登入，並記得勾選此權限
+            </div>
+            <button
+              onClick={signOut}
+              style={{
+                padding: '8px 20px', borderRadius: 8, border: 'none',
+                background: '#ef4444', color: '#fff', cursor: 'pointer',
+                fontSize: '0.9em', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
+              }}
+            >
+              登出並重新登入
+            </button>
+          </div>
+        </div>
+      )}
 
       {unboundProviders.map(provider => (
         <button key={provider} type="button" onClick={() => handleLink(provider)}
