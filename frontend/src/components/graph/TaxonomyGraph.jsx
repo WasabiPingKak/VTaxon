@@ -48,6 +48,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   // Filter state
   const [filters, setFilters] = useState(() => emptyFilters());
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [liveFilterActive, setLiveFilterActive] = useState(false);
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
   const [showDescription, setShowDescription] = useState(true);
   const isMobile = useIsMobile();
@@ -212,6 +213,32 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const filteredFictionalEntries = useMemo(() =>
     filterEntries(fictionalEntries, filters), [fictionalEntries, filters]);
 
+  // ── Live filter (layered on top of regular filters) ──
+  const finalEntries = useMemo(() => {
+    if (!liveFilterActive) return filteredEntries;
+    return filteredEntries.filter(e => liveUserIds.has(e.user_id));
+  }, [filteredEntries, liveFilterActive, liveUserIds]);
+
+  const finalFictionalEntries = useMemo(() => {
+    if (!liveFilterActive) return filteredFictionalEntries;
+    return filteredFictionalEntries.filter(e => liveUserIds.has(e.user_id));
+  }, [filteredFictionalEntries, liveFilterActive, liveUserIds]);
+
+  // Live count from raw entries (not affected by other filters)
+  const liveCount = useMemo(() => {
+    if (!entries || !liveUserIds || liveUserIds.size === 0) return 0;
+    const seen = new Set();
+    for (const e of entries) {
+      if (liveUserIds.has(e.user_id)) seen.add(e.user_id);
+    }
+    if (fictionalEntries) {
+      for (const e of fictionalEntries) {
+        if (liveUserIds.has(e.user_id)) seen.add(e.user_id);
+      }
+    }
+    return seen.size;
+  }, [entries, fictionalEntries, liveUserIds]);
+
   // Facets from raw (unfiltered) entries — combined and deduplicated
   const facets = useMemo(() => {
     const all = [...(entries || []), ...(fictionalEntries || [])];
@@ -269,7 +296,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const hasSortBadge = (sortKey === 'debut_date' || sortKey === 'created_at') ? 2 : 0;
   const totalBadgeCount = activeFilterCount + hasSortBadge;
   const { nodes, edges, bounds, rootData, fictionalRootData, maxCount } = useTreeLayout(
-    filteredEntries, filteredFictionalEntries, expandedSet, currentUser?.id, realSortConfig, fictSortConfig, totalBadgeCount,
+    finalEntries, finalFictionalEntries, expandedSet, currentUser?.id, realSortConfig, fictSortConfig, totalBadgeCount,
   );
   nodesRef.current = nodes;
 
@@ -538,6 +565,16 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       }, 1100);
     }
   }, [entries, fictionalEntries, scheduleCameraFit]);
+
+  const handleLiveFilterToggle = useCallback(() => {
+    setLiveFilterActive(prev => {
+      const next = !prev;
+      if (next) {
+        scheduleCameraFit(true, null);
+      }
+      return next;
+    });
+  }, [scheduleCameraFit]);
 
   useEffect(() => {
     if (prevTickRef.current === traceBackTick) return;
@@ -1151,7 +1188,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   }
 
   const totalCount = (entries?.length || 0) + (fictionalEntries?.length || 0);
-  const filteredCount = (filteredEntries?.length || 0) + (filteredFictionalEntries?.length || 0);
+  const filteredCount = (finalEntries?.length || 0) + (finalFictionalEntries?.length || 0);
 
   return (
     <>
@@ -1229,6 +1266,9 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
           filters={filters}
           filterPanelOpen={filterPanelOpen}
           onFilterToggle={() => setFilterPanelOpen(p => !p)}
+          liveCount={liveCount}
+          liveFilterActive={liveFilterActive}
+          onLiveFilterToggle={handleLiveFilterToggle}
           isMobile={isMobile}
           expanded={toolbarExpanded}
           onExpandedChange={setToolbarExpanded}

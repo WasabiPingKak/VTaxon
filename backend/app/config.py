@@ -17,6 +17,12 @@ class Config:
     TWITCH_WEBHOOK_SECRET = os.environ.get('TWITCH_WEBHOOK_SECRET', '')
     WEBHOOK_BASE_URL = os.environ.get('WEBHOOK_BASE_URL', '')
 
+    # YouTube PubSubHubbub
+    YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY', '')
+
+    # Cron authentication
+    CRON_SECRET = os.environ.get('CRON_SECRET', '')
+
     # CORS — default empty (no wildcard); CI/CD sets explicit whitelist
     ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', '')
 
