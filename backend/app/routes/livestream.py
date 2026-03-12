@@ -207,7 +207,13 @@ def list_twitch_subs():
 @livestream_bp.route('/livestream/rebuild-twitch-subs', methods=['POST'])
 @admin_required
 def rebuild_twitch_subs():
-    """Batch rebuild Twitch EventSub subscriptions for all Twitch users."""
+    """Batch rebuild Twitch EventSub subscriptions for all Twitch users.
+
+    Query params:
+      ?offset=N  — skip first N accounts (default 0)
+      ?limit=N   — process N accounts per call (default 20)
+      ?clean=1   — delete all existing subscriptions first (only on first call)
+    """
     from ..services.twitch import (create_eventsub_subscription,
                                     delete_eventsub_subscription,
                                     list_eventsub_subscriptions)
@@ -222,22 +228,33 @@ def rebuild_twitch_subs():
 
     callback_url = f'{webhook_base_url}/api/webhooks/twitch'
 
-    # 1. Delete all existing subscriptions
-    try:
-        existing = list_eventsub_subscriptions(client_id, client_secret)
-        for sub in existing:
-            try:
-                delete_eventsub_subscription(client_id, client_secret, sub['id'])
-            except Exception as e:
-                log.warning('Failed to delete subscription %s: %s', sub['id'], e)
-    except Exception as e:
-        log.error('Failed to list existing subscriptions: %s', e)
+    offset = request.args.get('offset', 0, type=int)
+    limit = request.args.get('limit', 20, type=int)
+    clean = request.args.get('clean', '', type=str) == '1'
 
-    # 2. Get all Twitch accounts
-    twitch_accounts = OAuthAccount.query.filter_by(provider='twitch').all()
+    # Optionally delete all existing subscriptions (first batch only)
+    deleted = 0
+    if clean:
+        try:
+            existing = list_eventsub_subscriptions(client_id, client_secret)
+            for sub in existing:
+                try:
+                    delete_eventsub_subscription(client_id, client_secret, sub['id'])
+                    deleted += 1
+                except Exception as e:
+                    log.warning('Failed to delete subscription %s: %s', sub['id'], e)
+        except Exception as e:
+            log.error('Failed to list existing subscriptions: %s', e)
+
+    # Get paginated Twitch accounts
+    total_accounts = OAuthAccount.query.filter_by(provider='twitch').count()
+    twitch_accounts = OAuthAccount.query.filter_by(provider='twitch') \
+        .order_by(OAuthAccount.created_at) \
+        .offset(offset).limit(limit).all()
 
     created = 0
     errors = 0
+    error_details = []
     for account in twitch_accounts:
         broadcaster_id = account.provider_account_id
         for event_type in ('stream.online', 'stream.offline'):
@@ -251,11 +268,18 @@ def rebuild_twitch_subs():
                 log.error('Failed to create %s sub for %s: %s',
                           event_type, broadcaster_id, e)
                 errors += 1
+                error_details.append(f'{broadcaster_id}:{event_type}:{e}')
 
+    next_offset = offset + limit
     return jsonify({
         'created': created,
         'errors': errors,
-        'total_accounts': len(twitch_accounts),
+        'deleted': deleted,
+        'batch': f'{offset}-{offset + len(twitch_accounts)}',
+        'total_accounts': total_accounts,
+        'has_more': next_offset < total_accounts,
+        'next_offset': next_offset if next_offset < total_accounts else None,
+        'error_details': error_details[:10],
     })
 
 
