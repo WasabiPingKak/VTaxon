@@ -344,7 +344,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
   const [detailLoading, setDetailLoading] = useState(false);
   const { liveUserIds, liveStreams } = useLiveStatus();
   const isLive = entry && liveUserIds.has(entry.user_id);
-  const liveInfo = isLive ? liveStreams.get(entry.user_id) : null;
+  const liveInfos = isLive ? (liveStreams.get(entry.user_id) || []) : [];
 
   useEffect(() => {
     if (!entry?.user_id) return;
@@ -496,24 +496,27 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
             {entry.display_name}
           </div>
 
-          {/* Live stream link */}
-          {isLive && liveInfo?.stream_url && (
-            <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-              <a href={liveInfo.stream_url} target="_blank" rel="noopener noreferrer" style={{
-                display: 'inline-flex', alignItems: 'center', gap: '5px',
-                padding: '4px 12px', borderRadius: '6px',
-                background: 'rgba(239,68,68,0.12)', color: '#ef4444',
-                border: '1px solid rgba(239,68,68,0.25)',
-                fontSize: '0.8em', fontWeight: 600, textDecoration: 'none',
-              }}>
-                <span style={{
-                  width: 6, height: 6, borderRadius: '50%',
-                  background: '#ef4444',
-                  animation: 'vtaxon-live-pulse 1.5s ease-in-out infinite',
-                  flexShrink: 0,
-                }} />
-                {liveInfo.stream_title || '正在直播'}
-              </a>
+          {/* Live stream links */}
+          {isLive && liveInfos.length > 0 && (
+            <div style={{ textAlign: 'center', marginBottom: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              {liveInfos.map((li, i) => li.stream_url && (
+                <a key={li.provider + i} href={li.stream_url} target="_blank" rel="noopener noreferrer" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '5px',
+                  padding: '4px 12px', borderRadius: '6px',
+                  background: 'rgba(239,68,68,0.12)', color: '#ef4444',
+                  border: '1px solid rgba(239,68,68,0.25)',
+                  fontSize: '0.8em', fontWeight: 600, textDecoration: 'none',
+                }}>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: '#ef4444',
+                    animation: 'vtaxon-live-pulse 1.5s ease-in-out infinite',
+                    flexShrink: 0,
+                  }} />
+                  {li.provider === 'youtube' ? <YouTubeIcon size={14} /> : li.provider === 'twitch' ? <TwitchIcon size={14} /> : null}
+                  {li.stream_title || '正在直播'}
+                </a>
+              ))}
             </div>
           )}
           <OrgBadge orgType={entry.org_type} organization={entry.organization} style={{ textAlign: 'center', marginBottom: '10px' }} />
