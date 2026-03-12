@@ -156,12 +156,12 @@ export function getSortBadge(entry, sortKey) {
     const diffMs = now - created;
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     let label, opacity;
-    if (diffDays < 1)        { label = '今天';                              opacity = 1;    }
-    else if (diffDays < 7)   { label = `${diffDays}天前`;                   opacity = 0.85; }
-    else if (diffDays < 30)  { label = `${diffDays}天前`;                   opacity = 0.65; }
-    else if (diffDays < 180) { label = `${Math.floor(diffDays / 30)}月前`;  opacity = 0.45; }
-    else if (diffDays < 365) { label = `${Math.floor(diffDays / 30)}月前`;  opacity = 0.3;  }
-    else                     { label = `${Math.floor(diffDays / 365)}年前`; opacity = 0.2;  }
+    if (diffDays < 1)        { label = '今天';                                opacity = 1;    }
+    else if (diffDays < 7)   { label = `${diffDays}天前`;                     opacity = 0.85; }
+    else if (diffDays < 30)  { label = `${Math.floor(diffDays / 7)}週前`;     opacity = 0.65; }
+    else if (diffDays < 180) { label = `${Math.floor(diffDays / 30)}月前`;    opacity = 0.45; }
+    else if (diffDays < 365) { label = `${Math.floor(diffDays / 30)}月前`;    opacity = 0.3;  }
+    else                     { label = `${Math.floor(diffDays / 365)}年前`;   opacity = 0.2;  }
     return { label, color: `rgba(103,232,249,${opacity})`, bg: `rgba(103,232,249,${opacity * 0.15})` };
   }
 
