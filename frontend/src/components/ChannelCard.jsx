@@ -172,9 +172,18 @@ export default function ChannelCard({
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ color: account.channel_url ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.3)', fontSize: '0.9em' }}>
-              {account.channel_url ? '已設定頻道連結' : '未設定頻道連結'}
-            </span>
+            {account.channel_url ? (
+              <a href={account.channel_url} target="_blank" rel="noopener noreferrer"
+                style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9em', textDecoration: 'none', wordBreak: 'break-all' }}
+                onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'}
+                onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}>
+                {account.channel_url}
+              </a>
+            ) : (
+              <span style={{ color: account.provider === 'youtube' ? '#f6ad55' : 'rgba(255,255,255,0.3)', fontSize: '0.9em' }}>
+                {account.provider === 'youtube' ? '⚠ 未取得 YouTube 頻道資訊，請重新授權' : '未設定頻道連結'}
+              </span>
+            )}
             <button type="button" onClick={() => setEditing(true)}
               title="編輯頻道連結"
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', fontSize: '1em', color: 'rgba(255,255,255,0.5)' }}>
