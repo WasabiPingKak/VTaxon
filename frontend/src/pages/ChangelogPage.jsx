@@ -3,9 +3,15 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SEOHead from '../components/SEOHead';
 
+import changelog_v2 from '../../../docs/changelogs/changelog-v2/changelog.md?raw';
 import changelog_2026_03_10 from '../../../docs/changelogs/2026-03-10/changelog.md?raw';
 
 const versions = [
+  {
+    date: '2026/3/10 ~ 3/12',
+    title: '搜尋 UX 改進、品種 Grid 排列、虛構物種更新',
+    content: changelog_v2,
+  },
   {
     date: '2026/3/7 ~ 3/10',
     title: '上線後首次大型更新',
