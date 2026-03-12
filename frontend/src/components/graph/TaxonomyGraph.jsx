@@ -570,11 +570,17 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     setLiveFilterActive(prev => {
       const next = !prev;
       if (next) {
+        // Expand paths for all live entries so their nodes are visible
+        const liveReal = (filteredEntries || []).filter(e => liveUserIds.has(e.user_id));
+        const liveFict = (filteredFictionalEntries || []).filter(e => liveUserIds.has(e.user_id));
+        const realPaths = liveReal.length > 0 ? collectAllPaths(liveReal) : new Set();
+        const fictPaths = liveFict.length > 0 ? collectAllFictionalPaths(liveFict) : new Set();
+        setExpandedSet(new Set([...realPaths, ...fictPaths]));
         scheduleCameraFit(true, null);
       }
       return next;
     });
-  }, [scheduleCameraFit]);
+  }, [filteredEntries, filteredFictionalEntries, liveUserIds, scheduleCameraFit]);
 
   useEffect(() => {
     if (prevTickRef.current === traceBackTick) return;
