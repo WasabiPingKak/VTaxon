@@ -53,7 +53,9 @@ jobs:
           TWITCH_WEBHOOK_SECRET=TWITCH_WEBHOOK_SECRET:latest,\
           RESEND_API_KEY=RESEND_API_KEY:latest,\
           ADMIN_NOTIFY_EMAILS=ADMIN_NOTIFY_EMAILS:latest,\
-          EMAIL_FROM=EMAIL_FROM:latest"
+          EMAIL_FROM=EMAIL_FROM:latest,\
+          YOUTUBE_API_KEY=YOUTUBE_API_KEY:latest,\
+          CRON_SECRET=CRON_SECRET:latest"
 
   deploy-frontend:
     runs-on: ubuntu-latest

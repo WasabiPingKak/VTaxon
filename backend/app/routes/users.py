@@ -757,6 +757,18 @@ def sync_oauth_accounts():
                 log.warning('Failed to subscribe Twitch EventSub for %s: %s',
                             account.provider_account_id, e)
 
+    # Subscribe new YouTube accounts to WebSub (non-blocking)
+    for account in synced:
+        if (account.provider == 'youtube' and account.channel_url
+                and account.created_at and
+                (datetime.now(timezone.utc) - account.created_at).total_seconds() < 30):
+            try:
+                from .livestream import subscribe_youtube_user
+                subscribe_youtube_user(account.channel_url)
+            except Exception as e:
+                log.warning('Failed to subscribe YouTube WebSub for %s: %s',
+                            account.channel_url, e)
+
     # Sync avatar_url from primary platform account
     user = db.session.get(User, g.current_user_id)
     if user and user.primary_platform:
@@ -888,6 +900,16 @@ def delete_oauth_account(account_id):
         except Exception as e:
             log.warning('Failed to unsubscribe Twitch EventSub for %s: %s',
                         deleted_provider_id, e)
+
+    # Clean up WebSub for YouTube accounts
+    if deleted_provider == 'youtube' and account.channel_url:
+        try:
+            from .livestream import unsubscribe_youtube_user
+            unsubscribe_youtube_user(account.channel_url)
+        except Exception as e:
+            log.warning('Failed to unsubscribe YouTube WebSub for %s: %s',
+                        account.channel_url, e)
+
     from ..models import LiveStream
     LiveStream.query.filter_by(
         user_id=g.current_user_id, provider=deleted_provider
