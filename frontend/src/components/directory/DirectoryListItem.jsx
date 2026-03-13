@@ -24,7 +24,7 @@ const PLATFORM_ICONS = {
 };
 
 // Shared grid template: avatar | name | platforms | org | species | debut | status | created | locate
-export const LIST_GRID = '36px 1fr 50px 100px 1.2fr 90px 80px 90px 60px';
+export const LIST_GRID = '36px 1fr 50px minmax(100px, 180px) 1.2fr 90px 80px 90px 60px';
 
 const DirectoryListItem = memo(function DirectoryListItem({ item, onClick, isLive }) {
   const navigate = useNavigate();
@@ -125,9 +125,7 @@ const DirectoryListItem = memo(function DirectoryListItem({ item, onClick, isLiv
       </div>
 
       {/* Organization */}
-      <div style={{
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>
+      <div style={{ lineHeight: 1.3 }}>
         {(item.org_type === 'corporate' || item.org_type === 'club')
           ? <OrgBadge orgType={item.org_type} organization={item.organization} />
           : <span style={{ color: 'rgba(255,255,255,0.5)' }}>{item.organization || '-'}</span>
@@ -135,10 +133,13 @@ const DirectoryListItem = memo(function DirectoryListItem({ item, onClick, isLiv
       </div>
 
       {/* Species */}
-      <div style={{
-        color: 'rgba(255,255,255,0.6)',
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>
+      <div
+        title={speciesNames.length > 0 ? speciesNames.join(' · ') : undefined}
+        style={{
+          color: 'rgba(255,255,255,0.6)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}
+      >
         {speciesNames.length > 0
           ? speciesNames.join(' · ')
           : <span style={{ color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>尚未標註</span>
