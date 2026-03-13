@@ -230,7 +230,7 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
               </span>
               {selectedCount > 0 && (
                 <span style={{
-                  background: '#FF6B35', color: '#fff',
+                  background: '#22c55e', color: '#fff',
                   borderRadius: 7, padding: '0 4px',
                   fontSize: 9, fontWeight: 700,
                   lineHeight: '14px', minWidth: 14, textAlign: 'center',

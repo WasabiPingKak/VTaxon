@@ -36,8 +36,8 @@ const VtuberCard = memo(function VtuberCard({ entry, isCurrentUser, isLive, onCl
       style={{
         display: 'inline-flex', alignItems: 'center', gap: '8px',
         padding: '6px 10px', borderRadius: '8px',
-        border: isLive ? '2px solid #ef4444' : isCurrentUser ? '2px solid #D4A017' : '1px solid rgba(255,255,255,0.1)',
-        background: isLive ? 'rgba(239,68,68,0.08)' : isCurrentUser ? 'rgba(212,160,23,0.1)' : '#141c2b',
+        border: isLive ? '2px solid #ef4444' : isCurrentUser ? '2px solid #E91E8C' : '1px solid rgba(255,255,255,0.1)',
+        background: isLive ? 'rgba(239,68,68,0.08)' : isCurrentUser ? 'rgba(233,30,140,0.1)' : '#141c2b',
         color: '#e2e8f0',
         cursor: 'pointer', textAlign: 'left',
         transition: 'box-shadow 0.15s',

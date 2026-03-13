@@ -32,7 +32,7 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
         background: 'rgba(8,13,21,0.9)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255,107,53,0.3)',
+        border: '1px solid rgba(34,197,94,0.3)',
         borderBottom: 'none',
         borderRadius: '12px 12px 0 0',
         paddingBottom: 'env(safe-area-inset-bottom, 8px)',
@@ -119,10 +119,10 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    background: isActive ? 'rgba(255,107,53,0.12)' : 'transparent',
+                    background: isActive ? 'rgba(34,197,94,0.12)' : 'transparent',
                     border: 'none',
-                    borderLeft: isActive ? '2px solid #FF6B35' : '2px solid transparent',
-                    color: isActive ? '#FF6B35' : 'rgba(255,255,255,0.7)',
+                    borderLeft: isActive ? '2px solid #22c55e' : '2px solid transparent',
+                    color: isActive ? '#22c55e' : 'rgba(255,255,255,0.7)',
                     fontSize: 13,
                     fontWeight: isActive ? 600 : 400,
                     cursor: 'pointer',
@@ -141,12 +141,12 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
           <div style={{ padding: '8px 12px 12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <button type="button" onClick={onLocate} style={{
               width: '100%',
-              background: 'rgba(233,30,140,0.1)',
-              border: '1px solid rgba(233,30,140,0.3)',
+              background: 'rgba(212,160,23,0.1)',
+              border: '1px solid rgba(212,160,23,0.3)',
               borderRadius: 8, cursor: 'pointer',
               padding: '10px 0',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              color: '#E91E8C', fontSize: 13, fontWeight: 500,
+              color: '#D4A017', fontSize: 13, fontWeight: 500,
             }} title="定位回自己">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
@@ -170,7 +170,7 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
         background: 'rgba(8,13,21,0.85)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255,107,53,0.3)',
+        border: '1px solid rgba(34,197,94,0.3)',
         borderRadius: 12,
         padding: '8px 16px',
         display: 'flex',
@@ -241,16 +241,16 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
         {/* Locate button — styled like Navbar */}
         <button type="button" onClick={onLocate} style={{
           marginLeft: 4,
-          background: 'rgba(233,30,140,0.1)',
-          border: '1px solid rgba(233,30,140,0.3)',
+          background: 'rgba(212,160,23,0.1)',
+          border: '1px solid rgba(212,160,23,0.3)',
           borderRadius: 6, cursor: 'pointer',
           padding: '5px 10px',
           display: 'inline-flex', alignItems: 'center', gap: 5,
-          color: '#E91E8C', fontSize: '0.8em',
+          color: '#D4A017', fontSize: '0.8em',
           whiteSpace: 'nowrap', flexShrink: 0,
         }} title="定位回自己"
-          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.5)'; e.currentTarget.style.background = 'rgba(233,30,140,0.18)'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.3)'; e.currentTarget.style.background = 'rgba(233,30,140,0.1)'; }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(212,160,23,0.5)'; e.currentTarget.style.background = 'rgba(212,160,23,0.18)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(212,160,23,0.3)'; e.currentTarget.style.background = 'rgba(212,160,23,0.1)'; }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />

@@ -65,7 +65,7 @@ export default function ChannelCard({
   const primaryBadge = isPrimary ? (
     <span style={{
       display: 'inline-block', padding: '1px 6px', borderRadius: '3px',
-      background: 'rgba(212,160,23,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)',
+      background: 'rgba(233,30,140,0.15)', color: '#f472b6', border: '1px solid rgba(244,114,182,0.3)',
       fontSize: '0.72em', fontWeight: '600', lineHeight: '1.4',
     }}>
       ★ 主要
@@ -75,9 +75,9 @@ export default function ChannelCard({
   if (mode === 'compact') {
     return (
       <div style={{
-        border: isPrimary ? '2px solid rgba(251,191,36,0.3)' : '1px solid rgba(255,255,255,0.1)',
+        border: isPrimary ? '2px solid rgba(244,114,182,0.3)' : '1px solid rgba(255,255,255,0.1)',
         borderRadius: '8px', padding: '10px 12px',
-        background: isPrimary ? 'rgba(212,160,23,0.06)' : '#141c2b', display: 'inline-block',
+        background: isPrimary ? 'rgba(233,30,140,0.06)' : '#141c2b', display: 'inline-block',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {avatar}
@@ -94,9 +94,9 @@ export default function ChannelCard({
   // full mode
   return (
     <div style={{
-      border: isPrimary ? '2px solid rgba(251,191,36,0.3)' : '1px solid rgba(255,255,255,0.1)',
+      border: isPrimary ? '2px solid rgba(244,114,182,0.3)' : '1px solid rgba(255,255,255,0.1)',
       borderRadius: '8px', padding: '12px',
-      marginBottom: '8px', background: isPrimary ? 'rgba(212,160,23,0.06)' : '#141c2b', position: 'relative',
+      marginBottom: '8px', background: isPrimary ? 'rgba(233,30,140,0.06)' : '#141c2b', position: 'relative',
     }}>
       {/* Row 1: avatar + name + icon + badges + actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
