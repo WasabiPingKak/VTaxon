@@ -7,6 +7,8 @@ import OrgBadge from '../components/OrgBadge';
 import RankBadge from '../components/RankBadge';
 import ProfileInfoCard from '../components/ProfileInfoCard';
 import { displayScientificName } from '../lib/speciesName';
+import { YouTubeIcon, TwitchIcon } from '../components/SnsIcons';
+import useLiveStatus from '../hooks/useLiveStatus';
 
 const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
 const RANK_TO_UPPER = {
@@ -78,6 +80,7 @@ function FictionalPath({ trait }) {
 export default function VTuberProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const { liveUserIds, liveStreams } = useLiveStatus();
   const [user, setUser] = useState(null);
   const [traits, setTraits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -147,8 +150,14 @@ export default function VTuberProfilePage() {
     if (url && !url.includes('@')) sameAs.push(url);
   });
 
+  const isLive = liveUserIds.has(userId);
+  const liveInfos = isLive ? (liveStreams.get(userId) || []) : [];
+
   return (
     <div style={{ maxWidth: 700, margin: '0 auto', padding: '40px 20px 80px' }}>
+      <style>{`
+        @keyframes vtaxon-live-pulse { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
+      `}</style>
       <SEOHead
         title={user.display_name}
         description={
@@ -178,17 +187,34 @@ export default function VTuberProfilePage() {
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
         {/* Avatar */}
         <div style={{ marginBottom: 8 }}>
-          {user.avatar_url ? (
-            <img src={user.avatar_url} alt={user.display_name}
-              style={{ width: 96, height: 96, borderRadius: '50%' }} />
-          ) : (
-            <div style={{
-              width: 96, height: 96, borderRadius: '50%', margin: '0 auto',
-              background: 'rgba(255,255,255,0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '40px', color: 'rgba(255,255,255,0.4)',
-            }}>?</div>
-          )}
+          <div style={{
+            position: 'relative', display: 'inline-block',
+            padding: isLive ? 3 : 0,
+            borderRadius: '50%',
+            border: isLive ? '3px solid #ef4444' : 'none',
+            boxShadow: isLive ? '0 0 12px rgba(239,68,68,0.4)' : 'none',
+          }}>
+            {user.avatar_url ? (
+              <img src={user.avatar_url} alt={user.display_name}
+                style={{ width: 96, height: 96, borderRadius: '50%', display: 'block' }} />
+            ) : (
+              <div style={{
+                width: 96, height: 96, borderRadius: '50%',
+                background: 'rgba(255,255,255,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '40px', color: 'rgba(255,255,255,0.4)',
+              }}>?</div>
+            )}
+            {isLive && (
+              <span style={{
+                position: 'absolute', bottom: -2, left: '50%', transform: 'translateX(-50%)',
+                padding: '1px 8px', borderRadius: 4,
+                background: '#ef4444', color: '#fff',
+                fontSize: '0.65em', fontWeight: 700, letterSpacing: '0.5px',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              }}>LIVE</span>
+            )}
+          </div>
         </div>
 
         {/* Name + org */}
@@ -205,6 +231,30 @@ export default function VTuberProfilePage() {
             countryFlags={user.country_flags}
           />
         </div>
+
+        {/* Live stream links */}
+        {isLive && liveInfos.length > 0 && (
+          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            {liveInfos.map((li, i) => li.stream_url && (
+              <a key={li.provider + i} href={li.stream_url} target="_blank" rel="noopener noreferrer" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '5px 14px', borderRadius: 6,
+                background: 'rgba(239,68,68,0.12)', color: '#ef4444',
+                border: '1px solid rgba(239,68,68,0.25)',
+                fontSize: '0.85em', fontWeight: 600, textDecoration: 'none',
+              }}>
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: '#ef4444',
+                  animation: 'vtaxon-live-pulse 1.5s ease-in-out infinite',
+                  flexShrink: 0,
+                }} />
+                {li.provider === 'youtube' ? <YouTubeIcon size={14} /> : li.provider === 'twitch' ? <TwitchIcon size={14} /> : null}
+                {li.stream_title || '正在直播'}
+              </a>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Locate in tree */}
