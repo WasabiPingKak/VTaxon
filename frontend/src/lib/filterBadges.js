@@ -122,7 +122,7 @@ export function getSortBadge(entry, sortKey, liveUserIds) {
       return { label: '直播中', color: '#f87171', bg: 'rgba(248,113,113,0.2)' };
     }
     const raw = entry.last_live_at;
-    if (!raw) return { label: '尚未開台', color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.05)' };
+    if (!raw) return { label: '無資料', color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.05)' };
     const diff = Date.now() - new Date(raw).getTime();
     const diffMins = Math.floor(diff / (1000 * 60));
     const diffHours = Math.floor(diff / (1000 * 60 * 60));
