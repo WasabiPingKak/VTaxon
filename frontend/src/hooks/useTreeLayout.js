@@ -306,7 +306,7 @@ function shuffleArray(arr, seed) {
 function sortVtubers(vtubers, sortConfig) {
   if (!sortConfig || !vtubers || vtubers.length <= 1) return vtubers;
 
-  const { key, order = 'asc', shuffleSeed } = sortConfig;
+  const { key, order = 'asc', shuffleSeed, liveUserIds } = sortConfig;
 
   if (key === 'shuffle' && shuffleSeed != null) {
     return shuffleArray(vtubers, shuffleSeed);
@@ -315,6 +315,21 @@ function sortVtubers(vtubers, sortConfig) {
   const sorted = [...vtubers].sort((a, b) => {
     let cmp = 0;
     switch (key) {
+      case 'active_first': {
+        const aLive = liveUserIds?.has(a.user_id) ? 1 : 0;
+        const bLive = liveUserIds?.has(b.user_id) ? 1 : 0;
+        if (aLive !== bLive) { cmp = aLive - bLive; break; }
+
+        const aTime = a.last_live_at ? new Date(a.last_live_at).getTime() : 0;
+        const bTime = b.last_live_at ? new Date(b.last_live_at).getTime() : 0;
+        const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const aRecent = aTime > sevenDaysAgo ? aTime : 0;
+        const bRecent = bTime > sevenDaysAgo ? bTime : 0;
+        if (aRecent !== bRecent) { cmp = aRecent - bRecent; break; }
+
+        cmp = (a.display_name || '').localeCompare(b.display_name || '', 'zh-TW');
+        break;
+      }
       case 'created_at':
         cmp = (a.created_at || '').localeCompare(b.created_at || '');
         break;
@@ -342,6 +357,8 @@ function sortVtubers(vtubers, sortConfig) {
       default:
         break;
     }
+    // active_first always uses desc (higher = better)
+    if (key === 'active_first') return -cmp;
     return order === 'desc' ? -cmp : cmp;
   });
 
@@ -363,7 +380,10 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
     // ── Real tree ──
     if (hasReal) {
       realRoot = buildTree(entries);
-      const hierData = mapToHierarchy(realRoot, expandedSet, currentUserId, 0, realSortConfig);
+      const realLiveSet = realSortConfig?.key === 'active_first'
+        ? buildLiveDescendantSet(realRoot, realSortConfig.liveUserIds)
+        : null;
+      const hierData = mapToHierarchy(realRoot, expandedSet, currentUserId, 0, realSortConfig, realLiveSet);
       const h = hierarchy(hierData, d => d.children);
       layoutTree(h, activeFilterCount);
       realNodes = h.descendants();
@@ -374,7 +394,10 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
     // ── Fictional tree ──
     if (hasFictional) {
       fictRoot = buildFictionalTree(fictionalEntries);
-      const hierData = mapToHierarchy(fictRoot, expandedSet, currentUserId, 0, fictSortConfig);
+      const fictLiveSet = fictSortConfig?.key === 'active_first'
+        ? buildLiveDescendantSet(fictRoot, fictSortConfig.liveUserIds)
+        : null;
+      const hierData = mapToHierarchy(fictRoot, expandedSet, currentUserId, 0, fictSortConfig, fictLiveSet);
       const h = hierarchy(hierData, d => d.children);
       layoutTree(h, activeFilterCount);
       fictNodes = h.descendants();
@@ -715,10 +738,30 @@ function applyBreedGridLayout(root) {
 }
 
 /**
+ * Precompute which tree nodes have live descendants (DFS).
+ * Returns a Set of node references that have at least one live vtuber in their subtree.
+ */
+function buildLiveDescendantSet(node, liveIds) {
+  const result = new Set();
+  if (!liveIds || liveIds.size === 0) return result;
+
+  function dfs(n) {
+    let hasLive = n.vtubers.some(v => liveIds.has(v.user_id));
+    for (const child of n.children.values()) {
+      if (dfs(child)) hasLive = true;
+    }
+    if (hasLive) result.add(n);
+    return hasLive;
+  }
+  dfs(node);
+  return result;
+}
+
+/**
  * Recursively convert Map-based tree node → plain object for d3.hierarchy.
  * Only includes children that are expanded. Also creates vtuber leaf nodes.
  */
-function mapToHierarchy(node, expandedSet, currentUserId, depth = 0, sortConfig = null) {
+function mapToHierarchy(node, expandedSet, currentUserId, depth = 0, sortConfig = null, liveDescendantSet = null) {
   const isExpanded = depth === 0 || expandedSet.has(node.pathKey);
   const children = [];
 
@@ -745,11 +788,19 @@ function mapToHierarchy(node, expandedSet, currentUserId, depth = 0, sortConfig 
     if (sortConfig?.key === 'shuffle' && sortConfig.shuffleSeed != null) {
       // Shuffle taxonomy nodes too so the entire tree layout changes
       taxonomyChildren = shuffleArray(taxonomyChildren, sortConfig.shuffleSeed + depth);
+    } else if (sortConfig?.key === 'active_first' && liveDescendantSet && liveDescendantSet.size > 0) {
+      // In active_first mode, sort taxonomy nodes with live descendants first
+      taxonomyChildren.sort((a, b) => {
+        const aHasLive = liveDescendantSet.has(a) ? 1 : 0;
+        const bHasLive = liveDescendantSet.has(b) ? 1 : 0;
+        if (aHasLive !== bHasLive) return bHasLive - aHasLive;
+        return b.count - a.count;
+      });
     } else {
       taxonomyChildren.sort((a, b) => b.count - a.count);
     }
     for (const child of taxonomyChildren) {
-      children.push(mapToHierarchy(child, expandedSet, currentUserId, depth + 1, sortConfig));
+      children.push(mapToHierarchy(child, expandedSet, currentUserId, depth + 1, sortConfig, liveDescendantSet));
     }
   }
 

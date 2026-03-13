@@ -16,6 +16,13 @@ import { filterEntries, computeFacets, countActiveFilters, emptyFilters } from '
 import useIsMobile from '../../hooks/useIsMobile';
 import useLiveStatus from '../../hooks/useLiveStatus';
 
+function getDailyHash() {
+  const dateStr = new Date().toISOString().slice(0, 10);
+  let h = 0;
+  for (const c of dateStr) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return Math.abs(h);
+}
+
 const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoading }, ref) {
   const canvasRef = useRef(null);
   const starFieldRef = useRef(null);
@@ -41,7 +48,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const [activeTree, setActiveTree] = useState('real');
 
   // Sort state
-  const [sortKey, setSortKey] = useState('created_at');
+  const [sortKey, setSortKey] = useState('active_first');
   const [sortOrder, setSortOrder] = useState('desc');
   const [shuffleSeed, setShuffleSeed] = useState(null);   // incrementing counter, not timestamp
 
@@ -247,8 +254,8 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
 
   // ── Sort config per tree (shuffle only affects activeTree) ──
   const baseSortConfig = useMemo(() => (
-    { key: sortKey, order: sortOrder, shuffleSeed: null }
-  ), [sortKey, sortOrder]);
+    { key: sortKey, order: sortOrder, shuffleSeed: null, liveUserIds }
+  ), [sortKey, sortOrder, liveUserIds]);
 
   const shuffleSortConfig = useMemo(() => (
     shuffleSeed != null
@@ -272,7 +279,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   }, []);
 
   const handleShuffle = useCallback(() => {
-    setShuffleSeed(s => (s ?? 0) + 1);
+    setShuffleSeed(s => s != null ? null : getDailyHash());
     // Pan so the root sits near the top (~1/5 of viewport height)
     scheduleCamera(() => {
       const prefix = activeTree === 'fictional' ? '__F__' : '';
@@ -281,8 +288,6 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       );
       if (!rootNode) return;
       const [, l, r, , t] = cameraInsetsRef.current;
-      // Inflate bottomInset so panTo's "center" lands at ~20% from top
-      // cy = t + (h - t - bFake) / 2 = t + 0.2*(h - t)  →  bFake = 0.6*(h - t)
       const vh = window.innerHeight;
       const fakeBottom = 0.6 * (vh - t);
       canvasRef.current?.panTo(rootNode.x, rootNode.y, undefined, l, r, fakeBottom, t);
@@ -293,7 +298,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   // d3 layout (before traceBack computations so focusedEntries can sort by X)
   const activeFilterCount = countActiveFilters(filters);
   // Sort badge text is wider than filter badges (e.g. "1年2個月"), count as 2 units
-  const hasSortBadge = (sortKey === 'debut_date' || sortKey === 'created_at') ? 2 : 0;
+  const hasSortBadge = (sortKey === 'debut_date' || sortKey === 'created_at' || sortKey === 'active_first') ? 2 : 0;
   const totalBadgeCount = activeFilterCount + hasSortBadge;
   const { nodes, edges, bounds, rootData, fictionalRootData, maxCount } = useTreeLayout(
     finalEntries, finalFictionalEntries, expandedSet, currentUser?.id, realSortConfig, fictSortConfig, totalBadgeCount,

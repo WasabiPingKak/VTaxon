@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { countActiveFilters } from '../../lib/treeFilters';
 import BottomSheet from '../BottomSheet';
 
-const SORT_SHORT = { created_at: '登錄', debut_date: '出道', display_name: '名稱', country: '國旗', organization: '組織' };
+const SORT_SHORT = { active_first: '活躍', created_at: '登錄', debut_date: '出道', display_name: '名稱', country: '國旗', organization: '組織' };
 
 const DEPTH_LABELS = { 8: '同亞種', 7: '同種', 6: '同屬', 5: '同科', 4: '同目', 3: '同綱', 2: '同門', 1: '同界' };
 
 const SORT_OPTIONS = [
+  { key: 'active_first', label: '活躍優先' },
   { key: 'created_at', label: '登錄順序' },
   { key: 'debut_date', label: '出道日期' },
   { key: 'display_name', label: '顯示名稱' },
@@ -282,7 +283,7 @@ export default function FloatingToolbar({
         )}
 
         {/* 打亂排序 */}
-        {onShuffle && actionBtn('shuffle-btn', '打亂排序', () => { onShuffle(); if (isMobile) setExpanded(false); },
+        {onShuffle && actionBtn('shuffle-btn', '每日公平輪換', () => { onShuffle(); if (isMobile) setExpanded(false); },
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="3" />
             <circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
@@ -291,6 +292,7 @@ export default function FloatingToolbar({
             <circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
             <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
           </svg>,
+          { active: isShuffled },
         )}
       </div>
 
@@ -387,7 +389,7 @@ export default function FloatingToolbar({
       {/* ── 打亂排序 ── */}
       {onShuffle && (
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 6, padding: '6px 4px 0' }}>
-          {actionBtn('shuffle-btn', '打亂排序', () => { onShuffle(); setExpanded(false); },
+          {actionBtn('shuffle-btn', '每日公平輪換', () => { onShuffle(); setExpanded(false); },
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="3" />
               <circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
@@ -396,6 +398,7 @@ export default function FloatingToolbar({
               <circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
               <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
             </svg>,
+            { active: isShuffled },
           )}
         </div>
       )}
