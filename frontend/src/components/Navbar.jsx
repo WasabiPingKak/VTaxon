@@ -149,13 +149,13 @@ export default function Navbar() {
                 onClick={handleRefocusSelf}
                 title="在樹狀圖中定位自己"
                 style={{
-                  background: 'rgba(212,160,23,0.1)', border: '1px solid rgba(212,160,23,0.3)',
+                  background: 'rgba(233,30,140,0.1)', border: '1px solid rgba(233,30,140,0.3)',
                   borderRadius: 6, cursor: 'pointer', padding: isMobile ? '5px 7px' : '4px 8px',
                   display: 'inline-flex', alignItems: 'center', gap: 4,
-                  color: '#D4A017', fontSize: '0.8em',
+                  color: '#E91E8C', fontSize: '0.8em',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(212,160,23,0.6)'; e.currentTarget.style.background = 'rgba(212,160,23,0.18)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(212,160,23,0.3)'; e.currentTarget.style.background = 'rgba(212,160,23,0.1)'; }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.6)'; e.currentTarget.style.background = 'rgba(233,30,140,0.18)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.3)'; e.currentTarget.style.background = 'rgba(233,30,140,0.1)'; }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
