@@ -1,7 +1,7 @@
 import logging
 import math
 import os
-from datetime import date as _date, datetime, timezone
+from datetime import date as _date, datetime, timedelta, timezone
 
 log = logging.getLogger(__name__)
 
@@ -249,32 +249,65 @@ def directory():
         )
 
     # Sorting
-    if sort not in ('debut_date', 'name', 'created_at'):
+    valid_sorts = ('debut_date', 'name', 'created_at', 'active_first', 'organization')
+    if sort not in valid_sorts:
         sort = 'created_at'
     if order not in ('asc', 'desc'):
         order = 'desc'
 
-    if sort == 'name':
-        order_col = User.display_name
-    elif sort == 'debut_date':
-        order_col = text("users.profile_data->>'debut_date'")
-    else:
-        order_col = User.created_at
+    # Live-pinning: in ALL sort modes, live users float to top
+    from ..models import LiveStream
+    is_live = (
+        db.session.query(LiveStream.user_id)
+        .filter(LiveStream.user_id == User.id)
+        .correlate(User)
+        .exists()
+    )
+    live_weight = case((is_live, 1), else_=0)
 
-    if order == 'asc':
-        if sort == 'debut_date':
-            query = query.order_by(text(
-                "users.profile_data->>'debut_date' ASC NULLS LAST"
-            ))
+    if sort == 'active_first':
+        # Live > recent last_live_at (7 days) > name fallback
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        recent_live = case(
+            (User.last_live_at > seven_days_ago, User.last_live_at),
+            else_=literal(None).cast(db.DateTime(timezone=True)),
+        )
+        query = query.order_by(
+            live_weight.desc(),
+            recent_live.desc().nullslast(),
+            User.display_name.asc(),
+        )
+    elif sort == 'organization':
+        # org_type priority: corporate > club > indie, then organization name
+        org_priority = case(
+            (User.org_type == 'corporate', 0),
+            (User.org_type == 'club', 1),
+            else_=2,
+        )
+        dir_fn = (lambda c: c.asc()) if order == 'asc' else (lambda c: c.desc())
+        query = query.order_by(
+            live_weight.desc(),
+            dir_fn(org_priority),
+            dir_fn(func.coalesce(User.organization, '')),
+            User.display_name.asc(),
+        )
+    elif sort == 'name':
+        dir_fn = (lambda c: c.asc()) if order == 'asc' else (lambda c: c.desc())
+        query = query.order_by(live_weight.desc(), dir_fn(User.display_name))
+    elif sort == 'debut_date':
+        if order == 'asc':
+            query = query.order_by(
+                live_weight.desc(),
+                text("users.profile_data->>'debut_date' ASC NULLS LAST"),
+            )
         else:
-            query = query.order_by(order_col.asc())
-    else:
-        if sort == 'debut_date':
-            query = query.order_by(text(
-                "users.profile_data->>'debut_date' DESC NULLS LAST"
-            ))
-        else:
-            query = query.order_by(order_col.desc())
+            query = query.order_by(
+                live_weight.desc(),
+                text("users.profile_data->>'debut_date' DESC NULLS LAST"),
+            )
+    else:  # created_at
+        dir_fn = (lambda c: c.asc()) if order == 'asc' else (lambda c: c.desc())
+        query = query.order_by(live_weight.desc(), dir_fn(User.created_at))
 
     # Count + paginate
     total = query.count()
@@ -316,6 +349,7 @@ def directory():
             'organization': u.organization,
             'org_type': u.org_type or 'indie',
             'country_flags': u.country_flags or [],
+            'last_live_at': u.last_live_at.isoformat() if u.last_live_at else None,
             'created_at': u.created_at.isoformat() if u.created_at else None,
             'profile_data': {
                 'gender': pd.get('gender'),
