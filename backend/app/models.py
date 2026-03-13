@@ -26,6 +26,7 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False,
                            default=lambda: datetime.now(timezone.utc),
                            onupdate=lambda: datetime.now(timezone.utc))
+    last_live_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     oauth_accounts = db.relationship('OAuthAccount', backref='user',
                                      lazy='dynamic', cascade='all, delete-orphan')

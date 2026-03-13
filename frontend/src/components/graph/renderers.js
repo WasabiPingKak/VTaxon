@@ -875,7 +875,7 @@ function drawVtuberNode(ctx, node, scale, state) {
     // Badges below name (filter badges + sort badge)
     if (d._entry) {
       const badges = state.activeFilters ? getActiveFilterBadges(d._entry, state.activeFilters) : [];
-      const sortBadge = getSortBadge(d._entry, state.sortKey);
+      const sortBadge = getSortBadge(d._entry, state.sortKey, state.liveUserIds);
       if (Array.isArray(sortBadge)) badges.push(...sortBadge);
       else if (sortBadge) badges.push(sortBadge);
       if (badges.length > 0) {

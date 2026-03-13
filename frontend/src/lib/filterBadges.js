@@ -116,7 +116,27 @@ export function getActiveFilterBadges(entry, filters) {
  * @param {string} sortKey - current sort key
  * @returns {{ label: string, color: string, bg: string } | null}
  */
-export function getSortBadge(entry, sortKey) {
+export function getSortBadge(entry, sortKey, liveUserIds) {
+  if (sortKey === 'active_first') {
+    if (liveUserIds?.has(entry.user_id)) {
+      return { label: '直播中', color: '#f87171', bg: 'rgba(248,113,113,0.2)' };
+    }
+    const raw = entry.last_live_at;
+    if (!raw) return { label: '尚未開台', color: 'rgba(255,255,255,0.3)', bg: 'rgba(255,255,255,0.05)' };
+    const diff = Date.now() - new Date(raw).getTime();
+    const diffHours = Math.floor(diff / (1000 * 60 * 60));
+    const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+    let label, color, bg;
+    if (diffHours < 1)        { label = '剛結束';                              color = '#67e8f9'; bg = 'rgba(103,232,249,0.15)'; }
+    else if (diffHours < 24)  { label = `${diffHours}小時前`;                  color = '#67e8f9'; bg = 'rgba(103,232,249,0.12)'; }
+    else if (diffDays < 7)    { label = `${diffDays}天前`;                     color = '#93c5fd'; bg = 'rgba(147,197,253,0.10)'; }
+    else if (diffDays < 30)   { label = `${Math.floor(diffDays / 7)}週前`;     color = '#a5b4c8'; bg = 'rgba(165,180,200,0.08)'; }
+    else if (diffDays < 180)  { label = `${Math.floor(diffDays / 30)}月前`;    color = '#7a8596'; bg = 'rgba(122,133,150,0.08)'; }
+    else if (diffDays < 365)  { label = `${Math.floor(diffDays / 30)}月前`;    color = '#586472'; bg = 'rgba(88,100,114,0.08)'; }
+    else                      { label = `${Math.floor(diffDays / 365)}年前`;   color = '#586472'; bg = 'rgba(88,100,114,0.08)'; }
+    return { label, color, bg };
+  }
+
   if (sortKey === 'country') {
     const flags = entry.country_flags || [];
     if (flags.length === 0) return { label: '無國旗', color: 'rgba(255,255,255,0.4)', bg: 'rgba(255,255,255,0.08)' };

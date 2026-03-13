@@ -10,7 +10,7 @@ from flask import Blueprint, jsonify, request
 from ..auth import admin_required
 from ..extensions import db
 from ..limiter import limiter
-from ..models import LiveStream, OAuthAccount
+from ..models import LiveStream, OAuthAccount, User
 
 log = logging.getLogger(__name__)
 
@@ -146,6 +146,11 @@ def _handle_stream_online(event):
         )
         db.session.add(stream)
 
+    # Update last_live_at on the user
+    user = db.session.get(User, account.user_id)
+    if user:
+        user.last_live_at = datetime.now(timezone.utc)
+
     db.session.commit()
     invalidate_live_cache()
     log.info('Twitch stream.online: user_id=%s, broadcaster=%s, title=%s',
@@ -163,6 +168,11 @@ def _handle_stream_offline(event):
     ).first()
     if not account:
         return
+
+    # Update last_live_at before deleting the stream record
+    user = db.session.get(User, account.user_id)
+    if user:
+        user.last_live_at = datetime.now(timezone.utc)
 
     LiveStream.query.filter_by(
         user_id=account.user_id, provider='twitch'
@@ -256,6 +266,11 @@ def _handle_youtube_live(user_id, video_id, title, channel_url, started_at):
         )
         db.session.add(stream)
 
+    # Update last_live_at on the user
+    user = db.session.get(User, user_id)
+    if user:
+        user.last_live_at = datetime.now(timezone.utc)
+
     db.session.commit()
     invalidate_live_cache()
     log.info('YouTube live: user_id=%s, video=%s, title=%s', user_id, video_id, title)
@@ -292,6 +307,13 @@ def youtube_check_offline():
     ended_ids = check_streams_ended(video_ids, api_key)
 
     if ended_ids:
+        # Update last_live_at for users whose streams ended
+        ended_user_ids = [s.user_id for s in streams if s.stream_id in ended_ids]
+        if ended_user_ids:
+            User.query.filter(User.id.in_(ended_user_ids)).update(
+                {'last_live_at': datetime.now(timezone.utc)}, synchronize_session='fetch'
+            )
+
         LiveStream.query.filter(
             LiveStream.provider == 'youtube',
             LiveStream.stream_id.in_(ended_ids),
