@@ -13,7 +13,7 @@ import useLiveStatus from '../hooks/useLiveStatus';
 
 const DEFAULT_FILTERS = {
   q: '', country: '', gender: '', status: '',
-  org_type: '', platform: '', has_traits: 'true',
+  org_type: '', platform: '', has_traits: 'true', live_first: '',
   sort: 'created_at', order: 'desc', page: 1, per_page: 24,
 };
 
@@ -138,6 +138,7 @@ export default function DirectoryPage() {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         facets={data?.facets}
+        liveCount={liveUserIds.size}
       />
 
       {/* Content */}
