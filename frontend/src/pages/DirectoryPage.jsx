@@ -9,6 +9,7 @@ import Pagination from '../components/Pagination';
 import VtuberDetailPanel from '../components/VtuberDetailPanel';
 import SEOHead, { SITE_URL } from '../components/SEOHead';
 import useIsMobile from '../hooks/useIsMobile';
+import useLiveStatus from '../hooks/useLiveStatus';
 
 const DEFAULT_FILTERS = {
   q: '', country: '', gender: '', status: '',
@@ -19,6 +20,7 @@ const DEFAULT_FILTERS = {
 export default function DirectoryPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { liveUserIds } = useLiveStatus();
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -160,7 +162,7 @@ export default function DirectoryPage() {
             gap: 12,
           }}>
             {items.map(item => (
-              <DirectoryCard key={item.id} item={item} onClick={handleItemClick} />
+              <DirectoryCard key={item.id} item={item} onClick={handleItemClick} isLive={liveUserIds.has(item.id)} />
             ))}
           </div>
         ) : (
@@ -191,7 +193,7 @@ export default function DirectoryPage() {
               <div />
             </div>
             {items.map(item => (
-              <DirectoryListItem key={item.id} item={item} onClick={handleItemClick} />
+              <DirectoryListItem key={item.id} item={item} onClick={handleItemClick} isLive={liveUserIds.has(item.id)} />
             ))}
           </div>
         )}

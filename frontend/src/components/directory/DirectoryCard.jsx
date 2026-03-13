@@ -66,7 +66,7 @@ function CreditLine({ label, items }) {
   );
 }
 
-const DirectoryCard = memo(function DirectoryCard({ item, onClick }) {
+const DirectoryCard = memo(function DirectoryCard({ item, onClick, isLive }) {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
 
@@ -88,36 +88,54 @@ const DirectoryCard = memo(function DirectoryCard({ item, onClick }) {
   return (
     <div style={{
       background: 'rgba(255,255,255,0.03)',
-      border: '1px solid rgba(255,255,255,0.08)',
+      border: `1px solid ${isLive ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.08)'}`,
       borderRadius: 10, padding: 16,
       display: 'flex', flexDirection: 'column', gap: 10,
       transition: 'border-color 0.15s',
       cursor: 'pointer',
     }}
       onClick={() => onClick?.(item)}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(56,189,248,0.3)'; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = isLive ? 'rgba(239,68,68,0.5)' : 'rgba(56,189,248,0.3)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = isLive ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.08)'; }}
     >
       {/* Top: avatar + name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {item.avatar_url && !imgError ? (
-          <img
-            src={item.avatar_url}
-            alt={item.display_name}
-            loading="lazy"
-            style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <div style={{
-            width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
-            background: `hsl(${(item.display_name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 360}, 55%, 55%)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontSize: 20, fontWeight: 'bold',
-          }}>
-            {(item.display_name || '?')[0].toUpperCase()}
-          </div>
-        )}
+        <div style={{
+          position: 'relative', flexShrink: 0,
+          padding: isLive ? 2 : 0,
+          borderRadius: '50%',
+          border: isLive ? '2px solid #ef4444' : 'none',
+          boxShadow: isLive ? '0 0 8px rgba(239,68,68,0.4)' : 'none',
+        }}>
+          {item.avatar_url && !imgError ? (
+            <img
+              src={item.avatar_url}
+              alt={item.display_name}
+              loading="lazy"
+              style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%',
+              background: `hsl(${(item.display_name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 360}, 55%, 55%)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: 20, fontWeight: 'bold',
+            }}>
+              {(item.display_name || '?')[0].toUpperCase()}
+            </div>
+          )}
+          {isLive && (
+            <span style={{
+              position: 'absolute', bottom: -2, left: '50%', transform: 'translateX(-50%)',
+              padding: '0px 5px', borderRadius: '3px',
+              background: '#ef4444', color: '#fff',
+              fontSize: '0.55em', fontWeight: 700, letterSpacing: '0.5px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+              lineHeight: '14px',
+            }}>LIVE</span>
+          )}
+        </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{
             fontWeight: 600, fontSize: '0.95em', color: '#fff',

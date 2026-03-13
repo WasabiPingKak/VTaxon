@@ -26,7 +26,7 @@ const PLATFORM_ICONS = {
 // Shared grid template: avatar | name | platforms | org | species | debut | status | created | locate
 export const LIST_GRID = '36px 1fr 50px 100px 1.2fr 90px 80px 90px 60px';
 
-const DirectoryListItem = memo(function DirectoryListItem({ item, onClick }) {
+const DirectoryListItem = memo(function DirectoryListItem({ item, onClick, isLive }) {
   const navigate = useNavigate();
   const [imgError, setImgError] = useState(false);
 
@@ -56,7 +56,13 @@ const DirectoryListItem = memo(function DirectoryListItem({ item, onClick }) {
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
     >
       {/* Avatar */}
-      <div>
+      <div style={{
+        padding: isLive ? 1 : 0,
+        borderRadius: '50%',
+        border: isLive ? '2px solid #ef4444' : 'none',
+        boxShadow: isLive ? '0 0 6px rgba(239,68,68,0.3)' : 'none',
+        width: 'fit-content',
+      }}>
         {item.avatar_url && !imgError ? (
           <img
             src={item.avatar_url}
@@ -90,6 +96,14 @@ const DirectoryListItem = memo(function DirectoryListItem({ item, onClick }) {
         >
           {item.display_name}
         </Link>
+        {isLive && (
+          <span style={{
+            padding: '0px 4px', borderRadius: 3,
+            background: 'rgba(239,68,68,0.15)', color: '#ef4444',
+            fontSize: '0.7em', fontWeight: 700, letterSpacing: '0.5px',
+            flexShrink: 0, lineHeight: '16px',
+          }}>LIVE</span>
+        )}
         {countryFlags.length > 0 && (
           <span style={{ display: 'inline-flex', gap: 3, flexShrink: 0 }}>
             {countryFlags.map(c => (
