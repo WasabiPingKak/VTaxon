@@ -337,11 +337,47 @@ function ReportSection({ entry }) {
 
 function str(v) { return v == null ? '' : String(v); }
 
+/** Map a trait API response item to the entry format expected by the panel */
+function mapTraitToEntry(trait, baseEntry) {
+  const mapped = { ...baseEntry };
+  if (trait.species) {
+    const s = trait.species;
+    mapped.taxon_path = s.taxon_path;
+    mapped.scientific_name = s.scientific_name;
+    mapped.common_name_zh = s.common_name_zh;
+    mapped.alternative_names_zh = s.alternative_names_zh;
+    mapped.taxon_rank = s.taxon_rank;
+    mapped.path_zh = {
+      kingdom: s.kingdom_zh,
+      phylum: s.phylum_zh,
+      class: s.class_zh,
+      order: s.order_zh,
+      family: s.family_zh,
+      genus: s.genus_zh,
+    };
+  }
+  if (trait.fictional) {
+    const f = trait.fictional;
+    mapped.fictional_species_id = f.id;
+    mapped.fictional_name = f.name;
+    mapped.fictional_name_zh = f.name_zh;
+    mapped.origin = f.origin;
+    mapped.sub_origin = f.sub_origin;
+    mapped.fictional_path = f.category_path;
+  }
+  mapped.breed_name = trait.breed_name;
+  mapped.breed_id = trait.breed_id;
+  return mapped;
+}
+
 export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus, onSwitchEntry }) {
   const [imgError, setImgError] = useState(false);
   const [closing, setClosing] = useState(false);
   const [userDetail, setUserDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [traitsData, setTraitsData] = useState(null);
+  const [traitsLoading, setTraitsLoading] = useState(false);
+  const [activeTraitIdx, setActiveTraitIdx] = useState(0);
   const { liveUserIds, liveStreams } = useLiveStatus();
   const isLive = entry && liveUserIds.has(entry.user_id);
   const liveInfos = isLive ? (liveStreams.get(entry.user_id) || []) : [];
@@ -359,16 +395,48 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
     return () => { cancelled = true; };
   }, [entry?.user_id]);
 
-  // Derive active tab index from current entry
-  const activeIdx = (allEntries && allEntries.length > 1)
-    ? Math.max(0, allEntries.findIndex(e => {
-        if (e.fictional_path) {
-          return e.fictional_path === entry.fictional_path
-            && (e.fictional_species_id || '') === (entry.fictional_species_id || '');
+  // Fetch traits when entry lacks species data (e.g. opened from DirectoryPage)
+  useEffect(() => {
+    if (!entry?.user_id) return;
+    // If entry already has species data (from TaxonomyGraph), skip
+    if (entry.taxon_path || entry.fictional_species_id) {
+      setTraitsData(null);
+      setActiveTraitIdx(0);
+      return;
+    }
+    setTraitsLoading(true);
+    setTraitsData(null);
+    setActiveTraitIdx(0);
+    let cancelled = false;
+    api.getTraits(entry.user_id)
+      .then(data => {
+        if (cancelled) return;
+        const traits = data.traits || [];
+        if (traits.length > 0) {
+          setTraitsData(traits.map(t => mapTraitToEntry(t, entry)));
         }
-        return e.taxon_path === entry.taxon_path && (e.breed_id || '') === (entry.breed_id || '');
-      }))
-    : 0;
+      })
+      .catch(() => { })
+      .finally(() => { if (!cancelled) setTraitsLoading(false); });
+    return () => { cancelled = true; };
+  }, [entry?.user_id, entry?.taxon_path, entry?.fictional_species_id]);
+
+  // Effective entry/allEntries: use traitsData when available
+  const effectiveEntry = traitsData ? (traitsData[activeTraitIdx] || traitsData[0]) : entry;
+  const effectiveAllEntries = traitsData && traitsData.length > 1 ? traitsData : allEntries;
+
+  // Derive active tab index from current entry
+  const activeIdx = traitsData
+    ? activeTraitIdx
+    : (allEntries && allEntries.length > 1)
+      ? Math.max(0, allEntries.findIndex(e => {
+          if (e.fictional_path) {
+            return e.fictional_path === entry.fictional_path
+              && (e.fictional_species_id || '') === (entry.fictional_species_id || '');
+          }
+          return e.taxon_path === entry.taxon_path && (e.breed_id || '') === (entry.breed_id || '');
+        }))
+      : 0;
 
   const handleClose = useCallback(() => setClosing(true), []);
   const handleAnimEnd = useCallback((e) => {
@@ -427,11 +495,11 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
         </div>
 
         {/* Trait selector tabs */}
-        {allEntries && allEntries.length > 1 && (
+        {effectiveAllEntries && effectiveAllEntries.length > 1 && (
           <div style={{
             display: 'flex', gap: '6px', padding: '10px 20px 0', flexWrap: 'wrap',
           }}>
-            {allEntries.map((e, i) => {
+            {effectiveAllEntries.map((e, i) => {
               const label = e.fictional_name_zh || e.common_name_zh || displayScientificName(e) || e.display_name;
               const active = i === activeIdx;
               const tabKey = e.fictional_path
@@ -439,7 +507,14 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
                 : `${e.taxon_path}\0${e.breed_id || ''}`;
               return (
                 <button key={tabKey} type="button"
-                  onClick={() => { if (!active && onSwitchEntry) onSwitchEntry(e); }}
+                  onClick={() => {
+                    if (active) return;
+                    if (traitsData) {
+                      setActiveTraitIdx(i);
+                    } else if (onSwitchEntry) {
+                      onSwitchEntry(e);
+                    }
+                  }}
                   style={{
                     padding: '4px 10px', borderRadius: '4px', fontSize: '0.8em',
                     cursor: 'pointer', border: 'none',
@@ -588,7 +663,20 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
           <ProfileInfoCard profileData={userDetail?.profile_data} />
 
           {/* Species info card */}
-          {!entry.fictional_species_id && !entry.taxon_path ? null : entry.fictional_species_id ? (
+          {traitsLoading ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '20px', color: 'rgba(255,255,255,0.4)', fontSize: '0.85em',
+            }}>
+              <span style={{
+                display: 'inline-block', width: 16, height: 16,
+                border: '2px solid rgba(255,255,255,0.1)', borderTopColor: '#38bdf8',
+                borderRadius: '50%', marginRight: 8,
+                animation: 'vtaxonSpin 0.8s linear infinite',
+              }} />
+              載入物種資料…
+            </div>
+          ) : !effectiveEntry.fictional_species_id && !effectiveEntry.taxon_path ? null : effectiveEntry.fictional_species_id ? (
             <div style={{
               background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '14px',
               marginBottom: '16px',
@@ -597,19 +685,19 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
               <div style={{ fontSize: '0.9em', lineHeight: '1.8' }}>
                 <div>
                   <span style={labelStyle}>名稱</span>
-                  {entry.fictional_name_zh || entry.fictional_name}
-                  {entry.fictional_name_zh && entry.fictional_name && entry.fictional_name_zh !== entry.fictional_name && (
-                    <span style={{ color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>({entry.fictional_name})</span>
+                  {effectiveEntry.fictional_name_zh || effectiveEntry.fictional_name}
+                  {effectiveEntry.fictional_name_zh && effectiveEntry.fictional_name && effectiveEntry.fictional_name_zh !== effectiveEntry.fictional_name && (
+                    <span style={{ color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>({effectiveEntry.fictional_name})</span>
                   )}
                 </div>
                 <div>
                   <span style={labelStyle}>來源</span>
-                  {entry.origin}
+                  {effectiveEntry.origin}
                 </div>
-                {entry.sub_origin && (
+                {effectiveEntry.sub_origin && (
                   <div>
                     <span style={labelStyle}>子來源</span>
-                    {entry.sub_origin}
+                    {effectiveEntry.sub_origin}
                   </div>
                 )}
               </div>
@@ -623,24 +711,24 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
               <div style={{ fontSize: '0.9em', lineHeight: '1.8' }}>
                 <div>
                   <span style={labelStyle}>學名</span>
-                  {displayScientificName(entry)}
+                  {displayScientificName(effectiveEntry)}
                 </div>
-                {entry.common_name_zh && (
+                {effectiveEntry.common_name_zh && (
                   <div>
                     <span style={labelStyle}>中文名</span>
-                    {entry.common_name_zh}
+                    {effectiveEntry.common_name_zh}
                   </div>
                 )}
-                {entry.alternative_names_zh && (
+                {effectiveEntry.alternative_names_zh && (
                   <div>
                     <span style={labelStyle}>俗名</span>
-                    {entry.alternative_names_zh.split(/[,，]/).map(s => s.trim()).filter(Boolean).join('、')}
+                    {effectiveEntry.alternative_names_zh.split(/[,，]/).map(s => s.trim()).filter(Boolean).join('、')}
                   </div>
                 )}
-                {entry.breed_name && (
+                {effectiveEntry.breed_name && (
                   <div>
                     <span style={labelStyle}>品種</span>
-                    {entry.breed_name}
+                    {effectiveEntry.breed_name}
                   </div>
                 )}
               </div>
@@ -648,13 +736,13 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
           )}
 
           {/* Taxonomy / Fictional path card */}
-          {!entry.fictional_species_id && !entry.taxon_path ? null : entry.fictional_species_id ? (
+          {traitsLoading ? null : !effectiveEntry.fictional_species_id && !effectiveEntry.taxon_path ? null : effectiveEntry.fictional_species_id ? (
             <div style={{
               background: 'rgba(255,255,255,0.06)', borderRadius: '8px', padding: '14px',
               marginBottom: '16px',
             }}>
               <div style={{ fontWeight: 600, marginBottom: '8px' }}>分類路徑</div>
-              <FictionalPath entry={entry} />
+              <FictionalPath entry={effectiveEntry} />
             </div>
           ) : (
             <div style={{
@@ -663,11 +751,11 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
             }}>
               <div style={{ fontWeight: 600, marginBottom: '8px' }}>分類路徑</div>
               <TaxonomyPath
-                taxonPath={entry.taxon_path}
-                pathZh={entry.path_zh}
-                commonNameZh={entry.common_name_zh}
-                scientificName={displayScientificName(entry)}
-                taxonRank={entry.taxon_rank}
+                taxonPath={effectiveEntry.taxon_path}
+                pathZh={effectiveEntry.path_zh}
+                commonNameZh={effectiveEntry.common_name_zh}
+                scientificName={displayScientificName(effectiveEntry)}
+                taxonRank={effectiveEntry.taxon_rank}
               />
             </div>
           )}
