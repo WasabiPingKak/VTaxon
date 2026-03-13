@@ -6,8 +6,10 @@ import useIsMobile from '../../hooks/useIsMobile';
 
 const SORT_OPTIONS = [
   { value: 'created_at', label: '最近建檔' },
+  { value: 'active_first', label: '活躍優先' },
   { value: 'name', label: '名稱' },
   { value: 'debut_date', label: '出道日期' },
+  { value: 'organization', label: '組織' },
 ];
 
 export default function DirectoryFilters({
