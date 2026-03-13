@@ -353,8 +353,13 @@ def youtube_renew_subs():
         ok = subscribe_channel(channel_id, callback_url)
         if ok:
             renewed += 1
+            account.live_sub_status = 'subscribed'
         else:
             errors += 1
+            account.live_sub_status = 'failed'
+        account.live_sub_at = datetime.now(timezone.utc)
+
+    db.session.commit()
 
     log.info('YouTube renew-subs: total=%d, renewed=%d, skipped=%d, errors=%d',
              len(accounts), renewed, skipped, errors)
@@ -440,6 +445,7 @@ def rebuild_twitch_subs():
     error_details = []
     for account in twitch_accounts:
         broadcaster_id = account.provider_account_id
+        account_success = 0
         for event_type in ('stream.online', 'stream.offline'):
             try:
                 create_eventsub_subscription(
@@ -447,11 +453,16 @@ def rebuild_twitch_subs():
                     event_type, callback_url, webhook_secret,
                 )
                 created += 1
+                account_success += 1
             except Exception as e:
                 log.error('Failed to create %s sub for %s: %s',
                           event_type, broadcaster_id, e)
                 errors += 1
                 error_details.append(f'{broadcaster_id}:{event_type}:{e}')
+        account.live_sub_status = 'subscribed' if account_success == 2 else 'failed'
+        account.live_sub_at = datetime.now(timezone.utc)
+
+    db.session.commit()
 
     next_offset = offset + limit
     return jsonify({
@@ -466,10 +477,11 @@ def rebuild_twitch_subs():
     })
 
 
-def subscribe_twitch_user(provider_account_id):
+def subscribe_twitch_user(provider_account_id, oauth_account=None):
     """Subscribe to stream.online + stream.offline for a Twitch broadcaster.
 
     Called from OAuth sync when a new Twitch account is linked.
+    If oauth_account is provided, updates live_sub_status/live_sub_at.
     """
     from ..services.twitch import create_eventsub_subscription
 
@@ -481,9 +493,14 @@ def subscribe_twitch_user(provider_account_id):
     if not all([client_id, client_secret, webhook_secret, webhook_base_url]):
         log.warning('Twitch EventSub not configured, skipping subscription for %s',
                     provider_account_id)
+        if oauth_account:
+            oauth_account.live_sub_status = 'failed'
+            oauth_account.live_sub_at = datetime.now(timezone.utc)
+            db.session.commit()
         return
 
     callback_url = f'{webhook_base_url}/api/webhooks/twitch'
+    success_count = 0
 
     for event_type in ('stream.online', 'stream.offline'):
         try:
@@ -492,9 +509,15 @@ def subscribe_twitch_user(provider_account_id):
                 event_type, callback_url, webhook_secret,
             )
             log.info('Created Twitch EventSub %s for %s', event_type, provider_account_id)
+            success_count += 1
         except Exception as e:
             log.error('Failed to create Twitch EventSub %s for %s: %s',
                       event_type, provider_account_id, e)
+
+    if oauth_account:
+        oauth_account.live_sub_status = 'subscribed' if success_count == 2 else 'failed'
+        oauth_account.live_sub_at = datetime.now(timezone.utc)
+        db.session.commit()
 
 
 def unsubscribe_twitch_user(provider_account_id):
@@ -596,8 +619,13 @@ def rebuild_youtube_subs():
         ok = subscribe_channel(channel_id, callback_url)
         if ok:
             subscribed += 1
+            account.live_sub_status = 'subscribed'
         else:
             errors += 1
+            account.live_sub_status = 'failed'
+        account.live_sub_at = datetime.now(timezone.utc)
+
+    db.session.commit()
 
     next_offset = offset + limit
     return jsonify({
@@ -614,23 +642,39 @@ def rebuild_youtube_subs():
 
 # ── YouTube WebSub helpers (called from OAuth sync) ──
 
-def subscribe_youtube_user(channel_url):
-    """Subscribe to YouTube WebSub for a channel. Called from OAuth sync."""
+def subscribe_youtube_user(channel_url, oauth_account=None):
+    """Subscribe to YouTube WebSub for a channel. Called from OAuth sync.
+
+    If oauth_account is provided, updates live_sub_status/live_sub_at.
+    """
     from ..services.youtube_pubsub import extract_channel_id, subscribe_channel
 
     webhook_base_url = os.environ.get('WEBHOOK_BASE_URL', '')
     if not webhook_base_url:
         log.warning('WEBHOOK_BASE_URL not configured, skipping YouTube WebSub for %s',
                     channel_url)
+        if oauth_account:
+            oauth_account.live_sub_status = 'failed'
+            oauth_account.live_sub_at = datetime.now(timezone.utc)
+            db.session.commit()
         return
 
     channel_id = extract_channel_id(channel_url)
     if not channel_id:
         log.warning('Could not extract channel ID from %s', channel_url)
+        if oauth_account:
+            oauth_account.live_sub_status = 'failed'
+            oauth_account.live_sub_at = datetime.now(timezone.utc)
+            db.session.commit()
         return
 
     callback_url = f'{webhook_base_url}/api/webhooks/youtube'
-    subscribe_channel(channel_id, callback_url)
+    ok = subscribe_channel(channel_id, callback_url)
+
+    if oauth_account:
+        oauth_account.live_sub_status = 'subscribed' if ok else 'failed'
+        oauth_account.live_sub_at = datetime.now(timezone.utc)
+        db.session.commit()
 
 
 def unsubscribe_youtube_user(channel_url):

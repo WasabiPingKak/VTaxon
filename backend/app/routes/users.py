@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from ..auth import login_required
 from ..cache import invalidate_tree_cache
 from ..extensions import db
+from ..limiter import limiter
 from ..models import (Blacklist, Breed, FictionalSpecies, OAuthAccount,
                        SpeciesCache, User, VtuberTrait)
 
@@ -798,7 +799,7 @@ def sync_oauth_accounts():
                 (datetime.now(timezone.utc) - account.created_at).total_seconds() < 30):
             try:
                 from .livestream import subscribe_twitch_user
-                subscribe_twitch_user(account.provider_account_id)
+                subscribe_twitch_user(account.provider_account_id, oauth_account=account)
             except Exception as e:
                 log.warning('Failed to subscribe Twitch EventSub for %s: %s',
                             account.provider_account_id, e)
@@ -810,7 +811,7 @@ def sync_oauth_accounts():
                 (datetime.now(timezone.utc) - account.created_at).total_seconds() < 30):
             try:
                 from .livestream import subscribe_youtube_user
-                subscribe_youtube_user(account.channel_url)
+                subscribe_youtube_user(account.channel_url, oauth_account=account)
             except Exception as e:
                 log.warning('Failed to subscribe YouTube WebSub for %s: %s',
                             account.channel_url, e)
@@ -904,10 +905,10 @@ def refresh_oauth_account(account_id):
             try:
                 if account.provider == 'youtube':
                     from .livestream import subscribe_youtube_user
-                    subscribe_youtube_user(account.channel_url)
+                    subscribe_youtube_user(account.channel_url, oauth_account=account)
                 elif account.provider == 'twitch' and account.provider_account_id:
                     from .livestream import subscribe_twitch_user
-                    subscribe_twitch_user(account.provider_account_id)
+                    subscribe_twitch_user(account.provider_account_id, oauth_account=account)
             except Exception as e:
                 log.warning('Failed to subscribe %s after refresh: %s',
                             account.provider, e)
@@ -939,10 +940,10 @@ def update_oauth_account(account_id):
         try:
             if account.provider == 'youtube':
                 from .livestream import subscribe_youtube_user
-                subscribe_youtube_user(account.channel_url)
+                subscribe_youtube_user(account.channel_url, oauth_account=account)
             elif account.provider == 'twitch' and account.provider_account_id:
                 from .livestream import subscribe_twitch_user
-                subscribe_twitch_user(account.provider_account_id)
+                subscribe_twitch_user(account.provider_account_id, oauth_account=account)
         except Exception as e:
             log.warning('Failed to re-subscribe %s for %s: %s',
                         account.provider, account.channel_url, e)
@@ -1006,3 +1007,31 @@ def delete_oauth_account(account_id):
 
     db.session.commit()
     return jsonify({'ok': True, 'user': user.to_dict() if user else None})
+
+
+@users_bp.route('/me/resubscribe', methods=['POST'])
+@login_required
+@limiter.limit("3/minute")
+def resubscribe_live():
+    """Re-subscribe a user's account to live stream notifications."""
+    data = request.get_json() or {}
+    account_id = data.get('account_id')
+    if not account_id:
+        return jsonify({'error': 'account_id is required'}), 400
+
+    account = db.session.get(OAuthAccount, account_id)
+    if not account or str(account.user_id) != str(g.current_user_id):
+        return jsonify({'error': 'Account not found'}), 404
+
+    if account.provider == 'youtube':
+        if not account.channel_url:
+            return jsonify({'error': '尚未取得 YouTube 頻道資訊，請先重新登入授權'}), 400
+        from .livestream import subscribe_youtube_user
+        subscribe_youtube_user(account.channel_url, oauth_account=account)
+    elif account.provider == 'twitch':
+        from .livestream import subscribe_twitch_user
+        subscribe_twitch_user(account.provider_account_id, oauth_account=account)
+    else:
+        return jsonify({'error': 'Unsupported provider'}), 400
+
+    return jsonify(account.to_dict())

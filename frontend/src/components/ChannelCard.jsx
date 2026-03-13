@@ -192,6 +192,20 @@ export default function ChannelCard({
           </div>
         )}
 
+        {account.live_sub_status === 'subscribed' && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px',
+          }}>
+            <span style={{
+              display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+              background: '#22c55e', flexShrink: 0,
+            }} />
+            <span style={{ fontSize: '0.82em', color: 'rgba(255,255,255,0.5)' }}>
+              直播通知已啟用
+            </span>
+          </div>
+        )}
+
         {onToggleShow && (
           <label style={{
             display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px',

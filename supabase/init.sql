@@ -44,6 +44,8 @@ CREATE TABLE oauth_accounts (
     access_token TEXT,
     refresh_token TEXT,
     token_expires_at TIMESTAMPTZ,
+    live_sub_status TEXT,
+    live_sub_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (provider, provider_account_id)
 );

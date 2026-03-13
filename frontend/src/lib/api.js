@@ -70,6 +70,9 @@ export const api = {
   refreshOAuthAccount: (id) => apiFetch(`/users/me/oauth-accounts/${id}/refresh`, {
     method: 'POST',
   }),
+  resubscribe: (accountId) => apiFetch('/users/me/resubscribe', {
+    method: 'POST', body: JSON.stringify({ account_id: accountId }),
+  }),
 
   // Species
   searchSpecies: async (q) => {

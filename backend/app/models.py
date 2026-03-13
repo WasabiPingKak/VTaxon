@@ -90,6 +90,8 @@ class OAuthAccount(db.Model):
     access_token = db.Column(db.Text)
     refresh_token = db.Column(db.Text)
     token_expires_at = db.Column(db.DateTime(timezone=True))
+    live_sub_status = db.Column(db.Text)
+    live_sub_at = db.Column(db.DateTime(timezone=True))
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
                            default=lambda: datetime.now(timezone.utc))
 
@@ -112,6 +114,8 @@ class OAuthAccount(db.Model):
             result.update({
                 'provider_account_id': self.provider_account_id,
                 'show_on_profile': self.show_on_profile,
+                'live_sub_status': self.live_sub_status,
+                'live_sub_at': self.live_sub_at.isoformat() if self.live_sub_at else None,
                 'created_at': self.created_at.isoformat(),
             })
         return result
