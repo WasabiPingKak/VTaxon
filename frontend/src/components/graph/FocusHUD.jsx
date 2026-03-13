@@ -259,15 +259,6 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
         </button>
       </div>
 
-      {/* Keyboard hint */}
-      {total > 1 && (
-        <div style={{
-          position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)',
-          fontSize: '0.68em', color: 'rgba(255,255,255,0.28)', pointerEvents: 'none', zIndex: 59,
-        }}>
-          ← → 方向鍵切換
-        </div>
-      )}
     </>
   );
 }
