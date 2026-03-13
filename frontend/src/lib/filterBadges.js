@@ -128,7 +128,7 @@ export function getSortBadge(entry, sortKey, liveUserIds) {
     const diffHours = Math.floor(diff / (1000 * 60 * 60));
     const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
     let label, color, bg;
-    if (diffMins < 30)        { label = `${Math.max(diffMins, 1)}分鐘前`;      color = '#67e8f9'; bg = 'rgba(103,232,249,0.15)'; }
+    if (diffMins < 60)        { label = `${Math.max(diffMins, 1)}分鐘前`;      color = '#67e8f9'; bg = 'rgba(103,232,249,0.15)'; }
     else if (diffHours < 24)  { label = `${diffHours}小時前`;                  color = '#67e8f9'; bg = 'rgba(103,232,249,0.12)'; }
     else if (diffDays < 7)    { label = `${diffDays}天前`;                     color = '#93c5fd'; bg = 'rgba(147,197,253,0.10)'; }
     else if (diffDays < 30)   { label = `${Math.floor(diffDays / 7)}週前`;     color = '#a5b4c8'; bg = 'rgba(165,180,200,0.08)'; }
