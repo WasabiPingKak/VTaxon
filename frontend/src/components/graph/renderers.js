@@ -638,9 +638,10 @@ function drawVtuberNode(ctx, node, scale, state) {
   const hovered = state.hoveredNode === node;
   const hexR = 21;
 
-  // Color priority: focused > close > currentUser > default
+  // Color priority: live > focused > close > currentUser > default
   let color, glow;
-  if (isFocused) { color = FOCUSED_COLOR; glow = FOCUSED_GLOW; }
+  if (isLive) { color = LIVE_COLOR; glow = LIVE_GLOW; }
+  else if (isFocused) { color = FOCUSED_COLOR; glow = FOCUSED_GLOW; }
   else if (isClose) { color = CLOSE_COLOR; glow = CLOSE_GLOW; }
   else if (isCurrentUser) { color = CURRENT_USER_COLOR; glow = CURRENT_USER_GLOW; }
   else { color = VTUBER_COLOR; glow = VTUBER_GLOW; }
@@ -697,8 +698,8 @@ function drawVtuberNode(ctx, node, scale, state) {
     drawHexRing(ctx, node.x, node.y, hexR + 5, 'rgba(34,197,94,0.5)', 1.5);
   }
 
-  // ── 5. Live: pulsing green hex ring + outer glow ──
-  if (isLive && !isFocused && !isClose) {
+  // ── 5. Live: pulsing hex ring + outer glow (highest priority) ──
+  if (isLive) {
     const liveAlpha = 0.4 + 0.4 * Math.sin(performance.now() / 1000);
     // Outer glow
     ctx.save();
@@ -826,7 +827,7 @@ function drawVtuberNode(ctx, node, scale, state) {
     const lines = d._labelLines || [d._displayName || '?'];
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = isFocused ? FOCUSED_COLOR : (isClose ? CLOSE_COLOR : (isCurrentUser ? CURRENT_USER_COLOR : LABEL_COLOR));
+    ctx.fillStyle = isLive ? LIVE_COLOR : (isFocused ? FOCUSED_COLOR : (isClose ? CLOSE_COLOR : (isCurrentUser ? CURRENT_USER_COLOR : LABEL_COLOR)));
     ctx.font = fontStr(12, scale, 'bold');
     const vFs = scaledFontSize(12, scale);
     const lineHeight = vFs * 1.25;
