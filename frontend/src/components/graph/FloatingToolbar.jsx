@@ -161,17 +161,17 @@ export default function FloatingToolbar({
     <>
       {/* ── Zoom (hidden on mobile BottomSheet) ── */}
       {!isMobile && [{
-          id: 'fitAll', tint: '#22c55e', title: '完整展開', action: onExpandBothTrees,
-          icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
-        },
-        {
-          id: 'zoomIn', title: '放大', action: () => canvasRef.current?.zoomIn(),
-          icon: <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
-        },
-        {
-          id: 'zoomOut', title: '縮小', action: () => canvasRef.current?.zoomOut(),
-          icon: <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>{'\u2212'}</span>
-        },
+        id: 'fitAll', tint: '#22c55e', title: '完整展開', action: onExpandBothTrees,
+        icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
+      },
+      {
+        id: 'zoomIn', title: '放大', action: () => canvasRef.current?.zoomIn(),
+        icon: <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>+</span>
+      },
+      {
+        id: 'zoomOut', title: '縮小', action: () => canvasRef.current?.zoomOut(),
+        icon: <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1 }}>{'\u2212'}</span>
+      },
       ].map(btn => {
         const isH = hovered === btn.id;
         const tint = btn.tint;
@@ -254,8 +254,10 @@ export default function FloatingToolbar({
         {/* 直播中 */}
         {liveCount > 0 && actionBtn('live-filter-btn', '直播中',
           () => { onLiveFilterToggle(); if (isMobile) setExpanded(false); },
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444',
-            animation: 'vtaxonPulse 1.5s ease-in-out infinite', display: 'inline-block' }} />,
+          <span style={{
+            width: 8, height: 8, borderRadius: '50%', background: '#ef4444',
+            animation: 'vtaxonPulse 1.5s ease-in-out infinite', display: 'inline-block'
+          }} />,
           {
             active: liveFilterActive,
             badge: <span style={{
@@ -283,7 +285,7 @@ export default function FloatingToolbar({
         )}
 
         {/* 打亂排序 */}
-        {onShuffle && actionBtn('shuffle-btn', '每日公平輪換', () => { onShuffle(); if (isMobile) setExpanded(false); },
+        {onShuffle && actionBtn('shuffle-btn', '今日隨機樹枝', () => { onShuffle(); if (isMobile) setExpanded(false); },
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="3" />
             <circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
@@ -374,8 +376,10 @@ export default function FloatingToolbar({
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 6, padding: '6px 4px 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
         {liveCount > 0 && actionBtn('live-filter-btn', '直播中',
           () => { onLiveFilterToggle(); setExpanded(false); },
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444',
-            animation: 'vtaxonPulse 1.5s ease-in-out infinite', display: 'inline-block' }} />,
+          <span style={{
+            width: 8, height: 8, borderRadius: '50%', background: '#ef4444',
+            animation: 'vtaxonPulse 1.5s ease-in-out infinite', display: 'inline-block'
+          }} />,
           {
             active: liveFilterActive,
             badge: <span style={{
@@ -389,7 +393,7 @@ export default function FloatingToolbar({
       {/* ── 打亂排序 ── */}
       {onShuffle && (
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 6, padding: '6px 4px 0' }}>
-          {actionBtn('shuffle-btn', '每日公平輪換', () => { onShuffle(); setExpanded(false); },
+          {actionBtn('shuffle-btn', '今日隨機樹枝', () => { onShuffle(); setExpanded(false); },
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="3" />
               <circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
@@ -598,8 +602,10 @@ export default function FloatingToolbar({
                 color: liveFilterActive ? '#ef4444' : 'rgba(255,255,255,0.7)', cursor: 'pointer',
               }}
             >
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444',
-                animation: 'vtaxonPulse 1.5s ease-in-out infinite', display: 'inline-block' }} />
+              <span style={{
+                width: 10, height: 10, borderRadius: '50%', background: '#ef4444',
+                animation: 'vtaxonPulse 1.5s ease-in-out infinite', display: 'inline-block'
+              }} />
               <span style={{
                 position: 'absolute', top: 0, right: -2,
                 background: '#ef4444', color: '#fff', borderRadius: 7, padding: '0 3px',
