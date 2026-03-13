@@ -228,10 +228,10 @@ function drawEdge(ctx, edge, scale, state) {
   ctx.bezierCurveTo(s.x, midY, t.x, midY, t.x, t.y);
 
   if (flashA > 0) {
-    ctx.strokeStyle = hexToRgba('#FF6B35', 0.3 + 0.45 * flashA);
+    ctx.strokeStyle = hexToRgba('#22c55e', 0.3 + 0.45 * flashA);
     ctx.lineWidth = (1.2 + 1.8 * flashA) / Math.max(scale, 0.3);
     ctx.shadowBlur = 10 * flashA;
-    ctx.shadowColor = 'rgba(255,107,53,0.7)';
+    ctx.shadowColor = 'rgba(34,197,94,0.7)';
   } else {
     const color = hexToRgba(rc.node, EDGE_ALPHA);
     ctx.strokeStyle = color;
@@ -305,10 +305,10 @@ function drawGridConnectors(ctx, nodes, scale, pm, vp, margin, state) {
     const rc = RANK_COLORS[parent.data._rank] || RANK_COLORS.ROOT;
 
     if (flashA > 0) {
-      ctx.strokeStyle = hexToRgba('#FF6B35', 0.3 + 0.45 * flashA);
+      ctx.strokeStyle = hexToRgba('#22c55e', 0.3 + 0.45 * flashA);
       ctx.lineWidth = (1.2 + 1.8 * flashA) / Math.max(scale, 0.3);
       ctx.shadowBlur = 10 * flashA;
-      ctx.shadowColor = 'rgba(255,107,53,0.7)';
+      ctx.shadowColor = 'rgba(34,197,94,0.7)';
     } else {
       const lineColor = hexToRgba(rc.node, 0.15);
       ctx.strokeStyle = lineColor;
@@ -398,10 +398,10 @@ function drawBreedGridConnectors(ctx, nodes, scale, pm, vp, margin, state) {
 
     const rc = RANK_COLORS[parent.data._rank] || RANK_COLORS.ROOT;
     if (flashA > 0) {
-      ctx.strokeStyle = hexToRgba('#FF6B35', 0.3 + 0.45 * flashA);
+      ctx.strokeStyle = hexToRgba('#22c55e', 0.3 + 0.45 * flashA);
       ctx.lineWidth = (1.2 + 1.8 * flashA) / Math.max(scale, 0.3);
       ctx.shadowBlur = 10 * flashA;
-      ctx.shadowColor = 'rgba(255,107,53,0.7)';
+      ctx.shadowColor = 'rgba(34,197,94,0.7)';
     } else {
       ctx.strokeStyle = hexToRgba(rc.node, 0.15);
       ctx.lineWidth = 1.2 / Math.max(scale, 0.3);
@@ -650,8 +650,8 @@ function drawVtuberNode(ctx, node, scale, state) {
     const t = performance.now();
     const spotAlpha = 0.06 + 0.06 * Math.sin(t / 900);
     const spotGrad = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, 50);
-    spotGrad.addColorStop(0, `rgba(233,30,140,${spotAlpha})`);
-    spotGrad.addColorStop(1, 'rgba(233,30,140,0)');
+    spotGrad.addColorStop(0, `rgba(212,160,23,${spotAlpha})`);
+    spotGrad.addColorStop(1, 'rgba(212,160,23,0)');
     ctx.fillStyle = spotGrad;
     ctx.beginPath();
     ctx.arc(node.x, node.y, 50, 0, Math.PI * 2);
@@ -661,8 +661,8 @@ function drawVtuberNode(ctx, node, scale, state) {
   // ── 4A. Close: static radial aura ──
   if (isClose && !isFocused) {
     const auraGrad = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, 38);
-    auraGrad.addColorStop(0, 'rgba(255,107,53,0.12)');
-    auraGrad.addColorStop(1, 'rgba(255,107,53,0)');
+    auraGrad.addColorStop(0, 'rgba(34,197,94,0.12)');
+    auraGrad.addColorStop(1, 'rgba(34,197,94,0)');
     ctx.fillStyle = auraGrad;
     ctx.beginPath();
     ctx.arc(node.x, node.y, 38, 0, Math.PI * 2);
@@ -687,14 +687,14 @@ function drawVtuberNode(ctx, node, scale, state) {
     const midA   = 0.08 + 0.6  * convergePulse(wave, 0.4);
     const innerA = 0.1  + 0.7  * convergePulse(wave, 0.7);
 
-    drawHexRing(ctx, node.x, node.y, hexR + 12, `rgba(233,30,140,${outerA})`, 1.5);
-    drawHexRing(ctx, node.x, node.y, hexR + 8,  `rgba(233,30,140,${midA})`,   2.0);
-    drawHexRing(ctx, node.x, node.y, hexR + 4,  `rgba(233,30,140,${innerA})`, 2.5);
+    drawHexRing(ctx, node.x, node.y, hexR + 12, `rgba(212,160,23,${outerA})`, 1.5);
+    drawHexRing(ctx, node.x, node.y, hexR + 8,  `rgba(212,160,23,${midA})`,   2.0);
+    drawHexRing(ctx, node.x, node.y, hexR + 4,  `rgba(212,160,23,${innerA})`, 2.5);
   }
 
   // ── 4B. Close: static outer hex ring ──
   if (isClose && !isFocused) {
-    drawHexRing(ctx, node.x, node.y, hexR + 5, 'rgba(255,107,53,0.5)', 1.5);
+    drawHexRing(ctx, node.x, node.y, hexR + 5, 'rgba(34,197,94,0.5)', 1.5);
   }
 
   // ── 5. Live: pulsing green hex ring + outer glow ──
@@ -702,9 +702,9 @@ function drawVtuberNode(ctx, node, scale, state) {
     const liveAlpha = 0.4 + 0.4 * Math.sin(performance.now() / 1000);
     // Outer glow
     ctx.save();
-    ctx.shadowColor = `rgba(34,197,94,${liveAlpha * 0.6})`;
+    ctx.shadowColor = `rgba(255,107,53,${liveAlpha * 0.6})`;
     ctx.shadowBlur = 12;
-    drawHexRing(ctx, node.x, node.y, hexR + 6, `rgba(34,197,94,${liveAlpha})`, 3.0);
+    drawHexRing(ctx, node.x, node.y, hexR + 6, `rgba(255,107,53,${liveAlpha})`, 3.0);
     ctx.restore();
   }
 
@@ -735,9 +735,9 @@ function drawVtuberNode(ctx, node, scale, state) {
               const ringR = hexR + 5 + rt * 55;
               const ringAlpha = Math.max(0, 1 - rt) * 0.85 * intensity;
               const ringWidth = Math.max(0.5, 4.5 - rt * 4);
-              const g = 160 - i * 30, b = 60 - i * 20;
+              const r = 34 + i * 20, g = 197 - i * 30, b = 94 - i * 20;
               drawHexRing(ctx, node.x, node.y, ringR,
-                `rgba(255,${g},${b},${ringAlpha})`, ringWidth);
+                `rgba(${r},${g},${b},${ringAlpha})`, ringWidth);
             }
           }
 
@@ -747,9 +747,9 @@ function drawVtuberNode(ctx, node, scale, state) {
           const burstR = hexR + 20 + t * 10;
           const burstGrad = ctx.createRadialGradient(
             node.x, node.y, 0, node.x, node.y, burstR);
-          burstGrad.addColorStop(0, `rgba(255,240,200,${burstAlpha})`);
-          burstGrad.addColorStop(0.3, `rgba(255,160,60,${burstAlpha * 0.6})`);
-          burstGrad.addColorStop(1, 'rgba(255,107,53,0)');
+          burstGrad.addColorStop(0, `rgba(200,255,220,${burstAlpha})`);
+          burstGrad.addColorStop(0.3, `rgba(60,200,100,${burstAlpha * 0.6})`);
+          burstGrad.addColorStop(1, 'rgba(34,197,94,0)');
           ctx.fillStyle = burstGrad;
           ctx.beginPath();
           ctx.arc(node.x, node.y, burstR, 0, Math.PI * 2);
@@ -759,8 +759,8 @@ function drawVtuberNode(ctx, node, scale, state) {
           const glowAlpha = Math.max(0, 1 - t) * 0.18 * intensity;
           const glowGrad = ctx.createRadialGradient(
             node.x, node.y, hexR, node.x, node.y, hexR + 60);
-          glowGrad.addColorStop(0, `rgba(255,140,40,${glowAlpha})`);
-          glowGrad.addColorStop(1, 'rgba(255,107,53,0)');
+          glowGrad.addColorStop(0, `rgba(40,200,100,${glowAlpha})`);
+          glowGrad.addColorStop(1, 'rgba(34,197,94,0)');
           ctx.fillStyle = glowGrad;
           ctx.beginPath();
           ctx.arc(node.x, node.y, hexR + 60, 0, Math.PI * 2);

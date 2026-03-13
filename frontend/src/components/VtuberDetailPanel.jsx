@@ -632,9 +632,9 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 width: '100%', padding: '8px 16px', borderRadius: '6px',
                 fontSize: '0.9em',
-                background: 'rgba(255,107,53,0.15)',
-                color: '#FF6B35',
-                border: '1px solid rgba(255,107,53,0.3)',
+                background: 'rgba(212,160,23,0.1)',
+                color: '#D4A017',
+                border: '1px solid rgba(212,160,23,0.3)',
                 cursor: 'pointer',
               }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

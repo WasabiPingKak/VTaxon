@@ -99,10 +99,10 @@ export default function FloatingToolbar({
         style={{
           width: '100%', height: 26, padding: '0 8px',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-          background: isActive ? 'rgba(255,107,53,0.12)' : isH ? 'rgba(255,255,255,0.06)' : 'transparent',
+          background: isActive ? 'rgba(34,197,94,0.12)' : isH ? 'rgba(255,255,255,0.06)' : 'transparent',
           border: 'none',
           borderRadius: 4,
-          color: disabled ? 'rgba(255,255,255,0.18)' : isActive ? '#FF6B35' : 'rgba(255,255,255,0.6)',
+          color: disabled ? 'rgba(255,255,255,0.18)' : isActive ? '#22c55e' : 'rgba(255,255,255,0.6)',
           fontSize: F.option, fontWeight: isActive ? 600 : 400,
           cursor: disabled ? 'default' : 'pointer',
           transition: 'all 0.15s',
@@ -161,7 +161,7 @@ export default function FloatingToolbar({
     <>
       {/* ── Zoom (hidden on mobile BottomSheet) ── */}
       {!isMobile && [{
-          id: 'fitAll', tint: '#FF6B35', title: '完整展開', action: onExpandBothTrees,
+          id: 'fitAll', tint: '#22c55e', title: '完整展開', action: onExpandBothTrees,
           icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
         },
         {
@@ -204,8 +204,8 @@ export default function FloatingToolbar({
             return (
               <div key={item.key} style={{
                 display: 'flex', alignItems: 'center',
-                background: isActive ? 'rgba(255,107,53,0.12)' : isH ? 'rgba(255,255,255,0.06)' : 'transparent',
-                borderLeft: isActive ? '2px solid #FF6B35' : '2px solid transparent',
+                background: isActive ? 'rgba(34,197,94,0.12)' : isH ? 'rgba(255,255,255,0.06)' : 'transparent',
+                borderLeft: isActive ? '2px solid #22c55e' : '2px solid transparent',
                 transition: 'all 0.15s', height: 26,
               }}>
                 <button type="button"
@@ -214,7 +214,7 @@ export default function FloatingToolbar({
                     flex: 1, height: '100%', padding: '0 0 0 8px',
                     display: 'flex', alignItems: 'center',
                     background: 'none', border: 'none', borderRadius: 0,
-                    color: isActive ? '#FF6B35' : 'rgba(255,255,255,0.6)',
+                    color: isActive ? '#22c55e' : 'rgba(255,255,255,0.6)',
                     fontSize: F.option, fontWeight: isActive ? 600 : 400,
                     cursor: 'pointer', transition: 'color 0.15s',
                   }}
@@ -274,7 +274,7 @@ export default function FloatingToolbar({
             active: filterPanelOpen,
             badge: activeFilterCount > 0 ? (
               <span style={{
-                background: '#FF6B35', color: '#fff', borderRadius: 7, padding: '0 4px',
+                background: '#22c55e', color: '#fff', borderRadius: 7, padding: '0 4px',
                 fontSize: F.badge, fontWeight: 700, lineHeight: '14px', minWidth: 14, textAlign: 'center',
               }}>{activeFilterCount}</span>
             ) : null,
@@ -318,7 +318,7 @@ export default function FloatingToolbar({
           {rankEntries.map(({ label, count }) => (
             <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 10px', fontSize: F.option, color: 'rgba(255,255,255,0.55)' }}>
               <span>{label}</span>
-              <span style={{ color: '#FF6B35', fontWeight: 600 }}>{count}</span>
+              <span style={{ color: '#22c55e', fontWeight: 600 }}>{count}</span>
             </div>
           ))}
         </div>
@@ -352,12 +352,12 @@ export default function FloatingToolbar({
               <div key={item.key} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0 8px', height: 32,
-                background: isActive ? 'rgba(255,107,53,0.08)' : 'transparent',
+                background: isActive ? 'rgba(34,197,94,0.08)' : 'transparent',
                 borderRadius: 4,
               }}>
                 <span style={{
                   fontSize: F.option,
-                  color: isActive ? '#FF6B35' : 'rgba(255,255,255,0.5)',
+                  color: isActive ? '#22c55e' : 'rgba(255,255,255,0.5)',
                   fontWeight: isActive ? 600 : 400,
                 }}>{item.label}</span>
                 <span style={{ display: 'flex', gap: 2 }}>
@@ -425,7 +425,7 @@ export default function FloatingToolbar({
           {rankEntries.map(({ label, count }) => (
             <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 10px', fontSize: F.option, color: 'rgba(255,255,255,0.55)' }}>
               <span>{label}</span>
-              <span style={{ color: '#FF6B35', fontWeight: 600 }}>{count}</span>
+              <span style={{ color: '#22c55e', fontWeight: 600 }}>{count}</span>
             </div>
           ))}
         </div>
@@ -465,7 +465,7 @@ export default function FloatingToolbar({
             style={{
               minWidth: 34, height: 34, padding: 0, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: expanded ? 'rgba(255,107,53,0.15)' : 'transparent',
+              background: expanded ? 'rgba(34,197,94,0.15)' : 'transparent',
               border: 'none', borderRadius: 6,
               color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
             }}
@@ -508,8 +508,8 @@ export default function FloatingToolbar({
                     style={{
                       padding: '0 10px', height: 28, border: 'none', borderRadius: 4,
                       fontSize: 11, fontWeight: isActive ? 600 : 400, whiteSpace: 'nowrap',
-                      background: isActive ? 'rgba(255,107,53,0.2)' : 'transparent',
-                      color: isActive ? '#FF6B35' : 'rgba(255,255,255,0.5)',
+                      background: isActive ? 'rgba(34,197,94,0.2)' : 'transparent',
+                      color: isActive ? '#22c55e' : 'rgba(255,255,255,0.5)',
                       cursor: 'pointer', transition: 'all 0.15s',
                     }}
                   >{item.label}</button>
@@ -526,8 +526,8 @@ export default function FloatingToolbar({
                 style={{
                   height: 34, padding: '0 8px', border: 'none', borderRadius: 6,
                   display: 'flex', alignItems: 'center', gap: 3,
-                  background: sortDropdownOpen ? 'rgba(255,107,53,0.15)' : 'transparent',
-                  color: isShuffled ? 'rgba(255,255,255,0.5)' : '#FF6B35',
+                  background: sortDropdownOpen ? 'rgba(34,197,94,0.15)' : 'transparent',
+                  color: isShuffled ? 'rgba(255,255,255,0.5)' : '#22c55e',
                   fontSize: 11, fontWeight: 600, cursor: 'pointer',
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   transition: 'all 0.15s',
@@ -565,9 +565,9 @@ export default function FloatingToolbar({
                         style={{
                           width: '100%', height: 44, padding: '0 14px',
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          background: isActive ? 'rgba(255,107,53,0.1)' : 'transparent',
+                          background: isActive ? 'rgba(34,197,94,0.1)' : 'transparent',
                           border: 'none', cursor: 'pointer',
-                          color: isActive ? '#FF6B35' : 'rgba(255,255,255,0.65)',
+                          color: isActive ? '#22c55e' : 'rgba(255,255,255,0.65)',
                           fontSize: 13, fontWeight: isActive ? 600 : 400,
                           transition: 'background 0.15s',
                         }}
@@ -626,7 +626,7 @@ export default function FloatingToolbar({
               {activeFilterCount > 0 && (
                 <span style={{
                   position: 'absolute', top: 0, right: -2,
-                  background: '#FF6B35', color: '#fff', borderRadius: 7, padding: '0 3px',
+                  background: '#22c55e', color: '#fff', borderRadius: 7, padding: '0 3px',
                   fontSize: 9, fontWeight: 700, lineHeight: '13px', minWidth: 13, textAlign: 'center',
                 }}>{activeFilterCount}</span>
               )}

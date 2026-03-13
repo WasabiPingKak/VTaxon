@@ -239,15 +239,15 @@ const DirectoryCard = memo(function DirectoryCard({ item, onClick, isLive }) {
             onClick={handleLocate}
             title="在樹狀圖中定位"
             style={{
-              background: 'rgba(233,30,140,0.08)',
-              border: '1px solid rgba(233,30,140,0.25)',
+              background: 'rgba(212,160,23,0.08)',
+              border: '1px solid rgba(212,160,23,0.25)',
               borderRadius: 6, padding: '3px 8px',
-              color: '#E91E8C', fontSize: '0.75em',
+              color: '#D4A017', fontSize: '0.75em',
               cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', gap: 4,
             }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.5)'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(233,30,140,0.25)'; }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(212,160,23,0.5)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(212,160,23,0.25)'; }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" />
