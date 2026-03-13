@@ -18,6 +18,7 @@ export default function DirectoryFilters({
   viewMode,
   onViewModeChange,
   facets,       // from API: { country, country_none, gender, status, org_type, platform, has_traits }
+  liveCount,
 }) {
   const isMobile = useIsMobile();
   const [searchInput, setSearchInput] = useState(filters.q || '');
@@ -141,12 +142,10 @@ export default function DirectoryFilters({
     }
   };
 
-  const showUntagged = filters.has_traits !== 'true';
-
   const clearAll = () => {
     onChange({
       q: '', country: '', gender: '', status: '',
-      org_type: '', platform: '', has_traits: 'true',
+      org_type: '', platform: '', has_traits: 'true', live_first: '',
       sort: 'created_at', order: 'desc', page: 1,
     });
     setSearchInput('');
@@ -221,30 +220,15 @@ export default function DirectoryFilters({
           onChange={(s) => updateSetFilter('platform', s)}
           isMobile={isMobile}
         />
-        <label
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            fontSize: '0.82em', color: 'rgba(255,255,255,0.5)',
-            cursor: 'pointer', userSelect: 'none',
-            marginLeft: 4,
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={showUntagged}
-            onChange={(e) => updateFilter('has_traits', e.target.checked ? '' : 'true')}
-            style={{ accentColor: '#38bdf8', cursor: 'pointer' }}
-          />
-          顯示未標註
-          {traitFacets['false'] != null && (
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.9em' }}>
-              ({traitFacets['false']})
-            </span>
-          )}
-        </label>
 
-        {/* Desktop: spacer + sort + view toggle inline */}
+        {/* Separator between dropdowns and toggles */}
+        <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', margin: '0 2px', flexShrink: 0 }} />
+
+        <ToggleControls filters={filters} updateFilter={updateFilter} traitFacets={traitFacets} liveCount={liveCount} />
+
+        {/* Desktop: separator + sort + view toggle inline */}
         {!isMobile && <>
+          <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', margin: '0 2px', flexShrink: 0 }} />
           <div style={{ flex: 1 }} />
           <SortControls filters={filters} updateFilter={updateFilter} />
           <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
@@ -304,6 +288,50 @@ export default function DirectoryFilters({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function ToggleControls({ filters, updateFilter, traitFacets, liveCount }) {
+  const toggles = [
+    {
+      key: 'live_first',
+      active: filters.live_first === 'true',
+      label: '直播優先',
+      count: liveCount || null,
+      onClick: () => updateFilter('live_first', filters.live_first === 'true' ? '' : 'true'),
+    },
+    {
+      key: 'show_untagged',
+      active: filters.has_traits !== 'true',
+      label: '顯示未標註',
+      count: traitFacets?.['false'] ?? null,
+      onClick: () => updateFilter('has_traits', filters.has_traits !== 'true' ? 'true' : ''),
+    },
+  ];
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.8em' }}>
+      {toggles.map(t => (
+        <button
+          key={t.key}
+          type="button"
+          onClick={t.onClick}
+          style={{
+            background: t.active ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${t.active ? 'rgba(56,189,248,0.4)' : 'rgba(255,255,255,0.1)'}`,
+            borderRadius: 5, padding: '4px 8px',
+            color: t.active ? '#38bdf8' : 'rgba(255,255,255,0.5)',
+            cursor: 'pointer', fontSize: '1em',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {t.label}
+          {t.count != null && (
+            <span style={{ opacity: 0.6, marginLeft: 2 }}>({t.count})</span>
+          )}
+        </button>
+      ))}
     </div>
   );
 }

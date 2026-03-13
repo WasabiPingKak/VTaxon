@@ -113,6 +113,7 @@ def directory():
     has_traits = request.args.get('has_traits', '').strip()
     sort = request.args.get('sort', 'created_at').strip()
     order = request.args.get('order', 'desc').strip()
+    live_first = request.args.get('live_first', '').strip().lower() == 'true'
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 24, type=int)
 
@@ -255,15 +256,17 @@ def directory():
     if order not in ('asc', 'desc'):
         order = 'desc'
 
-    # Live-pinning: in ALL sort modes, live users float to top
-    from ..models import LiveStream
-    is_live = (
-        db.session.query(LiveStream.user_id)
-        .filter(LiveStream.user_id == User.id)
-        .correlate(User)
-        .exists()
-    )
-    live_weight = case((is_live, 1), else_=0)
+    # Live-pinning: only when live_first toggle is on or sort is active_first
+    live_weight = None
+    if live_first or sort == 'active_first':
+        from ..models import LiveStream
+        is_live = (
+            db.session.query(LiveStream.user_id)
+            .filter(LiveStream.user_id == User.id)
+            .correlate(User)
+            .exists()
+        )
+        live_weight = case((is_live, 1), else_=0)
 
     if sort == 'active_first':
         # Live > recent last_live_at (7 days) > name fallback
@@ -285,29 +288,38 @@ def directory():
             else_=2,
         )
         dir_fn = (lambda c: c.asc()) if order == 'asc' else (lambda c: c.desc())
-        query = query.order_by(
-            live_weight.desc(),
+        order_clauses = []
+        if live_weight is not None:
+            order_clauses.append(live_weight.desc())
+        order_clauses.extend([
             dir_fn(org_priority),
             dir_fn(func.coalesce(User.organization, '')),
             User.display_name.asc(),
-        )
+        ])
+        query = query.order_by(*order_clauses)
     elif sort == 'name':
         dir_fn = (lambda c: c.asc()) if order == 'asc' else (lambda c: c.desc())
-        query = query.order_by(live_weight.desc(), dir_fn(User.display_name))
+        order_clauses = []
+        if live_weight is not None:
+            order_clauses.append(live_weight.desc())
+        order_clauses.append(dir_fn(User.display_name))
+        query = query.order_by(*order_clauses)
     elif sort == 'debut_date':
+        order_clauses = []
+        if live_weight is not None:
+            order_clauses.append(live_weight.desc())
         if order == 'asc':
-            query = query.order_by(
-                live_weight.desc(),
-                text("users.profile_data->>'debut_date' ASC NULLS LAST"),
-            )
+            order_clauses.append(text("users.profile_data->>'debut_date' ASC NULLS LAST"))
         else:
-            query = query.order_by(
-                live_weight.desc(),
-                text("users.profile_data->>'debut_date' DESC NULLS LAST"),
-            )
+            order_clauses.append(text("users.profile_data->>'debut_date' DESC NULLS LAST"))
+        query = query.order_by(*order_clauses)
     else:  # created_at
         dir_fn = (lambda c: c.asc()) if order == 'asc' else (lambda c: c.desc())
-        query = query.order_by(live_weight.desc(), dir_fn(User.created_at))
+        order_clauses = []
+        if live_weight is not None:
+            order_clauses.append(live_weight.desc())
+        order_clauses.append(dir_fn(User.created_at))
+        query = query.order_by(*order_clauses)
 
     # Count + paginate
     total = query.count()
