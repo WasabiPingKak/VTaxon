@@ -119,6 +119,23 @@ export default function SettingsAccounts() {
     }
   }
 
+  async function handleResubscribe(account) {
+    setAccountLoading(prev => ({ ...prev, [account.id]: 'resubscribing' }));
+    try {
+      const updated = await api.resubscribe(account.id);
+      setOauthAccounts(prev => prev.map(a => a.id === account.id ? updated : a));
+      if (updated.live_sub_status === 'subscribed') {
+        addToast('直播訂閱已重新建立', { type: 'success', duration: 3000 });
+      } else {
+        addToast('直播訂閱仍然失敗，請稍後再試', { type: 'error' });
+      }
+    } catch (err) {
+      addToast(`重新訂閱失敗：${err.message}`, { type: 'error' });
+    } finally {
+      setAccountLoading(prev => ({ ...prev, [account.id]: null }));
+    }
+  }
+
   function handleLink(provider) {
     const supabaseProvider = SUPABASE_PROVIDER_MAP[provider];
     linkProvider(supabaseProvider);
@@ -135,6 +152,11 @@ export default function SettingsAccounts() {
   const ytAccount = oauthAccounts.find(a => a.provider === 'youtube');
   const showYtWarning = ytPermissionFailed
     || (ytAccount && !ytAccount.channel_url);
+
+  // Accounts with failed live subscriptions (skip YouTube w/o channel_url — handled by YT warning)
+  const failedSubAccounts = oauthAccounts.filter(a =>
+    a.live_sub_status === 'failed' && !(a.provider === 'youtube' && !a.channel_url)
+  );
 
   if (loadingAccounts) {
     return <p style={{ color: 'rgba(255,255,255,0.4)' }}>載入中…</p>;
@@ -215,6 +237,41 @@ export default function SettingsAccounts() {
           </div>
         </div>
       )}
+
+      {failedSubAccounts.map(account => (
+        <div key={`sub-warn-${account.id}`} style={{
+          marginTop: 12, borderRadius: 10, overflow: 'hidden',
+          border: '1px solid rgba(234,179,8,0.35)',
+          background: 'rgba(234,179,8,0.08)',
+        }}>
+          <div style={{ padding: '16px 18px' }}>
+            <div style={{ fontSize: '1em', fontWeight: 700, color: '#eab308', marginBottom: 6 }}>
+              {PROVIDER_LABELS[account.provider]} 直播通知訂閱失敗
+            </div>
+            <div style={{ fontSize: '0.9em', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6 }}>
+              VTaxon 無法訂閱您的 {PROVIDER_LABELS[account.provider]} 頻道直播通知，直播狀態將無法自動更新。
+            </div>
+          </div>
+          <div style={{
+            padding: '14px 18px',
+            borderTop: '1px solid rgba(234,179,8,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+          }}>
+            <button
+              onClick={() => handleResubscribe(account)}
+              disabled={accountLoading[account.id] === 'resubscribing'}
+              style={{
+                padding: '8px 20px', borderRadius: 8, border: 'none',
+                background: '#3b82f6', color: '#fff', cursor: accountLoading[account.id] === 'resubscribing' ? 'not-allowed' : 'pointer',
+                fontSize: '0.9em', fontWeight: 600, whiteSpace: 'nowrap',
+                opacity: accountLoading[account.id] === 'resubscribing' ? 0.6 : 1,
+              }}
+            >
+              {accountLoading[account.id] === 'resubscribing' ? '訂閱中…' : '重新訂閱'}
+            </button>
+          </div>
+        </div>
+      ))}
 
       {unboundProviders.map(provider => (
         <button key={provider} type="button" onClick={() => handleLink(provider)}
