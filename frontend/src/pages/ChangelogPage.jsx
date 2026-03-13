@@ -4,10 +4,16 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SEOHead from '../components/SEOHead';
 
+import changelog_v3 from '../../../docs/changelogs/changelog-v3/changelog.md?raw';
 import changelog_v2 from '../../../docs/changelogs/changelog-v2/changelog.md?raw';
 import changelog_2026_03_10 from '../../../docs/changelogs/changelog-v1/changelog.md?raw';
 
 const versions = [
+  {
+    date: '2026/3/12 ~ 3/14',
+    title: '直播狀態偵測、圖鑑排序、訂閱狀態追蹤',
+    content: changelog_v3,
+  },
   {
     date: '2026/3/10 ~ 3/12',
     title: '搜尋 UX 改進、品種 Grid 排列、虛構物種更新',
