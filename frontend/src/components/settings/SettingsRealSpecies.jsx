@@ -109,7 +109,7 @@ function LivePrimaryButton({ isActive, onClick, disabled }) {
   );
 }
 
-export default function SettingsRealSpecies() {
+export default function SettingsRealSpecies({ traitVersion, onTraitChange }) {
   const { user, setUser } = useAuth();
   const { addToast } = useToast();
   const [traits, setTraits] = useState([]);
@@ -119,7 +119,7 @@ export default function SettingsRealSpecies() {
 
   useEffect(() => {
     if (user) loadTraits();
-  }, [user?.id]);
+  }, [user?.id, traitVersion]);
 
   useEffect(() => {
     if (showSearch && searchRef.current) {
@@ -156,6 +156,7 @@ export default function SettingsRealSpecies() {
       }
       setShowSearch(false);
       loadTraits();
+      onTraitChange?.();
     } catch (err) {
       if (err.data?.code === 'ancestor_blocked') {
         addToast(`無法新增：你已經有「${err.data.existing_display_name}」，範圍比這個更小更準確`, { type: 'warning' });
@@ -178,6 +179,7 @@ export default function SettingsRealSpecies() {
         setUser(prev => ({ ...prev, live_primary_real_trait_id: null }));
       }
       loadTraits();
+      onTraitChange?.();
     } catch (err) {
       addToast(err.message, { type: 'error' });
     }
@@ -212,16 +214,16 @@ export default function SettingsRealSpecies() {
       {totalTraitCount >= 4 && (
         <div style={{
           marginBottom: '12px', padding: '10px 14px', borderRadius: '8px',
-          background: totalTraitCount >= 6 ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)',
-          border: `1px solid ${totalTraitCount >= 6 ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}`,
+          background: totalTraitCount >= 6 ? 'rgba(239,68,68,0.08)' : 'rgba(148,163,184,0.08)',
+          border: `1px solid ${totalTraitCount >= 6 ? 'rgba(239,68,68,0.2)' : 'rgba(148,163,184,0.2)'}`,
           fontSize: '0.85em', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6,
         }}>
-          <span style={{ color: totalTraitCount >= 6 ? '#ef4444' : '#f59e0b', fontWeight: 600 }}>
-            ⚠ 顯示限制
+          <span style={{ color: totalTraitCount >= 6 ? '#ef4444' : '#94a3b8', fontWeight: 600 }}>
+            {totalTraitCount >= 6 ? '⚠' : 'ℹ'} 顯示限制
           </span>
           <span style={{ marginLeft: '6px' }}>
             {totalTraitCount >= 6
-              ? `你目前共有 ${totalTraitCount} 個物種標註。超過 5 個時，你在分類樹上將不會直接顯示，而是被收入「+N 位」摺疊群組中。`
+              ? `你目前共有 ${totalTraitCount} 個物種標註。超過 5 個時，你在分類樹上將不會直接顯示，而是被收入「+N 位」摺疊群組中，直播狀態也不會顯示。`
               : `你目前共有 ${totalTraitCount} 個物種標註。超過 3 個時，你在分類樹上的顯示會縮小（無頭像）。`
             }
           </span>

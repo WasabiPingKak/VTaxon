@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useReducer } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
@@ -24,6 +24,9 @@ export default function CharacterPage() {
   const [oauthAccounts, setOauthAccounts] = useState([]);
 
   const activeTab = searchParams.get('tab') || 'species';
+
+  // Trait version counter — bumped when any trait is added/removed to sync both panels
+  const [traitVersion, bumpTraitVersion] = useReducer(c => c + 1, 0);
 
   // Preview panel state — loaded on demand
   const [showPreview, setShowPreview] = useState(false);
@@ -151,10 +154,10 @@ export default function CharacterPage() {
       {activeTab === 'species' && (
         <>
           <div style={{ marginBottom: '24px' }}>
-            <SettingsRealSpecies />
+            <SettingsRealSpecies traitVersion={traitVersion} onTraitChange={bumpTraitVersion} />
           </div>
           <div style={{ marginBottom: '24px' }}>
-            <SettingsFictional />
+            <SettingsFictional traitVersion={traitVersion} onTraitChange={bumpTraitVersion} />
           </div>
         </>
       )}

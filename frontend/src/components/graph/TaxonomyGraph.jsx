@@ -1030,6 +1030,26 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       return changed ? next : prev;
     });
 
+    // Auto-expand budget groups containing the focused user (if they're in 6+ tier)
+    if (entry.trait_count >= 6) {
+      setExpandedBudgetGroups(prev => {
+        const next = new Set(prev);
+        // Expand all budget groups for this user's entries
+        const allUserEntries = [...(entries || []), ...(fictionalEntries || [])].filter(e => e.user_id === focusedUserId);
+        for (const ue of allUserEntries) {
+          const parts = ue.taxon_path ? ue.taxon_path.split('|') : (ue.fictional_path ? ue.fictional_path.split('|') : []);
+          if (parts.length > 0) {
+            const parentPathKey = ue.fictional_path
+              ? `__F__|${ue.fictional_path}`
+              : parts.join('|');
+            const breedKey = ue.breed_id ? `${parentPathKey}|__breed__${ue.breed_id}` : parentPathKey;
+            next.add(`${breedKey}|__budget_group__`);
+          }
+        }
+        return next;
+      });
+    }
+
     // Delay to let layout update with expanded paths, then pan
     scheduleCamera(() => {
       const pathKey = entryToPathKey(entry);

@@ -951,23 +951,89 @@ function drawDotVtuberNode(ctx, node, scale, state) {
   const d = node.data;
   const dotR = 5;
 
-  // Small gray dot
+  const isCurrentUser = d._isCurrentUser;
+  const isFocused = state.focusedUserId && d._userId === state.focusedUserId;
+  const isClose = state.closeVtuberIds && state.closeVtuberIds.get(d._userId)?.has(d._entry?.fictional_path || d._entry?.taxon_path);
+  const isLive = state.liveUserIds && state.liveUserIds.has(d._userId);
+
+  // Color priority: live > focused > close > currentUser > default
+  let dotColor;
+  if (isLive) dotColor = LIVE_COLOR;
+  else if (isFocused) dotColor = FOCUSED_COLOR;
+  else if (isClose) dotColor = CLOSE_COLOR;
+  else if (isCurrentUser) dotColor = CURRENT_USER_COLOR;
+  else dotColor = 'rgba(255,255,255,0.25)';
+
+  // Live: pulsing glow around dot
+  if (isLive) {
+    const liveAlpha = 0.4 + 0.4 * Math.sin(performance.now() / 1000);
+    ctx.save();
+    ctx.shadowColor = `rgba(255,107,53,${liveAlpha * 0.6})`;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, dotR + 2, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,107,53,${liveAlpha})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Dot
   ctx.beginPath();
   ctx.arc(node.x, node.y, dotR, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fillStyle = dotColor;
   ctx.fill();
 
   // Name label below dot
   if (scale > LOD_DOTS_ONLY) {
     const lines = d._labelLines || [d._displayName || '?'];
+    let labelColor;
+    if (isLive) labelColor = LIVE_COLOR;
+    else if (isFocused) labelColor = FOCUSED_COLOR;
+    else if (isClose) labelColor = CLOSE_COLOR;
+    else if (isCurrentUser) labelColor = CURRENT_USER_COLOR;
+    else labelColor = LABEL_DIM;
+
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = LABEL_DIM;
+    ctx.fillStyle = labelColor;
     ctx.font = fontStr(11, scale);
     const fs = scaledFontSize(11, scale);
     const lineHeight = fs * 1.25;
     const startY = node.y + dotR + fs * 0.3;
     drawWrappedText(ctx, lines, node.x, startY, lineHeight);
+
+    // LIVE badge below name
+    if (isLive) {
+      const liveFs = scaledFontSize(8, scale);
+      const livePadX = 4 / Math.max(scale, FONT_MIN_SCALE);
+      const livePadY = 1.5 / Math.max(scale, FONT_MIN_SCALE);
+      const liveR = 2 / Math.max(scale, FONT_MIN_SCALE);
+      const liveY = startY + lines.length * lineHeight + liveFs * 0.2;
+      ctx.font = fontStr(8, scale, 'bold');
+      const liveText = 'LIVE';
+      const liveW = ctx.measureText(liveText).width + livePadX * 2;
+      const liveH = liveFs + livePadY * 2;
+      const bx = node.x - liveW / 2;
+
+      ctx.beginPath();
+      roundedRect(ctx, bx, liveY, liveW, liveH, liveR);
+      ctx.fillStyle = 'rgba(239,68,68,0.9)';
+      ctx.fill();
+
+      // Pulsing dot
+      const pDotR = 2 / Math.max(scale, FONT_MIN_SCALE);
+      const pDotAlpha = 0.6 + 0.4 * Math.sin(performance.now() / 600);
+      ctx.beginPath();
+      ctx.arc(bx + pDotR + 2, liveY + liveH / 2, pDotR, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${pDotAlpha})`;
+      ctx.fill();
+
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(liveText, node.x + pDotR, liveY + livePadY);
+    }
   }
 }
 
