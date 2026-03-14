@@ -277,6 +277,7 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
   return (
     <div
       ref={panelRef}
+      className="vtaxon-scroll"
       style={{
         background: 'rgba(8,13,21,0.85)',
         backdropFilter: 'blur(12px)',

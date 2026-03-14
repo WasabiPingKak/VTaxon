@@ -139,7 +139,7 @@ export default function FilterDropdown({
 
       {open && !isMobile && (
         /* Desktop: dropdown popover */
-        <div style={{
+        <div className="vtaxon-scroll" style={{
           position: 'absolute',
           ...(popoverAlign === 'right'
             ? { top: 0, left: '100%', marginLeft: 4 }
