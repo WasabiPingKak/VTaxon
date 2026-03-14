@@ -94,7 +94,7 @@ export default function FocusHUD({ focusedEntries, speciesIndex, onPrev, onNext,
         </div>
 
         {/* ── Expanded content ── */}
-        <div style={{
+        <div className="vtaxon-scroll" style={{
           borderTop: '1px solid rgba(255,255,255,0.08)',
           overflowY: 'auto',
           maxHeight: 'calc(60vh - 100px)',

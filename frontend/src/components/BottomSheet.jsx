@@ -63,6 +63,7 @@ export default function BottomSheet({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        className="vtaxon-scroll"
         style={{
           background,
           borderTop: '1px solid rgba(255,255,255,0.12)',
