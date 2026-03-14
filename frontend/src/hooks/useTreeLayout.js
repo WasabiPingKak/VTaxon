@@ -125,14 +125,16 @@ function computeLabelLayout(data) {
   const { _rank, _vtuber, _name, _nameZh, _displayName, _budgetGroup, _visualTier } = data;
   const ctx = getMeasureCtx();
 
-  // Budget group "+N 位" — small pill
+  // Budget group "+N 位" — dot + label, same as dot-tier vtuber
   if (_budgetGroup) {
     const label = _displayName || '+? 位';
-    ctx.font = '11px sans-serif';
-    const textW = ctx.measureText(label).width;
-    data._labelLines = [label];
-    data._labelHalfW = (textW + 20) / 2;
-    data._labelBottomH = 10;
+    const { lines, widest } = computeWrappedLines(ctx, label, MAX_LABEL_W.VTUBER, 11);
+    data._labelLines = lines;
+    data._labelHalfW = Math.max(widest, 20) / 2;
+    const DOT_R = 5;
+    const hFs = 11;
+    const hLineH = hFs * 1.25;
+    data._labelBottomH = DOT_R + hFs * 0.3 + lines.length * hLineH;
     return;
   }
 
@@ -885,7 +887,7 @@ function buildLiveDescendantSet(node, liveIds) {
  * Only includes children that are expanded. Also creates vtuber leaf nodes.
  */
 // Visual budget tier thresholds
-const BUDGET_TIER_DOT = 4;   // 4-5 traits → dot + name (no avatar)
+const BUDGET_TIER_DOT = 5;   // 5 traits → dot + name (no avatar)
 const BUDGET_TIER_HIDDEN = 6; // 6+ traits → collapsed into "+N 位"
 
 function getVisualTier(traitCount) {

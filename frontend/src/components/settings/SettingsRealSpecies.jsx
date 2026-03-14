@@ -210,8 +210,8 @@ export default function SettingsRealSpecies({ traitVersion, onTraitChange }) {
         )}
       </div>
 
-      {/* Visual budget warning — show when total traits ≥ 4 */}
-      {totalTraitCount >= 4 && (
+      {/* Visual budget warning — show when total traits ≥ 5 */}
+      {totalTraitCount >= 5 && (
         <div style={{
           marginBottom: '12px', padding: '10px 14px', borderRadius: '8px',
           background: totalTraitCount >= 6 ? 'rgba(239,68,68,0.08)' : 'rgba(148,163,184,0.08)',
@@ -224,7 +224,7 @@ export default function SettingsRealSpecies({ traitVersion, onTraitChange }) {
           <span style={{ marginLeft: '6px' }}>
             {totalTraitCount >= 6
               ? `你目前共有 ${totalTraitCount} 個物種標註。超過 5 個時，你在分類樹上將不會直接顯示，而是被收入「+N 位」摺疊群組中，直播狀態也不會顯示。`
-              : `你目前共有 ${totalTraitCount} 個物種標註。超過 3 個時，你在分類樹上的顯示會縮小（無頭像）。`
+              : `你目前共有 ${totalTraitCount} 個物種標註。第 5 個起，你在分類樹上的顯示會縮小（無頭像）。`
             }
           </span>
         </div>
