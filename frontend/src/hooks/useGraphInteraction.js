@@ -12,7 +12,15 @@ export default function useGraphInteraction(nodes, maxCount) {
   const hitTest = useCallback((worldX, worldY) => {
     if (!nodes || nodes.length === 0) return null;
 
-    // Iterate in reverse so top-drawn nodes are hit first
+    // First pass: check budget badge hit areas (they sit below the node)
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const bb = nodes[i].data._budgetBadgeBounds;
+      if (bb && worldX >= bb.x && worldX <= bb.x + bb.w && worldY >= bb.y && worldY <= bb.y + bb.h) {
+        return nodes[i];
+      }
+    }
+
+    // Second pass: normal node hit-test in reverse so top-drawn nodes are hit first
     for (let i = nodes.length - 1; i >= 0; i--) {
       const node = nodes[i];
       const d = node.data;
