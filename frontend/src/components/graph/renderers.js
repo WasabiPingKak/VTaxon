@@ -499,7 +499,7 @@ function drawNode(ctx, node, scale, state) {
 }
 
 // ── Budget badge: "+N 位" shown below node labels when hidden vtubers exist ──
-function drawBudgetBadge(ctx, node, scale, bottomY) {
+function drawBudgetBadge(ctx, node, scale, bottomY, state) {
   const d = node.data;
   d._budgetBadgeBounds = null; // reset each frame
   if (!d._hiddenVtuberCount || d._hiddenVtuberCount <= 0) return;
@@ -604,7 +604,7 @@ function drawTaxonomyNode(ctx, node, scale, state) {
     }
 
     // Budget badge
-    drawBudgetBadge(ctx, node, scale, bottomY);
+    drawBudgetBadge(ctx, node, scale, bottomY, state);
   }
 }
 
@@ -685,7 +685,7 @@ function drawSpeciesNode(ctx, node, scale, state) {
     }
 
     // Budget badge
-    drawBudgetBadge(ctx, node, scale, bottomY);
+    drawBudgetBadge(ctx, node, scale, bottomY, state);
   }
 }
 
@@ -1166,7 +1166,7 @@ function drawBreedNode(ctx, node, scale, state) {
     }
 
     // Budget badge
-    drawBudgetBadge(ctx, node, scale, bottomY);
+    drawBudgetBadge(ctx, node, scale, bottomY, state);
   }
 }
 
