@@ -61,6 +61,20 @@ def _compute_path_ranks(taxon_path, taxon_rank):
     return list(_STANDARD_RANKS[:n])
 
 
+def _assign_default_primary(entries):
+    """For users without an explicit live primary trait, mark their first entry."""
+    users_with_primary = set()
+    for e in entries:
+        if e.get('is_live_primary'):
+            users_with_primary.add(e['user_id'])
+    first_seen = set()
+    for e in entries:
+        uid = e['user_id']
+        if uid not in users_with_primary and uid not in first_seen:
+            first_seen.add(uid)
+            e['is_live_primary'] = True
+
+
 def _inject_medusozoa(entries):
     """Post-process entries to inject Medusozoa subphylum between Cnidaria and its classes.
 
@@ -303,6 +317,9 @@ def get_taxonomy_tree():
     # Post-process: inject Medusozoa subphylum for display
     _inject_medusozoa(entries)
 
+    # Auto-assign is_live_primary for users who haven't set one
+    _assign_default_primary(entries)
+
     result = {'entries': entries}
     set_tree_cache(result)
     return jsonify(result)
@@ -411,6 +428,9 @@ def get_fictional_tree():
             'sub_origin': fictional.sub_origin,
             'fictional_type': fictional_type,
         })
+
+    # Auto-assign is_live_primary for users who haven't set one
+    _assign_default_primary(entries)
 
     result = {'entries': entries}
     set_fictional_tree_cache(result)
