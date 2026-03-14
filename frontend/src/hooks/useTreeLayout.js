@@ -438,7 +438,9 @@ function applyIntermediateLevel(root) {
     if (!node.data._vtuber || !node.parent) continue;
 
     const siblings = node.parent.children;
-    const hasTaxonomySiblings = siblings.some(s => !s.data._vtuber);
+    // Only apply intermediate level when there are structural taxonomy siblings
+    // (genus, family, etc.), NOT when siblings are only BREED nodes
+    const hasTaxonomySiblings = siblings.some(s => !s.data._vtuber && s.data._rank !== 'BREED');
     if (hasTaxonomySiblings) {
       // Place vtuber 40% of the way down (between parent and children)
       node.y = node.parent.y + NODE_DY * 0.4;
