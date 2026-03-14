@@ -13,6 +13,13 @@
           }
         },
         {
+          "source": "/vtuber/**",
+          "run": {
+            "serviceId": "vtaxon-api-prod",
+            "region": "asia-east1"
+          }
+        },
+        {
           "source": "**",
           "destination": "/index.html"
         }
@@ -65,6 +72,13 @@
       "rewrites": [
         {
           "source": "/api/**",
+          "run": {
+            "serviceId": "vtaxon-api-staging",
+            "region": "asia-east1"
+          }
+        },
+        {
+          "source": "/vtuber/**",
           "run": {
             "serviceId": "vtaxon-api-staging",
             "region": "asia-east1"

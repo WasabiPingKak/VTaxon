@@ -53,6 +53,7 @@ def create_app(config_name=None):
     from .routes.fictional import fictional_bp
     from .routes.reports import reports_bp
     from .routes.seo import seo_bp
+    from .routes.ssr import ssr_bp
     from .routes.notifications import notifications_bp
     from .routes.admin import admin_bp
     from .routes.stats import stats_bp
@@ -71,16 +72,23 @@ def create_app(config_name=None):
     app.register_blueprint(stats_bp, url_prefix='/api/stats')
     app.register_blueprint(livestream_bp, url_prefix='/api')
     app.register_blueprint(seo_bp, url_prefix='/api')
+    app.register_blueprint(ssr_bp, url_prefix='/vtuber')
 
-    # Security headers for all API responses
+    # Security headers for all responses
     @app.after_request
     def set_security_headers(response):
         response.headers['X-Content-Type-Options'] = 'nosniff'
-        response.headers['X-Frame-Options'] = 'DENY'
         response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-        response.headers['Content-Security-Policy'] = (
-            "default-src 'none'; frame-ancestors 'none'"
-        )
+
+        if response.content_type and 'text/html' in response.content_type:
+            # SSR pages: permissive CSP matching Firebase Hosting config
+            response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        else:
+            # API responses: restrictive CSP
+            response.headers['X-Frame-Options'] = 'DENY'
+            response.headers['Content-Security-Policy'] = (
+                "default-src 'none'; frame-ancestors 'none'"
+            )
         return response
 
     @app.route('/api/health')
