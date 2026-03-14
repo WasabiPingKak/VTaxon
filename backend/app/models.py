@@ -37,7 +37,8 @@ class User(db.Model):
     oauth_accounts = db.relationship('OAuthAccount', backref='user',
                                      lazy='dynamic', cascade='all, delete-orphan')
     traits = db.relationship('VtuberTrait', backref='user',
-                             lazy='dynamic', cascade='all, delete-orphan')
+                             lazy='dynamic', cascade='all, delete-orphan',
+                             foreign_keys='VtuberTrait.user_id')
 
     def _computed_profile_data(self):
         """Return profile_data with computed fields (auto-switch preparing→active)."""
