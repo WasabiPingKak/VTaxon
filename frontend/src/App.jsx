@@ -18,7 +18,6 @@ const AboutPage = lazy(() => import('./pages/AboutPage'));
 const ChangelogPage = lazy(() => import('./pages/ChangelogPage'));
 const VTuberProfilePage = lazy(() => import('./pages/VTuberProfilePage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
-const StatsPage = lazy(() => import('./pages/StatsPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function LoadingFallback() {
@@ -73,7 +72,6 @@ function AppContent() {
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/privacy" element={<PrivacyPolicyPage />} />
               <Route path="/terms" element={<TermsOfServicePage />} />
-              <Route path="/stats" element={<StatsPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/changelog" element={<ChangelogPage />} />
               <Route path="/vtuber/:userId" element={<VTuberProfilePage />} />

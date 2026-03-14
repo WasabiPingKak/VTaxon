@@ -14,7 +14,6 @@ STATIC_PAGES = [
     {'loc': '/',          'priority': '1.0', 'changefreq': 'daily'},
     {'loc': '/directory', 'priority': '0.9', 'changefreq': 'daily'},
     {'loc': '/search',    'priority': '0.7', 'changefreq': 'weekly'},
-    {'loc': '/breeds',    'priority': '0.6', 'changefreq': 'weekly'},
     {'loc': '/about',     'priority': '0.4', 'changefreq': 'monthly'},
     {'loc': '/privacy',   'priority': '0.2', 'changefreq': 'monthly'},
     {'loc': '/terms',     'priority': '0.2', 'changefreq': 'monthly'},

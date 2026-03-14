@@ -291,9 +291,6 @@ export const api = {
     method: 'POST', body: JSON.stringify(body),
   }),
 
-  // Stats
-  getStats: () => apiFetch('/stats/overview'),
-
   // Admin counts
   getAdminCounts: () => apiFetch('/admin/request-counts'),
 
