@@ -485,9 +485,7 @@ function drawBreedGridConnectors(ctx, nodes, scale, pm, vp, margin, state) {
 function drawNode(ctx, node, scale, state) {
   const d = node.data;
 
-  if (d._budgetGroup) {
-    drawBudgetGroupNode(ctx, node, scale, state);
-  } else if (d._vtuber && d._visualTier === 'dot') {
+  if (d._vtuber && d._visualTier === 'dot') {
     drawDotVtuberNode(ctx, node, scale, state);
   } else if (d._vtuber) {
     drawVtuberNode(ctx, node, scale, state);
@@ -498,6 +496,38 @@ function drawNode(ctx, node, scale, state) {
   } else {
     drawTaxonomyNode(ctx, node, scale, state);
   }
+}
+
+// ── Budget badge: "+N 位" shown below node labels when hidden vtubers exist ──
+function drawBudgetBadge(ctx, node, scale, bottomY) {
+  const d = node.data;
+  if (!d._hiddenVtuberCount || d._hiddenVtuberCount <= 0) return;
+  if (scale <= LOD_DOTS_ONLY) return;
+
+  const text = `+${d._hiddenVtuberCount} 位`;
+  const fs = scaledFontSize(9, scale);
+  ctx.font = fontStr(9, scale);
+  const textW = ctx.measureText(text).width;
+  const padX = 5 / Math.max(scale, FONT_MIN_SCALE);
+  const padY = 2 / Math.max(scale, FONT_MIN_SCALE);
+  const w = textW + padX * 2;
+  const h = fs + padY * 2;
+  const r = h / 2;
+  const x = node.x - w / 2;
+  const y = bottomY + fs * 0.3;
+
+  ctx.beginPath();
+  roundedRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = LABEL_DIM;
+  ctx.fillText(text, node.x, y + h / 2);
 }
 
 // ── Taxonomy node (circle) ──
@@ -548,12 +578,17 @@ function drawTaxonomyNode(ctx, node, scale, state) {
     drawWrappedText(ctx, lines, node.x, startY, lineHeight);
 
     // Rank label + count (positioned after the last line)
+    let bottomY = startY + (lines.length - 1) * lineHeight + mainFs;
     if (rankLabel) {
       ctx.fillStyle = LABEL_DIM;
       ctx.font = fontStr(10, scale);
-      const subY = startY + (lines.length - 1) * lineHeight + mainFs + 2;
+      const subY = bottomY + 2;
       ctx.fillText(`${rankLabel} · ${count}`, node.x, subY);
+      bottomY = subY + scaledFontSize(10, scale);
     }
+
+    // Budget badge
+    drawBudgetBadge(ctx, node, scale, bottomY);
   }
 }
 
@@ -625,10 +660,16 @@ function drawSpeciesNode(ctx, node, scale, state) {
     // Rank label + count below Latin name
     const count = d._count || 0;
     const rankLabel = RANK_LABELS[d._rank] || '';
+    let bottomY = latinY + latinFs;
     if (rankLabel) {
       ctx.font = fontStr(10, scale);
-      ctx.fillText(`${rankLabel} · ${count}`, node.x, latinY + latinFs + 2);
+      const rankY = latinY + latinFs + 2;
+      ctx.fillText(`${rankLabel} · ${count}`, node.x, rankY);
+      bottomY = rankY + scaledFontSize(10, scale);
     }
+
+    // Budget badge
+    drawBudgetBadge(ctx, node, scale, bottomY);
   }
 }
 
@@ -1034,31 +1075,6 @@ function drawDotVtuberNode(ctx, node, scale, state) {
       ctx.textBaseline = 'top';
       ctx.fillText(liveText, node.x + pDotR, liveY + livePadY);
     }
-  }
-}
-
-// ── Budget group node (dot + "+N 位" label, same layout as dot-tier vtuber) ──
-function drawBudgetGroupNode(ctx, node, scale, state) {
-  const d = node.data;
-  const dotR = 5;
-
-  // White dot
-  ctx.beginPath();
-  ctx.arc(node.x, node.y, dotR, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.25)';
-  ctx.fill();
-
-  // "+N 位" label below dot
-  if (scale > LOD_DOTS_ONLY) {
-    const lines = d._labelLines || [d._displayName || '+? 位'];
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = LABEL_DIM;
-    ctx.font = fontStr(11, scale);
-    const fs = scaledFontSize(11, scale);
-    const lineHeight = fs * 1.25;
-    const startY = node.y + dotR + fs * 0.3;
-    drawWrappedText(ctx, lines, node.x, startY, lineHeight);
   }
 }
 

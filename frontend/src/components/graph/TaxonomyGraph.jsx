@@ -933,23 +933,25 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     // Sync tree indicator to the clicked node's tree
     setActiveTree(hit.data._pathKey?.startsWith('__F__') ? 'fictional' : 'real');
 
-    if (hit.data._budgetGroup) {
-      // Toggle expand/collapse of visual budget group
-      const groupKey = hit.data._budgetGroupKey;
-      setExpandedBudgetGroups(prev => {
-        const next = new Set(prev);
-        if (next.has(groupKey)) next.delete(groupKey);
-        else next.add(groupKey);
-        return next;
-      });
-    } else if (hit.data._vtuber) {
+    if (hit.data._vtuber) {
       setSelectedVtuber(hit.data._entry);
       // If clicking own species node, sync HUD to that species
       if (hit.data._userId === focusedUserId) {
         setFocusedEntryKey(entryToKey(hit.data._entry));
       }
     } else if (hit.data._pathKey != null) {
-      handleToggle(hit.data._pathKey);
+      // If this node has hidden vtubers and is already expanded, toggle budget group
+      if (hit.data._hiddenVtuberCount > 0 && hit.data._budgetGroupKey) {
+        const groupKey = hit.data._budgetGroupKey;
+        setExpandedBudgetGroups(prev => {
+          const next = new Set(prev);
+          if (next.has(groupKey)) next.delete(groupKey);
+          else next.add(groupKey);
+          return next;
+        });
+      } else {
+        handleToggle(hit.data._pathKey);
+      }
     }
   }, [hitTestClick, handleToggle, focusedUserId]);
 
