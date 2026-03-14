@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths, buildBreedPaths, entryToVtuberPathKey } from '../../lib/treeUtils';
+import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths, entryToVtuberPathKey } from '../../lib/treeUtils';
 import GraphCanvas from './GraphCanvas';
 import { drawGraph, createStarField } from './renderers';
 import useTreeLayout from '../../hooks/useTreeLayout';
@@ -61,9 +61,6 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const isMobile = useIsMobile();
   const { liveUserIds, livePrimaries } = useLiveStatus();
 
-  // Precompute which taxon_paths have breed entries (for __breed__unspecified logic)
-  const breedPaths = useMemo(() => buildBreedPaths(entries || []), [entries]);
-
   // Camera insets: [padding, leftInset, rightInset, bottomInset, topInset]
   // Desktop: left toolbar ~200px wide; Mobile: top horizontal bar, bottom HUD drawer
   const cameraInsetsRef = useRef([80, 220, 100, 80, 100]);
@@ -117,7 +114,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
 
         // Also expand current user's paths (both trees)
         if (currentUser) {
-          const userPaths = computeHighlightPaths(e, currentUser.id, buildBreedPaths(e));
+          const userPaths = computeHighlightPaths(e, currentUser.id);
           for (const p of userPaths) defaultExpanded.add(p);
           if (fe.length > 0) {
             const fictUserPaths = computeFictionalHighlightPaths(fe, currentUser.id);
@@ -179,7 +176,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     // Expand paths
     setExpandedSet(prev => {
       const next = new Set(prev);
-      const userPaths = computeHighlightPaths(entries || [], locateId, breedPaths);
+      const userPaths = computeHighlightPaths(entries || [], locateId);
       for (const p of userPaths) next.add(p);
       const fictPaths = computeFictionalHighlightPaths(fictionalEntries || [], locateId);
       for (const p of fictPaths) next.add(p);
@@ -193,13 +190,13 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
 
     // Pan to node after layout settles
     scheduleCamera(() => {
-      const pathKey = entryToVtuberPathKey(entry, breedPaths);
+      const pathKey = entryToVtuberPathKey(entry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 400);
-  }, [locateId, entries, fictionalEntries, breedPaths, setSearchParams, scheduleCamera]);
+  }, [locateId, entries, fictionalEntries, setSearchParams, scheduleCamera]);
 
   // Focused entries for this user (raw: real + fictional, then sorted by X position)
   const rawFocusedEntries = useMemo(() => {
@@ -362,9 +359,9 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     }
     if (xMap.size === 0) return rawFocusedEntries;
     return [...rawFocusedEntries].sort((a, b) =>
-      (xMap.get(entryToVtuberPathKey(a, breedPaths)) ?? 0) - (xMap.get(entryToVtuberPathKey(b, breedPaths)) ?? 0)
+      (xMap.get(entryToVtuberPathKey(a)) ?? 0) - (xMap.get(entryToVtuberPathKey(b)) ?? 0)
     );
-  }, [rawFocusedEntries, nodes, focusedUserId, breedPaths]);
+  }, [rawFocusedEntries, nodes, focusedUserId]);
 
   // Derive index from stable entry key — survives focusedEntries re-sorting
   const focusedSpeciesIdx = useMemo(() => {
@@ -484,8 +481,8 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     if (!focusedUserId) return new Set();
     if (activeFocusedIsFictional)
       return computeCloseFictionalEdgePaths(activeFocusedEntries, fictionalEntries, closeVtuberIds, traceBack);
-    return computeCloseEdgePaths(activeFocusedEntries, entries, closeVtuberIds, traceBack, breedPaths);
-  }, [focusedUserId, closeVtuberIds, activeFocusedEntries, entries, fictionalEntries, traceBack, activeFocusedIsFictional, breedPaths]);
+    return computeCloseEdgePaths(activeFocusedEntries, entries, closeVtuberIds, traceBack);
+  }, [focusedUserId, closeVtuberIds, activeFocusedEntries, entries, fictionalEntries, traceBack, activeFocusedIsFictional]);
 
   // ── TraceBack change: auto-expand + flash ALL close nodes + camera fit ──
   const [traceBackTick, setTraceBackTick] = useState(0);
@@ -525,7 +522,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       if (!fitAll && focusedUserId && closeVtuberIds.size > 0) {
         // Build pathKey for the ACTIVE focused entry only (not all user species)
         const activeEntry = activeFocusedEntries[0];
-        const activePathKey = activeEntry ? entryToVtuberPathKey(activeEntry, breedPaths) : null;
+        const activePathKey = activeEntry ? entryToVtuberPathKey(activeEntry) : null;
 
         const edgePaths = closeEdgePaths;
         for (const n of currentNodes) {
@@ -550,7 +547,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       if (count === 0 && !fitAll && focusedUserId) {
         const activeEntry = activeFocusedEntries[0];
         if (activeEntry) {
-          const activePathKey = entryToVtuberPathKey(activeEntry, breedPaths);
+          const activePathKey = entryToVtuberPathKey(activeEntry);
           const focusedNode = currentNodes.find(n => n.data._pathKey === activePathKey);
           if (focusedNode) {
             panToWithInsets(focusedNode.x, focusedNode.y);
@@ -679,12 +676,12 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
           }
         }
       } else if (entries) {
-        const userPaths = computeHighlightPaths(entries, focusedUserId, breedPaths);
+        const userPaths = computeHighlightPaths(entries, focusedUserId);
         for (const p of userPaths) {
           if (!next.has(p)) { next.add(p); changed = true; }
         }
         if (closeVtuberIds.size > 0) {
-          const closePaths = collectCloseVtuberPaths(closeVtuberIds, entries, breedPaths);
+          const closePaths = collectCloseVtuberPaths(closeVtuberIds, entries);
           for (const p of closePaths) {
             if (!next.has(p)) { next.add(p); changed = true; }
           }
@@ -759,7 +756,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         const userEntry = entries?.find(e => e.user_id === currentUser.id)
           || fictionalEntries?.find(e => e.user_id === currentUser.id);
         if (userEntry) {
-          const userPathKey = entryToVtuberPathKey(userEntry, breedPaths);
+          const userPathKey = entryToVtuberPathKey(userEntry);
           const userNode = nodes.find(n => n.data._pathKey === userPathKey);
           if (userNode) {
             panToWithInsets(userNode.x, userNode.y, 0.8);
@@ -977,8 +974,8 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
 
   // Build a vtuber pathKey from an entry (real or fictional)
   const entryToPathKey = useCallback((entry) => {
-    return entryToVtuberPathKey(entry, breedPaths);
-  }, [breedPaths]);
+    return entryToVtuberPathKey(entry);
+  }, []);
 
   const entryToPathKeyRef = useRef(entryToPathKey);
   entryToPathKeyRef.current = entryToPathKey;
@@ -991,7 +988,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     // Ensure focused user's paths are expanded + auto-expand siblings
     setExpandedSet(prev => {
       const next = new Set(prev);
-      const userPaths = computeHighlightPaths(entries || [], focusedUserId, breedPaths);
+      const userPaths = computeHighlightPaths(entries || [], focusedUserId);
       let changed = false;
       for (const p of userPaths) {
         if (!next.has(p)) { next.add(p); changed = true; }
@@ -1031,7 +1028,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
-  }, [focusedEntries, focusedSpeciesIdx, entries, fictionalEntries, focusedUserId, entryToPathKey, scheduleCamera, rootData, fictionalRootData, breedPaths]);
+  }, [focusedEntries, focusedSpeciesIdx, entries, fictionalEntries, focusedUserId, entryToPathKey, scheduleCamera, rootData, fictionalRootData]);
 
   const handleSetFocus = useCallback((entry) => {
     const userId = entry.user_id;
@@ -1041,7 +1038,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     // Ensure paths are expanded so the node exists in the layout
     setExpandedSet(prev => {
       const next = new Set(prev);
-      const userPaths = computeHighlightPaths(entries || [], userId, breedPaths);
+      const userPaths = computeHighlightPaths(entries || [], userId);
       let changed = false;
       for (const p of userPaths) {
         if (!next.has(p)) { next.add(p); changed = true; }
@@ -1082,7 +1079,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     // Ensure paths are expanded so the node exists in the layout
     setExpandedSet(prev => {
       const next = new Set(prev);
-      const userPaths = computeHighlightPaths(entries || [], newEntry.user_id, breedPaths);
+      const userPaths = computeHighlightPaths(entries || [], newEntry.user_id);
       let changed = false;
       for (const p of userPaths) {
         if (!next.has(p)) { next.add(p); changed = true; }
@@ -1142,7 +1139,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     // Ensure the path is expanded
     setExpandedSet(prev => {
       const next = new Set(prev);
-      const userPaths = computeHighlightPaths(entries || [], focusedUserId, breedPaths);
+      const userPaths = computeHighlightPaths(entries || [], focusedUserId);
       let changed = false;
       for (const p of userPaths) {
         if (!next.has(p)) { next.add(p); changed = true; }
