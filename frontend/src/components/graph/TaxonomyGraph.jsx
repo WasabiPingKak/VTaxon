@@ -962,6 +962,30 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     return (e.taxon_path || '') + '\0' + (e.breed_id || '');
   };
 
+  // Expand budget groups for a user so their hidden nodes become visible
+  const expandBudgetGroupsForUser = useCallback((userId) => {
+    const allUserEntries = [...(entries || []), ...(fictionalEntries || [])].filter(e => e.user_id === userId);
+    // Only expand if user actually has hidden-tier entries
+    const hasHidden = allUserEntries.some(e => !e.is_live_primary && (e.trait_count || 0) >= 6);
+    if (!hasHidden) return;
+
+    setExpandedBudgetGroups(prev => {
+      const next = new Set(prev);
+      for (const ue of allUserEntries) {
+        if (ue.is_live_primary) continue;
+        const parts = ue.taxon_path ? ue.taxon_path.split('|') : (ue.fictional_path ? ue.fictional_path.split('|') : []);
+        if (parts.length > 0) {
+          const parentPathKey = ue.fictional_path
+            ? `__F__|${ue.fictional_path}`
+            : parts.join('|');
+          const breedKey = ue.breed_id ? `${parentPathKey}|__breed__${ue.breed_id}` : parentPathKey;
+          next.add(`${breedKey}|__budget_group__`);
+        }
+      }
+      return next;
+    });
+  }, [entries, fictionalEntries]);
+
   const handleFocusPrev = useCallback(() => {
     const newIdx = focusedSpeciesIdx <= 0 ? focusedEntries.length - 1 : focusedSpeciesIdx - 1;
     const entry = focusedEntries[newIdx];
@@ -1032,25 +1056,8 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       return changed ? next : prev;
     });
 
-    // Auto-expand budget groups containing the focused user (if they're in 6+ tier)
-    if (entry.trait_count >= 6) {
-      setExpandedBudgetGroups(prev => {
-        const next = new Set(prev);
-        // Expand all budget groups for this user's entries
-        const allUserEntries = [...(entries || []), ...(fictionalEntries || [])].filter(e => e.user_id === focusedUserId);
-        for (const ue of allUserEntries) {
-          const parts = ue.taxon_path ? ue.taxon_path.split('|') : (ue.fictional_path ? ue.fictional_path.split('|') : []);
-          if (parts.length > 0) {
-            const parentPathKey = ue.fictional_path
-              ? `__F__|${ue.fictional_path}`
-              : parts.join('|');
-            const breedKey = ue.breed_id ? `${parentPathKey}|__breed__${ue.breed_id}` : parentPathKey;
-            next.add(`${breedKey}|__budget_group__`);
-          }
-        }
-        return next;
-      });
-    }
+    // Auto-expand budget groups containing the focused user
+    expandBudgetGroupsForUser(focusedUserId);
 
     // Delay to let layout update with expanded paths, then pan
     scheduleCamera(() => {
@@ -1066,6 +1073,9 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     const userId = entry.user_id;
     setFocusedUserId(userId);
     setFocusedEntryKey(entryToKey(entry));
+
+    // Expand budget groups so hidden nodes become visible
+    expandBudgetGroupsForUser(userId);
 
     // Ensure paths are expanded so the node exists in the layout
     setExpandedSet(prev => {
@@ -1107,6 +1117,9 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     setSelectedVtuber(newEntry);
     setFocusedUserId(newEntry.user_id);
     setFocusedEntryKey(entryToKey(newEntry));
+
+    // Expand budget groups so hidden nodes become visible
+    expandBudgetGroupsForUser(newEntry.user_id);
 
     // Ensure paths are expanded so the node exists in the layout
     setExpandedSet(prev => {
@@ -1167,6 +1180,9 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   useEffect(() => {
     const entry = focusedEntries[focusedSpeciesIdx];
     if (!entry) return;
+
+    // Expand budget groups so hidden nodes become visible
+    if (focusedUserId) expandBudgetGroupsForUser(focusedUserId);
 
     // Ensure the path is expanded
     setExpandedSet(prev => {
