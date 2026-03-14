@@ -568,7 +568,8 @@ function applyGridLayout(root, activeFilterCount) {
       normalVtubers[i].data._gridBarY = barY;
     }
 
-    // Place dot-tier vtubers in a row below the grid
+    // Place dot-tier vtubers in a row below the grid (not marked as _inGrid
+    // so they use regular edge drawing instead of grid connectors)
     if (dotVtubers.length > 0) {
       const lastRow = Math.floor((normalVtubers.length - 1) / cols);
       const dotBaseY = baseY + (lastRow + 1) * cellH;
@@ -578,8 +579,6 @@ function applyGridLayout(root, activeFilterCount) {
       for (let i = 0; i < dotVtubers.length; i++) {
         dotVtubers[i].x = dotStartX + i * dotCellW;
         dotVtubers[i].y = dotBaseY;
-        dotVtubers[i].data._inGrid = true;
-        dotVtubers[i].data._gridBarY = barY;
       }
     }
   }
