@@ -108,18 +108,27 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
     const isChecked = selected.has(opt.value);
     // Get badge color for this option (skip country — uses flag icons)
     const badgeConf = dim !== 'country' ? FILTER_BADGES[dim]?.[opt.value] : null;
+    const checkSize = isMobile ? 20 : 15;
+    const checkSvgSize = isMobile ? 12 : 9;
+    const rowFontSize = isMobile ? 15 : 12;
+    const countFontSize = isMobile ? 14 : 11;
+    const platformIconSize = isMobile ? 18 : 14;
+    const dotSize = isMobile ? 10 : 8;
+    const flagW = isMobile ? 22 : 18;
+    const flagH = isMobile ? 16 : 13;
     return (
       <button
         key={opt.value}
         type="button"
         onClick={() => multi ? toggle(dim, opt.value) : toggleSingle(dim, opt.value)}
         style={{
-          width: '100%', padding: '4px 8px 4px 4px',
-          display: 'flex', alignItems: 'center', gap: 7,
+          width: '100%', padding: isMobile ? '8px 12px 8px 8px' : '4px 8px 4px 4px',
+          display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 7,
           background: 'none', border: 'none',
           color: 'rgba(255,255,255,0.85)',
-          fontSize: 12, cursor: 'pointer', textAlign: 'left',
-          borderRadius: 4,
+          fontSize: rowFontSize, cursor: 'pointer', textAlign: 'left',
+          borderRadius: isMobile ? 6 : 4,
+          minHeight: isMobile ? 44 : undefined,
           transition: 'background 0.1s',
         }}
         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
@@ -127,14 +136,14 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
       >
         {/* Checkbox / radio indicator */}
         <span style={{
-          width: 15, height: 15, flexShrink: 0,
-          borderRadius: multi ? 3 : 8,
-          border: `1.5px solid ${isChecked ? '#38bdf8' : 'rgba(255,255,255,0.25)'}`,
+          width: checkSize, height: checkSize, flexShrink: 0,
+          borderRadius: multi ? (isMobile ? 4 : 3) : checkSize,
+          border: `${isMobile ? 2 : 1.5}px solid ${isChecked ? '#38bdf8' : 'rgba(255,255,255,0.25)'}`,
           background: isChecked ? 'rgba(56,189,248,0.2)' : 'transparent',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {isChecked && (
-            <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="#38bdf8" strokeWidth="2">
+            <svg width={checkSvgSize} height={checkSvgSize} viewBox="0 0 10 10" fill="none" stroke="#38bdf8" strokeWidth="2">
               <path d="M2 5 L4 7 L8 3" />
             </svg>
           )}
@@ -142,11 +151,11 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
         {/* Platform icon or badge color dot */}
         {badgeConf?.isPlatform ? (
           <span style={{ flexShrink: 0, opacity: isChecked ? 1 : 0.5, display: 'flex', alignItems: 'center' }}>
-            {opt.value === 'youtube' ? <YouTubeIcon size={14} /> : <TwitchIcon size={14} />}
+            {opt.value === 'youtube' ? <YouTubeIcon size={platformIconSize} /> : <TwitchIcon size={platformIconSize} />}
           </span>
         ) : badgeConf && !badgeConf.isPlatform ? (
           <span style={{
-            width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+            width: dotSize, height: dotSize, borderRadius: '50%', flexShrink: 0,
             background: badgeConf.color,
             opacity: isChecked ? 1 : 0.5,
           }} />
@@ -154,11 +163,11 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
         {/* Flag icon */}
         {opt.flagClass && (
           <span className={opt.flagClass}
-            style={{ width: 18, height: 13, display: 'inline-block', borderRadius: 2, flexShrink: 0 }} />
+            style={{ width: flagW, height: flagH, display: 'inline-block', borderRadius: 2, flexShrink: 0 }} />
         )}
         <span style={{ flex: 1 }}>{opt.label}</span>
         {opt.count != null && (
-          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>{opt.count}</span>
+          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: countFontSize }}>{opt.count}</span>
         )}
       </button>
     );
@@ -169,21 +178,21 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: isMobile ? '0 10px 8px' : '0 6px 6px',
+        padding: isMobile ? '0 12px 10px' : '0 6px 6px',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
-        marginBottom: 2,
+        marginBottom: isMobile ? 4 : 2,
       }}>
-        <span style={{ fontSize: isMobile ? 14 : 13, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>
+        <span style={{ fontSize: isMobile ? 17 : 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>
           篩選
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 8 }}>
           {activeCount > 0 && (
             <button
               type="button" onClick={clearAll}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 11, color: 'rgba(255,255,255,0.4)',
-                textDecoration: 'underline', padding: 0,
+                fontSize: isMobile ? 14 : 11, color: 'rgba(255,255,255,0.4)',
+                textDecoration: 'underline', padding: isMobile ? '4px 0' : 0,
               }}
             >
               清除全部
@@ -193,8 +202,8 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
             type="button" onClick={onClose}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'rgba(255,255,255,0.4)', fontSize: 18, lineHeight: 1,
-              padding: '0 2px',
+              color: 'rgba(255,255,255,0.4)', fontSize: isMobile ? 22 : 18, lineHeight: 1,
+              padding: isMobile ? '0 4px' : '0 2px',
             }}
           >
             &times;
@@ -213,34 +222,35 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
               onClick={() => toggleSection(sec.key)}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center',
-                padding: isMobile ? '7px 10px' : '5px 6px',
+                padding: isMobile ? '10px 12px' : '5px 6px',
                 background: 'none', border: 'none', cursor: 'pointer',
-                gap: 4,
+                gap: isMobile ? 6 : 4,
+                minHeight: isMobile ? 44 : undefined,
               }}
             >
               <svg
-                width="8" height="8" viewBox="0 0 10 10" fill="none"
+                width={isMobile ? 10 : 8} height={isMobile ? 10 : 8} viewBox="0 0 10 10" fill="none"
                 stroke="rgba(255,255,255,0.35)" strokeWidth="1.5"
                 style={{ transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0 }}
               >
                 <path d="M2 3.5 L5 6.5 L8 3.5" />
               </svg>
-              <span style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.6)', flex: 1, textAlign: 'left' }}>
+              <span style={{ fontSize: isMobile ? 15 : 12, fontWeight: 500, color: 'rgba(255,255,255,0.6)', flex: 1, textAlign: 'left' }}>
                 {sec.title}
               </span>
               {selectedCount > 0 && (
                 <span style={{
                   background: '#22c55e', color: '#fff',
-                  borderRadius: 7, padding: '0 4px',
-                  fontSize: 9, fontWeight: 700,
-                  lineHeight: '14px', minWidth: 14, textAlign: 'center',
+                  borderRadius: isMobile ? 8 : 7, padding: isMobile ? '1px 6px' : '0 4px',
+                  fontSize: isMobile ? 12 : 9, fontWeight: 700,
+                  lineHeight: isMobile ? '18px' : '14px', minWidth: isMobile ? 18 : 14, textAlign: 'center',
                 }}>
                   {selectedCount}
                 </span>
               )}
             </button>
             {isOpen && (
-              <div style={{ padding: isMobile ? '0 6px 6px' : '0 2px 4px' }}>
+              <div style={{ padding: isMobile ? '0 4px 8px' : '0 2px 4px' }}>
                 {sec.options.map(opt => checkboxRow(sec.key, opt, sec.multi))}
               </div>
             )}
@@ -253,10 +263,10 @@ export default function FilterPanel({ filters, onFiltersChange, facets, onClose,
   // Mobile: animated bottom sheet with backdrop
   if (isMobile) {
     return (
-      <BottomSheet open={openProp !== undefined ? openProp : true} onClose={onClose} maxHeight="65vh" padding="8px 8px env(safe-area-inset-bottom, 12px)">
+      <BottomSheet open={openProp !== undefined ? openProp : true} onClose={onClose} maxHeight="85vh">
         {/* Handle bar */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 4px' }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 4px' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
         </div>
         {panelBody}
       </BottomSheet>
