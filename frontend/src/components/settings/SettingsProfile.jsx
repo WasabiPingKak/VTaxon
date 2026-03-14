@@ -208,6 +208,7 @@ export default function SettingsProfile() {
         country_flags: countryFlags,
         profile_data,
       });
+      initializedIdRef.current = null;
       setUser(updated);
       addToast('個人資料已儲存', { type: 'success', duration: 3000 });
     } catch (err) {
