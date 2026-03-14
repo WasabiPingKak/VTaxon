@@ -549,6 +549,40 @@ function _compactNode(node) {
     }
   }
 
+  // Close gap between vtuber grid block and adjacent non-grid siblings.
+  // Grid layout compresses many vtubers into a compact block, but the
+  // non-grid siblings retain their original d3 positions, leaving a huge gap.
+  const gridChildren = node.children.filter(c => c.data._inGrid);
+  if (gridChildren.length > 0 && nonGrid.length > 0) {
+    let gridMaxX = -Infinity;
+    let gridMinX = Infinity;
+    for (const g of gridChildren) {
+      gridMinX = Math.min(gridMinX, g.x + (g.data._extLeft != null ? g.data._extLeft : -(g.data._labelHalfW || 40)));
+      gridMaxX = Math.max(gridMaxX, g.x + (g.data._extRight != null ? g.data._extRight : (g.data._labelHalfW || 40)));
+    }
+    nonGrid.sort((a, b) => a.x - b.x);
+    const leftNG = nonGrid[0];
+    const leftNGEdge = leftNG.x + leftNG.data._extLeft;
+    const rightNG = nonGrid[nonGrid.length - 1];
+    const rightNGEdge = rightNG.x + rightNG.data._extRight;
+
+    if (gridMaxX < leftNGEdge) {
+      // Grid block is to the left of non-grid siblings
+      const gap = leftNGEdge - gridMaxX;
+      if (gap > LABEL_PADDING + 0.5) {
+        const shift = -(gap - LABEL_PADDING);
+        for (const ng of nonGrid) shiftSubtree(ng, shift);
+      }
+    } else if (gridMinX > rightNGEdge) {
+      // Grid block is to the right of non-grid siblings
+      const gap = gridMinX - rightNGEdge;
+      if (gap > LABEL_PADDING + 0.5) {
+        const shift = -(gap - LABEL_PADDING);
+        for (const g of gridChildren) { g.x += shift; }
+      }
+    }
+  }
+
   // Compute subtree extent from all children
   let minX = Infinity, maxX = -Infinity;
   for (const child of node.children) {
