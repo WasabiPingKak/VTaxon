@@ -11,7 +11,7 @@ import changelog_2026_03_10 from '../../../docs/changelogs/changelog-v1/changelo
 const versions = [
   {
     date: '2026/3/12 ~ 3/14',
-    title: '直播狀態偵測、圖鑑排序、訂閱狀態追蹤',
+    title: '直播狀態偵測、圖鑑排序、直播代表物種',
     content: changelog_v3,
   },
   {
