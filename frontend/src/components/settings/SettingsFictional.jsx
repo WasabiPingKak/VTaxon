@@ -39,7 +39,7 @@ function LivePrimaryButton({ isActive, onClick, disabled }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       disabled={disabled}
-      title={isActive ? '目前的直播代表物種' : '設為直播代表物種'}
+      title={isActive ? '目前的代表物種' : '設為代表物種'}
       style={{
         padding: '4px 8px',
         background: 'transparent',
@@ -182,9 +182,9 @@ export default function SettingsFictional({ traitVersion, onTraitChange }) {
           background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
           fontSize: '0.85em', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6,
         }}>
-          <span style={{ color: '#f59e0b', fontWeight: 600 }}>★ 直播代表物種</span>
+          <span style={{ color: '#f59e0b', fontWeight: 600 }}>★ 代表物種</span>
           <span style={{ marginLeft: '6px' }}>
-            開啟「直播中」篩選器時，你只會出現在一個物種節點。點擊 ★ 來選擇要顯示的物種。
+            代表物種會在分類樹上優先顯示，也是直播篩選時唯一顯示的節點。點擊 ★ 來選擇。
           </span>
         </div>
       )}

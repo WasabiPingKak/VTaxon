@@ -48,6 +48,7 @@ function VtuberTierGroup({ vtubers, depth, currentUserId, liveUserIds, onSelectV
   const dot = [];
   const hidden = [];
   for (const v of vtubers) {
+    if (v.is_live_primary) { normal.push(v); continue; }
     const tc = v.trait_count || 0;
     if (tc >= BUDGET_TIER_HIDDEN) hidden.push(v);
     else if (tc >= BUDGET_TIER_DOT) dot.push(v);

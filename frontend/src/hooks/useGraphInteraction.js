@@ -19,10 +19,7 @@ export default function useGraphInteraction(nodes, maxCount) {
       const dx = worldX - node.x;
       const dy = worldY - node.y;
 
-      if (d._budgetGroup) {
-        // Budget group "+N 位" — dot, approximate with circle r=10
-        if (dx * dx + dy * dy <= 10 * 10) return node;
-      } else if (d._vtuber && d._visualTier === 'dot') {
+      if (d._vtuber && d._visualTier === 'dot') {
         // Dot-tier vtuber — small circle r=10
         if (dx * dx + dy * dy <= 10 * 10) return node;
       } else if (d._vtuber) {
