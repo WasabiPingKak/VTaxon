@@ -43,11 +43,11 @@ def live_status():
         for u in users:
             p = {}
             if u.live_primary_real_trait_id:
-                p['real'] = u.live_primary_real_trait_id
+                p['real'] = str(u.live_primary_real_trait_id)
             if u.live_primary_fictional_trait_id:
-                p['fictional'] = u.live_primary_fictional_trait_id
+                p['fictional'] = str(u.live_primary_fictional_trait_id)
             if p:
-                primaries[u.id] = p
+                primaries[str(u.id)] = p
 
     result = {
         'live': [s.to_dict() for s in streams],
