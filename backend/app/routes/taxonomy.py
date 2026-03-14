@@ -253,6 +253,7 @@ def get_taxonomy_tree():
 
         pd = user._computed_profile_data()
         entries.append({
+            'trait_id': trait.id,
             'user_id': user.id,
             'display_name': user.display_name,
             'avatar_url': user.avatar_url,
@@ -365,6 +366,7 @@ def get_fictional_tree():
 
         pd = user._computed_profile_data()
         entries.append({
+            'trait_id': trait.id,
             'user_id': user.id,
             'display_name': user.display_name,
             'avatar_url': user.avatar_url,

@@ -34,8 +34,24 @@ def live_status():
     db.session.commit()
 
     streams = LiveStream.query.all()
+
+    # Include live primary trait IDs for dedup in frontend tree
+    live_user_ids = list({s.user_id for s in streams})
+    primaries = {}
+    if live_user_ids:
+        users = User.query.filter(User.id.in_(live_user_ids)).all()
+        for u in users:
+            p = {}
+            if u.live_primary_real_trait_id:
+                p['real'] = u.live_primary_real_trait_id
+            if u.live_primary_fictional_trait_id:
+                p['fictional'] = u.live_primary_fictional_trait_id
+            if p:
+                primaries[u.id] = p
+
     result = {
         'live': [s.to_dict() for s in streams],
+        'primaries': primaries,
     }
 
     _live_cache['data'] = result

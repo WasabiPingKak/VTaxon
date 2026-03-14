@@ -14,6 +14,8 @@ const POLL_INTERVAL = 60_000; // 60 seconds
 export default function useLiveStatus() {
   const [liveUserIds, setLiveUserIds] = useState(() => new Set());
   const [liveStreams, setLiveStreams] = useState(() => new Map());
+  // Map<user_id, { real?: trait_id, fictional?: trait_id }>
+  const [livePrimaries, setLivePrimaries] = useState(() => new Map());
   const intervalRef = useRef(null);
   const visibleRef = useRef(!document.hidden);
 
@@ -31,6 +33,14 @@ export default function useLiveStatus() {
       }
       setLiveUserIds(ids);
       setLiveStreams(streams);
+      // Parse primaries map
+      const pm = new Map();
+      if (data.primaries) {
+        for (const [uid, p] of Object.entries(data.primaries)) {
+          pm.set(uid, p);
+        }
+      }
+      setLivePrimaries(pm);
     } catch {
       // Silently ignore — live status is non-critical
     }
@@ -72,5 +82,5 @@ export default function useLiveStatus() {
     };
   }, [fetchStatus]);
 
-  return { liveUserIds, liveStreams };
+  return { liveUserIds, liveStreams, livePrimaries };
 }

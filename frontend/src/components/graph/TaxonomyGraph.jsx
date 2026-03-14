@@ -59,7 +59,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
   const [showDescription, setShowDescription] = useState(true);
   const isMobile = useIsMobile();
-  const { liveUserIds } = useLiveStatus();
+  const { liveUserIds, livePrimaries } = useLiveStatus();
 
   // Precompute which taxon_paths have breed entries (for __breed__unspecified logic)
   const breedPaths = useMemo(() => buildBreedPaths(entries || []), [entries]);
@@ -221,15 +221,62 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     filterEntries(fictionalEntries, filters), [fictionalEntries, filters]);
 
   // ── Live filter (layered on top of regular filters) ──
+  // When live filter is active, dedup: each user appears at most once per tree,
+  // at their chosen "live primary" trait node. Fallback: first (earliest) entry.
   const finalEntries = useMemo(() => {
     if (!liveFilterActive) return filteredEntries;
-    return filteredEntries.filter(e => liveUserIds.has(e.user_id));
-  }, [filteredEntries, liveFilterActive, liveUserIds]);
+    const liveEntries = filteredEntries.filter(e => liveUserIds.has(e.user_id));
+    // Dedup per user: keep only the primary trait entry
+    const seen = new Set();
+    // First pass: collect entries matching user's primary trait
+    const primary = [];
+    const fallback = [];
+    for (const e of liveEntries) {
+      const p = livePrimaries.get(e.user_id);
+      if (p?.real && e.trait_id === p.real) {
+        if (!seen.has(e.user_id)) {
+          seen.add(e.user_id);
+          primary.push(e);
+        }
+      } else {
+        fallback.push(e);
+      }
+    }
+    // Second pass: for users without a matched primary, keep first entry
+    for (const e of fallback) {
+      if (!seen.has(e.user_id)) {
+        seen.add(e.user_id);
+        primary.push(e);
+      }
+    }
+    return primary;
+  }, [filteredEntries, liveFilterActive, liveUserIds, livePrimaries]);
 
   const finalFictionalEntries = useMemo(() => {
     if (!liveFilterActive) return filteredFictionalEntries;
-    return filteredFictionalEntries.filter(e => liveUserIds.has(e.user_id));
-  }, [filteredFictionalEntries, liveFilterActive, liveUserIds]);
+    const liveEntries = filteredFictionalEntries.filter(e => liveUserIds.has(e.user_id));
+    const seen = new Set();
+    const primary = [];
+    const fallback = [];
+    for (const e of liveEntries) {
+      const p = livePrimaries.get(e.user_id);
+      if (p?.fictional && e.trait_id === p.fictional) {
+        if (!seen.has(e.user_id)) {
+          seen.add(e.user_id);
+          primary.push(e);
+        }
+      } else {
+        fallback.push(e);
+      }
+    }
+    for (const e of fallback) {
+      if (!seen.has(e.user_id)) {
+        seen.add(e.user_id);
+        primary.push(e);
+      }
+    }
+    return primary;
+  }, [filteredFictionalEntries, liveFilterActive, liveUserIds, livePrimaries]);
 
   // Live count from raw entries (not affected by other filters)
   const liveCount = useMemo(() => {

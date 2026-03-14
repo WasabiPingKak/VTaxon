@@ -488,7 +488,8 @@ def update_me():
 
     data = request.get_json() or {}
     allowed = {'display_name', 'organization', 'bio', 'country_flags',
-               'social_links', 'primary_platform', 'profile_data', 'org_type'}
+               'social_links', 'primary_platform', 'profile_data', 'org_type',
+               'live_primary_real_trait_id', 'live_primary_fictional_trait_id'}
 
     ALLOWED_SNS_KEYS = {
         'twitter', 'threads', 'instagram', 'bluesky',
@@ -610,6 +611,20 @@ def update_me():
         ).first()
         if not has_account:
             return jsonify({'error': f'No {pp} account linked'}), 400
+
+    # Validate live_primary_*_trait_id: must belong to the current user and correct type
+    for field, fk_col in [
+        ('live_primary_real_trait_id', 'taxon_id'),
+        ('live_primary_fictional_trait_id', 'fictional_species_id'),
+    ]:
+        if field in data:
+            trait_id = data[field]
+            if trait_id is not None:
+                trait = db.session.get(VtuberTrait, trait_id)
+                if not trait or str(trait.user_id) != str(g.current_user_id):
+                    return jsonify({'error': f'Invalid {field}'}), 400
+                if getattr(trait, fk_col) is None:
+                    return jsonify({'error': f'Trait type mismatch for {field}'}), 400
 
     for key in allowed:
         if key in data:

@@ -27,6 +27,12 @@ class User(db.Model):
                            default=lambda: datetime.now(timezone.utc),
                            onupdate=lambda: datetime.now(timezone.utc))
     last_live_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    live_primary_real_trait_id = db.Column(db.String(36),
+                                           db.ForeignKey('vtuber_traits.id',
+                                                         ondelete='SET NULL'))
+    live_primary_fictional_trait_id = db.Column(db.String(36),
+                                                db.ForeignKey('vtuber_traits.id',
+                                                              ondelete='SET NULL'))
 
     oauth_accounts = db.relationship('OAuthAccount', backref='user',
                                      lazy='dynamic', cascade='all, delete-orphan')
@@ -59,6 +65,8 @@ class User(db.Model):
             'social_links': self.social_links or {},
             'primary_platform': self.primary_platform,
             'profile_data': self._computed_profile_data(),
+            'live_primary_real_trait_id': self.live_primary_real_trait_id,
+            'live_primary_fictional_trait_id': self.live_primary_fictional_trait_id,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
         }

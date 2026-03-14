@@ -16,6 +16,9 @@ CREATE TABLE users (
     social_links JSONB DEFAULT '{}'::jsonb,
     primary_platform TEXT CHECK (primary_platform IN ('youtube', 'twitch')),
     profile_data JSONB DEFAULT '{}'::jsonb,
+    last_live_at TIMESTAMPTZ,
+    live_primary_real_trait_id UUID,
+    live_primary_fictional_trait_id UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -190,6 +193,12 @@ CREATE UNIQUE INDEX idx_vtuber_traits_user_taxon
 CREATE UNIQUE INDEX idx_vtuber_traits_user_fictional
     ON vtuber_traits(user_id, fictional_species_id)
     WHERE fictional_species_id IS NOT NULL;
+
+-- Foreign keys for live primary traits (deferred because vtuber_traits must exist first)
+ALTER TABLE users ADD CONSTRAINT fk_live_primary_real_trait
+    FOREIGN KEY (live_primary_real_trait_id) REFERENCES vtuber_traits(id) ON DELETE SET NULL;
+ALTER TABLE users ADD CONSTRAINT fk_live_primary_fictional_trait
+    FOREIGN KEY (live_primary_fictional_trait_id) REFERENCES vtuber_traits(id) ON DELETE SET NULL;
 
 -- ============================================================
 -- Row Level Security (RLS)

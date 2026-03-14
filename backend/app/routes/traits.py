@@ -229,6 +229,16 @@ def delete_trait(trait_id):
         return jsonify({'error': 'Not authorized to delete this trait'}), 403
 
     had_fictional = trait.fictional_species_id is not None
+
+    # Clear live primary if this trait was the primary
+    from ..models import User
+    user = db.session.get(User, g.current_user_id)
+    if user:
+        if str(user.live_primary_real_trait_id) == str(trait_id):
+            user.live_primary_real_trait_id = None
+        if str(user.live_primary_fictional_trait_id) == str(trait_id):
+            user.live_primary_fictional_trait_id = None
+
     db.session.delete(trait)
     db.session.commit()
     invalidate_tree_cache()

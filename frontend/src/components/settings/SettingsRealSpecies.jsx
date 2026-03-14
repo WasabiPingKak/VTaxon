@@ -83,8 +83,34 @@ function RemoveButton({ onClick }) {
 }
 
 
+/** Star button for selecting live primary trait */
+function LivePrimaryButton({ isActive, onClick, disabled }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      disabled={disabled}
+      title={isActive ? '目前的直播代表物種' : '設為直播代表物種'}
+      style={{
+        padding: '4px 8px',
+        background: 'transparent',
+        border: 'none',
+        cursor: disabled ? 'default' : 'pointer',
+        fontSize: '1.2em',
+        color: isActive ? '#f59e0b' : (hovered ? '#fbbf24' : 'rgba(255,255,255,0.15)'),
+        transition: 'color 0.15s',
+        flexShrink: 0,
+      }}
+    >
+      {isActive ? '★' : '☆'}
+    </button>
+  );
+}
+
 export default function SettingsRealSpecies() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { addToast } = useToast();
   const [traits, setTraits] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
@@ -144,7 +170,20 @@ export default function SettingsRealSpecies() {
     if (!confirm('確定要移除此特徵嗎？')) return;
     try {
       await api.deleteTrait(traitId);
+      // If deleted trait was the primary, update local user state
+      if (user.live_primary_real_trait_id === traitId) {
+        setUser(prev => ({ ...prev, live_primary_real_trait_id: null }));
+      }
       loadTraits();
+    } catch (err) {
+      addToast(err.message, { type: 'error' });
+    }
+  }
+
+  async function handleSetPrimary(traitId) {
+    try {
+      const updated = await api.updateMe({ live_primary_real_trait_id: traitId });
+      setUser(prev => ({ ...prev, live_primary_real_trait_id: updated.live_primary_real_trait_id }));
     } catch (err) {
       addToast(err.message, { type: 'error' });
     }
@@ -166,6 +205,20 @@ export default function SettingsRealSpecies() {
         )}
       </div>
 
+      {/* Live primary info banner — only show when multiple traits exist */}
+      {traits.length > 1 && (
+        <div style={{
+          marginBottom: '12px', padding: '10px 14px', borderRadius: '8px',
+          background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
+          fontSize: '0.85em', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6,
+        }}>
+          <span style={{ color: '#f59e0b', fontWeight: 600 }}>★ 直播代表物種</span>
+          <span style={{ marginLeft: '6px' }}>
+            開啟「直播中」篩選器時，你只會出現在一個物種節點。點擊 ★ 來選擇要顯示的物種。
+          </span>
+        </div>
+      )}
+
       {traits.length === 0 && !showSearch ? (
         <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '16px' }}>尚未新增真實物種特徵</p>
       ) : (
@@ -173,16 +226,31 @@ export default function SettingsRealSpecies() {
           {traits.map(trait => {
             const displayName = trait.species?.common_name_zh || displayScientificName(trait.species) || trait.display_name;
             const rank = (trait.species?.taxon_rank || '').toUpperCase() || null;
+            // Determine if this trait is the live primary
+            const isPrimary = user.live_primary_real_trait_id
+              ? user.live_primary_real_trait_id === trait.id
+              : traits[0]?.id === trait.id; // fallback: first trait is default primary
 
             return (
               <div key={trait.id} style={{
                 padding: '12px 16px',
                 borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.06)',
-                background: 'rgba(255,255,255,0.02)',
+                border: isPrimary && traits.length > 1
+                  ? '1px solid rgba(245,158,11,0.35)'
+                  : '1px solid rgba(255,255,255,0.06)',
+                background: isPrimary && traits.length > 1
+                  ? 'rgba(245,158,11,0.06)'
+                  : 'rgba(255,255,255,0.02)',
                 marginBottom: '8px',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
               }}>
+                {traits.length > 1 && (
+                  <LivePrimaryButton
+                    isActive={isPrimary}
+                    onClick={() => handleSetPrimary(trait.id)}
+                    disabled={isPrimary}
+                  />
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   {trait.species && <TaxonomyPath species={trait.species} />}
                   <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: '6px', marginTop: trait.species ? '4px' : 0 }}>
