@@ -788,6 +788,18 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
             next.delete(key);
           }
         }
+        // Reset budget groups under this node
+        setExpandedBudgetGroups(bgPrev => {
+          const bgNext = new Set(bgPrev);
+          let changed = false;
+          for (const key of bgPrev) {
+            if (key.startsWith(pathKey)) {
+              bgNext.delete(key);
+              changed = true;
+            }
+          }
+          return changed ? bgNext : bgPrev;
+        });
       } else {
         toggleActionRef.current = 'expand';
         next.add(pathKey);
@@ -933,25 +945,26 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     // Sync tree indicator to the clicked node's tree
     setActiveTree(hit.data._pathKey?.startsWith('__F__') ? 'fictional' : 'real');
 
-    if (hit.data._vtuber) {
-      setSelectedVtuber(hit.data._entry);
-      // If clicking own species node, sync HUD to that species
-      if (hit.data._userId === focusedUserId) {
-        setFocusedEntryKey(entryToKey(hit.data._entry));
-      }
-    } else if (hit.data._pathKey != null) {
-      // If this node has hidden vtubers and is already expanded, toggle budget group
-      if (hit.data._hiddenVtuberCount > 0 && hit.data._budgetGroupKey) {
-        const groupKey = hit.data._budgetGroupKey;
+    // Check if click landed on a budget badge ("+N 位")
+    const bb = hit.data._budgetBadgeBounds;
+    if (bb && worldX >= bb.x && worldX <= bb.x + bb.w && worldY >= bb.y && worldY <= bb.y + bb.h) {
+      const groupKey = hit.data._budgetGroupKey;
+      if (groupKey) {
         setExpandedBudgetGroups(prev => {
           const next = new Set(prev);
           if (next.has(groupKey)) next.delete(groupKey);
           else next.add(groupKey);
           return next;
         });
-      } else {
-        handleToggle(hit.data._pathKey);
       }
+    } else if (hit.data._vtuber) {
+      setSelectedVtuber(hit.data._entry);
+      // If clicking own species node, sync HUD to that species
+      if (hit.data._userId === focusedUserId) {
+        setFocusedEntryKey(entryToKey(hit.data._entry));
+      }
+    } else if (hit.data._pathKey != null) {
+      handleToggle(hit.data._pathKey);
     }
   }, [hitTestClick, handleToggle, focusedUserId]);
 

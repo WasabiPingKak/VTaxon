@@ -501,6 +501,7 @@ function drawNode(ctx, node, scale, state) {
 // ── Budget badge: "+N 位" shown below node labels when hidden vtubers exist ──
 function drawBudgetBadge(ctx, node, scale, bottomY) {
   const d = node.data;
+  d._budgetBadgeBounds = null; // reset each frame
   if (!d._hiddenVtuberCount || d._hiddenVtuberCount <= 0) return;
   if (scale <= LOD_DOTS_ONLY) return;
 
@@ -515,6 +516,9 @@ function drawBudgetBadge(ctx, node, scale, bottomY) {
   const r = h / 2;
   const x = node.x - w / 2;
   const y = bottomY + fs * 0.3;
+
+  // Store bounds for hit-testing (world coordinates, unscaled)
+  d._budgetBadgeBounds = { x, y, w, h };
 
   ctx.beginPath();
   roundedRect(ctx, x, y, w, h, r);
