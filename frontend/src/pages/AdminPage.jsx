@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
@@ -91,7 +91,7 @@ const ACTION_STYLES = {
 
 // ── Fictional Species Request Card ──────────────────
 
-function FictionalRequestCard({ req, onUpdate }) {
+const FictionalRequestCard = memo(function FictionalRequestCard({ req, onUpdate }) {
   const [note, setNote] = useState(req.admin_note || '');
   const [loading, setLoading] = useState(false);
   const actions = REQUEST_ACTIONS[req.status];
@@ -149,11 +149,11 @@ function FictionalRequestCard({ req, onUpdate }) {
       />
     </RequestCardShell>
   );
-}
+});
 
 // ── Breed Request Card ──────────────────
 
-function BreedRequestCard({ req, onUpdate }) {
+const BreedRequestCard = memo(function BreedRequestCard({ req, onUpdate }) {
   const [note, setNote] = useState(req.admin_note || '');
   const [loading, setLoading] = useState(false);
   const actions = REQUEST_ACTIONS[req.status];
@@ -215,11 +215,11 @@ function BreedRequestCard({ req, onUpdate }) {
       />
     </RequestCardShell>
   );
-}
+});
 
 // ── Name Report Card ──────────────────
 
-function NameReportCard({ req, onUpdate }) {
+const NameReportCard = memo(function NameReportCard({ req, onUpdate }) {
   const [note, setNote] = useState(req.admin_note || '');
   const [loading, setLoading] = useState(false);
   const actions = REQUEST_ACTIONS[req.status];
@@ -300,11 +300,11 @@ function NameReportCard({ req, onUpdate }) {
       />
     </RequestCardShell>
   );
-}
+});
 
 // ── Report Card ──────────────────
 
-function ReportCard({ req, onUpdate }) {
+const ReportCard = memo(function ReportCard({ req, onUpdate }) {
   const [note, setNote] = useState(req.admin_note || '');
   const [loading, setLoading] = useState(false);
   const [previewItems, setPreviewItems] = useState(null);
@@ -762,7 +762,7 @@ function ReportCard({ req, onUpdate }) {
       )}
     </div>
   );
-}
+});
 
 // ── Shared components ──────────────────
 
@@ -1050,10 +1050,10 @@ export default function AdminPage() {
     );
   }
 
-  const handleUpdate = () => {
+  const handleUpdate = useCallback(() => {
     fetchRequests(activeTab);
     fetchAllPendingCounts();
-  };
+  }, [activeTab, fetchRequests, fetchAllPendingCounts]);
 
   function handleSectionChange(key) {
     setSection(key);
