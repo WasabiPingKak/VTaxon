@@ -533,52 +533,49 @@ function _compactNode(node) {
     _compactNode(child);
   }
 
-  // Compact non-grid children: ensure exactly LABEL_PADDING between subtree extents.
-  // Handles both excess gaps (pull left) and overlaps (push right).
-  const nonGrid = node.children.filter(c => !c.data._inGrid && !c.data._inBreedGrid);
-  if (nonGrid.length > 1) {
-    nonGrid.sort((a, b) => a.x - b.x);
-    for (let i = 1; i < nonGrid.length; i++) {
-      const prev = nonGrid[i - 1];
-      const curr = nonGrid[i];
-      const gap = (curr.x + curr.data._extLeft) - (prev.x + prev.data._extRight);
-      const shift = LABEL_PADDING - gap;
-      if (Math.abs(shift) > 0.5) {
-        shiftSubtree(curr, shift);
-      }
+  // Build block list: each non-grid child is its own block; all _inGrid
+  // children merge into one block; all _inBreedGrid children merge into one.
+  // Then close gaps between adjacent blocks to exactly LABEL_PADDING.
+  const blocks = [];
+  for (const c of node.children) {
+    if (!c.data._inGrid && !c.data._inBreedGrid) {
+      blocks.push({
+        left: c.x + c.data._extLeft,
+        right: c.x + c.data._extRight,
+        nodes: [c],
+      });
     }
   }
-
-  // Close gap between vtuber grid block and adjacent non-grid siblings.
-  // Grid layout compresses many vtubers into a compact block, but the
-  // non-grid siblings retain their original d3 positions, leaving a huge gap.
-  const gridChildren = node.children.filter(c => c.data._inGrid);
-  if (gridChildren.length > 0 && nonGrid.length > 0) {
-    let gridMaxX = -Infinity;
-    let gridMinX = Infinity;
-    for (const g of gridChildren) {
-      gridMinX = Math.min(gridMinX, g.x + (g.data._extLeft != null ? g.data._extLeft : -(g.data._labelHalfW || 40)));
-      gridMaxX = Math.max(gridMaxX, g.x + (g.data._extRight != null ? g.data._extRight : (g.data._labelHalfW || 40)));
+  const gridNodes = node.children.filter(c => c.data._inGrid);
+  if (gridNodes.length > 0) {
+    let gL = Infinity, gR = -Infinity;
+    for (const g of gridNodes) {
+      gL = Math.min(gL, g.x + g.data._extLeft);
+      gR = Math.max(gR, g.x + g.data._extRight);
     }
-    nonGrid.sort((a, b) => a.x - b.x);
-    const leftNG = nonGrid[0];
-    const leftNGEdge = leftNG.x + leftNG.data._extLeft;
-    const rightNG = nonGrid[nonGrid.length - 1];
-    const rightNGEdge = rightNG.x + rightNG.data._extRight;
+    blocks.push({ left: gL, right: gR, nodes: gridNodes });
+  }
+  const breedGridNodes = node.children.filter(c => c.data._inBreedGrid);
+  if (breedGridNodes.length > 0) {
+    let bgL = Infinity, bgR = -Infinity;
+    for (const bg of breedGridNodes) {
+      bgL = Math.min(bgL, bg.x + (bg.data._extLeft ?? -(bg.data._labelHalfW || 40)));
+      bgR = Math.max(bgR, bg.x + (bg.data._extRight ?? (bg.data._labelHalfW || 40)));
+    }
+    blocks.push({ left: bgL, right: bgR, nodes: breedGridNodes });
+  }
 
-    if (gridMaxX < leftNGEdge) {
-      // Grid block is to the left of non-grid siblings
-      const gap = leftNGEdge - gridMaxX;
-      if (gap > LABEL_PADDING + 0.5) {
-        const shift = -(gap - LABEL_PADDING);
-        for (const ng of nonGrid) shiftSubtree(ng, shift);
-      }
-    } else if (gridMinX > rightNGEdge) {
-      // Grid block is to the right of non-grid siblings
-      const gap = gridMinX - rightNGEdge;
-      if (gap > LABEL_PADDING + 0.5) {
-        const shift = -(gap - LABEL_PADDING);
-        for (const g of gridChildren) { g.x += shift; }
+  if (blocks.length > 1) {
+    blocks.sort((a, b) => a.left - b.left);
+    for (let i = 1; i < blocks.length; i++) {
+      const prev = blocks[i - 1];
+      const curr = blocks[i];
+      const gap = curr.left - prev.right;
+      const shift = LABEL_PADDING - gap;
+      if (Math.abs(shift) > 0.5) {
+        for (const n of curr.nodes) shiftSubtree(n, shift);
+        curr.left += shift;
+        curr.right += shift;
       }
     }
   }
