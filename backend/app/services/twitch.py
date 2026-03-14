@@ -51,6 +51,11 @@ def create_eventsub_subscription(client_id, client_secret, broadcaster_user_id,
         'Client-Id': client_id,
         'Content-Type': 'application/json',
     }, timeout=10)
+    # 409 = subscription already exists — treat as success
+    if resp.status_code == 409:
+        log.info('Twitch EventSub %s already exists for %s, skipping',
+                 event_type, broadcaster_user_id)
+        return {'status': 'already_exists'}
     resp.raise_for_status()
     return resp.json()
 

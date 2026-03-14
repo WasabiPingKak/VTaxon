@@ -945,13 +945,14 @@ def update_oauth_account(account_id):
     data = request.get_json() or {}
     if 'show_on_profile' in data:
         account.show_on_profile = bool(data['show_on_profile'])
+    old_channel_url = account.channel_url
     if 'channel_url' in data:
         account.channel_url = data['channel_url'] or None
 
     db.session.commit()
 
-    # Re-subscribe live detection when channel_url is updated
-    if 'channel_url' in data and account.channel_url:
+    # Re-subscribe live detection only when channel_url actually changed
+    if 'channel_url' in data and account.channel_url and account.channel_url != old_channel_url:
         try:
             if account.provider == 'youtube':
                 from .livestream import subscribe_youtube_user
