@@ -1037,41 +1037,28 @@ function drawDotVtuberNode(ctx, node, scale, state) {
   }
 }
 
-// ── Budget group node ("+N 位" collapsed placeholder) ──
+// ── Budget group node (dot + "+N 位" label, same layout as dot-tier vtuber) ──
 function drawBudgetGroupNode(ctx, node, scale, state) {
   const d = node.data;
-  const hovered = state.hoveredNode === node;
-  const text = d._displayName || '+? 位';
-  const fs = scaledFontSize(11, scale);
+  const dotR = 5;
 
-  ctx.font = fontStr(11, scale);
-  const textW = ctx.measureText(text).width;
-  const padX = 10;
-  const padY = 6;
-  const w = textW + padX * 2;
-  const h = fs + padY * 2;
-  d._nodeWidth = w;
-  d._nodeHeight = h;
-  const r = h / 2;
-  const x = node.x - w / 2;
-  const y = node.y - h / 2;
-
-  // Pill-shaped background
+  // White dot
   ctx.beginPath();
-  roundedRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = hovered ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
+  ctx.arc(node.x, node.y, dotR, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
 
-  // Text
+  // "+N 位" label below dot
   if (scale > LOD_DOTS_ONLY) {
+    const lines = d._labelLines || [d._displayName || '+? 位'];
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textBaseline = 'top';
     ctx.fillStyle = LABEL_DIM;
     ctx.font = fontStr(11, scale);
-    ctx.fillText(text, node.x, node.y);
+    const fs = scaledFontSize(11, scale);
+    const lineHeight = fs * 1.25;
+    const startY = node.y + dotR + fs * 0.3;
+    drawWrappedText(ctx, lines, node.x, startY, lineHeight);
   }
 }
 

@@ -4,7 +4,7 @@ import RankBadge from './RankBadge';
 import { getActiveFilterBadges, getSortBadge } from '../lib/filterBadges';
 
 const SHOW_LIMIT = 20;
-const BUDGET_TIER_DOT = 4;
+const BUDGET_TIER_DOT = 5;
 const BUDGET_TIER_HIDDEN = 6;
 
 // Static style objects (avoid re-creating on each render)
