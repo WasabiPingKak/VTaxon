@@ -113,32 +113,14 @@ export function buildTree(entries) {
     }
   }
 
-  // Post-pass: move unbreed vtubers to "未指定品種" node when breed siblings exist
-  _addUnspecifiedBreedNodes(root);
-
   return root;
 }
 
 /**
- * Build a Set of normalized taxon_paths that have at least one breed entry.
- * Used to determine if a breedless entry would be placed under __breed__unspecified.
- */
-export function buildBreedPaths(entries) {
-  const paths = new Set();
-  for (const entry of entries) {
-    if (entry.breed_id) {
-      paths.add(splitPath(entry.taxon_path).join('|'));
-    }
-  }
-  return paths;
-}
-
-/**
- * Build the vtuber node pathKey for an entry, accounting for __breed__unspecified.
+ * Build the vtuber node pathKey for an entry.
  * @param {object} entry - taxonomy entry with taxon_path, breed_id, user_id, fictional_path
- * @param {Set<string>} breedPaths - Set from buildBreedPaths()
  */
-export function entryToVtuberPathKey(entry, breedPaths) {
+export function entryToVtuberPathKey(entry) {
   if (entry.fictional_path) {
     return `__F__|${entry.fictional_path}|__vtuber__${entry.user_id}`;
   }
@@ -146,44 +128,16 @@ export function entryToVtuberPathKey(entry, breedPaths) {
   let pk = parts.join('|');
   if (entry.breed_id) {
     pk += `|__breed__${entry.breed_id}`;
-  } else if (breedPaths && breedPaths.has(pk)) {
-    pk += '|__breed__unspecified';
   }
   return pk + `|__vtuber__${entry.user_id}`;
-}
-
-/** Recursively add "未指定品種" virtual nodes for species that have both
- *  breed children and vtubers without a breed. */
-function _addUnspecifiedBreedNodes(node) {
-  for (const child of node.children.values()) {
-    _addUnspecifiedBreedNodes(child);
-  }
-  const hasBreedChildren = [...node.children.values()].some(c => c.rank === 'BREED');
-  if ((node.rank === 'SPECIES' || node.rank === 'SUBSPECIES' || node.rank === 'FORM') &&
-      node.vtubers.length > 0 && hasBreedChildren) {
-    const unspecKey = '__breed__unspecified';
-    node.children.set(unspecKey, {
-      name: '',
-      nameZh: '未指定品種',
-      rank: 'BREED',
-      pathKey: `${node.pathKey}|${unspecKey}`,
-      count: node.vtubers.length,
-      children: new Map(),
-      vtubers: [...node.vtubers],
-    });
-    node.vtubers = [];
-  }
 }
 
 /**
  * Compute the set of path keys belonging to a specific user.
  */
-export function computeHighlightPaths(entries, userId, breedPaths) {
+export function computeHighlightPaths(entries, userId) {
   const paths = new Set();
   if (!userId) return paths;
-
-  // Build breedPaths lazily if not provided
-  const bp = breedPaths || buildBreedPaths(entries);
 
   for (const entry of entries) {
     if (entry.user_id !== userId) continue;
@@ -191,11 +145,8 @@ export function computeHighlightPaths(entries, userId, breedPaths) {
     for (let i = 1; i <= parts.length; i++) {
       paths.add(parts.slice(0, i).join('|'));
     }
-    const fullPath = parts.join('|');
     if (entry.breed_id) {
-      paths.add(`${fullPath}|__breed__${entry.breed_id}`);
-    } else if (bp.has(fullPath)) {
-      paths.add(`${fullPath}|__breed__unspecified`);
+      paths.add(`${parts.join('|')}|__breed__${entry.breed_id}`);
     }
   }
   return paths;
@@ -233,17 +184,13 @@ export function findNode(root, pathKey) {
  */
 export function collectAllPaths(entries) {
   const all = new Set();
-  const bp = buildBreedPaths(entries);
   for (const entry of entries) {
     const parts = splitPath(entry.taxon_path);
     for (let i = 1; i <= parts.length; i++) {
       all.add(parts.slice(0, i).join('|'));
     }
-    const fullPath = parts.join('|');
     if (entry.breed_id) {
-      all.add(`${fullPath}|__breed__${entry.breed_id}`);
-    } else if (bp.has(fullPath)) {
-      all.add(`${fullPath}|__breed__unspecified`);
+      all.add(`${parts.join('|')}|__breed__${entry.breed_id}`);
     }
   }
   return all;
@@ -388,11 +335,9 @@ export function computeCloseVtubers(focusedEntries, allEntries, traceBack = 2) {
 /**
  * Collect all expandable pathKeys needed to reveal close vtuber nodes.
  */
-export function collectCloseVtuberPaths(closeVtuberIds, entries, breedPaths) {
+export function collectCloseVtuberPaths(closeVtuberIds, entries) {
   const paths = new Set();
   if (!closeVtuberIds || closeVtuberIds.size === 0) return paths;
-
-  const bp = breedPaths || buildBreedPaths(entries);
 
   for (const entry of entries) {
     if (!closeVtuberIds.has(entry.user_id)) continue;
@@ -400,11 +345,8 @@ export function collectCloseVtuberPaths(closeVtuberIds, entries, breedPaths) {
     for (let i = 1; i <= parts.length; i++) {
       paths.add(parts.slice(0, i).join('|'));
     }
-    const fullPath = parts.join('|');
     if (entry.breed_id) {
-      paths.add(`${fullPath}|__breed__${entry.breed_id}`);
-    } else if (bp.has(fullPath)) {
-      paths.add(`${fullPath}|__breed__unspecified`);
+      paths.add(`${parts.join('|')}|__breed__${entry.breed_id}`);
     }
   }
   return paths;
@@ -696,11 +638,10 @@ export function computeCloseFictionalVtubersByRank(focusedEntries, allFictionalE
  * Returns Set<pathKey> covering all intermediate taxonomy edges from the
  * common ancestor down to close vtuber leaf nodes and the focused user's leaf.
  */
-export function computeCloseEdgePaths(focusedEntries, allEntries, closeVtuberIds, traceBack, breedPaths) {
+export function computeCloseEdgePaths(focusedEntries, allEntries, closeVtuberIds, traceBack) {
   const edgeKeys = new Set();
   if (!focusedEntries?.length || !allEntries) return edgeKeys;
 
-  const bp = breedPaths || buildBreedPaths(allEntries);
   const focusedUserId = focusedEntries[0].user_id;
   const focusedSegs = splitPath(focusedEntries[0].taxon_path);
   const ancestorDepth = Math.max(0, focusedSegs.length - traceBack);
@@ -728,15 +669,11 @@ export function computeCloseEdgePaths(focusedEntries, allEntries, closeVtuberIds
     let leafKey = normalized;
     if (entry.breed_id) {
       leafKey += `|__breed__${entry.breed_id}`;
-    } else if (bp.has(normalized)) {
-      leafKey += '|__breed__unspecified';
     }
     edgeKeys.add(leafKey + `|__vtuber__${entry.user_id}`);
-    // Add breed/unspecified pathKey if applicable
+    // Add breed pathKey if applicable
     if (entry.breed_id) {
       edgeKeys.add(`${normalized}|__breed__${entry.breed_id}`);
-    } else if (bp.has(normalized)) {
-      edgeKeys.add(`${normalized}|__breed__unspecified`);
     }
   }
   return edgeKeys;
