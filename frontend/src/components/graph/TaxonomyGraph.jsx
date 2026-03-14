@@ -634,6 +634,27 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     });
   }, [filteredEntries, filteredFictionalEntries, liveUserIds, scheduleCameraFit]);
 
+  // When live filter is active and liveUserIds changes (new streamer goes live),
+  // expand paths for newly-live entries so their leaf nodes are visible
+  useEffect(() => {
+    if (!liveFilterActive || !liveUserIds || liveUserIds.size === 0) return;
+    const liveReal = (filteredEntries || []).filter(e => liveUserIds.has(e.user_id));
+    const liveFict = (filteredFictionalEntries || []).filter(e => liveUserIds.has(e.user_id));
+    const realPaths = liveReal.length > 0 ? collectAllPaths(liveReal) : new Set();
+    const fictPaths = liveFict.length > 0 ? collectAllFictionalPaths(liveFict) : new Set();
+    setExpandedSet(prev => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const p of realPaths) {
+        if (!next.has(p)) { next.add(p); changed = true; }
+      }
+      for (const p of fictPaths) {
+        if (!next.has(p)) { next.add(p); changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [liveFilterActive, liveUserIds, filteredEntries, filteredFictionalEntries]);
+
   useEffect(() => {
     if (prevTickRef.current === traceBackTick) return;
     prevTickRef.current = traceBackTick;
