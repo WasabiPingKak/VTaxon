@@ -520,17 +520,29 @@ function drawBudgetBadge(ctx, node, scale, bottomY) {
   // Store bounds for hit-testing (world coordinates, unscaled)
   d._budgetBadgeBounds = { x, y, w, h };
 
+  // Check if the hovered node is this node and the hover is on the badge
+  const isHovered = state.hoveredNode === node && d._budgetBadgeBounds;
+
   ctx.beginPath();
   roundedRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+
+  if (isHovered) {
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = 'rgba(56,189,248,0.5)';
+    ctx.fillStyle = 'rgba(56,189,248,0.15)';
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  }
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-  ctx.lineWidth = 0.5;
+  ctx.shadowBlur = 0;
+
+  ctx.strokeStyle = isHovered ? 'rgba(56,189,248,0.4)' : 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = isHovered ? 1 : 0.5;
   ctx.stroke();
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = LABEL_DIM;
+  ctx.fillStyle = isHovered ? '#38bdf8' : LABEL_DIM;
   ctx.fillText(text, node.x, y + h / 2);
 }
 
