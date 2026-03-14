@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import useIsMobile from '../hooks/useIsMobile';
 import { api } from '../lib/api';
@@ -45,32 +45,32 @@ export default function StatsPage() {
     );
   }
 
-  const ratioSegments = data?.trait_type_ratio ? [
+  const ratioSegments = useMemo(() => data?.trait_type_ratio ? [
     { label: '現實物種', value: data.trait_type_ratio.real_only, color: '#38bdf8' },
     { label: '奇幻生物', value: data.trait_type_ratio.fictional_only, color: '#a78bfa' },
     { label: '兩者皆有', value: data.trait_type_ratio.both, color: '#34d399' },
-  ] : [];
+  ] : [], [data]);
 
-  const ratioTotal = ratioSegments.reduce((s, d) => s + d.value, 0);
+  const ratioTotal = useMemo(() => ratioSegments.reduce((s, d) => s + d.value, 0), [ratioSegments]);
 
-  const platformSegments = data?.by_platform ? [
+  const platformSegments = useMemo(() => data?.by_platform ? [
     { label: 'YouTube', value: data.by_platform.youtube || 0, color: '#ef4444' },
     { label: 'Twitch', value: data.by_platform.twitch || 0, color: '#a78bfa' },
-  ] : [];
+  ] : [], [data]);
 
-  const orgSegments = data?.by_org_type ? [
+  const orgSegments = useMemo(() => data?.by_org_type ? [
     { label: '個人勢', value: data.by_org_type.indie || 0, color: '#38bdf8' },
     { label: '企業勢', value: data.by_org_type.corporate || 0, color: '#f472b6' },
     { label: '社團', value: data.by_org_type.club || 0, color: '#34d399' },
     ...(data.by_org_type.unknown ? [{ label: '未設定', value: data.by_org_type.unknown, color: '#64748b' }] : []),
-  ] : [];
+  ] : [], [data]);
 
-  const statusSegments = data?.by_status ? [
+  const statusSegments = useMemo(() => data?.by_status ? [
     { label: '活動中', value: data.by_status.active || 0, color: '#34d399' },
     { label: '準備中', value: data.by_status.preparing || 0, color: '#facc15' },
     { label: '休止中', value: data.by_status.hiatus || 0, color: '#94a3b8' },
     ...(data.by_status.unknown ? [{ label: '未設定', value: data.by_status.unknown, color: '#64748b' }] : []),
-  ] : [];
+  ] : [], [data]);
 
   const twoCol = !isMobile;
 

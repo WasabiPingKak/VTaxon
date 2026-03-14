@@ -20,6 +20,7 @@ export default function GrowthChart({ data }) {
     const maxCum = Math.max(...data.map(d => d.cumulative));
 
     const svg = select(svgRef.current);
+    svg.selectAll('*').interrupt();
     svg.attr('width', width).attr('height', height);
     svg.selectAll('*').remove();
 
@@ -125,6 +126,10 @@ export default function GrowthChart({ data }) {
       .attr('fill', 'rgba(255,255,255,0.5)').attr('font-size', '0.65em')
       .text('累計');
 
+    return () => {
+      svg.selectAll('*').interrupt();
+      svg.selectAll('*').remove();
+    };
   }, [data, isMobile]);
 
   if (!data?.length) {

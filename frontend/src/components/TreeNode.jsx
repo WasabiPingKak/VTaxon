@@ -21,6 +21,15 @@ const showMoreBtnStyle = {
   padding: '4px 12px', cursor: 'pointer', color: '#666', fontSize: '0.85em',
 };
 
+function setsEqualForNode(a, b, pathKey, isExpanded) {
+  if (a === b) return true;
+  if (!a || !b) return a === b;
+  // If this node is collapsed, only its own membership matters
+  if (!isExpanded) return a.has(pathKey) === b.has(pathKey);
+  // If expanded, children need propagation — must re-render
+  return false;
+}
+
 const TreeNode = memo(function TreeNode({
   node, depth, expandedSet, onToggle,
   currentUserId, onSelectVtuber, highlightPaths, activeFilters, sortKey, liveUserIds,
@@ -135,6 +144,25 @@ const TreeNode = memo(function TreeNode({
       )}
     </div>
   );
+}, (prev, next) => {
+  // Fast path: if all refs are identical, skip re-render
+  if (prev.node !== next.node) return false;
+  if (prev.depth !== next.depth) return false;
+  if (prev.onToggle !== next.onToggle) return false;
+  if (prev.currentUserId !== next.currentUserId) return false;
+  if (prev.onSelectVtuber !== next.onSelectVtuber) return false;
+  if (prev.activeFilters !== next.activeFilters) return false;
+  if (prev.sortKey !== next.sortKey) return false;
+
+  const pathKey = prev.node.pathKey;
+  const wasExpanded = prev.expandedSet?.has(pathKey);
+  const isExpanded = next.expandedSet?.has(pathKey);
+
+  if (!setsEqualForNode(prev.expandedSet, next.expandedSet, pathKey, wasExpanded || isExpanded)) return false;
+  if (!setsEqualForNode(prev.highlightPaths, next.highlightPaths, pathKey, wasExpanded || isExpanded)) return false;
+  if (prev.liveUserIds !== next.liveUserIds) return false;
+
+  return true;
 });
 
 export default TreeNode;
