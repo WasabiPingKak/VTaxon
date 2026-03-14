@@ -19,7 +19,15 @@ export default function useGraphInteraction(nodes, maxCount) {
       const dx = worldX - node.x;
       const dy = worldY - node.y;
 
-      if (d._vtuber) {
+      if (d._budgetGroup) {
+        // Budget group "+N 位" — small rounded rect AABB
+        const bgHalfW = d._nodeWidth ? d._nodeWidth / 2 + 4 : 30;
+        const bgHalfH = d._nodeHeight ? d._nodeHeight / 2 + 4 : 14;
+        if (Math.abs(dx) <= bgHalfW && Math.abs(dy) <= bgHalfH) return node;
+      } else if (d._vtuber && d._visualTier === 'dot') {
+        // Dot-tier vtuber — small circle r=10
+        if (dx * dx + dy * dy <= 10 * 10) return node;
+      } else if (d._vtuber) {
         // Hexagon — approximate with circle r=24
         if (dx * dx + dy * dy <= 24 * 24) return node;
       } else if (d._rank === 'BREED') {
