@@ -1138,13 +1138,19 @@ function drawBreedNode(ctx, node, scale, state) {
 
     // Count badge below rect
     const count = d._count || 0;
+    let bottomY = y + h;
     if (count > 0) {
       const countFs = scaledFontSize(9, scale);
       ctx.font = fontStr(9, scale);
       ctx.fillStyle = LABEL_DIM;
       ctx.textBaseline = 'top';
-      ctx.fillText(`${count}`, node.x, y + h + countFs * 0.3);
+      const countY = y + h + countFs * 0.3;
+      ctx.fillText(`${count}`, node.x, countY);
+      bottomY = countY + countFs;
     }
+
+    // Budget badge
+    drawBudgetBadge(ctx, node, scale, bottomY);
   }
 }
 
