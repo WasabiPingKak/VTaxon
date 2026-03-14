@@ -268,8 +268,8 @@ function SpeciesGroup({ group, onSelect, familyColor }) {
   const [childrenLoaded, setChildrenLoaded] = useState(false);
   const [loadingChildren, setLoadingChildren] = useState(false);
   const [allSubspecies, setAllSubspecies] = useState(group.subspecies);
-  const mountedRef = useRef(true);
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  const abortRef = useRef(null);
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
 
   const mainResult = group.species || group.subspecies[0];
   const isSpeciesRank = (mainResult?.taxon_rank || '').toUpperCase() === 'SPECIES';
@@ -290,21 +290,24 @@ function SpeciesGroup({ group, onSelect, familyColor }) {
     setExpanded(next);
 
     if (next && !childrenLoaded && isSpeciesRank) {
+      abortRef.current?.abort();
+      const ac = new AbortController();
+      abortRef.current = ac;
       setLoadingChildren(true);
       try {
         const speciesKey = group.species?.taxon_id || group.speciesKey;
         const existing = new Map(group.subspecies.map(s => [s.taxon_id, s]));
         await api.getSubspeciesStream(speciesKey, (sub) => {
-          if (!mountedRef.current) return;
           if (!existing.has(sub.taxon_id)) {
             existing.set(sub.taxon_id, sub);
             setAllSubspecies(Array.from(existing.values()));
           }
-        });
+        }, { signal: ac.signal });
       } catch (err) {
+        if (err.name === 'AbortError') return;
         console.error('Failed to load subspecies:', err);
       } finally {
-        if (!mountedRef.current) return;
+        if (ac.signal.aborted) return;
         setLoadingChildren(false);
         setChildrenLoaded(true);
       }
@@ -379,6 +382,8 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
   const [notFoundForm, setNotFoundForm] = useState({ searched: '', expected: '', description: '' });
   const [notFoundSubmitting, setNotFoundSubmitting] = useState(false);
   const [notFoundSubmitted, setNotFoundSubmitted] = useState(false);
+  const searchAbortRef = useRef(null);
+  useEffect(() => () => { searchAbortRef.current?.abort(); }, []);
 
   const { breedResults, groups, familyColorMap } = useMemo(() => {
     const { breeds, speciesGroups } = groupBySpecies(results);
@@ -436,6 +441,9 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
   async function handleSearch(e) {
     e.preventDefault();
     if (!query.trim()) return;
+    searchAbortRef.current?.abort();
+    const ac = new AbortController();
+    searchAbortRef.current = ac;
     setSearching(true);
     setSearched(false);
     setResults([]);
@@ -446,10 +454,12 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
       await api.searchSpeciesStream(query, (sp) => {
         count++;
         setResults(prev => [...prev, sp]);
-      });
+      }, { signal: ac.signal });
     } catch (err) {
+      if (err.name === 'AbortError') return;
       alert(err.message);
     } finally {
+      if (ac.signal.aborted) return;
       setSearching(false);
       setSearched(true);
       onSearchPerformed?.({ query: query.trim(), resultCount: count });
@@ -628,6 +638,9 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
                   setLatinRetry('');
                   markLatinIfApplicable(retryQuery);
                   // trigger search
+                  searchAbortRef.current?.abort();
+                  const ac = new AbortController();
+                  searchAbortRef.current = ac;
                   setSearching(true);
                   setSearched(false);
                   setResults([]);
@@ -635,7 +648,10 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
                   api.searchSpeciesStream(retryQuery, (sp) => {
                     retryCount++;
                     setResults(prev => [...prev, sp]);
-                  }).catch(() => {}).finally(() => {
+                  }, { signal: ac.signal }).catch((err) => {
+                    if (err.name === 'AbortError') return;
+                  }).finally(() => {
+                    if (ac.signal.aborted) return;
                     setSearching(false);
                     setSearched(true);
                     onSearchPerformed?.({ query: retryQuery, resultCount: retryCount });

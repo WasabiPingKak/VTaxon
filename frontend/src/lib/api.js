@@ -82,15 +82,18 @@ export const api = {
     boundedSet(searchCache, key, data);
     return data;
   },
-  searchSpeciesStream: async (q, onResult) => {
+  searchSpeciesStream: async (q, onResult, { signal } = {}) => {
     const key = q.trim().toLowerCase();
     if (searchCache.has(key)) {
       const cached = searchCache.get(key);
-      for (const sp of cached) onResult(sp);
+      for (const sp of cached) {
+        if (signal?.aborted) return;
+        onResult(sp);
+      }
       return;
     }
     const headers = { ...await getAuthHeaders() };
-    const res = await fetch(`/api/species/search/stream?q=${encodeURIComponent(q)}`, { headers });
+    const res = await fetch(`/api/species/search/stream?q=${encodeURIComponent(q)}`, { headers, signal });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.error || `API error ${res.status}`);
@@ -99,28 +102,35 @@ export const api = {
     const decoder = new TextDecoder();
     let buffer = '';
     const all = [];
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-      for (const line of lines) {
-        if (line.trim()) {
-          const sp = JSON.parse(line);
-          if (sp.error) throw new Error(sp.error);
-          all.push(sp);
-          onResult(sp);
+    try {
+      while (true) {
+        if (signal?.aborted) { reader.cancel(); return; }
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (line.trim()) {
+            const sp = JSON.parse(line);
+            if (sp.error) throw new Error(sp.error);
+            all.push(sp);
+            if (signal?.aborted) { reader.cancel(); return; }
+            onResult(sp);
+          }
         }
       }
+    } catch (err) {
+      reader.cancel();
+      throw err;
     }
     if (buffer.trim()) {
       const sp = JSON.parse(buffer);
       if (sp.error) throw new Error(sp.error);
       all.push(sp);
-      onResult(sp);
+      if (!signal?.aborted) onResult(sp);
     }
-    boundedSet(searchCache, key, all);
+    if (!signal?.aborted) boundedSet(searchCache, key, all);
   },
   matchSpecies: (name) => apiFetch(`/species/match?name=${encodeURIComponent(name)}`),
   getSpecies: (id) => apiFetch(`/species/${id}`),
@@ -130,14 +140,17 @@ export const api = {
     boundedSet(childrenCache, taxonId, data);
     return data;
   },
-  getSubspeciesStream: async (taxonId, onResult) => {
+  getSubspeciesStream: async (taxonId, onResult, { signal } = {}) => {
     if (childrenCache.has(taxonId)) {
       const cached = childrenCache.get(taxonId);
-      for (const sp of (cached.results || cached)) onResult(sp);
+      for (const sp of (cached.results || cached)) {
+        if (signal?.aborted) return;
+        onResult(sp);
+      }
       return;
     }
     const headers = { ...await getAuthHeaders() };
-    const res = await fetch(`/api/species/${taxonId}/children/stream`, { headers });
+    const res = await fetch(`/api/species/${taxonId}/children/stream`, { headers, signal });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.error || `API error ${res.status}`);
@@ -146,28 +159,35 @@ export const api = {
     const decoder = new TextDecoder();
     let buffer = '';
     const all = [];
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-      for (const line of lines) {
-        if (line.trim()) {
-          const sp = JSON.parse(line);
-          if (sp.error) throw new Error(sp.error);
-          all.push(sp);
-          onResult(sp);
+    try {
+      while (true) {
+        if (signal?.aborted) { reader.cancel(); return; }
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (line.trim()) {
+            const sp = JSON.parse(line);
+            if (sp.error) throw new Error(sp.error);
+            all.push(sp);
+            if (signal?.aborted) { reader.cancel(); return; }
+            onResult(sp);
+          }
         }
       }
+    } catch (err) {
+      reader.cancel();
+      throw err;
     }
     if (buffer.trim()) {
       const sp = JSON.parse(buffer);
       if (sp.error) throw new Error(sp.error);
       all.push(sp);
-      onResult(sp);
+      if (!signal?.aborted) onResult(sp);
     }
-    boundedSet(childrenCache, taxonId, { results: all });
+    if (!signal?.aborted) boundedSet(childrenCache, taxonId, { results: all });
   },
 
   // Breeds
