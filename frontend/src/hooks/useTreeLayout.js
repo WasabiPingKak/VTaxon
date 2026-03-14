@@ -132,14 +132,14 @@ function computeLabelLayout(data) {
     data._labelHalfW = Math.max(widest, 42) / 2;
 
     // Compute vertical extent below node center (for intermediate level clearance).
-    // Uses worst-case font (same as width) to prevent overlap at any zoom level.
-    // Always reserves LIVE badge space since live status can change dynamically
-    // and the layout may not re-compute when it does.
+    // Uses base font (scale=1) as reference; applyIntermediateLevel adds extra
+    // margin to handle moderate zoom-out.  Always reserves LIVE badge space
+    // since live status can change dynamically without triggering re-layout.
     const HEX_R = 21;
-    const hFs = 12 / FONT_MIN_SCALE;
+    const hFs = 12;          // base font at scale=1
     const hLineH = hFs * 1.25;
-    const hLiveFs = 9 / FONT_MIN_SCALE;
-    const hLivePadY = 2 / FONT_MIN_SCALE;
+    const hLiveFs = 9;
+    const hLivePadY = 2;
     data._labelBottomH = HEX_R + hFs * 0.3 + lines.length * hLineH
       + hLiveFs * 0.2 + hLiveFs + hLivePadY * 2;
     return;
@@ -224,11 +224,9 @@ function layoutTree(h, activeFilterCount) {
     // Widen vtuber nodes to accommodate badge row
     if (activeFilterCount > 0 && node.data._vtuber) {
       node.data._labelHalfW = Math.max(node.data._labelHalfW, badgeHalfW);
-      // Also extend vertical extent for badge row
+      // Also extend vertical extent for badge row (base font scale=1)
       if (node.data._labelBottomH) {
-        const badgeFs = 9 / FONT_MIN_SCALE;
-        const badgePadY = 1 / FONT_MIN_SCALE;
-        node.data._labelBottomH += badgeFs * 0.3 + badgeFs + badgePadY * 2;
+        node.data._labelBottomH += 9 * 0.3 + 9 + 1 * 2;
       }
     }
   }
@@ -467,16 +465,29 @@ function applyIntermediateLevel(root) {
 
     if (vtubers.length === 0 || !hasTaxonomySiblings) continue;
 
-    // Use the tallest vtuber's bottom extent to compute a safe ratio.
-    // The vtuber's visual bottom must not overlap with sibling children
-    // at NODE_DY (accounting for children's top visual extent ~15px).
-    const maxBottomH = Math.max(...vtubers.map(v => v.data._labelBottomH || 80));
-    const childVisualTop = NODE_DY - 15; // children's center minus ~15px top extent
-    const safeRatio = (childVisualTop - maxBottomH - 5) / NODE_DY;
-    const ratio = Math.min(0.4, Math.max(0.15, safeRatio));
-
+    // Place vtubers at fixed intermediate level (40% of NODE_DY)
+    const intermediateY = parent.y + NODE_DY * 0.4;
     for (const v of vtubers) {
-      v.y = parent.y + NODE_DY * ratio;
+      v.y = intermediateY;
+    }
+
+    // Check if the tallest vtuber's bottom extent would overlap with
+    // taxonomy children at NODE_DY.  If so, push those children down.
+    // Height is computed at base font (scale=1); add 30% margin to
+    // cover moderate zoom-out where text grows larger.
+    const maxBottomH = Math.max(...vtubers.map(v => v.data._labelBottomH || 60));
+    const vtuberBottom = intermediateY + maxBottomH * 1.3;
+    const childY = parent.y + NODE_DY;
+    const CHILD_TOP_H = 15;  // conservative top extent of child node
+    const MIN_GAP = 8;
+
+    if (vtuberBottom + MIN_GAP > childY - CHILD_TOP_H) {
+      const pushDown = vtuberBottom + MIN_GAP - (childY - CHILD_TOP_H);
+      for (const c of parent.children) {
+        if (!c.data._vtuber) {
+          shiftSubtreeXY(c, 0, pushDown);
+        }
+      }
     }
   }
 }
