@@ -17,6 +17,8 @@ const SORT_OPTIONS = [
 
 // px-based font sizes to avoid compound em scaling
 const F = { section: 11, option: 12, zoom: 12, badge: 10, footer: 11 };
+// Mobile: larger sizes for touch-friendly readability
+const FM = { section: 14, option: 15, badge: 12, footer: 14 };
 
 /**
  * Left-side floating toolbar for graph controls.
@@ -339,12 +341,32 @@ export default function FloatingToolbar({
     </>
   );
 
+  // ── Mobile-only icon button (larger touch targets) ──
+  const mobileIconBtn = (id, title, onClick, icon) => {
+    const isH = hovered === id;
+    return (
+      <button key={id} type="button" title={title} onClick={(e) => { e.stopPropagation(); onClick(); }} {...hp(id)}
+        style={{
+          width: 32, height: 32, padding: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: isH ? 'rgba(255,255,255,0.12)' : 'transparent',
+          border: 'none', borderRadius: 6,
+          color: isH ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)',
+          cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0,
+        }}
+      >{icon}</button>
+    );
+  };
+
+  const mobileExpandIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>;
+  const mobileCollapseIcon = <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20" /><polyline points="20 10 14 10 14 4" /><line x1="14" y1="10" x2="21" y2="3" /><line x1="3" y1="21" x2="10" y2="14" /></svg>;
+
   // ── Mobile-only: simplified BottomSheet content (no tree selector, sort, filter) ──
   const mobileSheetContent = (
     <>
       {/* ── Tree expand/collapse controls ── */}
       {onSelectTree && (
-        <div style={{ paddingTop: 2 }}>
+        <div style={{ paddingTop: 4 }}>
           {[
             { key: 'real', label: '現實生物' },
             { key: 'fictional', label: '虛構生物' },
@@ -353,18 +375,18 @@ export default function FloatingToolbar({
             return (
               <div key={item.key} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '0 8px', height: 32,
+                padding: '0 12px', height: 44,
                 background: isActive ? 'rgba(34,197,94,0.08)' : 'transparent',
-                borderRadius: 4,
+                borderRadius: 6,
               }}>
                 <span style={{
-                  fontSize: F.option,
-                  color: isActive ? '#22c55e' : 'rgba(255,255,255,0.5)',
+                  fontSize: FM.option,
+                  color: isActive ? '#22c55e' : 'rgba(255,255,255,0.6)',
                   fontWeight: isActive ? 600 : 400,
                 }}>{item.label}</span>
-                <span style={{ display: 'flex', gap: 2 }}>
-                  {iconBtn(`expand-${item.key}`, `${item.label} 全部展開`, () => { onSelectTree(item.key); onExpandAll(item.key); }, expandIcon)}
-                  {iconBtn(`collapse-${item.key}`, `${item.label} 全部收合`, () => { onSelectTree(item.key); onCollapseAll(item.key); }, collapseIcon)}
+                <span style={{ display: 'flex', gap: 4 }}>
+                  {mobileIconBtn(`expand-${item.key}`, `${item.label} 全部展開`, () => { onSelectTree(item.key); onExpandAll(item.key); }, mobileExpandIcon)}
+                  {mobileIconBtn(`collapse-${item.key}`, `${item.label} 全部收合`, () => { onSelectTree(item.key); onCollapseAll(item.key); }, mobileCollapseIcon)}
                 </span>
               </div>
             );
@@ -372,62 +394,97 @@ export default function FloatingToolbar({
         </div>
       )}
 
-      {/* ── 直播中 + 打亂排序 ── */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 6, padding: '6px 4px 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {liveCount > 0 && actionBtn('live-filter-btn', '直播中',
-          () => { onLiveFilterToggle(); setExpanded(false); },
-          <span style={{
-            width: 8, height: 8, borderRadius: '50%', background: '#ef4444',
-            animation: 'vtaxonPulse 1.5s ease-in-out infinite', display: 'inline-block'
-          }} />,
-          {
-            active: liveFilterActive,
-            badge: <span style={{
-              background: '#ef4444', color: '#fff', borderRadius: 7, padding: '0 4px',
-              fontSize: F.badge, fontWeight: 700, lineHeight: '14px', minWidth: 14, textAlign: 'center',
-            }}>{liveCount}</span>,
-          },
+      {/* ── 直播中 ── */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 8, padding: '8px 8px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {liveCount > 0 && (
+          <button type="button" onClick={() => { onLiveFilterToggle(); setExpanded(false); }} {...hp('live-filter-btn')}
+            style={{
+              width: '100%', height: 44,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              background: liveFilterActive ? 'rgba(56,189,248,0.12)' : hovered === 'live-filter-btn' ? 'rgba(255,255,255,0.08)' : 'transparent',
+              border: liveFilterActive ? '1px solid rgba(56,189,248,0.3)' : '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8, cursor: 'pointer',
+              color: liveFilterActive ? '#38bdf8' : 'rgba(255,255,255,0.7)',
+              fontSize: FM.option, transition: 'all 0.15s',
+            }}
+          >
+            <span style={{
+              width: 10, height: 10, borderRadius: '50%', background: '#ef4444',
+              animation: 'vtaxonPulse 1.5s ease-in-out infinite', display: 'inline-block'
+            }} />
+            <span>直播中</span>
+            <span style={{
+              background: '#ef4444', color: '#fff', borderRadius: 8, padding: '1px 6px',
+              fontSize: FM.badge, fontWeight: 700, lineHeight: '18px', minWidth: 18, textAlign: 'center',
+            }}>{liveCount}</span>
+          </button>
         )}
       </div>
 
       {/* ── 打亂排序 ── */}
       {onShuffle && (
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 6, padding: '6px 4px 0' }}>
-          {actionBtn('shuffle-btn', '今日隨機樹枝', () => { onShuffle(); setExpanded(false); },
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 8, padding: '8px 8px 0' }}>
+          <button type="button" onClick={() => { onShuffle(); setExpanded(false); }} {...hp('shuffle-btn')}
+            style={{
+              width: '100%', height: 44,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              background: isShuffled ? 'rgba(56,189,248,0.12)' : hovered === 'shuffle-btn' ? 'rgba(255,255,255,0.08)' : 'transparent',
+              border: isShuffled ? '1px solid rgba(56,189,248,0.3)' : '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8, cursor: 'pointer',
+              color: isShuffled ? '#38bdf8' : 'rgba(255,255,255,0.7)',
+              fontSize: FM.option, transition: 'all 0.15s',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="3" />
               <circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
               <circle cx="15.5" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
               <circle cx="8.5" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
               <circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none" />
               <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
-            </svg>,
-            { active: isShuffled },
-          )}
+            </svg>
+            <span>今日隨機樹枝</span>
+          </button>
         </div>
       )}
 
       {/* ── Trace back range ── */}
       {showTraceBack && (
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 6, paddingTop: 4, paddingBottom: 2 }}>
-          <div style={{ textAlign: 'center', fontSize: F.section, color: 'rgba(255,255,255,0.35)', marginBottom: 2, letterSpacing: 1.5 }}>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 8, paddingTop: 8, paddingBottom: 4 }}>
+          <div style={{ textAlign: 'center', fontSize: FM.section, color: 'rgba(255,255,255,0.4)', marginBottom: 4, letterSpacing: 1.5 }}>
             溯源範圍
           </div>
           {traceBackLevels.map(lv => {
             const isActive = lv.available && lv.value === traceBack;
-            return radioRow(`tb-${lv.label}`, lv.label, isActive, () => onTraceBackChange(lv.value), { disabled: !lv.available });
+            const isH = hovered === `tb-${lv.label}` && lv.available;
+            return (
+              <button key={`tb-${lv.label}`} type="button" disabled={!lv.available} onClick={() => onTraceBackChange(lv.value)} {...hp(`tb-${lv.label}`)}
+                style={{
+                  width: '100%', height: 40, padding: '0 12px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  background: isActive ? 'rgba(34,197,94,0.12)' : isH ? 'rgba(255,255,255,0.06)' : 'transparent',
+                  border: 'none', borderRadius: 6,
+                  color: !lv.available ? 'rgba(255,255,255,0.18)' : isActive ? '#22c55e' : 'rgba(255,255,255,0.6)',
+                  fontSize: FM.option, fontWeight: isActive ? 600 : 400,
+                  cursor: !lv.available ? 'default' : 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {lv.label}
+              </button>
+            );
           })}
         </div>
       )}
 
       {/* ── Close vtuber stats ── */}
       {rankEntries.length > 0 && (
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 4, paddingTop: 4, paddingBottom: 2 }}>
-          <div style={{ textAlign: 'center', fontSize: F.section, color: 'rgba(255,255,255,0.35)', marginBottom: 2, letterSpacing: 1.5 }}>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 8, paddingTop: 8, paddingBottom: 4 }}>
+          <div style={{ textAlign: 'center', fontSize: FM.section, color: 'rgba(255,255,255,0.4)', marginBottom: 4, letterSpacing: 1.5 }}>
             與我相近
           </div>
           {rankEntries.map(({ label, count }) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 10px', fontSize: F.option, color: 'rgba(255,255,255,0.55)' }}>
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 14px', fontSize: FM.option, color: 'rgba(255,255,255,0.6)' }}>
               <span>{label}</span>
               <span style={{ color: '#22c55e', fontWeight: 600 }}>{count}</span>
             </div>
@@ -438,8 +495,8 @@ export default function FloatingToolbar({
       {/* ── Footer ── */}
       <div style={{
         borderTop: '1px solid rgba(255,255,255,0.06)',
-        marginTop: 6, padding: '5px 0 2px',
-        textAlign: 'center', fontSize: F.footer, color: 'rgba(255,255,255,0.4)',
+        marginTop: 8, padding: '8px 0 4px',
+        textAlign: 'center', fontSize: FM.footer, color: 'rgba(255,255,255,0.4)',
       }}>
         {filteredCount != null && filteredCount !== totalCount
           ? <span>{filteredCount}/{totalCount} 筆</span>
@@ -641,14 +698,14 @@ export default function FloatingToolbar({
         </div>
 
         {/* ── Simplified BottomSheet (advanced settings only) ── */}
-        <BottomSheet open={expanded} onClose={() => setExpanded(false)} maxHeight="70vh">
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 2px' }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
+        <BottomSheet open={expanded} onClose={() => setExpanded(false)} maxHeight="85vh">
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 4px' }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 4px 8px' }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)' }}>進階設定</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 12px 10px' }}>
+            <span style={{ fontSize: 17, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>進階設定</span>
             <button type="button" onClick={() => setExpanded(false)}
-              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 18, cursor: 'pointer', padding: '0 4px' }}
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 22, cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
             >&times;</button>
           </div>
           {mobileSheetContent}
