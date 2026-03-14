@@ -21,6 +21,7 @@ const BREED_GRID_VISUAL_BOTTOM = 100; // approx visual space below lowest node i
 const FONT_MIN_SCALE = 0.55;
 const FONT_FAMILY = '"Microsoft JhengHei", "Noto Sans TC", sans-serif';
 const LABEL_PADDING = 14;  // minimum gap between adjacent labels (world px)
+const BLOCK_TYPE_GAP = 40; // minimum gap between different block types (grid↔other, vtuber↔taxonomy)
 
 // ── Label width caps per node type (world px at worst-case font) ──
 const MAX_LABEL_W = {
@@ -533,19 +534,38 @@ function _compactNode(node) {
     _compactNode(child);
   }
 
-  // Build block list: each non-grid child is its own block; all _inGrid
-  // children merge into one block; all _inBreedGrid children merge into one.
-  // Then close gaps between adjacent blocks to exactly LABEL_PADDING.
+  // Build typed block list: group children by type so we can apply different
+  // gap sizes between different block types (grid↔other, vtuber↔taxonomy).
+  // Block types: 'taxonomy' (each its own block), 'vtuber' (all non-grid
+  // vtubers merged), 'grid' (all _inGrid merged), 'breedGrid' (all merged).
   const blocks = [];
+
+  // Separate non-grid, non-breed-grid children into vtubers vs taxonomy
+  const nonGridVtubers = [];
   for (const c of node.children) {
-    if (!c.data._inGrid && !c.data._inBreedGrid) {
+    if (c.data._inGrid || c.data._inBreedGrid) continue;
+    if (c.data._vtuber) {
+      nonGridVtubers.push(c);
+    } else {
       blocks.push({
+        type: 'taxonomy',
         left: c.x + c.data._extLeft,
         right: c.x + c.data._extRight,
         nodes: [c],
       });
     }
   }
+
+  // Merge all non-grid vtubers into one block
+  if (nonGridVtubers.length > 0) {
+    let vL = Infinity, vR = -Infinity;
+    for (const v of nonGridVtubers) {
+      vL = Math.min(vL, v.x + v.data._extLeft);
+      vR = Math.max(vR, v.x + v.data._extRight);
+    }
+    blocks.push({ type: 'vtuber', left: vL, right: vR, nodes: nonGridVtubers });
+  }
+
   const gridNodes = node.children.filter(c => c.data._inGrid);
   if (gridNodes.length > 0) {
     let gL = Infinity, gR = -Infinity;
@@ -553,7 +573,7 @@ function _compactNode(node) {
       gL = Math.min(gL, g.x + g.data._extLeft);
       gR = Math.max(gR, g.x + g.data._extRight);
     }
-    blocks.push({ left: gL, right: gR, nodes: gridNodes });
+    blocks.push({ type: 'grid', left: gL, right: gR, nodes: gridNodes });
   }
   const breedGridNodes = node.children.filter(c => c.data._inBreedGrid);
   if (breedGridNodes.length > 0) {
@@ -562,7 +582,7 @@ function _compactNode(node) {
       bgL = Math.min(bgL, bg.x + (bg.data._extLeft ?? -(bg.data._labelHalfW || 40)));
       bgR = Math.max(bgR, bg.x + (bg.data._extRight ?? (bg.data._labelHalfW || 40)));
     }
-    blocks.push({ left: bgL, right: bgR, nodes: breedGridNodes });
+    blocks.push({ type: 'breedGrid', left: bgL, right: bgR, nodes: breedGridNodes });
   }
 
   if (blocks.length > 1) {
@@ -571,7 +591,10 @@ function _compactNode(node) {
       const prev = blocks[i - 1];
       const curr = blocks[i];
       const gap = curr.left - prev.right;
-      const shift = LABEL_PADDING - gap;
+      // Use larger gap between different block types
+      const sameType = prev.type === curr.type && prev.type === 'taxonomy';
+      const minGap = sameType ? LABEL_PADDING : BLOCK_TYPE_GAP;
+      const shift = minGap - gap;
       if (Math.abs(shift) > 0.5) {
         for (const n of curr.nodes) shiftSubtree(n, shift);
         curr.left += shift;
