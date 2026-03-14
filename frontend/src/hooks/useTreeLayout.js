@@ -478,8 +478,19 @@ function applyIntermediateLevel(root) {
 
     if (vtubers.length === 0 || !hasTaxonomySiblings) continue;
 
-    // Place vtubers at fixed intermediate level (40% of NODE_DY)
-    const intermediateY = parent.y + NODE_DY * 0.4;
+    // When parent has a budget badge ("+N 位"), push intermediate level
+    // down to clear the badge text.  Estimate badge bottom extent at
+    // worst-case font scale so zooming out doesn't cause overlap.
+    let budgetExtraY = 0;
+    if (parent.data._hiddenVtuberCount > 0) {
+      const badgeFs = 9 / FONT_MIN_SCALE;
+      const badgePadY = 2 / FONT_MIN_SCALE;
+      const badgeGap = badgeFs * 0.3;
+      budgetExtraY = badgeGap + badgeFs + badgePadY * 2 + 4;
+    }
+
+    // Place vtubers at fixed intermediate level (40% of NODE_DY) + badge clearance
+    const intermediateY = parent.y + NODE_DY * 0.4 + budgetExtraY;
     for (const v of vtubers) {
       v.y = intermediateY;
     }
@@ -509,20 +520,26 @@ function applyIntermediateLevel(root) {
  * When a parent has more than GRID_THRESHOLD vtuber children,
  * rearrange them into a compact grid instead of a single row.
  * Cell width adapts to the widest label in the group.
+ * Dot-tier vtubers (from budget expansion) are appended at the end
+ * of the grid so they share the same grid layout.
  */
 function applyGridLayout(root, activeFilterCount) {
   for (const node of root.descendants()) {
     if (!node.children) continue;
 
-    // Only grid normal-tier vtubers; dot-tier nodes are placed after the grid
+    // Grid threshold counts ALL vtubers (normal + dot) so that expanding
+    // hidden vtubers (5→6) correctly triggers grid mode.
     const allVtubers = node.children.filter(c => c.data._vtuber);
+    if (allVtubers.length <= GRID_THRESHOLD) continue;
+
+    // Normal first, then dots appended at end of grid
     const normalVtubers = allVtubers.filter(c => !c.data._visualTier);
     const dotVtubers = allVtubers.filter(c => c.data._visualTier === 'dot');
-    if (normalVtubers.length <= GRID_THRESHOLD) continue;
+    const gridVtubers = [...normalVtubers, ...dotVtubers];
 
     // Dynamic cell width: at least GRID_CELL_W, or widest label + padding
     const maxLabelFullW = Math.max(
-      ...normalVtubers.map(v => (v.data._labelHalfW || 40) * 2 + LABEL_PADDING)
+      ...gridVtubers.map(v => (v.data._labelHalfW || 40) * 2 + LABEL_PADDING)
     );
     // Estimate badge row width when filters active (same formula as badgeHalfW * 2)
     const badgeRowW = activeFilterCount > 0
@@ -535,51 +552,38 @@ function applyGridLayout(root, activeFilterCount) {
     const HEX_R = 21;
     const worstFs = 12 / FONT_MIN_SCALE;          // worst-case font size
     const worstLineH = worstFs * 1.25;             // worst-case line height
-    const maxLines = Math.max(...normalVtubers.map(v => (v.data._labelLines || ['']).length));
+    const maxLines = Math.max(...normalVtubers.map(v => (v.data._labelLines || ['']).length), 1);
     // text bottom from center = hexR + fs*0.3 + (maxLines-1)*lineH + fs
     const textBottom = HEX_R + worstFs * 0.3 + (maxLines - 1) * worstLineH + worstFs;
     // Extra space for filter badge row (one line of badges at 9px font)
     const badgeExtra = activeFilterCount > 0 ? (9 / FONT_MIN_SCALE) * 1.25 + 4 : 0;
     const cellH = Math.max(GRID_CELL_H, textBottom + badgeExtra + HEX_R + 10);
 
-    const cols = Math.min(GRID_COLS, normalVtubers.length);
+    const cols = Math.min(GRID_COLS, gridVtubers.length);
 
     // Push grid down based on first row's tallest label so it clears sibling branches
-    const firstRowCount = Math.min(cols, normalVtubers.length);
+    const firstRowCount = Math.min(cols, gridVtubers.length);
     const firstRowMaxLines = Math.max(
-      ...normalVtubers.slice(0, firstRowCount).map(v => (v.data._labelLines || ['']).length)
+      ...gridVtubers.slice(0, firstRowCount).map(v => (v.data._labelLines || ['']).length)
     );
     const gridYOffset = Math.max(0, (firstRowMaxLines - 1) * worstLineH);
 
     // Center of the original vtuber positions
     const centerX = allVtubers.reduce((s, n) => s + n.x, 0) / allVtubers.length;
-    const baseY = normalVtubers[0].y + gridYOffset;
+    const baseY = gridVtubers[0].y + gridYOffset;
 
     const gridW = (cols - 1) * cellW;
     const startX = centerX - gridW / 2;
     const barY = baseY - 25;  // horizontal bar Y position
 
-    for (let i = 0; i < normalVtubers.length; i++) {
+    // Place ALL vtubers (normal + dot) in the same grid
+    for (let i = 0; i < gridVtubers.length; i++) {
       const col = i % cols;
       const row = Math.floor(i / cols);
-      normalVtubers[i].x = startX + col * cellW;
-      normalVtubers[i].y = baseY + row * cellH;
-      normalVtubers[i].data._inGrid = true;
-      normalVtubers[i].data._gridBarY = barY;
-    }
-
-    // Place dot-tier vtubers in a row below the grid (not marked as _inGrid
-    // so they use regular edge drawing instead of grid connectors)
-    if (dotVtubers.length > 0) {
-      const lastRow = Math.floor((normalVtubers.length - 1) / cols);
-      const dotBaseY = baseY + (lastRow + 1) * cellH;
-      const dotCellW = Math.max(60, ...dotVtubers.map(v => (v.data._labelHalfW || 20) * 2 + LABEL_PADDING));
-      const dotGridW = (dotVtubers.length - 1) * dotCellW;
-      const dotStartX = centerX - dotGridW / 2;
-      for (let i = 0; i < dotVtubers.length; i++) {
-        dotVtubers[i].x = dotStartX + i * dotCellW;
-        dotVtubers[i].y = dotBaseY;
-      }
+      gridVtubers[i].x = startX + col * cellW;
+      gridVtubers[i].y = baseY + row * cellH;
+      gridVtubers[i].data._inGrid = true;
+      gridVtubers[i].data._gridBarY = barY;
     }
   }
 }
