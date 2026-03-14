@@ -196,11 +196,12 @@ export const api = {
   getTraits: (userId) => apiFetch(`/traits?user_id=${userId}`),
   createTrait: (body) => apiFetch('/traits', {
     method: 'POST', body: JSON.stringify(body),
-  }),
+  }).then(r => { window.dispatchEvent(new CustomEvent('vtaxon:traits-changed')); return r; }),
   updateTrait: (id, body) => apiFetch(`/traits/${id}`, {
     method: 'PATCH', body: JSON.stringify(body),
   }),
-  deleteTrait: (id) => apiFetch(`/traits/${id}`, { method: 'DELETE' }),
+  deleteTrait: (id) => apiFetch(`/traits/${id}`, { method: 'DELETE' })
+    .then(r => { window.dispatchEvent(new CustomEvent('vtaxon:traits-changed')); return r; }),
 
   // Taxonomy (session-cached)
   getTaxonomyTree: async (qs = '') => {

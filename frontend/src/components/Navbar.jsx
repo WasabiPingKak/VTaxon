@@ -48,13 +48,18 @@ export default function Navbar() {
   }, [dropdownOpen]);
 
   // Fetch tagged VTuber count for directory badge
-  useEffect(() => {
-    let cancelled = false;
+  const fetchDirectoryCount = useCallback(() => {
     api.getDirectory({ has_traits: 'true', per_page: 1 })
-      .then(data => { if (!cancelled) setDirectoryCount(data.total ?? null); })
+      .then(data => setDirectoryCount(data.total ?? null))
       .catch(() => {});
-    return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    fetchDirectoryCount();
+    const handler = () => fetchDirectoryCount();
+    window.addEventListener('vtaxon:traits-changed', handler);
+    return () => window.removeEventListener('vtaxon:traits-changed', handler);
+  }, [fetchDirectoryCount]);
 
   // Fetch admin pending counts on mount + periodically
   useEffect(() => {
