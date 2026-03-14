@@ -122,8 +122,32 @@ function computeWrappedLines(ctx, text, maxW, basePx, weight = 'bold') {
  * and by renderers for multi-line drawing.
  */
 function computeLabelLayout(data) {
-  const { _rank, _vtuber, _name, _nameZh, _displayName } = data;
+  const { _rank, _vtuber, _name, _nameZh, _displayName, _budgetGroup, _visualTier } = data;
   const ctx = getMeasureCtx();
+
+  // Budget group "+N 位" — small pill
+  if (_budgetGroup) {
+    const label = _displayName || '+? 位';
+    ctx.font = '11px sans-serif';
+    const textW = ctx.measureText(label).width;
+    data._labelLines = [label];
+    data._labelHalfW = (textW + 20) / 2;
+    data._labelBottomH = 10;
+    return;
+  }
+
+  // Dot-tier vtuber — smaller footprint
+  if (_vtuber && _visualTier === 'dot') {
+    const label = _displayName || '?';
+    const { lines, widest } = computeWrappedLines(ctx, label, MAX_LABEL_W.VTUBER, 11);
+    data._labelLines = lines;
+    data._labelHalfW = Math.max(widest, 20) / 2;
+    const DOT_R = 5;
+    const hFs = 11;
+    const hLineH = hFs * 1.25;
+    data._labelBottomH = DOT_R + hFs * 0.3 + lines.length * hLineH;
+    return;
+  }
 
   if (_vtuber) {
     const label = _displayName || '?';
@@ -173,7 +197,7 @@ function computeLabelLayout(data) {
 }
 
 // Ranks that use rect rendering (not circle)
-const RECT_RANKS = new Set(['SPECIES', 'SUBSPECIES', 'FORM', 'BREED', 'F_SPECIES']);
+const RECT_RANKS = new Set(['SPECIES', 'SUBSPECIES', 'FORM', 'BREED', 'F_SPECIES', 'VTUBER_BUDGET_GROUP']);
 
 /** Compute bounds from a list of d3 hierarchy nodes. */
 function computeBounds(nodes) {
@@ -382,7 +406,7 @@ function sortVtubers(vtubers, sortConfig) {
   return sorted;
 }
 
-export default function useTreeLayout(entries, fictionalEntries, expandedSet, currentUserId, realSortConfig, fictSortConfig, activeFilterCount) {
+export default function useTreeLayout(entries, fictionalEntries, expandedSet, currentUserId, realSortConfig, fictSortConfig, activeFilterCount, expandedBudgetGroups) {
   return useMemo(() => {
     const hasReal = entries && entries.length > 0;
     const hasFictional = fictionalEntries && fictionalEntries.length > 0;
@@ -400,7 +424,7 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
       const realLiveSet = realSortConfig?.key === 'active_first'
         ? buildLiveDescendantSet(realRoot, realSortConfig.liveUserIds)
         : null;
-      const hierData = mapToHierarchy(realRoot, expandedSet, currentUserId, 0, realSortConfig, realLiveSet);
+      const hierData = mapToHierarchy(realRoot, expandedSet, currentUserId, 0, realSortConfig, realLiveSet, expandedBudgetGroups);
       const h = hierarchy(hierData, d => d.children);
       layoutTree(h, activeFilterCount);
       realNodes = h.descendants();
@@ -414,7 +438,7 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
       const fictLiveSet = fictSortConfig?.key === 'active_first'
         ? buildLiveDescendantSet(fictRoot, fictSortConfig.liveUserIds)
         : null;
-      const hierData = mapToHierarchy(fictRoot, expandedSet, currentUserId, 0, fictSortConfig, fictLiveSet);
+      const hierData = mapToHierarchy(fictRoot, expandedSet, currentUserId, 0, fictSortConfig, fictLiveSet, expandedBudgetGroups);
       const h = hierarchy(hierData, d => d.children);
       layoutTree(h, activeFilterCount);
       fictNodes = h.descendants();
@@ -442,7 +466,7 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
       bounds: allBounds,
       maxCount,
     };
-  }, [entries, fictionalEntries, expandedSet, currentUserId, realSortConfig, fictSortConfig, activeFilterCount]);
+  }, [entries, fictionalEntries, expandedSet, currentUserId, realSortConfig, fictSortConfig, activeFilterCount, expandedBudgetGroups]);
 }
 
 /**
@@ -459,7 +483,7 @@ function applyIntermediateLevel(root) {
     let hasTaxonomySiblings = false;
 
     for (const c of parent.children) {
-      if (c.data._vtuber) vtubers.push(c);
+      if (c.data._vtuber || c.data._budgetGroup) vtubers.push(c);
       else if (c.data._rank !== 'BREED') hasTaxonomySiblings = true;
     }
 
@@ -484,7 +508,7 @@ function applyIntermediateLevel(root) {
     if (vtuberBottom + MIN_GAP > childY - CHILD_TOP_H) {
       const pushDown = vtuberBottom + MIN_GAP - (childY - CHILD_TOP_H);
       for (const c of parent.children) {
-        if (!c.data._vtuber) {
+        if (!c.data._vtuber && !c.data._budgetGroup) {
           shiftSubtreeXY(c, 0, pushDown);
         }
       }
@@ -501,7 +525,7 @@ function applyGridLayout(root, activeFilterCount) {
   for (const node of root.descendants()) {
     if (!node.children) continue;
 
-    const vtubers = node.children.filter(c => c.data._vtuber);
+    const vtubers = node.children.filter(c => c.data._vtuber || c.data._budgetGroup);
     if (vtubers.length <= GRID_THRESHOLD) continue;
 
     // Dynamic cell width: at least GRID_CELL_W, or widest label + padding
@@ -860,7 +884,17 @@ function buildLiveDescendantSet(node, liveIds) {
  * Recursively convert Map-based tree node → plain object for d3.hierarchy.
  * Only includes children that are expanded. Also creates vtuber leaf nodes.
  */
-function mapToHierarchy(node, expandedSet, currentUserId, depth = 0, sortConfig = null, liveDescendantSet = null) {
+// Visual budget tier thresholds
+const BUDGET_TIER_DOT = 4;   // 4-5 traits → dot + name (no avatar)
+const BUDGET_TIER_HIDDEN = 6; // 6+ traits → collapsed into "+N 位"
+
+function getVisualTier(traitCount) {
+  if (traitCount >= BUDGET_TIER_HIDDEN) return 'hidden';
+  if (traitCount >= BUDGET_TIER_DOT) return 'dot';
+  return 'normal';
+}
+
+function mapToHierarchy(node, expandedSet, currentUserId, depth = 0, sortConfig = null, liveDescendantSet = null, expandedBudgetGroups = null) {
   const isExpanded = depth === 0 || expandedSet.has(node.pathKey);
   const children = [];
 
@@ -868,7 +902,20 @@ function mapToHierarchy(node, expandedSet, currentUserId, depth = 0, sortConfig 
     // Vtubers FIRST (so they appear before taxonomy children when
     // at intermediate levels — see applyIntermediateLevel)
     const sortedVtubers = sortVtubers(node.vtubers, sortConfig);
+
+    // Split vtubers into visual budget tiers
+    const normalVtubers = [];
+    const dotVtubers = [];
+    const hiddenVtubers = [];
     for (const v of sortedVtubers) {
+      const tier = getVisualTier(v.trait_count || 0);
+      if (tier === 'hidden') hiddenVtubers.push(v);
+      else if (tier === 'dot') dotVtubers.push(v);
+      else normalVtubers.push(v);
+    }
+
+    // Normal tier: full avatar + name
+    for (const v of normalVtubers) {
       children.push({
         _name: v.display_name,
         _displayName: v.display_name,
@@ -881,6 +928,62 @@ function mapToHierarchy(node, expandedSet, currentUserId, depth = 0, sortConfig 
         _pathKey: `${node.pathKey}|__vtuber__${v.user_id}`,
         children: null,
       });
+    }
+
+    // Dot tier: small dot + name (no avatar)
+    for (const v of dotVtubers) {
+      children.push({
+        _name: v.display_name,
+        _displayName: v.display_name,
+        _rank: 'VTUBER',
+        _vtuber: true,
+        _visualTier: 'dot',
+        _entry: v,
+        _userId: v.user_id,
+        _avatarUrl: v.avatar_url,
+        _isCurrentUser: v.user_id === currentUserId,
+        _pathKey: `${node.pathKey}|__vtuber__${v.user_id}`,
+        children: null,
+      });
+    }
+
+    // Hidden tier: collapsed into "+N 位" group
+    const budgetGroupKey = `${node.pathKey}|__budget_group__`;
+    const isBudgetExpanded = expandedBudgetGroups?.has(budgetGroupKey);
+
+    if (hiddenVtubers.length > 0) {
+      if (isBudgetExpanded) {
+        // When expanded, show hidden vtubers as dot tier
+        for (const v of hiddenVtubers) {
+          children.push({
+            _name: v.display_name,
+            _displayName: v.display_name,
+            _rank: 'VTUBER',
+            _vtuber: true,
+            _visualTier: 'dot',
+            _entry: v,
+            _userId: v.user_id,
+            _avatarUrl: v.avatar_url,
+            _isCurrentUser: v.user_id === currentUserId,
+            _pathKey: `${node.pathKey}|__vtuber__${v.user_id}`,
+            children: null,
+          });
+        }
+      } else {
+        // Collapsed: single "+N 位" placeholder node
+        children.push({
+          _name: `+${hiddenVtubers.length} 位`,
+          _displayName: `+${hiddenVtubers.length} 位`,
+          _rank: 'VTUBER_BUDGET_GROUP',
+          _vtuber: false,
+          _budgetGroup: true,
+          _budgetGroupKey: budgetGroupKey,
+          _hiddenCount: hiddenVtubers.length,
+          _hiddenEntries: hiddenVtubers,
+          _pathKey: budgetGroupKey,
+          children: null,
+        });
+      }
     }
 
     let taxonomyChildren = [...node.children.values()];
@@ -899,7 +1002,7 @@ function mapToHierarchy(node, expandedSet, currentUserId, depth = 0, sortConfig 
       taxonomyChildren.sort((a, b) => b.count - a.count);
     }
     for (const child of taxonomyChildren) {
-      children.push(mapToHierarchy(child, expandedSet, currentUserId, depth + 1, sortConfig, liveDescendantSet));
+      children.push(mapToHierarchy(child, expandedSet, currentUserId, depth + 1, sortConfig, liveDescendantSet, expandedBudgetGroups));
     }
   }
 

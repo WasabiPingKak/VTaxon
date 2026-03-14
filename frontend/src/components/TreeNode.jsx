@@ -4,6 +4,8 @@ import RankBadge from './RankBadge';
 import { getActiveFilterBadges, getSortBadge } from '../lib/filterBadges';
 
 const SHOW_LIMIT = 20;
+const BUDGET_TIER_DOT = 4;
+const BUDGET_TIER_HIDDEN = 6;
 
 // Static style objects (avoid re-creating on each render)
 const arrowStyle = {
@@ -20,6 +22,89 @@ const showMoreBtnStyle = {
   background: 'none', border: '1px dashed #ccc', borderRadius: '4px',
   padding: '4px 12px', cursor: 'pointer', color: '#666', fontSize: '0.85em',
 };
+
+const dotCardStyle = {
+  display: 'inline-flex', alignItems: 'center', gap: '6px',
+  padding: '4px 8px', borderRadius: '6px',
+  border: '1px solid rgba(255,255,255,0.06)',
+  background: 'rgba(255,255,255,0.03)',
+  color: 'rgba(255,255,255,0.45)',
+  cursor: 'pointer', fontSize: '0.85em',
+};
+const dotStyle = {
+  width: 6, height: 6, borderRadius: '50%',
+  background: 'rgba(255,255,255,0.25)', flexShrink: 0,
+};
+const budgetBtnStyle = {
+  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: '12px', padding: '4px 12px',
+  cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: '0.82em',
+};
+
+function VtuberTierGroup({ vtubers, depth, currentUserId, liveUserIds, onSelectVtuber, activeFilters, sortKey }) {
+  const [budgetExpanded, setBudgetExpanded] = useState(false);
+
+  const normal = [];
+  const dot = [];
+  const hidden = [];
+  for (const v of vtubers) {
+    const tc = v.trait_count || 0;
+    if (tc >= BUDGET_TIER_HIDDEN) hidden.push(v);
+    else if (tc >= BUDGET_TIER_DOT) dot.push(v);
+    else normal.push(v);
+  }
+
+  return (
+    <div style={{
+      marginLeft: (depth + 1) * 20,
+      display: 'flex', flexWrap: 'wrap', gap: '6px',
+      padding: '4px 0', alignItems: 'center',
+    }}>
+      {normal.map(v => (
+        <VtuberCard
+          key={`${v.user_id}-${v.taxon_id}`}
+          entry={v}
+          isCurrentUser={currentUserId && v.user_id === currentUserId}
+          isLive={liveUserIds && liveUserIds.has(v.user_id)}
+          onClick={() => onSelectVtuber(v)}
+          activeFilterBadges={activeFilters ? getActiveFilterBadges(v, activeFilters) : undefined}
+          sortBadge={sortKey ? getSortBadge(v, sortKey) : undefined}
+        />
+      ))}
+      {dot.map(v => (
+        <button
+          key={`${v.user_id}-${v.taxon_id}`}
+          type="button"
+          onClick={() => onSelectVtuber(v)}
+          style={dotCardStyle}
+        >
+          <span style={dotStyle} />
+          <span>{v.display_name}</span>
+        </button>
+      ))}
+      {hidden.length > 0 && !budgetExpanded && (
+        <button
+          type="button"
+          onClick={() => setBudgetExpanded(true)}
+          style={budgetBtnStyle}
+        >
+          +{hidden.length} 位
+        </button>
+      )}
+      {budgetExpanded && hidden.map(v => (
+        <button
+          key={`${v.user_id}-${v.taxon_id}`}
+          type="button"
+          onClick={() => onSelectVtuber(v)}
+          style={dotCardStyle}
+        >
+          <span style={dotStyle} />
+          <span>{v.display_name}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function setsEqualForNode(a, b, pathKey, isExpanded) {
   if (a === b) return true;
@@ -90,25 +175,17 @@ const TreeNode = memo(function TreeNode({
       {/* Expanded content */}
       {isExpanded && (
         <div>
-          {/* Vtuber cards at this node (before children) */}
+          {/* Vtuber cards at this node (before children) — split by visual budget tier */}
           {node.vtubers.length > 0 && (
-            <div style={{
-              marginLeft: (depth + 1) * 20,
-              display: 'flex', flexWrap: 'wrap', gap: '6px',
-              padding: '4px 0',
-            }}>
-              {node.vtubers.map(v => (
-                <VtuberCard
-                  key={`${v.user_id}-${v.taxon_id}`}
-                  entry={v}
-                  isCurrentUser={currentUserId && v.user_id === currentUserId}
-                  isLive={liveUserIds && liveUserIds.has(v.user_id)}
-                  onClick={() => onSelectVtuber(v)}
-                  activeFilterBadges={activeFilters ? getActiveFilterBadges(v, activeFilters) : undefined}
-                  sortBadge={sortKey ? getSortBadge(v, sortKey) : undefined}
-                />
-              ))}
-            </div>
+            <VtuberTierGroup
+              vtubers={node.vtubers}
+              depth={depth}
+              currentUserId={currentUserId}
+              liveUserIds={liveUserIds}
+              onSelectVtuber={onSelectVtuber}
+              activeFilters={activeFilters}
+              sortKey={sortKey}
+            />
           )}
 
           {/* Child taxonomy nodes */}

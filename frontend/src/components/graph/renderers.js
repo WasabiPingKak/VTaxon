@@ -485,7 +485,11 @@ function drawBreedGridConnectors(ctx, nodes, scale, pm, vp, margin, state) {
 function drawNode(ctx, node, scale, state) {
   const d = node.data;
 
-  if (d._vtuber) {
+  if (d._budgetGroup) {
+    drawBudgetGroupNode(ctx, node, scale, state);
+  } else if (d._vtuber && d._visualTier === 'dot') {
+    drawDotVtuberNode(ctx, node, scale, state);
+  } else if (d._vtuber) {
     drawVtuberNode(ctx, node, scale, state);
   } else if (d._rank === 'BREED') {
     drawBreedNode(ctx, node, scale, state);
@@ -939,6 +943,69 @@ function drawVtuberNode(ctx, node, scale, state) {
         }
       }
     }
+  }
+}
+
+// ── Dot-tier Vtuber node (small dot + name, no avatar/hexagon) ──
+function drawDotVtuberNode(ctx, node, scale, state) {
+  const d = node.data;
+  const dotR = 5;
+
+  // Small gray dot
+  ctx.beginPath();
+  ctx.arc(node.x, node.y, dotR, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.fill();
+
+  // Name label below dot
+  if (scale > LOD_DOTS_ONLY) {
+    const lines = d._labelLines || [d._displayName || '?'];
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = LABEL_DIM;
+    ctx.font = fontStr(11, scale);
+    const fs = scaledFontSize(11, scale);
+    const lineHeight = fs * 1.25;
+    const startY = node.y + dotR + fs * 0.3;
+    drawWrappedText(ctx, lines, node.x, startY, lineHeight);
+  }
+}
+
+// ── Budget group node ("+N 位" collapsed placeholder) ──
+function drawBudgetGroupNode(ctx, node, scale, state) {
+  const d = node.data;
+  const hovered = state.hoveredNode === node;
+  const text = d._displayName || '+? 位';
+  const fs = scaledFontSize(11, scale);
+
+  ctx.font = fontStr(11, scale);
+  const textW = ctx.measureText(text).width;
+  const padX = 10;
+  const padY = 6;
+  const w = textW + padX * 2;
+  const h = fs + padY * 2;
+  d._nodeWidth = w;
+  d._nodeHeight = h;
+  const r = h / 2;
+  const x = node.x - w / 2;
+  const y = node.y - h / 2;
+
+  // Pill-shaped background
+  ctx.beginPath();
+  roundedRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = hovered ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Text
+  if (scale > LOD_DOTS_ONLY) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = LABEL_DIM;
+    ctx.font = fontStr(11, scale);
+    ctx.fillText(text, node.x, node.y);
   }
 }
 

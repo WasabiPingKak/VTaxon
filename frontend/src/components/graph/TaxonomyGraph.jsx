@@ -35,6 +35,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedSet, setExpandedSet] = useState(new Set());
+  const [expandedBudgetGroups, setExpandedBudgetGroups] = useState(new Set());
   const [selectedVtuber, setSelectedVtuber] = useState(null);
 
   // Focus Vtuber state
@@ -345,7 +346,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const hasSortBadge = (sortKey === 'debut_date' || sortKey === 'created_at' || sortKey === 'active_first') ? 2 : 0;
   const totalBadgeCount = activeFilterCount + hasSortBadge;
   const { nodes, edges, bounds, rootData, fictionalRootData, maxCount } = useTreeLayout(
-    finalEntries, finalFictionalEntries, expandedSet, currentUser?.id, realSortConfig, fictSortConfig, totalBadgeCount,
+    finalEntries, finalFictionalEntries, expandedSet, currentUser?.id, realSortConfig, fictSortConfig, totalBadgeCount, expandedBudgetGroups,
   );
   nodesRef.current = nodes;
 
@@ -932,7 +933,16 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     // Sync tree indicator to the clicked node's tree
     setActiveTree(hit.data._pathKey?.startsWith('__F__') ? 'fictional' : 'real');
 
-    if (hit.data._vtuber) {
+    if (hit.data._budgetGroup) {
+      // Toggle expand/collapse of visual budget group
+      const groupKey = hit.data._budgetGroupKey;
+      setExpandedBudgetGroups(prev => {
+        const next = new Set(prev);
+        if (next.has(groupKey)) next.delete(groupKey);
+        else next.add(groupKey);
+        return next;
+      });
+    } else if (hit.data._vtuber) {
       setSelectedVtuber(hit.data._entry);
       // If clicking own species node, sync HUD to that species
       if (hit.data._userId === focusedUserId) {

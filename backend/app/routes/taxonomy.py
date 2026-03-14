@@ -7,6 +7,8 @@ from ..limiter import limiter
 from ..cache import (get_tree_cache, set_tree_cache, invalidate_tree_cache,
                      get_fictional_tree_cache, set_fictional_tree_cache,
                      invalidate_fictional_tree_cache)
+from sqlalchemy import func
+
 from ..extensions import db
 from ..models import User, VtuberTrait, SpeciesCache, FictionalSpecies, OAuthAccount
 from ..services.gbif import _build_path_zh, _realign_taxon_path
@@ -194,6 +196,15 @@ def get_taxonomy_tree():
     for uid, provider in platform_rows:
         user_platforms.setdefault(uid, []).append(provider)
 
+    # Batch query total trait count per user (real + fictional) for visual budget
+    trait_count_rows = (
+        db.session.query(VtuberTrait.user_id, func.count(VtuberTrait.id))
+        .filter(VtuberTrait.user_id.in_(user_ids))
+        .group_by(VtuberTrait.user_id)
+        .all()
+    ) if user_ids else []
+    user_trait_counts = dict(trait_count_rows)
+
     needs_commit = False
     entries = []
     _parent_override_cache = {}  # parent_binomial → override zh or None
@@ -266,6 +277,7 @@ def get_taxonomy_tree():
             'debut_date': pd.get('debut_date'),
             'last_live_at': user.last_live_at.isoformat() if user.last_live_at else None,
             'platforms': user_platforms.get(user.id, []),
+            'trait_count': user_trait_counts.get(user.id, 0),
             'taxon_id': species.taxon_id,
             'taxon_rank': species.taxon_rank,
             'taxon_path': taxon_path,
@@ -349,6 +361,15 @@ def get_fictional_tree():
     for uid, provider in platform_rows:
         user_platforms.setdefault(uid, []).append(provider)
 
+    # Batch query total trait count per user (real + fictional) for visual budget
+    trait_count_rows = (
+        db.session.query(VtuberTrait.user_id, func.count(VtuberTrait.id))
+        .filter(VtuberTrait.user_id.in_(user_ids))
+        .group_by(VtuberTrait.user_id)
+        .all()
+    ) if user_ids else []
+    user_trait_counts = dict(trait_count_rows)
+
     entries = []
     for trait, fictional, user in rows:
         # Use category_path directly; fallback to legacy construction
@@ -379,6 +400,7 @@ def get_fictional_tree():
             'debut_date': pd.get('debut_date'),
             'last_live_at': user.last_live_at.isoformat() if user.last_live_at else None,
             'platforms': user_platforms.get(user.id, []),
+            'trait_count': user_trait_counts.get(user.id, 0),
             'fictional_species_id': fictional.id,
             'fictional_path': fictional_path,
             'fictional_name': fictional.name,
