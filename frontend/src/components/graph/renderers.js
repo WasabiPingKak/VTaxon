@@ -520,8 +520,8 @@ function drawBudgetBadge(ctx, node, scale, bottomY, state) {
   // Store bounds for hit-testing (world coordinates, unscaled)
   d._budgetBadgeBounds = { x, y, w, h };
 
-  // Check if the hovered node is this node and the hover is on the badge
-  const isHovered = state.hoveredNode === node && d._budgetBadgeBounds;
+  // Check if the badge itself is hovered (independent from parent node hover)
+  const isHovered = state.hoveredBadgeNode === node;
 
   ctx.beginPath();
   roundedRect(ctx, x, y, w, h, r);

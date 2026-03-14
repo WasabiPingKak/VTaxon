@@ -734,7 +734,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const { positionMap, isAnimating } = useNodeAnimation(nodes);
 
   // Interaction
-  const { hoveredNode, handleHover, handleClick: hitTestClick } = useGraphInteraction(nodes, maxCount);
+  const { hoveredNode, hoveredBadgeNode, handleHover, handleClick: hitTestClick } = useGraphInteraction(nodes, maxCount);
 
   // Image preloader (all entries from both trees)
   const allEntriesForImages = useMemo(() =>
@@ -1237,6 +1237,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
 
   const renderState = useMemo(() => ({
     hoveredNode,
+    hoveredBadgeNode,
     imageCache: imageCacheRef.current,
     starField: starFieldRef.current,
     focusedUserId,
@@ -1249,7 +1250,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     activeFilters: activeFiltersForRender,
     sortKey,
     liveUserIds,
-  }), [hoveredNode, imageCacheRef, focusedUserId, closeVtuberIds, closeEdgePaths, positionMap, flashTick, maxCount, activeFiltersForRender, sortKey, liveUserIds]);
+  }), [hoveredNode, hoveredBadgeNode, imageCacheRef, focusedUserId, closeVtuberIds, closeEdgePaths, positionMap, flashTick, maxCount, activeFiltersForRender, sortKey, liveUserIds]);
 
   const onRender = useCallback((ctx, transform, canvasSize) => {
     drawGraph(ctx, nodes, edges, transform, canvasSize, renderState);
@@ -1274,9 +1275,9 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     canvasRef.current?.requestRender();
     const canvas = canvasRef.current?.getCanvas();
     if (canvas) {
-      canvas.style.cursor = hoveredNode ? 'pointer' : 'grab';
+      canvas.style.cursor = (hoveredNode || hoveredBadgeNode) ? 'pointer' : 'grab';
     }
-  }, [hoveredNode]);
+  }, [hoveredNode, hoveredBadgeNode]);
 
   // Keyboard shortcuts
   useEffect(() => {
