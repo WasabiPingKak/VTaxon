@@ -130,6 +130,18 @@ function computeLabelLayout(data) {
     const { lines, widest } = computeWrappedLines(ctx, label, MAX_LABEL_W.VTUBER, 12);
     data._labelLines = lines;
     data._labelHalfW = Math.max(widest, 42) / 2;
+
+    // Compute vertical extent below node center (for intermediate level clearance).
+    // Uses worst-case font (same as width) to prevent overlap at any zoom level.
+    // Always reserves LIVE badge space since live status can change dynamically
+    // and the layout may not re-compute when it does.
+    const HEX_R = 21;
+    const hFs = 12 / FONT_MIN_SCALE;
+    const hLineH = hFs * 1.25;
+    const hLiveFs = 9 / FONT_MIN_SCALE;
+    const hLivePadY = 2 / FONT_MIN_SCALE;
+    data._labelBottomH = HEX_R + hFs * 0.3 + lines.length * hLineH
+      + hLiveFs * 0.2 + hLiveFs + hLivePadY * 2;
     return;
   }
 
@@ -212,6 +224,12 @@ function layoutTree(h, activeFilterCount) {
     // Widen vtuber nodes to accommodate badge row
     if (activeFilterCount > 0 && node.data._vtuber) {
       node.data._labelHalfW = Math.max(node.data._labelHalfW, badgeHalfW);
+      // Also extend vertical extent for badge row
+      if (node.data._labelBottomH) {
+        const badgeFs = 9 / FONT_MIN_SCALE;
+        const badgePadY = 1 / FONT_MIN_SCALE;
+        node.data._labelBottomH += badgeFs * 0.3 + badgeFs + badgePadY * 2;
+      }
     }
   }
 
@@ -435,16 +453,30 @@ export default function useTreeLayout(entries, fictionalEntries, expandedSet, cu
  * its parent and the normal child depth.
  */
 function applyIntermediateLevel(root) {
-  for (const node of root.descendants()) {
-    if (!node.data._vtuber || !node.parent) continue;
+  // Process parent-by-parent so sibling vtubers share the same intermediate y.
+  for (const parent of root.descendants()) {
+    if (!parent.children) continue;
 
-    const siblings = node.parent.children;
-    // Only apply intermediate level when there are structural taxonomy siblings
-    // (genus, family, etc.), NOT when siblings are only BREED nodes
-    const hasTaxonomySiblings = siblings.some(s => !s.data._vtuber && s.data._rank !== 'BREED');
-    if (hasTaxonomySiblings) {
-      // Place vtuber 40% of the way down (between parent and children)
-      node.y = node.parent.y + NODE_DY * 0.4;
+    const vtubers = [];
+    let hasTaxonomySiblings = false;
+
+    for (const c of parent.children) {
+      if (c.data._vtuber) vtubers.push(c);
+      else if (c.data._rank !== 'BREED') hasTaxonomySiblings = true;
+    }
+
+    if (vtubers.length === 0 || !hasTaxonomySiblings) continue;
+
+    // Use the tallest vtuber's bottom extent to compute a safe ratio.
+    // The vtuber's visual bottom must not overlap with sibling children
+    // at NODE_DY (accounting for children's top visual extent ~15px).
+    const maxBottomH = Math.max(...vtubers.map(v => v.data._labelBottomH || 80));
+    const childVisualTop = NODE_DY - 15; // children's center minus ~15px top extent
+    const safeRatio = (childVisualTop - maxBottomH - 5) / NODE_DY;
+    const ratio = Math.min(0.4, Math.max(0.15, safeRatio));
+
+    for (const v of vtubers) {
+      v.y = parent.y + NODE_DY * ratio;
     }
   }
 }
