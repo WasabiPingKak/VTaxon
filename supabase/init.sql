@@ -285,6 +285,47 @@ CREATE POLICY "traits_update_own" ON vtuber_traits
 CREATE POLICY "traits_delete_own" ON vtuber_traits
     FOR DELETE USING (auth.uid() = user_id);
 
+-- 11. live_streams — 直播狀態
+CREATE TABLE live_streams (
+    id            SERIAL PRIMARY KEY,
+    user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider      TEXT NOT NULL CHECK (provider IN ('youtube', 'twitch')),
+    stream_id     TEXT,
+    stream_title  TEXT,
+    stream_url    TEXT,
+    started_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (user_id, provider)
+);
+
+CREATE INDEX idx_live_streams_user_id ON live_streams(user_id);
+
+ALTER TABLE live_streams ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "live_streams_select_all" ON live_streams
+    FOR SELECT USING (true);
+
+-- 12. species_name_reports — 物種中文名稱回報
+CREATE TABLE species_name_reports (
+    id          SERIAL PRIMARY KEY,
+    user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
+    taxon_id    INTEGER REFERENCES species_cache(taxon_id),
+    report_type TEXT NOT NULL,            -- 'missing_zh' | 'wrong_zh'
+    current_name_zh   TEXT,
+    suggested_name_zh TEXT NOT NULL,
+    description TEXT,
+    status      TEXT NOT NULL DEFAULT 'pending',
+    admin_note  TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_species_name_reports_status ON species_name_reports(status);
+
+ALTER TABLE species_name_reports ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "species_name_reports_insert_own" ON species_name_reports
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "species_name_reports_select_own" ON species_name_reports
+    FOR SELECT USING (auth.uid() = user_id);
+
 -- ============================================================
 -- updated_at 自動更新觸發器
 -- ============================================================
@@ -305,7 +346,7 @@ CREATE TRIGGER trg_vtuber_traits_updated_at
     BEFORE UPDATE ON vtuber_traits
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
--- 11. notifications — 通知
+-- 13. notifications — 通知
 CREATE TABLE notifications (
     id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
