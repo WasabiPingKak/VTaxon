@@ -147,7 +147,7 @@ export default function BreedInterceptPanel({ species, onSelectBreed, onSkip, on
           {filter ? '無匹配品種' : '此物種尚無品種資料'}
         </p>
       ) : (
-        <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', maxHeight: '350px', overflow: 'auto' }}>
+        <div className="vtaxon-scroll" style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', maxHeight: '350px', overflow: 'auto' }}>
           {filtered.map(breed => (
             <div
               key={breed.id}

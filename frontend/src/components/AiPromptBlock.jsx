@@ -76,7 +76,7 @@ export default function AiPromptBlock() {
             </div>
           ) : (
             <>
-              <div style={{
+              <div className="vtaxon-scroll" style={{
                 background: '#0d1526', padding: '10px', borderRadius: '4px',
                 maxHeight: '200px', overflowY: 'auto', fontSize: '0.8em',
                 color: 'rgba(255,255,255,0.5)', lineHeight: 1.5,

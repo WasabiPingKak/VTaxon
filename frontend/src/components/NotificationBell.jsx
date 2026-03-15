@@ -115,7 +115,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div style={{
+        <div className="vtaxon-scroll" style={{
           position: 'absolute', right: 0, top: 34,
           width: 320, maxHeight: 400, overflowY: 'auto',
           background: '#141c2b',
