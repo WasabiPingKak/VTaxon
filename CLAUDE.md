@@ -108,6 +108,10 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 - CI/CD：`.github/workflows/deploy-staging.yml` / `deploy-prod.yml`
 - DB 初始化腳本：`scripts/init_db.py`（支援 `--target staging/prod`）
 
+## Debugging
+
+- When debugging, do NOT guess root causes speculatively. Read the actual error logs and trace the code path before proposing fixes. If a hypothesis is disproven, move on — don't keep guessing.
+
 ## 開發注意事項
 
 - **Feature branch 必須使用獨立 worktree**：開發新功能時，使用 `EnterWorktree` 工具從 `develop` 建立獨立的 git worktree + feature branch。禁止在主 worktree 用 `git checkout -b` 開新分支，以避免 unstaged changes 跨分支汙染。
