@@ -530,7 +530,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
         )}
 
         {/* Body (scrollable) */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+        <div className="vtaxon-scroll" style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
           {/* Avatar */}
           <div style={{ textAlign: 'center', marginBottom: '6px' }}>
             <div style={{

@@ -554,7 +554,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
       {searching && results.length === 0 && <LoadingSkeleton />}
 
       {(breedResults.length > 0 || groups.length > 0) && (
-        <div style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', maxHeight: '500px', overflow: 'auto' }}>
+        <div className="vtaxon-scroll" style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: '4px', maxHeight: '500px', overflow: 'auto' }}>
           {searching && (
             <div style={{
               padding: '8px 14px', background: 'rgba(56,189,248,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)',
