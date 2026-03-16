@@ -364,6 +364,10 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     );
   }, [rawFocusedEntries, nodes, focusedUserId]);
 
+  // Keep a ref to latest focusedEntries so delayed callbacks avoid stale closures
+  const focusedEntriesRef = useRef(focusedEntries);
+  focusedEntriesRef.current = focusedEntries;
+
   // Derive index from stable entry key — survives focusedEntries re-sorting
   const focusedSpeciesIdx = useMemo(() => {
     if (!focusedEntryKey || focusedEntries.length === 0) return 0;
@@ -1215,7 +1219,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   useEffect(() => {
     if (refocusTick === 0) return;
     scheduleCamera(() => {
-      const entry = focusedEntries[0];
+      const entry = focusedEntriesRef.current[0];
       if (!entry) return;
       const pathKey = entryToPathKeyRef.current(entry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
@@ -1223,7 +1227,6 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 200);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refocusTick, scheduleCamera]);
 
   // Pan to focused species when user explicitly changes selection
@@ -1253,14 +1256,15 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
 
     // Delay to let layout update with expanded paths, then pan
     scheduleCamera(() => {
-      const pathKey = entryToPathKeyRef.current(entry);
+      const latestEntry = focusedEntriesRef.current[focusedSpeciesIdx] || focusedEntriesRef.current[0];
+      if (!latestEntry) return;
+      const pathKey = entryToPathKeyRef.current(latestEntry);
       const targetNode = nodesRef.current.find(n => n.data._pathKey === pathKey);
       if (targetNode) {
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusedEntryKey, focusedUserId, scheduleCamera]);
+  }, [focusedEntryKey, focusedUserId, focusedSpeciesIdx, scheduleCamera]);
 
   // Render state
   // Only pass activeFilters when there are active selections
