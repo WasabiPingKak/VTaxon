@@ -633,26 +633,27 @@ function drawSpeciesNode(ctx, node, scale, state) {
   const baseW = Math.min(Math.max(70, widestLine + 24), SPECIES_MAX_RECT_W);
   const textBlockH = fs + (lines.length - 1) * lineHeight;
   const baseH = Math.max(26, textBlockH + 12);
-  const w = baseW + cw * 40;   // up to +40px wider
-  const h = baseH + cw * 16;   // up to +16px taller
+  const w = baseW + cw * 100;  // up to +100px wider
+  const h = baseH + cw * 40;   // up to +40px taller
   d._nodeWidth = w;
   d._nodeHeight = h;
-  const r = 6;
+  const r = 6 + cw * 4;        // rounder corners when bigger
   const x = node.x - w / 2, y = node.y - h / 2;
 
   ctx.beginPath();
   roundedRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = '#1a2433';
+  // Fill with rank-tinted background when collapsed
+  ctx.fillStyle = cw > 0 ? hexToRgba(rc.node, 0.06 + cw * 0.10) : '#1a2433';
 
   if (scale > LOD_DOTS_ONLY) {
-    ctx.shadowBlur = hovered ? 18 : (6 + cw * 8);  // up to 14
+    ctx.shadowBlur = hovered ? 22 : (6 + cw * 14);  // up to 20
     ctx.shadowColor = rc.glow;
   }
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  ctx.strokeStyle = hexToRgba(rc.node, 0.3 + cw * 0.3);  // up to 0.6
-  ctx.lineWidth = 1 + cw * 1.5;                           // up to 2.5
+  ctx.strokeStyle = hexToRgba(rc.node, 0.3 + cw * 0.4);  // up to 0.7
+  ctx.lineWidth = 1 + cw * 2;                             // up to 3
   ctx.stroke();
 
   // Collapsed indicator
@@ -690,7 +691,7 @@ function drawSpeciesNode(ctx, node, scale, state) {
     const rankLabel = RANK_LABELS[d._rank] || '';
     let bottomY = latinY + latinFs;
     if (rankLabel) {
-      const countFsPx = cw > 0 ? 10 + cw * 3 : 10;  // up to 13px
+      const countFsPx = cw > 0 ? 10 + cw * 5 : 10;  // up to 15px
       ctx.font = fontStr(countFsPx, scale, cw > 0 ? 'bold' : '');
       ctx.fillStyle = cw > 0 ? rc.node : LABEL_DIM;
       const rankY = latinY + latinFs + 2;
@@ -1126,26 +1127,26 @@ function drawBreedNode(ctx, node, scale, state) {
   const baseW = Math.min(Math.max(60, widestLine + 20), BREED_MAX_RECT_W);
   const textBlockH = fs + (lines.length - 1) * lineHeight;
   const baseH = Math.max(24, textBlockH + 10);
-  const w = baseW + cw * 36;   // up to +36px wider
-  const h = baseH + cw * 14;   // up to +14px taller
+  const w = baseW + cw * 80;   // up to +80px wider
+  const h = baseH + cw * 34;   // up to +34px taller
   d._nodeWidth = w;
   d._nodeHeight = h;
-  const r = 5;
+  const r = 5 + cw * 3;
   const x = node.x - w / 2, y = node.y - h / 2;
 
   ctx.beginPath();
   roundedRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = '#1a2433';
+  ctx.fillStyle = cw > 0 ? hexToRgba(rc.node, 0.06 + cw * 0.10) : '#1a2433';
 
   if (scale > LOD_DOTS_ONLY) {
-    ctx.shadowBlur = hovered ? 18 : (6 + cw * 8);
+    ctx.shadowBlur = hovered ? 22 : (6 + cw * 14);
     ctx.shadowColor = rc.glow;
   }
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  ctx.strokeStyle = hexToRgba(rc.node, 0.3 + cw * 0.3);
-  ctx.lineWidth = 1 + cw * 1.5;
+  ctx.strokeStyle = hexToRgba(rc.node, 0.3 + cw * 0.4);
+  ctx.lineWidth = 1 + cw * 2;
   ctx.stroke();
 
   // Collapsed indicator
@@ -1175,7 +1176,7 @@ function drawBreedNode(ctx, node, scale, state) {
     const count = d._count || 0;
     let bottomY = y + h;
     if (count > 0) {
-      const countFsPx = cw > 0 ? 9 + cw * 3 : 9;  // up to 12px
+      const countFsPx = cw > 0 ? 9 + cw * 5 : 9;  // up to 14px
       const countFs = scaledFontSize(countFsPx, scale);
       ctx.font = fontStr(countFsPx, scale, cw > 0 ? 'bold' : '');
       ctx.fillStyle = cw > 0 ? rc.node : LABEL_DIM;

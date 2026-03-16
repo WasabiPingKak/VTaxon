@@ -167,7 +167,7 @@ function computeLabelLayout(data) {
     const latinW = Math.min(measureTextWidth(_name, 10, 'normal'), SPECIES_MAX_RECT_W);
     let halfW = Math.max(mainW, latinW, 70) / 2;
     // Reserve extra collision width for collapsed nodes with many children
-    if (data._hasHiddenChildren && (data._count || 0) > 1) halfW += 20;
+    if (data._hasHiddenChildren && (data._count || 0) > 1) halfW += 50;
     data._labelHalfW = halfW;
     return;
   }
@@ -178,7 +178,7 @@ function computeLabelLayout(data) {
     data._labelLines = lines;
     const rectW = widest + 20;  // rect padding
     let halfW = Math.max(rectW, 60) / 2;
-    if (data._hasHiddenChildren && (data._count || 0) > 1) halfW += 18;
+    if (data._hasHiddenChildren && (data._count || 0) > 1) halfW += 40;
     data._labelHalfW = halfW;
     return;
   }
