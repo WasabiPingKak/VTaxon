@@ -2,10 +2,9 @@ import { useState, memo } from 'react';
 import VtuberCard from './VtuberCard';
 import RankBadge from './RankBadge';
 import { getActiveFilterBadges, getSortBadge } from '../lib/filterBadges';
+import { BUDGET_TIER_DOT, BUDGET_TIER_HIDDEN, subtreeHasNormalUser } from '../lib/treeUtils';
 
 const SHOW_LIMIT = 20;
-const BUDGET_TIER_DOT = 5;
-const BUDGET_TIER_HIDDEN = 6;
 
 // Static style objects (avoid re-creating on each render)
 const arrowStyle = {
@@ -121,6 +120,7 @@ const TreeNode = memo(function TreeNode({
   currentUserId, onSelectVtuber, highlightPaths, activeFilters, sortKey, liveUserIds,
 }) {
   const [showAll, setShowAll] = useState(false);
+  const [collapsedBudgetExpanded, setCollapsedBudgetExpanded] = useState(false);
 
   const isExpanded = expandedSet.has(node.pathKey);
   const isHighlighted = highlightPaths?.has(node.pathKey);
@@ -130,8 +130,19 @@ const TreeNode = memo(function TreeNode({
     (a.nameZh || a.name).localeCompare(b.nameZh || b.name, 'zh-Hant')
   );
 
-  const displayChildren = showAll ? childEntries : childEntries.slice(0, SHOW_LIMIT);
-  const remaining = childEntries.length - SHOW_LIMIT;
+  // Separate visible children from hidden-only branches
+  const visibleChildren = [];
+  let collapsedChildCount = 0;
+  for (const child of childEntries) {
+    if (!subtreeHasNormalUser(child) && !collapsedBudgetExpanded) {
+      collapsedChildCount++;
+    } else {
+      visibleChildren.push(child);
+    }
+  }
+
+  const displayChildren = showAll ? visibleChildren : visibleChildren.slice(0, SHOW_LIMIT);
+  const remaining = visibleChildren.length - SHOW_LIMIT;
 
   return (
     <div style={{ marginLeft: depth > 0 ? 20 : 0 }}>
@@ -189,7 +200,7 @@ const TreeNode = memo(function TreeNode({
             />
           )}
 
-          {/* Child taxonomy nodes */}
+          {/* Child taxonomy nodes (only visible ones; hidden-only branches are collapsed) */}
           {displayChildren.map(child => (
             <TreeNode
               key={child.pathKey}
@@ -205,6 +216,19 @@ const TreeNode = memo(function TreeNode({
               liveUserIds={liveUserIds}
             />
           ))}
+
+          {/* Collapsed hidden-only branches badge */}
+          {collapsedChildCount > 0 && (
+            <div style={{ marginLeft: (depth + 1) * 20, padding: '4px 0' }}>
+              <button
+                type="button"
+                onClick={() => setCollapsedBudgetExpanded(true)}
+                style={budgetBtnStyle}
+              >
+                +{collapsedChildCount} 位
+              </button>
+            </div>
+          )}
 
           {/* Show more button */}
           {!showAll && remaining > 0 && (

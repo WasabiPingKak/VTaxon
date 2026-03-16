@@ -198,20 +198,64 @@ export function collectAllPaths(entries) {
 
 const AUTO_EXPAND_THRESHOLD = 5;
 
+// ── Visual budget tier thresholds ──
+export const BUDGET_TIER_DOT = 5;    // 5 traits → dot + name (no avatar)
+export const BUDGET_TIER_HIDDEN = 6; // 6+ traits → collapsed into "+N 位"
+
+export function getVisualTier(entry) {
+  if (entry.is_live_primary) return 'normal';
+  const tc = entry.trait_count || 0;
+  if (tc >= BUDGET_TIER_HIDDEN) return 'hidden';
+  if (tc >= BUDGET_TIER_DOT) return 'dot';
+  return 'normal';
+}
+
+/**
+ * Check if a tree node's subtree contains at least one normal/dot-tier user.
+ * Used to decide whether a branch should be collapsed into the parent's [+N位] badge.
+ */
+export function subtreeHasNormalUser(node) {
+  for (const v of node.vtubers) {
+    if (getVisualTier(v) !== 'hidden') return true;
+  }
+  for (const child of node.children.values()) {
+    if (subtreeHasNormalUser(child)) return true;
+  }
+  return false;
+}
+
 /** Effective child count: taxonomy children + vtubers (visual children). */
 function effectiveChildCount(node) {
   return node.children.size + node.vtubers.length;
 }
 
 /**
+ * Effective VISIBLE child count: only counts children with normal users
+ * and non-hidden vtubers. Hidden-only branches don't consume the ≤5 auto-expand quota.
+ */
+function effectiveVisibleChildCount(node) {
+  let count = 0;
+  for (const child of node.children.values()) {
+    if (subtreeHasNormalUser(child)) count++;
+  }
+  for (const v of node.vtubers) {
+    if (getVisualTier(v) !== 'hidden') count++;
+  }
+  return count;
+}
+
+/**
  * Recursively expand children into pathSet.
- * Each child independently checks its own effectiveChildCount:
+ * Each child independently checks its own effectiveVisibleChildCount:
  *   ≤ 5 → expand + recurse;  > 5 → only expand single-child chains inside.
+ * Skips children whose subtrees contain only hidden-tier users.
  */
 export function autoExpandPaths(node, pathSet) {
   if (!node || effectiveChildCount(node) === 0) return;
   for (const child of node.children.values()) {
-    const cc = effectiveChildCount(child);
+    // Skip branches with only hidden users — they'll be collapsed into [+N位]
+    if (!subtreeHasNormalUser(child)) continue;
+    const cc = effectiveVisibleChildCount(child);
     if (cc > 0 && cc <= AUTO_EXPAND_THRESHOLD) {
       pathSet.add(child.pathKey);
       autoExpandPaths(child, pathSet);
@@ -221,13 +265,42 @@ export function autoExpandPaths(node, pathSet) {
   }
 }
 
-/** 若節點只有 1 個分類子節點，展開它並遞迴向下直到分叉或葉 */
+/**
+ * Unfiltered version of autoExpandPaths — does NOT skip hidden-only branches.
+ * Used when expanding collapsed budget groups (revealing hidden-only branches).
+ */
+export function autoExpandPathsUnfiltered(node, pathSet) {
+  if (!node || effectiveChildCount(node) === 0) return;
+  for (const child of node.children.values()) {
+    const cc = effectiveChildCount(child);
+    if (cc > 0 && cc <= AUTO_EXPAND_THRESHOLD) {
+      pathSet.add(child.pathKey);
+      autoExpandPathsUnfiltered(child, pathSet);
+    } else {
+      expandSingleChildChainUnfiltered(child, pathSet);
+    }
+  }
+}
+
+/** 若節點只有 1 個可見分類子節點，展開它並遞迴向下直到分叉或葉 */
 function expandSingleChildChain(node, pathSet) {
+  if (!node) return;
+  // Count only children with normal users
+  const visibleChildren = [...node.children.values()].filter(c => subtreeHasNormalUser(c));
+  if (visibleChildren.length !== 1) return;
+  pathSet.add(node.pathKey);
+  const child = visibleChildren[0];
+  pathSet.add(child.pathKey);
+  autoExpandPaths(child, pathSet);
+}
+
+/** Unfiltered version of expandSingleChildChain */
+function expandSingleChildChainUnfiltered(node, pathSet) {
   if (!node || node.children.size !== 1) return;
   pathSet.add(node.pathKey);
   const child = node.children.values().next().value;
   pathSet.add(child.pathKey);
-  autoExpandPaths(child, pathSet);
+  autoExpandPathsUnfiltered(child, pathSet);
 }
 
 /**

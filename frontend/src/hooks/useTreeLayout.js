@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { hierarchy, tree } from 'd3-hierarchy';
-import { buildTree, buildFictionalTree } from '../lib/treeUtils';
+import { buildTree, buildFictionalTree, getVisualTier, subtreeHasNormalUser, BUDGET_TIER_DOT, BUDGET_TIER_HIDDEN } from '../lib/treeUtils';
 
 // ── Layout constants ──
 const NODE_DX = 110;   // base horizontal spacing (used as separation denominator)
@@ -893,25 +893,15 @@ function buildLiveDescendantSet(node, liveIds) {
 /**
  * Recursively convert Map-based tree node → plain object for d3.hierarchy.
  * Only includes children that are expanded. Also creates vtuber leaf nodes.
+ * Collapses taxonomy branches that contain only hidden-tier users into the parent's [+N位] badge.
  */
-// Visual budget tier thresholds
-const BUDGET_TIER_DOT = 5;   // 5 traits → dot + name (no avatar)
-const BUDGET_TIER_HIDDEN = 6; // 6+ traits → collapsed into "+N 位"
-
-function getVisualTier(entry) {
-  if (entry.is_live_primary) return 'normal';
-  const tc = entry.trait_count || 0;
-  if (tc >= BUDGET_TIER_HIDDEN) return 'hidden';
-  if (tc >= BUDGET_TIER_DOT) return 'dot';
-  return 'normal';
-}
-
 function mapToHierarchy(node, expandedSet, currentUserId, depth = 0, sortConfig = null, liveDescendantSet = null, expandedBudgetGroups = null) {
   const isExpanded = depth === 0 || expandedSet.has(node.pathKey);
   const children = [];
   const budgetGroupKey = `${node.pathKey}|__budget_group__`;
   const isBudgetExpanded = expandedBudgetGroups?.has(budgetGroupKey);
   let hiddenVtuberCount = 0;
+  let collapsedChildCount = 0;
 
   if (isExpanded) {
     // Vtubers FIRST (so they appear before taxonomy children when
@@ -998,15 +988,23 @@ function mapToHierarchy(node, expandedSet, currentUserId, depth = 0, sortConfig 
     } else {
       taxonomyChildren.sort((a, b) => b.count - a.count);
     }
+
+    // Collapse taxonomy children whose subtrees contain only hidden-tier users.
+    // These branches are folded into the parent's [+N位] badge (counted as nodes, not users).
     for (const child of taxonomyChildren) {
+      if (!subtreeHasNormalUser(child) && !isBudgetExpanded) {
+        collapsedChildCount++;
+        continue;
+      }
       children.push(mapToHierarchy(child, expandedSet, currentUserId, depth + 1, sortConfig, liveDescendantSet, expandedBudgetGroups));
     }
   }
 
   const hasHiddenChildren = !isExpanded && (node.children.size > 0 || node.vtubers.length > 0);
 
-  // Hidden vtuber count for "+N 位" badge on this node
-  const showBudgetBadge = hiddenVtuberCount > 0 && !isBudgetExpanded;
+  // Combine hidden vtuber count + collapsed child node count for the "+N 位" badge
+  const totalHiddenCount = hiddenVtuberCount + collapsedChildCount;
+  const showBudgetBadge = totalHiddenCount > 0 && !isBudgetExpanded;
 
   return {
     _name: node.name,
@@ -1015,7 +1013,7 @@ function mapToHierarchy(node, expandedSet, currentUserId, depth = 0, sortConfig 
     _pathKey: node.pathKey,
     _count: node.count,
     _hasHiddenChildren: hasHiddenChildren,
-    _hiddenVtuberCount: showBudgetBadge ? hiddenVtuberCount : 0,
+    _hiddenVtuberCount: showBudgetBadge ? totalHiddenCount : 0,
     _budgetGroupKey: showBudgetBadge ? budgetGroupKey : null,
     children: children.length > 0 ? children : null,
   };
