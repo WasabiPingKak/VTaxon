@@ -495,6 +495,14 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   const FLASH_DURATION = 2800;
   const MAX_FLASH_ENTRIES = 500;
 
+  // Cleanup all pending timers on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(cameraTimerRef.current);
+      clearTimeout(flashTimerRef.current);
+    };
+  }, []);
+
   // Wrapper: always increments tick so re-clicking the same level triggers effects
   const handleTraceBackChange = useCallback((value) => {
     setTraceBack(value);
