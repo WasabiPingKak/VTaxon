@@ -656,6 +656,21 @@ function drawSpeciesNode(ctx, node, scale, state) {
   ctx.lineWidth = 1 + cw * 2;                             // up to 3
   ctx.stroke();
 
+  // Multi-layer contour rings when collapsed (方案 B)
+  if (cw > 0) {
+    const layers = Math.round(1 + cw * 3);  // 1~4 layers
+    for (let i = 1; i <= layers; i++) {
+      const off = i * 5;  // 5px per layer
+      const alpha = (0.35 - i * 0.07) * cw;  // fade out per layer
+      if (alpha <= 0) break;
+      ctx.beginPath();
+      roundedRect(ctx, x - off, y - off, w + off * 2, h + off * 2, r + off * 0.5);
+      ctx.strokeStyle = hexToRgba(rc.node, alpha);
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+
   // Collapsed indicator
   if (d._hasHiddenChildren) {
     const plusSz = scaledFontSize(8, scale);
@@ -1148,6 +1163,21 @@ function drawBreedNode(ctx, node, scale, state) {
   ctx.strokeStyle = hexToRgba(rc.node, 0.3 + cw * 0.4);
   ctx.lineWidth = 1 + cw * 2;
   ctx.stroke();
+
+  // Multi-layer contour rings when collapsed (方案 B)
+  if (cw > 0) {
+    const layers = Math.round(1 + cw * 3);
+    for (let i = 1; i <= layers; i++) {
+      const off = i * 5;
+      const alpha = (0.35 - i * 0.07) * cw;
+      if (alpha <= 0) break;
+      ctx.beginPath();
+      roundedRect(ctx, x - off, y - off, w + off * 2, h + off * 2, r + off * 0.5);
+      ctx.strokeStyle = hexToRgba(rc.node, alpha);
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
 
   // Collapsed indicator
   if (d._hasHiddenChildren) {
