@@ -640,10 +640,24 @@ function drawSpeciesNode(ctx, node, scale, state) {
   const r = 6 + cw * 4;        // rounder corners when bigger
   const x = node.x - w / 2, y = node.y - h / 2;
 
+  // Filled contour bands (outermost first, so inner layers paint over)
+  if (cw > 0) {
+    const layers = Math.round(1 + cw * 3);  // 1~4 layers
+    for (let i = layers; i >= 1; i--) {
+      const off = i * 6;  // 6px per layer
+      const alpha = (0.12 - i * 0.02) * cw;  // outermost ~0.04, inner ~0.10
+      if (alpha <= 0) continue;
+      ctx.beginPath();
+      roundedRect(ctx, x - off, y - off, w + off * 2, h + off * 2, r + off * 0.6);
+      ctx.fillStyle = hexToRgba(rc.node, alpha);
+      ctx.fill();
+    }
+  }
+
   ctx.beginPath();
   roundedRect(ctx, x, y, w, h, r);
-  // Fill with rank-tinted background when collapsed
-  ctx.fillStyle = cw > 0 ? hexToRgba(rc.node, 0.06 + cw * 0.10) : '#1a2433';
+  // Deep rank-tinted fill (方案 E)
+  ctx.fillStyle = cw > 0 ? hexToRgba(rc.node, 0.15 + cw * 0.15) : '#1a2433';
 
   if (scale > LOD_DOTS_ONLY) {
     ctx.shadowBlur = hovered ? 22 : (6 + cw * 14);  // up to 20
@@ -655,21 +669,6 @@ function drawSpeciesNode(ctx, node, scale, state) {
   ctx.strokeStyle = hexToRgba(rc.node, 0.3 + cw * 0.4);  // up to 0.7
   ctx.lineWidth = 1 + cw * 2;                             // up to 3
   ctx.stroke();
-
-  // Multi-layer contour rings when collapsed (方案 B)
-  if (cw > 0) {
-    const layers = Math.round(1 + cw * 3);  // 1~4 layers
-    for (let i = 1; i <= layers; i++) {
-      const off = i * 5;  // 5px per layer
-      const alpha = (0.35 - i * 0.07) * cw;  // fade out per layer
-      if (alpha <= 0) break;
-      ctx.beginPath();
-      roundedRect(ctx, x - off, y - off, w + off * 2, h + off * 2, r + off * 0.5);
-      ctx.strokeStyle = hexToRgba(rc.node, alpha);
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
-  }
 
   // Collapsed indicator
   if (d._hasHiddenChildren) {
@@ -1149,9 +1148,23 @@ function drawBreedNode(ctx, node, scale, state) {
   const r = 5 + cw * 3;
   const x = node.x - w / 2, y = node.y - h / 2;
 
+  // Filled contour bands (outermost first)
+  if (cw > 0) {
+    const layers = Math.round(1 + cw * 3);
+    for (let i = layers; i >= 1; i--) {
+      const off = i * 6;
+      const alpha = (0.12 - i * 0.02) * cw;
+      if (alpha <= 0) continue;
+      ctx.beginPath();
+      roundedRect(ctx, x - off, y - off, w + off * 2, h + off * 2, r + off * 0.6);
+      ctx.fillStyle = hexToRgba(rc.node, alpha);
+      ctx.fill();
+    }
+  }
+
   ctx.beginPath();
   roundedRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = cw > 0 ? hexToRgba(rc.node, 0.06 + cw * 0.10) : '#1a2433';
+  ctx.fillStyle = cw > 0 ? hexToRgba(rc.node, 0.15 + cw * 0.15) : '#1a2433';
 
   if (scale > LOD_DOTS_ONLY) {
     ctx.shadowBlur = hovered ? 22 : (6 + cw * 14);
@@ -1163,21 +1176,6 @@ function drawBreedNode(ctx, node, scale, state) {
   ctx.strokeStyle = hexToRgba(rc.node, 0.3 + cw * 0.4);
   ctx.lineWidth = 1 + cw * 2;
   ctx.stroke();
-
-  // Multi-layer contour rings when collapsed (方案 B)
-  if (cw > 0) {
-    const layers = Math.round(1 + cw * 3);
-    for (let i = 1; i <= layers; i++) {
-      const off = i * 5;
-      const alpha = (0.35 - i * 0.07) * cw;
-      if (alpha <= 0) break;
-      ctx.beginPath();
-      roundedRect(ctx, x - off, y - off, w + off * 2, h + off * 2, r + off * 0.5);
-      ctx.strokeStyle = hexToRgba(rc.node, alpha);
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
-  }
 
   // Collapsed indicator
   if (d._hasHiddenChildren) {
