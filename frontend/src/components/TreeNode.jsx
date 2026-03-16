@@ -1,8 +1,10 @@
 import { useState, memo } from 'react';
 import VtuberCard from './VtuberCard';
-import RankBadge from './RankBadge';
+import RankBadge, { getRankConfig } from './RankBadge';
 import { getActiveFilterBadges, getSortBadge } from '../lib/filterBadges';
 import { BUDGET_TIER_DOT, BUDGET_TIER_HIDDEN, subtreeHasNormalUser } from '../lib/treeUtils';
+
+const COLLAPSED_WEIGHT_THRESHOLD = 5; // count above this gets visual weight when collapsed
 
 const SHOW_LIMIT = 20;
 
@@ -144,6 +146,23 @@ const TreeNode = memo(function TreeNode({
   const displayChildren = showAll ? visibleChildren : visibleChildren.slice(0, SHOW_LIMIT);
   const remaining = visibleChildren.length - SHOW_LIMIT;
 
+  // Enhanced count badge for collapsed nodes with significant children
+  let computedCountBadgeStyle = countBadgeStyle;
+  if (!isExpanded && hasChildren && node.count > COLLAPSED_WEIGHT_THRESHOLD) {
+    const rc = getRankConfig(node.rank);
+    const t = Math.min((node.count - COLLAPSED_WEIGHT_THRESHOLD) / 15, 1); // 0→1 over 6..20+
+    const size = 0.8 + t * 0.25;  // 0.8em → 1.05em
+    const pad = `${1 + t * 2}px ${6 + t * 4}px`;
+    computedCountBadgeStyle = {
+      marginLeft: '6px', padding: pad, borderRadius: '10px',
+      background: rc ? rc.bg : 'rgba(255,255,255,0.1)',
+      border: rc ? `1px solid ${rc.border}` : '1px solid rgba(255,255,255,0.15)',
+      fontSize: `${size}em`, fontWeight: 600,
+      color: rc ? rc.color : 'rgba(255,255,255,0.6)',
+      transition: 'all 0.2s',
+    };
+  }
+
   return (
     <div style={{ marginLeft: depth > 0 ? 20 : 0 }}>
       {/* Node header */}
@@ -179,7 +198,7 @@ const TreeNode = memo(function TreeNode({
           </span>
         </span>
 
-        <span style={countBadgeStyle}>
+        <span style={computedCountBadgeStyle}>
           {node.count}
         </span>
       </button>
