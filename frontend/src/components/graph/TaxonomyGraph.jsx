@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths, entryToVtuberPathKey } from '../../lib/treeUtils';
+import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, autoExpandPathsUnfiltered, subtreeHasNormalUser, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths, entryToVtuberPathKey } from '../../lib/treeUtils';
 import GraphCanvas from './GraphCanvas';
 import { drawGraph, createStarField } from './renderers';
 import useTreeLayout from '../../hooks/useTreeLayout';
@@ -950,12 +950,31 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     if (bb && worldX >= bb.x && worldX <= bb.x + bb.w && worldY >= bb.y && worldY <= bb.y + bb.h) {
       const groupKey = hit.data._budgetGroupKey;
       if (groupKey) {
+        const wasExpanded = expandedBudgetGroups.has(groupKey);
         setExpandedBudgetGroups(prev => {
           const next = new Set(prev);
           if (next.has(groupKey)) next.delete(groupKey);
           else next.add(groupKey);
           return next;
         });
+        // When expanding, auto-expand collapsed hidden-only branches
+        if (!wasExpanded) {
+          const pathKey = hit.data._pathKey;
+          const treeRoot = pathKey?.startsWith('__F__') ? fictionalRootData : rootData;
+          const parentNode = treeRoot ? findNode(treeRoot, pathKey) : null;
+          if (parentNode) {
+            setExpandedSet(prev => {
+              const next = new Set(prev);
+              for (const child of parentNode.children.values()) {
+                if (!subtreeHasNormalUser(child)) {
+                  next.add(child.pathKey);
+                  autoExpandPathsUnfiltered(child, next);
+                }
+              }
+              return next;
+            });
+          }
+        }
       }
     } else if (hit.data._vtuber) {
       setSelectedVtuber(hit.data._entry);
@@ -966,7 +985,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     } else if (hit.data._pathKey != null) {
       handleToggle(hit.data._pathKey);
     }
-  }, [hitTestClick, handleToggle, focusedUserId]);
+  }, [hitTestClick, handleToggle, focusedUserId, expandedBudgetGroups, rootData, fictionalRootData]);
 
   // Focus navigation — set entry key so index is derived stably
   const entryToKey = (e) => {
@@ -975,7 +994,8 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     return (e.taxon_path || '') + '\0' + (e.breed_id || '');
   };
 
-  // Expand budget groups for a user so their hidden nodes become visible
+  // Expand budget groups for a user so their hidden nodes become visible.
+  // Also expands ancestor budget groups along the path so collapsed branches are revealed.
   const expandBudgetGroupsForUser = useCallback((userId) => {
     const allUserEntries = [...(entries || []), ...(fictionalEntries || [])].filter(e => e.user_id === userId);
     // Only expand if user actually has hidden-tier entries
@@ -986,13 +1006,22 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       const next = new Set(prev);
       for (const ue of allUserEntries) {
         if (ue.is_live_primary) continue;
+        const isFictional = !!ue.fictional_path;
         const parts = ue.taxon_path ? ue.taxon_path.split('|') : (ue.fictional_path ? ue.fictional_path.split('|') : []);
         if (parts.length > 0) {
-          const parentPathKey = ue.fictional_path
+          // Expand budget group at the leaf node (where vtuber sits)
+          const parentPathKey = isFictional
             ? `__F__|${ue.fictional_path}`
             : parts.join('|');
           const breedKey = ue.breed_id ? `${parentPathKey}|__breed__${ue.breed_id}` : parentPathKey;
           next.add(`${breedKey}|__budget_group__`);
+          // Also expand budget groups at every ancestor so collapsed branches are revealed
+          for (let i = 1; i < parts.length; i++) {
+            const ancestorKey = isFictional
+              ? `__F__|${parts.slice(0, i).join('|')}`
+              : parts.slice(0, i).join('|');
+            next.add(`${ancestorKey}|__budget_group__`);
+          }
         }
       }
       return next;
