@@ -13,7 +13,6 @@ function cellKey(cx, cy) {
 
 function buildSpatialIndex(nodes) {
   const grid = new Map();
-  const badgeGrid = new Map();
 
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
@@ -24,26 +23,9 @@ function buildSpatialIndex(nodes) {
     let bucket = grid.get(key);
     if (!bucket) { bucket = []; grid.set(key, bucket); }
     bucket.push(i);
-
-    // Also index budget badge bounds (they may extend below the node)
-    const bb = node.data._budgetBadgeBounds;
-    if (bb) {
-      const bx0 = Math.floor(bb.x / CELL_SIZE);
-      const by0 = Math.floor(bb.y / CELL_SIZE);
-      const bx1 = Math.floor((bb.x + bb.w) / CELL_SIZE);
-      const by1 = Math.floor((bb.y + bb.h) / CELL_SIZE);
-      for (let bx = bx0; bx <= bx1; bx++) {
-        for (let by = by0; by <= by1; by++) {
-          const bKey = cellKey(bx, by);
-          let bBucket = badgeGrid.get(bKey);
-          if (!bBucket) { bBucket = []; badgeGrid.set(bKey, bBucket); }
-          bBucket.push(i);
-        }
-      }
-    }
   }
 
-  return { grid, badgeGrid };
+  return grid;
 }
 
 /**
@@ -68,62 +50,68 @@ export default function useGraphInteraction(nodes, maxCount) {
     const cx = Math.floor(worldX / CELL_SIZE);
     const cy = Math.floor(worldY / CELL_SIZE);
 
-    // First pass: check budget badge hit areas in 3×3 neighborhood
+    // Collect unique candidate indices from 3×3 neighborhood
+    // (a node may appear in multiple cells via different grid squares)
+    const seen = new Set();
+    const candidates = [];
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
-        const bucket = spatialIndex.badgeGrid.get(cellKey(cx + dx, cy + dy));
+        const bucket = spatialIndex.get(cellKey(cx + dx, cy + dy));
         if (!bucket) continue;
-        for (let j = bucket.length - 1; j >= 0; j--) {
-          const bb = nodes[bucket[j]].data._budgetBadgeBounds;
-          if (bb && worldX >= bb.x && worldX <= bb.x + bb.w && worldY >= bb.y && worldY <= bb.y + bb.h) {
-            return { node: nodes[bucket[j]], isBadge: true };
+        for (let j = 0; j < bucket.length; j++) {
+          const idx = bucket[j];
+          if (!seen.has(idx)) {
+            seen.add(idx);
+            candidates.push(idx);
           }
         }
       }
     }
 
-    // Second pass: normal node hit-test in 3×3 neighborhood
+    // First pass: check budget badge hit areas (set at render time, not index time)
+    for (let j = candidates.length - 1; j >= 0; j--) {
+      const bb = nodes[candidates[j]].data._budgetBadgeBounds;
+      if (bb && worldX >= bb.x && worldX <= bb.x + bb.w && worldY >= bb.y && worldY <= bb.y + bb.h) {
+        return { node: nodes[candidates[j]], isBadge: true };
+      }
+    }
+
+    // Second pass: normal node hit-test
     // Track highest-index hit for correct z-ordering (higher index = drawn on top)
     let bestHit = null;
     let bestIdx = -1;
 
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        const bucket = spatialIndex.grid.get(cellKey(cx + dx, cy + dy));
-        if (!bucket) continue;
-        for (let j = 0; j < bucket.length; j++) {
-          const idx = bucket[j];
-          if (idx < bestIdx) continue; // skip lower z-order
+    for (let j = 0; j < candidates.length; j++) {
+      const idx = candidates[j];
+      if (idx < bestIdx) continue; // skip lower z-order
 
-          const node = nodes[idx];
-          const d = node.data;
-          const ndx = worldX - node.x;
-          const ndy = worldY - node.y;
+      const node = nodes[idx];
+      const d = node.data;
+      const ndx = worldX - node.x;
+      const ndy = worldY - node.y;
 
-          let hit = false;
-          if (d._vtuber && d._visualTier === 'dot') {
-            hit = ndx * ndx + ndy * ndy <= 100; // r=10
-          } else if (d._vtuber) {
-            hit = ndx * ndx + ndy * ndy <= 576; // r=24
-          } else if (d._rank === 'BREED') {
-            const bHalfW = d._nodeWidth ? d._nodeWidth / 2 + 4 : 34;
-            const bHalfH = d._nodeHeight ? d._nodeHeight / 2 + 4 : 16;
-            hit = Math.abs(ndx) <= bHalfW && Math.abs(ndy) <= bHalfH;
-          } else if (d._rank === 'SPECIES' || d._rank === 'SUBSPECIES' || d._rank === 'FORM' || d._rank === 'F_SPECIES') {
-            const halfW = d._nodeWidth ? d._nodeWidth / 2 + 4 : 39;
-            const halfH = d._nodeHeight ? d._nodeHeight / 2 + 4 : 17;
-            hit = Math.abs(ndx) <= halfW && Math.abs(ndy) <= halfH;
-          } else {
-            const count = d._count || 0;
-            const r = taxonomyNodeRadius(count, maxCount) + 4;
-            hit = ndx * ndx + ndy * ndy <= r * r;
-          }
+      let hit = false;
+      if (d._vtuber && d._visualTier === 'dot') {
+        hit = ndx * ndx + ndy * ndy <= 100; // r=10
+      } else if (d._vtuber) {
+        hit = ndx * ndx + ndy * ndy <= 576; // r=24
+      } else if (d._rank === 'BREED') {
+        const bHalfW = d._nodeWidth ? d._nodeWidth / 2 + 4 : 34;
+        const bHalfH = d._nodeHeight ? d._nodeHeight / 2 + 4 : 16;
+        hit = Math.abs(ndx) <= bHalfW && Math.abs(ndy) <= bHalfH;
+      } else if (d._rank === 'SPECIES' || d._rank === 'SUBSPECIES' || d._rank === 'FORM' || d._rank === 'F_SPECIES') {
+        const halfW = d._nodeWidth ? d._nodeWidth / 2 + 4 : 39;
+        const halfH = d._nodeHeight ? d._nodeHeight / 2 + 4 : 17;
+        hit = Math.abs(ndx) <= halfW && Math.abs(ndy) <= halfH;
+      } else {
+        const count = d._count || 0;
+        const r = taxonomyNodeRadius(count, maxCount) + 4;
+        hit = ndx * ndx + ndy * ndy <= r * r;
+      }
 
-          if (hit) {
-            bestHit = node;
-            bestIdx = idx;
-          }
-        }
+      if (hit) {
+        bestHit = node;
+        bestIdx = idx;
       }
     }
 
