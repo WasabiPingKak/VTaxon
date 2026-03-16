@@ -57,6 +57,13 @@ export function taxonomyNodeRadius(count, maxCount) {
   return MIN_R + (MAX_R - MIN_R) * Math.sqrt(count / maxCount);
 }
 
+// ── Collapsed rect node scale factor (0→1) based on count ──
+// Returns a 0–1 factor for scaling rect size, border, glow when collapsed
+function collapsedRectWeight(count, maxCount) {
+  if (!count || count <= 1 || !maxCount || maxCount <= 1) return 0;
+  return Math.min(Math.sqrt(count / maxCount), 1);
+}
+
 // ── Helpers ──
 function hexToRgba(hex, alpha) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -617,13 +624,18 @@ function drawSpeciesNode(ctx, node, scale, state) {
   const fs = scaledFontSize(12, scale);
   const lineHeight = fs * 1.25;
 
+  // Collapsed weight boost: scale rect size when hiding many children
+  const cw = d._hasHiddenChildren ? collapsedRectWeight(d._count, state.maxCount) : 0;
+
   // Dynamic size: width from widest line (capped), height from line count
   ctx.font = fontStr(12, scale, 'bold');
   const widestLine = Math.max(...lines.map(l => ctx.measureText(l).width));
-  const w = Math.min(Math.max(70, widestLine + 24), SPECIES_MAX_RECT_W);
-  const textBlockH = fs + (lines.length - 1) * lineHeight;  // first line fs + remaining lines
-  const h = Math.max(26, textBlockH + 12);
-  d._nodeWidth = w;  // cache for hit-test
+  const baseW = Math.min(Math.max(70, widestLine + 24), SPECIES_MAX_RECT_W);
+  const textBlockH = fs + (lines.length - 1) * lineHeight;
+  const baseH = Math.max(26, textBlockH + 12);
+  const w = baseW + cw * 40;   // up to +40px wider
+  const h = baseH + cw * 16;   // up to +16px taller
+  d._nodeWidth = w;
   d._nodeHeight = h;
   const r = 6;
   const x = node.x - w / 2, y = node.y - h / 2;
@@ -633,14 +645,14 @@ function drawSpeciesNode(ctx, node, scale, state) {
   ctx.fillStyle = '#1a2433';
 
   if (scale > LOD_DOTS_ONLY) {
-    ctx.shadowBlur = hovered ? 18 : 6;
+    ctx.shadowBlur = hovered ? 18 : (6 + cw * 8);  // up to 14
     ctx.shadowColor = rc.glow;
   }
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  ctx.strokeStyle = hexToRgba(rc.node, 0.3);
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = hexToRgba(rc.node, 0.3 + cw * 0.3);  // up to 0.6
+  ctx.lineWidth = 1 + cw * 1.5;                           // up to 2.5
   ctx.stroke();
 
   // Collapsed indicator
@@ -673,15 +685,17 @@ function drawSpeciesNode(ctx, node, scale, state) {
     const latinY = node.y + h / 2 + latinFs * 0.8;
     ctx.fillText(stripAuthor(d._name) || '', node.x, latinY);
 
-    // Rank label + count below Latin name
+    // Rank label + count below Latin name (enhanced when collapsed with weight)
     const count = d._count || 0;
     const rankLabel = RANK_LABELS[d._rank] || '';
     let bottomY = latinY + latinFs;
     if (rankLabel) {
-      ctx.font = fontStr(10, scale);
+      const countFsPx = cw > 0 ? 10 + cw * 3 : 10;  // up to 13px
+      ctx.font = fontStr(countFsPx, scale, cw > 0 ? 'bold' : '');
+      ctx.fillStyle = cw > 0 ? rc.node : LABEL_DIM;
       const rankY = latinY + latinFs + 2;
       ctx.fillText(`${rankLabel} · ${count}`, node.x, rankY);
-      bottomY = rankY + scaledFontSize(10, scale);
+      bottomY = rankY + scaledFontSize(countFsPx, scale);
     }
 
     // Budget badge
@@ -1103,13 +1117,18 @@ function drawBreedNode(ctx, node, scale, state) {
   const fs = scaledFontSize(11, scale);
   const lineHeight = fs * 1.25;
 
+  // Collapsed weight boost
+  const cw = d._hasHiddenChildren ? collapsedRectWeight(d._count, state.maxCount) : 0;
+
   // Dynamic size: width from widest line (capped), height from line count
   ctx.font = fontStr(11, scale, 'bold');
   const widestLine = Math.max(...lines.map(l => ctx.measureText(l).width));
-  const w = Math.min(Math.max(60, widestLine + 20), BREED_MAX_RECT_W);
+  const baseW = Math.min(Math.max(60, widestLine + 20), BREED_MAX_RECT_W);
   const textBlockH = fs + (lines.length - 1) * lineHeight;
-  const h = Math.max(24, textBlockH + 10);
-  d._nodeWidth = w;   // cache for hit-test
+  const baseH = Math.max(24, textBlockH + 10);
+  const w = baseW + cw * 36;   // up to +36px wider
+  const h = baseH + cw * 14;   // up to +14px taller
+  d._nodeWidth = w;
   d._nodeHeight = h;
   const r = 5;
   const x = node.x - w / 2, y = node.y - h / 2;
@@ -1119,14 +1138,14 @@ function drawBreedNode(ctx, node, scale, state) {
   ctx.fillStyle = '#1a2433';
 
   if (scale > LOD_DOTS_ONLY) {
-    ctx.shadowBlur = hovered ? 18 : 6;
+    ctx.shadowBlur = hovered ? 18 : (6 + cw * 8);
     ctx.shadowColor = rc.glow;
   }
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  ctx.strokeStyle = hexToRgba(rc.node, 0.3);
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = hexToRgba(rc.node, 0.3 + cw * 0.3);
+  ctx.lineWidth = 1 + cw * 1.5;
   ctx.stroke();
 
   // Collapsed indicator
@@ -1152,13 +1171,14 @@ function drawBreedNode(ctx, node, scale, state) {
     const textStartY = node.y - textBlockH / 2;
     drawWrappedText(ctx, lines, node.x, textStartY, lineHeight);
 
-    // Count badge below rect
+    // Count badge below rect (enhanced when collapsed with weight)
     const count = d._count || 0;
     let bottomY = y + h;
     if (count > 0) {
-      const countFs = scaledFontSize(9, scale);
-      ctx.font = fontStr(9, scale);
-      ctx.fillStyle = LABEL_DIM;
+      const countFsPx = cw > 0 ? 9 + cw * 3 : 9;  // up to 12px
+      const countFs = scaledFontSize(countFsPx, scale);
+      ctx.font = fontStr(countFsPx, scale, cw > 0 ? 'bold' : '');
+      ctx.fillStyle = cw > 0 ? rc.node : LABEL_DIM;
       ctx.textBaseline = 'top';
       const countY = y + h + countFs * 0.3;
       ctx.fillText(`${count}`, node.x, countY);

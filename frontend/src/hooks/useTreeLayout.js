@@ -165,7 +165,10 @@ function computeLabelLayout(data) {
     data._labelLines = lines;
     const mainW = widest + 24;  // rect padding
     const latinW = Math.min(measureTextWidth(_name, 10, 'normal'), SPECIES_MAX_RECT_W);
-    data._labelHalfW = Math.max(mainW, latinW, 70) / 2;
+    let halfW = Math.max(mainW, latinW, 70) / 2;
+    // Reserve extra collision width for collapsed nodes with many children
+    if (data._hasHiddenChildren && (data._count || 0) > 1) halfW += 20;
+    data._labelHalfW = halfW;
     return;
   }
 
@@ -174,7 +177,9 @@ function computeLabelLayout(data) {
     const { lines, widest } = computeWrappedLines(ctx, label, MAX_LABEL_W.BREED, 11);
     data._labelLines = lines;
     const rectW = widest + 20;  // rect padding
-    data._labelHalfW = Math.max(rectW, 60) / 2;
+    let halfW = Math.max(rectW, 60) / 2;
+    if (data._hasHiddenChildren && (data._count || 0) > 1) halfW += 18;
+    data._labelHalfW = halfW;
     return;
   }
 
