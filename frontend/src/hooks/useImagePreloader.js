@@ -15,14 +15,18 @@ export default function useImagePreloader(entries) {
     if (!entries) return;
     const cache = cacheRef.current;
     let active = 0;
+    let cancelled = false;
     const queue = [];
 
     function loadNext() {
-      while (active < CONCURRENCY && queue.length > 0) {
+      while (!cancelled && active < CONCURRENCY && queue.length > 0) {
         const url = queue.shift();
         active++;
         const img = new Image();
-        img.onload = img.onerror = () => { active--; loadNext(); };
+        img.onload = img.onerror = () => {
+          active--;
+          if (!cancelled) loadNext();
+        };
         img.src = url;
         cache.set(url, img);
       }
@@ -54,6 +58,8 @@ export default function useImagePreloader(entries) {
     }
 
     loadNext();
+
+    return () => { cancelled = true; };
   }, [entries]);
 
   return cacheRef;
