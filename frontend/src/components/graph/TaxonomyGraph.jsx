@@ -1285,19 +1285,36 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     drawGraph(ctx, nodes, edges, transform, canvasSize, renderState);
   }, [nodes, edges, renderState]);
 
-  // Continuous animation loop (focus pulse + node animation)
-  const needsAnimLoop = !!focusedUserId || isAnimating || hasActiveFlash || liveUserIds.size > 0;
+  // Animation loop — 60fps for time-critical animations, 15fps for steady-state effects
+  const needsFastLoop = isAnimating || hasActiveFlash; // time-limited, needs 60fps
+  const needsSlowLoop = !!focusedUserId || liveUserIds.size > 0; // steady-state pulse, 15fps suffices
+  const SLOW_INTERVAL = 66; // ~15fps
+
   useEffect(() => {
-    if (!needsAnimLoop) return;
+    if (!needsFastLoop && !needsSlowLoop) return;
+
     let running = true;
-    const tick = () => {
-      if (!running) return;
-      canvasRef.current?.requestRender();
+
+    if (needsFastLoop) {
+      // 60fps RAF loop for smooth animations
+      const tick = () => {
+        if (!running) return;
+        canvasRef.current?.requestRender();
+        requestAnimationFrame(tick);
+      };
       requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
+    } else {
+      // ~15fps interval for focus pulse / live indicators
+      canvasRef.current?.requestRender();
+      const id = setInterval(() => {
+        if (!running) return;
+        canvasRef.current?.requestRender();
+      }, SLOW_INTERVAL);
+      return () => { running = false; clearInterval(id); };
+    }
+
     return () => { running = false; };
-  }, [needsAnimLoop]);
+  }, [needsFastLoop, needsSlowLoop]);
 
   // Trigger re-render when hover changes + update cursor
   useEffect(() => {
