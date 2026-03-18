@@ -1035,6 +1035,11 @@ export default function AdminPage() {
     if (isAdmin) fetchAllPendingCounts();
   }, [isAdmin, section]);
 
+  const handleUpdate = useCallback(() => {
+    fetchRequests(activeTab);
+    fetchAllPendingCounts();
+  }, [activeTab, fetchRequests, fetchAllPendingCounts]);
+
   if (authLoading) {
     return <p style={{ textAlign: 'center', marginTop: 40, color: 'rgba(255,255,255,0.5)' }}>載入中…</p>;
   }
@@ -1049,11 +1054,6 @@ export default function AdminPage() {
       </div>
     );
   }
-
-  const handleUpdate = useCallback(() => {
-    fetchRequests(activeTab);
-    fetchAllPendingCounts();
-  }, [activeTab, fetchRequests, fetchAllPendingCounts]);
 
   function handleSectionChange(key) {
     setSection(key);
