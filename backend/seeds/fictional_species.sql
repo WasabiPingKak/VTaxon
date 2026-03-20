@@ -140,5 +140,6 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Half-elven', '半精靈', '奇幻文學', '通用', '奇幻文學|通用|精靈族|Half-elven', '精靈與人類的混血後代，兼具雙方的特徵。壽命長於人類但短於精靈，在奇幻作品中常面臨種族認同的抉擇。'),
 ('Incubus', '夢魔', '奇幻文學', '通用', '奇幻文學|通用|魔族|Incubus', '西方傳說中於夜間造訪沉睡者的男性惡魔，為魅魔（Succubus）的男性對應。常以俊美青年的形象現身。'),
 ('Mandrake', '曼德拉草', '奇幻文學', '通用', '奇幻文學|通用|魔法生物|Mandrake', '傳說中具有人形根部的魔法植物，拔起時會發出致命的尖叫聲。原型為真實植物毒茄蔘（Mandragora officinarum），在中世紀歐洲鍊金術與奇幻作品中廣泛出現。'),
-('Cat Demihuman', '貓亞人', '奇幻文學', '通用', '奇幻文學|通用|亞人種|Cat Demihuman', '擁有貓咪耳朵、尾巴等特徵的人形物種，比獸人更接近人類的體態。')
+('Cat Demihuman', '貓亞人', '奇幻文學', '通用', '奇幻文學|通用|亞人種|Cat Demihuman', '擁有貓咪耳朵、尾巴等特徵的人形物種，比獸人更接近人類的體態。'),
+('Therianthropy', '獸人', '奇幻文學', '通用', '奇幻文學|通用|亞人種|Therianthropy', '又稱獸化人，保留了獸類外型特徵（寬大口部、皮毛、尾巴、獸耳）但具有人類特徵（直立行走、手部操作、語言能力）的幻想生物。')
 ON CONFLICT(name) DO NOTHING;
