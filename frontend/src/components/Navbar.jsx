@@ -111,7 +111,7 @@ export default function Navbar() {
         display: 'flex', alignItems: 'center', gap: 6,
       }}>
         <img src="/favicon.svg" alt="VTaxon" width={22} height={22} />
-        VTaxon
+        {isMobile ? 'VTaxon 物種圖鑑' : 'VTaxon | Vtuber 物種圖鑑'}
       </Link>
 
       {/* Right section */}
