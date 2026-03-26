@@ -36,7 +36,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 ## 認證流程
 
 1. **登入**：前端呼叫 Supabase Auth SDK，使用者透過 YouTube / Twitch OAuth 登入，取得 JWT。
-2. **API 驗證**：前端在每次 API 請求的 `Authorization: Bearer <JWT>` 標頭帶上 JWT。Flask 後端優先使用 Supabase JWKS（ES256 公鑰）驗證簽章，fallback 到 legacy HS256 secret。
+2. **API 驗證**：前端在每次 API 請求的 `Authorization: Bearer <JWT>` 標頭帶上 JWT。Flask 後端使用 Supabase JWKS（ES256 公鑰）驗證簽章，驗證失敗時自動刷新 JWKS 並重試一次（處理 key rotation）。
 3. **權限檢查**：從 JWT 中取得 `user_id`，查詢 `users` 表的 `role` 欄位判斷權限（`admin` 或 `user`）。
 
 ## 資料模型（10 張表）
