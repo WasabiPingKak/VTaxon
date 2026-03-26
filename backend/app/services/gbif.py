@@ -16,20 +16,18 @@ import re
 from functools import lru_cache
 
 import requests
-
 from sqlalchemy import func
 
 from ..extensions import db
 from ..models import Breed, SpeciesCache
-from .taxonomy_zh import (get_taxonomy_zh, get_taxonomy_zh_for_ranks,
-                          get_species_zh_override, get_species_name_override)
-from .wikidata import get_chinese_name_by_gbif_id, get_aliases_by_gbif_id
-from .wikidata import clear_cache as wikidata_clear_cache
+from .taicol import clear_cache as taicol_clear_cache
 from .taicol import get_chinese_name as taicol_get_chinese_name
+from .taicol import get_higher_taxa_zh as taicol_get_higher_taxa_zh
 from .taicol import search_by_chinese as taicol_search_chinese
 from .taicol import search_by_scientific_name as taicol_search_by_scientific_name
-from .taicol import get_higher_taxa_zh as taicol_get_higher_taxa_zh
-from .taicol import clear_cache as taicol_clear_cache
+from .taxonomy_zh import get_species_name_override, get_species_zh_override, get_taxonomy_zh, get_taxonomy_zh_for_ranks
+from .wikidata import clear_cache as wikidata_clear_cache
+from .wikidata import get_aliases_by_gbif_id, get_chinese_name_by_gbif_id
 
 log = logging.getLogger(__name__)
 

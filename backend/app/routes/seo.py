@@ -1,10 +1,8 @@
-from datetime import datetime, timezone
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 from flask import Blueprint, Response
 
 from ..extensions import db
-from ..models import User
 
 seo_bp = Blueprint('seo', __name__)
 

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
 
@@ -22,10 +22,10 @@ class User(db.Model):
     primary_platform = db.Column(db.Text)
     profile_data = db.Column(db.JSON, default=dict)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc),
-                           onupdate=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC),
+                           onupdate=lambda: datetime.now(UTC))
     last_live_at = db.Column(db.DateTime(timezone=True), nullable=True)
     live_primary_real_trait_id = db.Column(db.String(36),
                                            db.ForeignKey('vtuber_traits.id',
@@ -80,7 +80,7 @@ class AuthIdAlias(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey('users.id',
                         ondelete='CASCADE'), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
 
 
 class OAuthAccount(db.Model):
@@ -102,7 +102,7 @@ class OAuthAccount(db.Model):
     live_sub_status = db.Column(db.Text)
     live_sub_at = db.Column(db.DateTime(timezone=True))
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         db.UniqueConstraint('provider', 'provider_account_id',
@@ -148,7 +148,7 @@ class SpeciesCache(db.Model):
     genus = db.Column(db.Text)
     path_zh = db.Column(db.JSON, default=dict)
     cached_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                          default=lambda: datetime.now(timezone.utc))
+                          default=lambda: datetime.now(UTC))
 
     def _effective_common_name_zh(self):
         """Return common_name_zh with genus suffix '屬' stripped for species-level taxa."""
@@ -200,7 +200,7 @@ class FictionalSpecies(db.Model):
     category_path = db.Column(db.Text)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
 
     def to_dict(self):
         return {
@@ -228,7 +228,7 @@ class FictionalSpeciesRequest(db.Model):
     status = db.Column(db.Text, nullable=False, default='pending')
     admin_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
 
     user = db.relationship('User', backref='fictional_requests', lazy='joined')
 
@@ -266,7 +266,7 @@ class Breed(db.Model):
     wikidata_id = db.Column(db.Text)
     source = db.Column(db.Text, default='manual')
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
 
     species = db.relationship('SpeciesCache', backref='breeds', lazy='joined')
 
@@ -297,7 +297,7 @@ class BreedRequest(db.Model):
     status = db.Column(db.Text, nullable=False, default='pending')
     admin_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
 
     user = db.relationship('User', backref='breed_requests', lazy='joined')
     species = db.relationship('SpeciesCache', lazy='joined')
@@ -340,7 +340,7 @@ class SpeciesNameReport(db.Model):
     status = db.Column(db.Text, nullable=False, default='pending')
     admin_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
 
     user = db.relationship('User', backref='species_name_reports',
                            lazy='joined')
@@ -386,7 +386,7 @@ class UserReport(db.Model):
     status = db.Column(db.Text, nullable=False, default='pending')
     admin_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
 
     reporter = db.relationship('User', foreign_keys=[reporter_id],
                                backref='submitted_reports', lazy='joined')
@@ -432,7 +432,7 @@ class Blacklist(db.Model):
     banned_by = db.Column(db.String(36), db.ForeignKey('users.id',
                           ondelete='SET NULL'))
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
 
     original_user = db.relationship('User', foreign_keys=[user_id],
                                     backref='blacklist_entries', lazy='joined')
@@ -481,7 +481,7 @@ class Notification(db.Model):
     status = db.Column(db.Text)
     is_read = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
 
     def to_dict(self):
         return {
@@ -507,9 +507,9 @@ class LiveStream(db.Model):
     stream_title = db.Column(db.Text)
     stream_url = db.Column(db.Text)
     started_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'provider',
@@ -545,10 +545,10 @@ class VtuberTrait(db.Model):
                          ondelete='SET NULL'))
     trait_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC))
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False,
-                           default=lambda: datetime.now(timezone.utc),
-                           onupdate=lambda: datetime.now(timezone.utc))
+                           default=lambda: datetime.now(UTC),
+                           onupdate=lambda: datetime.now(UTC))
 
     species = db.relationship('SpeciesCache', backref='traits', lazy='joined')
     fictional = db.relationship('FictionalSpecies', backref='traits',

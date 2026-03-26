@@ -1,13 +1,11 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flask import Blueprint, jsonify
 from sqlalchemy import func
 
 from ..auth import admin_required
 from ..extensions import db
-from ..models import (Breed, BreedRequest, FictionalSpecies,
-                      FictionalSpeciesRequest, SpeciesCache,
-                      SpeciesNameReport, UserReport)
+from ..models import Breed, BreedRequest, FictionalSpeciesRequest, SpeciesCache, SpeciesNameReport, UserReport
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -69,7 +67,7 @@ def export_fictional():
 
     return jsonify({
         'export_metadata': {
-            'exported_at': datetime.now(timezone.utc).isoformat(),
+            'exported_at': datetime.now(UTC).isoformat(),
             'type': 'fictional_species',
             'total_requests': len(requests),
         },
@@ -140,7 +138,7 @@ def export_breeds():
 
     return jsonify({
         'export_metadata': {
-            'exported_at': datetime.now(timezone.utc).isoformat(),
+            'exported_at': datetime.now(UTC).isoformat(),
             'type': 'breed',
             'total_requests': len(requests),
         },

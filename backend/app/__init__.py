@@ -44,19 +44,19 @@ def create_app(config_name=None):
     db.init_app(app)
 
     # Register blueprints
+    from .routes.admin import admin_bp
     from .routes.auth import auth_bp
-    from .routes.users import users_bp
-    from .routes.species import species_bp
-    from .routes.traits import traits_bp
-    from .routes.taxonomy import taxonomy_bp
     from .routes.breeds import breeds_bp
     from .routes.fictional import fictional_bp
+    from .routes.livestream import livestream_bp
+    from .routes.notifications import notifications_bp
     from .routes.reports import reports_bp
     from .routes.seo import seo_bp
+    from .routes.species import species_bp
     from .routes.ssr import ssr_bp
-    from .routes.notifications import notifications_bp
-    from .routes.admin import admin_bp
-    from .routes.livestream import livestream_bp
+    from .routes.taxonomy import taxonomy_bp
+    from .routes.traits import traits_bp
+    from .routes.users import users_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(users_bp, url_prefix='/api/users')

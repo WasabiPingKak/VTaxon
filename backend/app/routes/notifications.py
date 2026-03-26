@@ -1,10 +1,8 @@
 from flask import Blueprint, g, jsonify, request
-from sqlalchemy import func
 
 from ..auth import login_required
 from ..extensions import db
-from ..models import (BreedRequest, FictionalSpeciesRequest, Notification,
-                      UserReport)
+from ..models import BreedRequest, FictionalSpeciesRequest, Notification, UserReport
 
 notifications_bp = Blueprint('notifications', __name__)
 

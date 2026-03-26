@@ -307,7 +307,7 @@ function SpeciesGroup({ group, onSelect, familyColor }) {
         if (err.name === 'AbortError') return;
         console.error('Failed to load subspecies:', err);
       } finally {
-        if (ac.signal.aborted) return;
+        if (ac.signal.aborted) return; // eslint-disable-line no-unsafe-finally
         setLoadingChildren(false);
         setChildrenLoaded(true);
       }
@@ -434,7 +434,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
         setInterceptSpecies({ ...species, _breeds: data.breeds, _speciesInfo: data.species || species });
         return;
       }
-    } catch {}
+    } catch {} // eslint-disable-line no-empty
     onSelect(species);
   }
 
@@ -459,7 +459,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
       if (err.name === 'AbortError') return;
       alert(err.message);
     } finally {
-      if (ac.signal.aborted) return;
+      if (ac.signal.aborted) return; // eslint-disable-line no-unsafe-finally
       setSearching(false);
       setSearched(true);
       onSearchPerformed?.({ query: query.trim(), resultCount: count });

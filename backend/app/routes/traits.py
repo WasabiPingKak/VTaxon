@@ -1,7 +1,7 @@
 from flask import Blueprint, g, jsonify, request
 
 from ..auth import login_required
-from ..cache import invalidate_tree_cache, invalidate_fictional_tree_cache
+from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
 from ..extensions import db
 from ..models import Breed, FictionalSpecies, SpeciesCache, VtuberTrait
 from ..services.gbif import get_species

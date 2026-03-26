@@ -230,8 +230,6 @@ TAXONOMY_ZH = {
     'Ovis': '羊屬',
     'Capra': '山羊屬',
     'Sus': '豬屬',
-    'Ovis': '羊屬',
-    'Capra': '山羊屬',
     'Cervus': '鹿屬',
     'Muntiacus': '麂屬',
     'Giraffa': '長頸鹿屬',

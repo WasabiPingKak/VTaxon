@@ -1,18 +1,22 @@
 import logging
 
 from flask import Blueprint, jsonify, request
-
-from ..auth import admin_required
-from ..limiter import limiter
-from ..cache import (get_tree_cache, set_tree_cache, invalidate_tree_cache,
-                     get_fictional_tree_cache, set_fictional_tree_cache,
-                     invalidate_fictional_tree_cache)
 from sqlalchemy import func
 
+from ..auth import admin_required
+from ..cache import (
+    get_fictional_tree_cache,
+    get_tree_cache,
+    invalidate_fictional_tree_cache,
+    invalidate_tree_cache,
+    set_fictional_tree_cache,
+    set_tree_cache,
+)
 from ..extensions import db
-from ..models import User, VtuberTrait, SpeciesCache, FictionalSpecies, OAuthAccount
+from ..limiter import limiter
+from ..models import FictionalSpecies, OAuthAccount, SpeciesCache, User, VtuberTrait
 from ..services.gbif import _build_path_zh, _realign_taxon_path
-from ..services.taxonomy_zh import get_species_zh_override, get_parent_species_zh_by_name
+from ..services.taxonomy_zh import get_parent_species_zh_by_name, get_species_zh_override
 
 log = logging.getLogger(__name__)
 
