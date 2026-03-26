@@ -11,10 +11,10 @@ import re
 import time
 
 import requests as http_requests
-from flask import Blueprint, Response, current_app
+from flask import Blueprint, Response
 
 from ..extensions import db
-from ..models import SpeciesCache, User, VtuberTrait
+from ..models import User, VtuberTrait
 
 logger = logging.getLogger(__name__)
 

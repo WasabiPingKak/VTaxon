@@ -124,6 +124,20 @@ export default function TaxonomyTree({ currentUser, filters }) {
     setExpandedSet(new Set());
   };
 
+  // Collect live entries (deduplicated by user_id, pick first entry per user)
+  const liveEntries = useMemo(() => {
+    if (!entries || liveUserIds.size === 0) return [];
+    const seen = new Set();
+    const result = [];
+    for (const e of entries) {
+      if (liveUserIds.has(e.user_id) && !seen.has(e.user_id)) {
+        seen.add(e.user_id);
+        result.push(e);
+      }
+    }
+    return result;
+  }, [entries, liveUserIds]);
+
   if (loading) {
     return (
       <div style={{ padding: '40px 0', textAlign: 'center' }}>
@@ -149,20 +163,6 @@ export default function TaxonomyTree({ currentUser, filters }) {
       </div>
     );
   }
-
-  // Collect live entries (deduplicated by user_id, pick first entry per user)
-  const liveEntries = useMemo(() => {
-    if (!entries || liveUserIds.size === 0) return [];
-    const seen = new Set();
-    const result = [];
-    for (const e of entries) {
-      if (liveUserIds.has(e.user_id) && !seen.has(e.user_id)) {
-        seen.add(e.user_id);
-        result.push(e);
-      }
-    }
-    return result;
-  }, [entries, liveUserIds]);
 
   // Render top-level children (kingdoms)
   const topNodes = [...tree.children.values()].sort((a, b) => b.count - a.count);

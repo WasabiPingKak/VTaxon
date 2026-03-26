@@ -1,9 +1,8 @@
 import logging
 import math
 import os
-from datetime import date as _date, datetime, timedelta, timezone
-
-log = logging.getLogger(__name__)
+from datetime import UTC, datetime, timedelta
+from datetime import date as _date
 
 import requests
 from flask import Blueprint, g, jsonify, request
@@ -14,8 +13,9 @@ from ..auth import login_required
 from ..cache import invalidate_tree_cache
 from ..extensions import db
 from ..limiter import limiter
-from ..models import (Blacklist, Breed, FictionalSpecies, OAuthAccount,
-                       SpeciesCache, User, VtuberTrait)
+from ..models import Blacklist, Breed, FictionalSpecies, OAuthAccount, SpeciesCache, User, VtuberTrait
+
+log = logging.getLogger(__name__)
 
 users_bp = Blueprint('users', __name__)
 
@@ -271,7 +271,7 @@ def directory():
 
     if sort == 'active_first':
         # Live > recent last_live_at (7 days) > name fallback
-        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        seven_days_ago = datetime.now(UTC) - timedelta(days=7)
         recent_live = case(
             (User.last_live_at > seven_days_ago, User.last_live_at),
             else_=literal(None).cast(db.DateTime(timezone=True)),
@@ -811,7 +811,7 @@ def sync_oauth_accounts():
     for account in synced:
         if (account.provider == 'twitch' and account.provider_account_id
                 and account.created_at and
-                (datetime.now(timezone.utc) - account.created_at).total_seconds() < 30):
+                (datetime.now(UTC) - account.created_at).total_seconds() < 30):
             try:
                 from .livestream import subscribe_twitch_user
                 subscribe_twitch_user(account.provider_account_id, oauth_account=account)
@@ -823,7 +823,7 @@ def sync_oauth_accounts():
     for account in synced:
         if (account.provider == 'youtube' and account.channel_url
                 and account.created_at and
-                (datetime.now(timezone.utc) - account.created_at).total_seconds() < 30):
+                (datetime.now(UTC) - account.created_at).total_seconds() < 30):
             try:
                 from .livestream import subscribe_youtube_user
                 subscribe_youtube_user(account.channel_url, oauth_account=account)

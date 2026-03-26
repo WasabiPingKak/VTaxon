@@ -3,7 +3,7 @@
 import logging
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from flask import Blueprint, jsonify, request
 
@@ -29,7 +29,7 @@ def live_status():
         return jsonify(_live_cache['data'])
 
     # Clean up ghost records (started > 24h ago)
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    cutoff = datetime.now(UTC) - timedelta(hours=24)
     LiveStream.query.filter(LiveStream.started_at < cutoff).delete()
     db.session.commit()
 
@@ -150,7 +150,7 @@ def _handle_stream_online(event):
         existing.stream_id = event.get('id')
         existing.stream_url = stream_url
         existing.stream_title = stream_title
-        existing.started_at = datetime.now(timezone.utc)
+        existing.started_at = datetime.now(UTC)
     else:
         stream = LiveStream(
             user_id=account.user_id,
@@ -158,14 +158,14 @@ def _handle_stream_online(event):
             stream_id=event.get('id'),
             stream_url=stream_url,
             stream_title=stream_title,
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
         )
         db.session.add(stream)
 
     # Update last_live_at on the user
     user = db.session.get(User, account.user_id)
     if user:
-        user.last_live_at = datetime.now(timezone.utc)
+        user.last_live_at = datetime.now(UTC)
 
     db.session.commit()
     invalidate_live_cache()
@@ -188,7 +188,7 @@ def _handle_stream_offline(event):
     # Update last_live_at before deleting the stream record
     user = db.session.get(User, account.user_id)
     if user:
-        user.last_live_at = datetime.now(timezone.utc)
+        user.last_live_at = datetime.now(UTC)
 
     LiveStream.query.filter_by(
         user_id=account.user_id, provider='twitch'
@@ -214,9 +214,7 @@ def youtube_webhook_verify():
 @limiter.exempt
 def youtube_webhook_notify():
     """Receive YouTube PubSubHubbub Atom feed notification."""
-    from ..services.youtube_pubsub import (check_video_is_live,
-                                            extract_channel_id, parse_feed,
-                                            verify_hub_signature)
+    from ..services.youtube_pubsub import check_video_is_live, parse_feed, verify_hub_signature
 
     # Verify X-Hub-Signature if CRON_SECRET is configured
     hub_secret = os.environ.get('CRON_SECRET', '')
@@ -270,7 +268,7 @@ def _handle_youtube_live(user_id, video_id, title, channel_url, started_at):
     try:
         started_dt = datetime.fromisoformat(started_at.replace('Z', '+00:00'))
     except (ValueError, TypeError, AttributeError):
-        started_dt = datetime.now(timezone.utc)
+        started_dt = datetime.now(UTC)
 
     existing = LiveStream.query.filter_by(
         user_id=user_id, provider='youtube'
@@ -294,7 +292,7 @@ def _handle_youtube_live(user_id, video_id, title, channel_url, started_at):
     # Update last_live_at on the user
     user = db.session.get(User, user_id)
     if user:
-        user.last_live_at = datetime.now(timezone.utc)
+        user.last_live_at = datetime.now(UTC)
 
     db.session.commit()
     invalidate_live_cache()
@@ -336,7 +334,7 @@ def youtube_check_offline():
         ended_user_ids = [s.user_id for s in streams if s.stream_id in ended_ids]
         if ended_user_ids:
             User.query.filter(User.id.in_(ended_user_ids)).update(
-                {'last_live_at': datetime.now(timezone.utc)}, synchronize_session='fetch'
+                {'last_live_at': datetime.now(UTC)}, synchronize_session='fetch'
             )
 
         LiveStream.query.filter(
@@ -418,7 +416,7 @@ def youtube_renew_subs():
         ).first()
         if account:
             account.live_sub_status = 'subscribed' if ok else 'failed'
-            account.live_sub_at = datetime.now(timezone.utc)
+            account.live_sub_at = datetime.now(UTC)
         if ok:
             renewed += 1
         else:
@@ -474,7 +472,7 @@ def youtube_subscribe_one():
     ).first()
     if account:
         account.live_sub_status = 'subscribed' if ok else 'failed'
-        account.live_sub_at = datetime.now(timezone.utc)
+        account.live_sub_at = datetime.now(UTC)
         db.session.commit()
 
     if ok:
@@ -516,9 +514,11 @@ def rebuild_twitch_subs():
       ?limit=N   — process N accounts per call (default 20)
       ?clean=1   — delete all existing subscriptions first (only on first call)
     """
-    from ..services.twitch import (create_eventsub_subscription,
-                                    delete_eventsub_subscription,
-                                    list_eventsub_subscriptions)
+    from ..services.twitch import (
+        create_eventsub_subscription,
+        delete_eventsub_subscription,
+        list_eventsub_subscriptions,
+    )
 
     client_id = os.environ.get('TWITCH_CLIENT_ID', '')
     client_secret = os.environ.get('TWITCH_CLIENT_SECRET', '')
@@ -574,7 +574,7 @@ def rebuild_twitch_subs():
                 errors += 1
                 error_details.append(f'{broadcaster_id}:{event_type}:{e}')
         account.live_sub_status = 'subscribed' if account_success == 2 else 'failed'
-        account.live_sub_at = datetime.now(timezone.utc)
+        account.live_sub_at = datetime.now(UTC)
 
     db.session.commit()
 
@@ -609,7 +609,7 @@ def subscribe_twitch_user(provider_account_id, oauth_account=None):
                     provider_account_id)
         if oauth_account:
             oauth_account.live_sub_status = 'failed'
-            oauth_account.live_sub_at = datetime.now(timezone.utc)
+            oauth_account.live_sub_at = datetime.now(UTC)
             db.session.commit()
         return
 
@@ -630,7 +630,7 @@ def subscribe_twitch_user(provider_account_id, oauth_account=None):
 
     if oauth_account:
         oauth_account.live_sub_status = 'subscribed' if success_count == 2 else 'failed'
-        oauth_account.live_sub_at = datetime.now(timezone.utc)
+        oauth_account.live_sub_at = datetime.now(UTC)
         db.session.commit()
 
 
@@ -639,8 +639,7 @@ def unsubscribe_twitch_user(provider_account_id):
 
     Called when a Twitch account is unlinked.
     """
-    from ..services.twitch import (list_eventsub_subscriptions,
-                                    delete_eventsub_subscription)
+    from ..services.twitch import delete_eventsub_subscription, list_eventsub_subscriptions
 
     client_id = os.environ.get('TWITCH_CLIENT_ID', '')
     client_secret = os.environ.get('TWITCH_CLIENT_SECRET', '')
@@ -695,9 +694,7 @@ def rebuild_youtube_subs():
       ?limit=N   — process N accounts per call (default 20)
       ?clean=1   — unsubscribe all first (only on first call)
     """
-    from ..services.youtube_pubsub import (extract_channel_id,
-                                            subscribe_channel,
-                                            unsubscribe_channel)
+    from ..services.youtube_pubsub import extract_channel_id, subscribe_channel, unsubscribe_channel
 
     webhook_base_url = os.environ.get('WEBHOOK_BASE_URL', '')
     if not webhook_base_url:
@@ -738,7 +735,7 @@ def rebuild_youtube_subs():
         else:
             errors += 1
             account.live_sub_status = 'failed'
-        account.live_sub_at = datetime.now(timezone.utc)
+        account.live_sub_at = datetime.now(UTC)
 
     db.session.commit()
 
@@ -770,7 +767,7 @@ def subscribe_youtube_user(channel_url, oauth_account=None):
                     channel_url)
         if oauth_account:
             oauth_account.live_sub_status = 'failed'
-            oauth_account.live_sub_at = datetime.now(timezone.utc)
+            oauth_account.live_sub_at = datetime.now(UTC)
             db.session.commit()
         return
 
@@ -779,7 +776,7 @@ def subscribe_youtube_user(channel_url, oauth_account=None):
         log.warning('Could not extract channel ID from %s', channel_url)
         if oauth_account:
             oauth_account.live_sub_status = 'failed'
-            oauth_account.live_sub_at = datetime.now(timezone.utc)
+            oauth_account.live_sub_at = datetime.now(UTC)
             db.session.commit()
         return
 
@@ -789,7 +786,7 @@ def subscribe_youtube_user(channel_url, oauth_account=None):
 
     if oauth_account:
         oauth_account.live_sub_status = 'subscribed' if ok else 'failed'
-        oauth_account.live_sub_at = datetime.now(timezone.utc)
+        oauth_account.live_sub_at = datetime.now(UTC)
         db.session.commit()
 
 

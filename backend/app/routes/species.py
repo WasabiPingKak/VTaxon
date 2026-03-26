@@ -2,8 +2,6 @@ import logging
 
 from flask import Blueprint, Response, g, jsonify, request, stream_with_context
 
-log = logging.getLogger(__name__)
-
 from ..auth import admin_required, login_required
 from ..extensions import db
 from ..limiter import limiter
@@ -17,6 +15,8 @@ from ..services.gbif import (
     search_species,
     search_species_stream,
 )
+
+log = logging.getLogger(__name__)
 
 species_bp = Blueprint('species', __name__)
 limiter.limit("30/minute")(species_bp)
