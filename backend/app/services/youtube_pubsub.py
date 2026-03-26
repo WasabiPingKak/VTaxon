@@ -5,6 +5,8 @@ PubSubHubbub hub, parses Atom feed notifications, and checks live status
 via the YouTube Data API v3.
 """
 
+import hashlib
+import hmac
 import logging
 import re
 import xml.etree.ElementTree as ET
@@ -24,6 +26,23 @@ NS = {
 }
 
 
+def verify_hub_signature(secret, signature_header, body):
+    """Verify the X-Hub-Signature HMAC-SHA1 from PubSubHubbub.
+
+    *signature_header* is e.g. ``sha1=abcdef1234...``.
+    Returns True if the signature is valid.
+    """
+    if not signature_header:
+        return False
+    parts = signature_header.split('=', 1)
+    if len(parts) != 2 or parts[0] != 'sha1':
+        return False
+    expected = hmac.new(
+        secret.encode(), body.encode(), hashlib.sha1,
+    ).hexdigest()
+    return hmac.compare_digest(expected, parts[1])
+
+
 def extract_channel_id(channel_url):
     """Extract YouTube channel ID (UCxxx) from a channel URL.
 
@@ -38,18 +57,22 @@ def extract_channel_id(channel_url):
     return match.group(1) if match else None
 
 
-def subscribe_channel(channel_id, callback_url):
+def subscribe_channel(channel_id, callback_url, secret=None):
     """Subscribe to a YouTube channel's feed via PubSubHubbub.
 
+    If *secret* is provided, the hub will sign notifications with HMAC-SHA1.
     Returns True if the hub accepted the request (HTTP 202/204).
     """
     try:
-        resp = requests.post(HUB_URL, data={
+        data = {
             'hub.mode': 'subscribe',
             'hub.topic': TOPIC_TEMPLATE.format(channel_id),
             'hub.callback': callback_url,
             'hub.verify': 'async',
-        }, timeout=15)
+        }
+        if secret:
+            data['hub.secret'] = secret
+        resp = requests.post(HUB_URL, data=data, timeout=15)
         if resp.status_code in (202, 204):
             log.info('YouTube WebSub subscribe OK for %s', channel_id)
             return True
@@ -61,18 +84,21 @@ def subscribe_channel(channel_id, callback_url):
         return False
 
 
-def unsubscribe_channel(channel_id, callback_url):
+def unsubscribe_channel(channel_id, callback_url, secret=None):
     """Unsubscribe from a YouTube channel's feed via PubSubHubbub.
 
     Returns True if the hub accepted the request (HTTP 202/204).
     """
     try:
-        resp = requests.post(HUB_URL, data={
+        data = {
             'hub.mode': 'unsubscribe',
             'hub.topic': TOPIC_TEMPLATE.format(channel_id),
             'hub.callback': callback_url,
             'hub.verify': 'async',
-        }, timeout=15)
+        }
+        if secret:
+            data['hub.secret'] = secret
+        resp = requests.post(HUB_URL, data=data, timeout=15)
         if resp.status_code in (202, 204):
             log.info('YouTube WebSub unsubscribe OK for %s', channel_id)
             return True
