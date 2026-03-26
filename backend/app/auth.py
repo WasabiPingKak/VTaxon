@@ -105,25 +105,7 @@ def get_current_user():
                 except jwt.InvalidTokenError:
                     pass
 
-    # HS256 fallback — disabled by default, enable only for emergencies
-    if current_app.config.get('ALLOW_HS256_FALLBACK'):
-        secret = current_app.config.get('SUPABASE_JWT_SECRET')
-        if secret:
-            logger.warning('HS256 fallback triggered — consider disabling after migration')
-            try:
-                payload = jwt.decode(
-                    token,
-                    secret,
-                    algorithms=['HS256'],
-                    audience='authenticated',
-                )
-                user_id = payload.get('sub')
-                if user_id:
-                    return user_id
-            except jwt.InvalidTokenError:
-                pass
-
-    logger.warning('JWT verification failed with all methods')
+    logger.warning('JWT verification failed')
     return None
 
 
