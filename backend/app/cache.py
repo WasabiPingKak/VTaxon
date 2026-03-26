@@ -2,6 +2,12 @@
 
 Avoids re-querying the DB on every /api/taxonomy/tree request.
 TTL-based with manual invalidation when traits/breeds change.
+
+Limitation: This is a per-process cache. In multi-worker deployments
+(e.g. gunicorn with 2+ workers), each worker maintains its own copy.
+Acceptable at current scale (~2,500 users) since taxonomy data changes
+infrequently and a 300s TTL bounds staleness. For higher scale,
+consider migrating to Redis as a shared cache backend.
 """
 
 import time
