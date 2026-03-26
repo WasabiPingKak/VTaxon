@@ -215,10 +215,19 @@ def youtube_webhook_verify():
 def youtube_webhook_notify():
     """Receive YouTube PubSubHubbub Atom feed notification."""
     from ..services.youtube_pubsub import (check_video_is_live,
-                                            extract_channel_id, parse_feed)
+                                            extract_channel_id, parse_feed,
+                                            verify_hub_signature)
+
+    # Verify X-Hub-Signature if CRON_SECRET is configured
+    hub_secret = os.environ.get('CRON_SECRET', '')
+    feed_xml = request.get_data(as_text=True)
+    if hub_secret:
+        sig = request.headers.get('X-Hub-Signature', '')
+        if not verify_hub_signature(hub_secret, sig, feed_xml):
+            log.warning('YouTube WebSub signature verification failed')
+            return '', 403
 
     api_key = os.environ.get('YOUTUBE_API_KEY', '')
-    feed_xml = request.get_data(as_text=True)
     entries = parse_feed(feed_xml)
 
     for entry in entries:
@@ -344,47 +353,136 @@ def youtube_check_offline():
 @livestream_bp.route('/livestream/youtube-renew-subs', methods=['POST'])
 @limiter.exempt
 def youtube_renew_subs():
-    """Cron endpoint: renew all YouTube WebSub subscriptions."""
+    """Cron endpoint: dispatch Cloud Tasks to renew YouTube WebSub subscriptions.
+
+    Instead of subscribing synchronously (which times out with many channels),
+    this creates one Cloud Task per channel. Each task calls subscribe-one.
+    Falls back to synchronous mode if Cloud Tasks is not configured.
+    """
     if not _verify_cron_secret():
         return jsonify({'error': 'Unauthorized'}), 403
 
-    from ..services.youtube_pubsub import extract_channel_id, subscribe_channel
+    from ..services.youtube_pubsub import extract_channel_id
+
+    accounts = OAuthAccount.query.filter_by(provider='youtube').all()
+
+    # Build list of valid channel_ids
+    params_list = []
+    skipped = 0
+    for account in accounts:
+        channel_id = extract_channel_id(account.channel_url)
+        if not channel_id:
+            skipped += 1
+            continue
+        params_list.append({'channel_id': channel_id})
+
+    if not params_list:
+        return jsonify({'total': len(accounts), 'skipped': skipped, 'dispatched': 0})
+
+    # Try Cloud Tasks dispatch
+    cloud_run_url = os.environ.get('CLOUD_RUN_SERVICE_URL', '')
+    if cloud_run_url:
+        from ..utils.cloud_tasks_client import dispatch_tasks_batch
+        result = dispatch_tasks_batch(
+            '/api/livestream/youtube-subscribe-one',
+            params_list=params_list,
+        )
+        log.info(
+            'YouTube renew-subs via Cloud Tasks: total=%d, dispatched=%d, failed=%d, skipped=%d',
+            len(accounts), result['dispatched'], result['failed'], skipped,
+        )
+        return jsonify({
+            'mode': 'cloud_tasks',
+            'total': len(accounts),
+            'dispatched': result['dispatched'],
+            'failed': result['failed'],
+            'skipped': skipped,
+        })
+
+    # Fallback: synchronous subscribe (for local dev / missing config)
+    from ..services.youtube_pubsub import subscribe_channel
 
     webhook_base_url = os.environ.get('WEBHOOK_BASE_URL', '')
     if not webhook_base_url:
         return jsonify({'error': 'WEBHOOK_BASE_URL not configured'}), 500
 
     callback_url = f'{webhook_base_url}/api/webhooks/youtube'
-
-    accounts = OAuthAccount.query.filter_by(provider='youtube').all()
+    hub_secret = os.environ.get('CRON_SECRET', '') or None
     renewed = 0
-    skipped = 0
     errors = 0
-
-    for account in accounts:
-        channel_id = extract_channel_id(account.channel_url)
-        if not channel_id:
-            skipped += 1
-            continue
-        ok = subscribe_channel(channel_id, callback_url)
+    for p in params_list:
+        ok = subscribe_channel(p['channel_id'], callback_url, secret=hub_secret)
+        account = OAuthAccount.query.filter(
+            OAuthAccount.provider == 'youtube',
+            OAuthAccount.channel_url.ilike(f'%/channel/{p["channel_id"]}%'),
+        ).first()
+        if account:
+            account.live_sub_status = 'subscribed' if ok else 'failed'
+            account.live_sub_at = datetime.now(timezone.utc)
         if ok:
             renewed += 1
-            account.live_sub_status = 'subscribed'
         else:
             errors += 1
-            account.live_sub_status = 'failed'
-        account.live_sub_at = datetime.now(timezone.utc)
-
     db.session.commit()
 
-    log.info('YouTube renew-subs: total=%d, renewed=%d, skipped=%d, errors=%d',
+    log.info('YouTube renew-subs (sync fallback): total=%d, renewed=%d, skipped=%d, errors=%d',
              len(accounts), renewed, skipped, errors)
     return jsonify({
+        'mode': 'sync',
         'total': len(accounts),
         'renewed': renewed,
         'skipped': skipped,
         'errors': errors,
     })
+
+
+@livestream_bp.route('/livestream/youtube-subscribe-one', methods=['POST'])
+@limiter.exempt
+def youtube_subscribe_one():
+    """Cloud Task handler: subscribe a single YouTube channel.
+
+    Accepts ?channel_id=UCxxx. Called by Cloud Tasks from youtube-renew-subs.
+    Returns 200 on success, 500 on failure (so Cloud Tasks will retry).
+    """
+    if not _verify_cron_secret():
+        # Cloud Tasks on the same Cloud Run service share the same origin,
+        # so also accept requests without cron secret (internal traffic).
+        # But if CRON_SECRET is set and a wrong value is provided, reject.
+        secret = os.environ.get('CRON_SECRET', '')
+        provided = request.headers.get('X-Cron-Secret', '')
+        if secret and provided and provided != secret:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+    from ..services.youtube_pubsub import subscribe_channel
+
+    channel_id = request.args.get('channel_id', '')
+    if not channel_id:
+        return jsonify({'error': 'channel_id required'}), 400
+
+    webhook_base_url = os.environ.get('WEBHOOK_BASE_URL', '')
+    if not webhook_base_url:
+        return jsonify({'error': 'WEBHOOK_BASE_URL not configured'}), 500
+
+    callback_url = f'{webhook_base_url}/api/webhooks/youtube'
+    hub_secret = os.environ.get('CRON_SECRET', '') or None
+    ok = subscribe_channel(channel_id, callback_url, secret=hub_secret)
+
+    # Update account subscription status
+    account = OAuthAccount.query.filter(
+        OAuthAccount.provider == 'youtube',
+        OAuthAccount.channel_url.ilike(f'%/channel/{channel_id}%'),
+    ).first()
+    if account:
+        account.live_sub_status = 'subscribed' if ok else 'failed'
+        account.live_sub_at = datetime.now(timezone.utc)
+        db.session.commit()
+
+    if ok:
+        log.info('YouTube subscribe-one OK: %s', channel_id)
+        return jsonify({'channel_id': channel_id, 'status': 'subscribed'})
+
+    log.warning('YouTube subscribe-one FAILED: %s', channel_id)
+    return jsonify({'channel_id': channel_id, 'status': 'failed'}), 500
 
 
 # ── Admin endpoints for Twitch subscription management ──
@@ -606,6 +704,7 @@ def rebuild_youtube_subs():
         return jsonify({'error': 'WEBHOOK_BASE_URL not configured'}), 500
 
     callback_url = f'{webhook_base_url}/api/webhooks/youtube'
+    hub_secret = os.environ.get('CRON_SECRET', '') or None
 
     offset = request.args.get('offset', 0, type=int)
     limit = request.args.get('limit', 20, type=int)
@@ -621,7 +720,7 @@ def rebuild_youtube_subs():
         for account in yt_accounts:
             channel_id = extract_channel_id(account.channel_url)
             if channel_id:
-                unsubscribe_channel(channel_id, callback_url)
+                unsubscribe_channel(channel_id, callback_url, secret=hub_secret)
                 unsubscribed += 1
 
     subscribed = 0
@@ -632,7 +731,7 @@ def rebuild_youtube_subs():
         if not channel_id:
             skipped += 1
             continue
-        ok = subscribe_channel(channel_id, callback_url)
+        ok = subscribe_channel(channel_id, callback_url, secret=hub_secret)
         if ok:
             subscribed += 1
             account.live_sub_status = 'subscribed'
@@ -685,7 +784,8 @@ def subscribe_youtube_user(channel_url, oauth_account=None):
         return
 
     callback_url = f'{webhook_base_url}/api/webhooks/youtube'
-    ok = subscribe_channel(channel_id, callback_url)
+    hub_secret = os.environ.get('CRON_SECRET', '') or None
+    ok = subscribe_channel(channel_id, callback_url, secret=hub_secret)
 
     if oauth_account:
         oauth_account.live_sub_status = 'subscribed' if ok else 'failed'
@@ -706,4 +806,5 @@ def unsubscribe_youtube_user(channel_url):
         return
 
     callback_url = f'{webhook_base_url}/api/webhooks/youtube'
-    unsubscribe_channel(channel_id, callback_url)
+    hub_secret = os.environ.get('CRON_SECRET', '') or None
+    unsubscribe_channel(channel_id, callback_url, secret=hub_secret)
