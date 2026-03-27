@@ -1,7 +1,9 @@
+from datetime import UTC, datetime
+
 from flask import Blueprint, g, jsonify, request
 
 from ..auth import admin_required, get_current_user
-from ..cache import invalidate_tree_cache
+from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
 from ..extensions import db
 from ..limiter import limiter
 from ..models import Blacklist, OAuthAccount, User, UserReport
@@ -97,6 +99,49 @@ def update_report(report_id):
 
     db.session.commit()
     return jsonify(report.to_dict())
+
+
+@reports_bp.route('/<int:report_id>/hide', methods=['POST'])
+@admin_required
+def hide_user(report_id):
+    """Hide the reported user (shadow ban) instead of full ban. Admin only."""
+    report = db.session.get(UserReport, report_id)
+    if not report:
+        return jsonify({'error': 'Report not found'}), 404
+    if not report.reported_user_id:
+        return jsonify({'error': '被舉報使用者已刪除'}), 404
+
+    reported_user = db.session.get(User, report.reported_user_id)
+    if not reported_user:
+        return jsonify({'error': '被舉報使用者不存在'}), 404
+
+    data = request.get_json() or {}
+    reason = (data.get('reason') or '').strip() or '不符收錄宗旨'
+
+    reported_user.visibility = 'hidden'
+    reported_user.visibility_reason = reason
+    reported_user.visibility_changed_at = datetime.now(UTC)
+    reported_user.visibility_changed_by = g.current_user_id
+    reported_user.appeal_note = None
+
+    report.status = 'confirmed'
+    if 'admin_note' in data:
+        report.admin_note = data['admin_note'] or None
+
+    from ..services.notifications import create_notification
+    create_notification(report.reporter_id, 'report', report.id,
+                        'confirmed', report.admin_note)
+
+    db.session.commit()
+    invalidate_tree_cache()
+    invalidate_fictional_tree_cache()
+
+    return jsonify({
+        'ok': True,
+        'user_id': reported_user.id,
+        'visibility': 'hidden',
+        'message': f'已隱藏使用者 {reported_user.display_name}',
+    })
 
 
 @reports_bp.route('/<int:report_id>/blacklist-preview', methods=['GET'])

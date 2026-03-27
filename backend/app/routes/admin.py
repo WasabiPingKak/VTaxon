@@ -1,11 +1,12 @@
 from datetime import UTC, datetime
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, g, jsonify, request
 from sqlalchemy import func
 
 from ..auth import admin_required
+from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
 from ..extensions import db
-from ..models import Breed, BreedRequest, FictionalSpeciesRequest, SpeciesCache, SpeciesNameReport, UserReport
+from ..models import Breed, BreedRequest, FictionalSpeciesRequest, SpeciesCache, SpeciesNameReport, User, UserReport
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -46,11 +47,15 @@ def get_request_counts():
     )
     report = {status: count for status, count in report_rows}
 
+    # Visibility pending reviews count
+    pending_review_count = User.query.filter_by(visibility='pending_review').count()
+
     return jsonify({
         'fictional': fictional,
         'breed': breed,
         'name_report': name_report,
         'report': report,
+        'visibility': {'pending_review': pending_review_count},
     })
 
 
@@ -201,3 +206,56 @@ def transition_breeds():
         db.session.rollback()
         return jsonify({'error': f'批量轉移失敗：{e}'}), 500
     return jsonify({'updated': len(reqs)})
+
+
+@admin_bp.route('/users/<user_id>/visibility', methods=['PATCH'])
+@admin_required
+def set_user_visibility(user_id):
+    """Set a user's visibility (visible/hidden). Admin only."""
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.get_json() or {}
+    new_visibility = data.get('visibility')
+    if new_visibility not in ('visible', 'hidden'):
+        return jsonify({'error': 'visibility must be visible or hidden'}), 400
+
+    reason = (data.get('reason') or '').strip() or None
+
+    user.visibility = new_visibility
+    user.visibility_reason = reason
+    user.visibility_changed_at = datetime.now(UTC)
+    user.visibility_changed_by = g.current_user_id
+    user.appeal_note = None
+
+    db.session.commit()
+    invalidate_tree_cache()
+    invalidate_fictional_tree_cache()
+
+    return jsonify({
+        'ok': True,
+        'user_id': user.id,
+        'visibility': user.visibility,
+    })
+
+
+@admin_bp.route('/users/pending-reviews', methods=['GET'])
+@admin_required
+def pending_reviews():
+    """List users with pending_review visibility (appealed). Admin only."""
+    users = (
+        User.query
+        .filter_by(visibility='pending_review')
+        .order_by(User.updated_at.desc())
+        .all()
+    )
+    return jsonify({
+        'users': [
+            {
+                **u.to_dict(),
+                'appeal_note': u.appeal_note,
+            }
+            for u in users
+        ],
+    })

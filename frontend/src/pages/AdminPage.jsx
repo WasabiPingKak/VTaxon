@@ -24,6 +24,7 @@ const SECTION_TABS = [
   { key: 'breed', label: '品種回報' },
   { key: 'name_report', label: '名稱回報' },
   { key: 'report', label: '帳號檢舉' },
+  { key: 'visibility', label: '帳號審核' },
 ];
 
 const SECTION_ACTIVE_STATUSES = {
@@ -31,6 +32,7 @@ const SECTION_ACTIVE_STATUSES = {
   breed: ['pending', 'received', 'in_progress'],
   name_report: ['pending', 'received', 'in_progress'],
   report: ['pending', 'investigating'],
+  visibility: ['pending_review'],
 };
 
 // Status badge color mapping
@@ -44,6 +46,7 @@ const STATUS_BADGE = {
   investigating: { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8', label: '調查中' },
   confirmed:     { bg: 'rgba(34,197,94,0.15)', color: '#4ade80', label: '已確認' },
   dismissed:     { bg: 'rgba(100,100,100,0.15)', color: '#999', label: '不處理' },
+  pending_review: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b', label: '待審核' },
 };
 
 // Next actions for request types (fictional/breed)
@@ -313,6 +316,7 @@ const ReportCard = memo(function ReportCard({ req, onUpdate }) {
   const [userDetail, setUserDetail] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [hideLoading, setHideLoading] = useState(false);
   const actions = REPORT_ACTIONS[req.status];
   const isTerminal = !actions;
 
@@ -383,6 +387,21 @@ const ReportCard = memo(function ReportCard({ req, onUpdate }) {
       alert(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleHide = async () => {
+    setHideLoading(true);
+    try {
+      await api.hideReportedUser(req.id, {
+        reason: '不符收錄宗旨',
+        admin_note: note || undefined,
+      });
+      onUpdate();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setHideLoading(false);
     }
   };
 
@@ -637,13 +656,23 @@ const ReportCard = memo(function ReportCard({ req, onUpdate }) {
 
           {/* For investigating status with confirm action, show blacklist preview */}
           {req.status === 'investigating' && !previewItems && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
               <button type="button" disabled={loading} onClick={() => handleAction('dismissed')} style={{
                 padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
                 ...ACTION_STYLES.danger, fontSize: '0.85em',
                 opacity: loading ? 0.5 : 1,
               }}>
                 不處理
+              </button>
+              <button type="button" disabled={hideLoading || !req.reported_user} onClick={handleHide} style={{
+                padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
+                fontSize: '0.85em',
+                background: 'rgba(245,158,11,0.15)',
+                border: '1px solid rgba(245,158,11,0.3)',
+                color: '#f59e0b',
+                opacity: (hideLoading || !req.reported_user) ? 0.5 : 1,
+              }}>
+                {hideLoading ? '處理中…' : '隱藏使用者'}
               </button>
               <button type="button" disabled={previewLoading || !req.reported_user} onClick={handlePreview} style={{
                 padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
@@ -969,6 +998,99 @@ function ExportToolbar({ section, requestCount, onTransitioned }) {
   );
 }
 
+// ── Pending Review Card (visibility appeals) ──────────────────
+
+const PendingReviewCard = memo(function PendingReviewCard({ req: user, onUpdate }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleVisibility = async (visibility) => {
+    setLoading(true);
+    try {
+      await api.setUserVisibility(user.id, {
+        visibility,
+        reason: visibility === 'hidden' ? user.visibility_reason : undefined,
+      });
+      onUpdate();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 10, padding: '16px 20px', marginBottom: 14,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        {user.avatar_url ? (
+          <img src={user.avatar_url} alt={user.display_name} loading="lazy" style={{
+            width: 32, height: 32, borderRadius: '50%', objectFit: 'cover',
+          }} />
+        ) : (
+          <div style={{
+            width: 32, height: 32, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 14, color: 'rgba(255,255,255,0.4)',
+          }}>?</div>
+        )}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: '0.95em' }}>{user.display_name}</div>
+          <div style={{ fontSize: '0.8em', color: 'rgba(255,255,255,0.4)' }}>
+            隱藏原因：{user.visibility_reason || '(未填寫)'}
+          </div>
+        </div>
+        <span style={{
+          padding: '2px 8px', borderRadius: 4,
+          fontSize: '0.8em', fontWeight: 600,
+          background: 'rgba(245,158,11,0.15)', color: '#f59e0b',
+        }}>
+          申訴中
+        </span>
+      </div>
+
+      {user.appeal_note && (
+        <div style={{
+          padding: '10px 12px', marginBottom: 12, borderRadius: 6,
+          background: 'rgba(56,189,248,0.08)',
+          border: '1px solid rgba(56,189,248,0.15)',
+          fontSize: '0.9em', whiteSpace: 'pre-wrap', lineHeight: 1.6,
+        }}>
+          <div style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 4, fontSize: '0.85em' }}>
+            申訴說明：
+          </div>
+          {user.appeal_note}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <button type="button" disabled={loading} onClick={() => handleVisibility('hidden')} style={{
+          padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
+          fontSize: '0.85em',
+          background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.25)',
+          color: '#f87171',
+          opacity: loading ? 0.5 : 1,
+        }}>
+          維持隱藏
+        </button>
+        <button type="button" disabled={loading} onClick={() => handleVisibility('visible')} style={{
+          padding: '6px 16px', borderRadius: 6, cursor: 'pointer',
+          fontSize: '0.85em',
+          background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.25)',
+          color: '#4ade80', fontWeight: 600,
+          opacity: loading ? 0.5 : 1,
+        }}>
+          恢復顯示
+        </button>
+      </div>
+    </div>
+  );
+});
+
+
 // ── Main AdminPage ──────────────────
 
 export default function AdminPage() {
@@ -982,14 +1104,21 @@ export default function AdminPage() {
   const fetchRequests = useCallback(async (status) => {
     setLoading(true);
     try {
-      const fn = section === 'fictional' ? api.getRequests
-        : section === 'breed' ? api.getBreedRequests
-        : section === 'name_report' ? api.getNameReports
-        : api.getReports;
-      const data = await fn(status);
-      const items = data.requests ?? data.reports ?? [];
-      setRequests(items);
-      setCounts(prev => ({ ...prev, [`${section}_${status}`]: items.length }));
+      if (section === 'visibility') {
+        const data = await api.getPendingReviews();
+        const items = data.users || [];
+        setRequests(items);
+        setCounts(prev => ({ ...prev, visibility_pending_review: items.length }));
+      } else {
+        const fn = section === 'fictional' ? api.getRequests
+          : section === 'breed' ? api.getBreedRequests
+          : section === 'name_report' ? api.getNameReports
+          : api.getReports;
+        const data = await fn(status);
+        const items = data.requests ?? data.reports ?? [];
+        setRequests(items);
+        setCounts(prev => ({ ...prev, [`${section}_${status}`]: items.length }));
+      }
     } catch (err) {
       console.error('Failed to fetch requests:', err);
       setRequests([]);
@@ -1005,7 +1134,12 @@ export default function AdminPage() {
     }
   }, [activeTab, isAdmin, fetchRequests]);
 
-  const currentStatusTabs = section === 'report' ? REPORT_STATUS_TABS
+  const VISIBILITY_STATUS_TABS = [
+    { key: 'pending_review', label: '待審核' },
+  ];
+
+  const currentStatusTabs = section === 'visibility' ? VISIBILITY_STATUS_TABS
+    : section === 'report' ? REPORT_STATUS_TABS
     : section === 'name_report' ? REQUEST_STATUS_TABS
     : REQUEST_STATUS_TABS;
 
@@ -1017,8 +1151,9 @@ export default function AdminPage() {
         const bc = data.breed || {};
         const nc = data.name_report || {};
         const rc = data.report || {};
+        const vc = data.visibility || {};
         const newCounts = {};
-        for (const [key, obj] of Object.entries({ fictional: fc, breed: bc, name_report: nc, report: rc })) {
+        for (const [key, obj] of Object.entries({ fictional: fc, breed: bc, name_report: nc, report: rc, visibility: vc })) {
           for (const [status, count] of Object.entries(obj)) {
             newCounts[`${key}_${status}`] = count;
           }
@@ -1057,13 +1192,14 @@ export default function AdminPage() {
 
   function handleSectionChange(key) {
     setSection(key);
-    setActiveTab('pending');
+    setActiveTab(key === 'visibility' ? 'pending_review' : 'pending');
     setRequests([]);
   }
 
   const CardComponent = section === 'fictional' ? FictionalRequestCard
     : section === 'breed' ? BreedRequestCard
     : section === 'name_report' ? NameReportCard
+    : section === 'visibility' ? PendingReviewCard
     : ReportCard;
 
   return (

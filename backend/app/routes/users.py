@@ -41,6 +41,7 @@ def recent_users():
     rows = (
         db.session.query(User, latest_trait)
         .join(VtuberTrait, User.id == VtuberTrait.user_id)
+        .filter(User.visibility == 'visible')
         .group_by(User.id)
         .having(latest_trait > since)
         .order_by(latest_trait.desc())
@@ -121,7 +122,7 @@ def directory():
     per_page = min(max(per_page, 1), 100)
     page = max(page, 1)
 
-    query = User.query
+    query = User.query.filter(User.visibility == 'visible')
 
     # Name search
     if q:
@@ -489,7 +490,8 @@ def update_me():
     data = request.get_json() or {}
     allowed = {'display_name', 'organization', 'bio', 'country_flags',
                'social_links', 'primary_platform', 'profile_data', 'org_type',
-               'live_primary_real_trait_id', 'live_primary_fictional_trait_id'}
+               'live_primary_real_trait_id', 'live_primary_fictional_trait_id',
+               'vtuber_declaration_at'}
 
     ALLOWED_SNS_KEYS = {
         'twitter', 'threads', 'instagram', 'bluesky',
@@ -601,6 +603,12 @@ def update_me():
 
         data['profile_data'] = pd
 
+    # VTuber declaration: write-once timestamp
+    if 'vtuber_declaration_at' in data:
+        if user.vtuber_declaration_at is not None:
+            return jsonify({'error': 'VTuber declaration already submitted'}), 400
+        data['vtuber_declaration_at'] = datetime.now(UTC)
+
     if 'primary_platform' in data:
         pp = data['primary_platform']
         if pp not in ('youtube', 'twitch'):
@@ -654,6 +662,36 @@ def get_user(user_id):
     ).all()
     data['oauth_accounts'] = [a.to_dict(public=True) for a in public_accounts]
     return jsonify(data)
+
+
+@users_bp.route('/me/appeal', methods=['POST'])
+@login_required
+def submit_appeal():
+    """Submit an appeal to request visibility review."""
+    user = db.session.get(User, g.current_user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if user.visibility != 'hidden':
+        return jsonify({'error': '目前帳號狀態不允許申訴'}), 400
+
+    data = request.get_json() or {}
+    appeal_note = (data.get('appeal_note') or '').strip()
+    if not appeal_note:
+        return jsonify({'error': '請填寫申訴說明'}), 400
+    if len(appeal_note) > 2000:
+        return jsonify({'error': '申訴說明不得超過 2000 字'}), 400
+
+    user.visibility = 'pending_review'
+    user.appeal_note = appeal_note
+    user.updated_at = datetime.now(UTC)
+
+    db.session.commit()
+
+    return jsonify({
+        'ok': True,
+        'visibility': user.visibility,
+    })
 
 
 @users_bp.route('/me/oauth-accounts', methods=['GET'])

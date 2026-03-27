@@ -11,6 +11,8 @@ import SettingsRealSpecies from '../components/settings/SettingsRealSpecies';
 import SettingsFictional from '../components/settings/SettingsFictional';
 import SettingsAccounts from '../components/settings/SettingsAccounts';
 import SEOHead from '../components/SEOHead';
+import VtuberDeclarationModal from '../components/VtuberDeclarationModal';
+import ShadowBanNotice from '../components/ShadowBanNotice';
 
 const TABS = [
   { key: 'species', label: '物種標註' },
@@ -67,6 +69,8 @@ export default function CharacterPage() {
   return (
     <div style={{ maxWidth: '700px', margin: '40px auto', padding: '0 20px' }}>
       <SEOHead title="我的角色" noindex />
+      <VtuberDeclarationModal />
+      <ShadowBanNotice />
       {/* === Header === */}
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         {/* Avatar */}
@@ -120,6 +124,27 @@ export default function CharacterPage() {
           onSelectTrait={setPreviewTraitIdx}
           onClose={() => setShowPreview(false)}
         />
+      )}
+
+      {/* === Visibility Status Banner === */}
+      {user.visibility === 'hidden' && (
+        <div style={{
+          padding: '12px 16px', marginBottom: '16px', borderRadius: '8px',
+          background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)',
+          fontSize: '0.9em', color: 'rgba(255,255,255,0.8)',
+        }}>
+          您的帳號目前已被隱藏，不會顯示在分類樹和目錄中。
+          {user.visibility_reason && <span> 理由：{user.visibility_reason}</span>}
+        </div>
+      )}
+      {user.visibility === 'pending_review' && (
+        <div style={{
+          padding: '12px 16px', marginBottom: '16px', borderRadius: '8px',
+          background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)',
+          fontSize: '0.9em', color: 'rgba(255,255,255,0.8)',
+        }}>
+          您的申訴正在審核中，請耐心等待管理團隊的回覆。
+        </div>
       )}
 
       {/* === Tab Bar === */}
