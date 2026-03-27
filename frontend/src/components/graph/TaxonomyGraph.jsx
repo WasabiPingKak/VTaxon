@@ -134,11 +134,13 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on currentUser?.id only
   }, [authLoading, currentUser?.id, fetchTreeData]);
 
   // Auto-focus logged-in user
   useEffect(() => {
     if (currentUser && !focusedUserId) setFocusedUserId(currentUser.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on currentUser?.id only
   }, [currentUser?.id, focusedUserId]);
 
   // Centralized camera scheduling — cancels any pending camera move before scheduling a new one
@@ -197,6 +199,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 400);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- panToWithInsets is stable (empty deps useCallback)
   }, [locateId, entries, fictionalEntries, setSearchParams, scheduleCamera]);
 
   // Focused entries for this user (raw: real + fictional, then sorted by X position)
@@ -404,6 +407,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
   // Auto-clamp when maxTraceBack changes
   useEffect(() => {
     if (traceBack > maxTraceBack) setTraceBack(maxTraceBack);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only clamp when maxTraceBack changes, not when traceBack changes
   }, [maxTraceBack]);
 
   // Trace back levels for UI
@@ -579,6 +583,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       if (count === 0) return;
       canvasRef.current?.fitBounds(minX, minY, maxX, maxY, ...cameraInsetsRef.current);
     }, 300);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- panToWithInsets is stable (empty deps useCallback)
   }, [focusedUserId, closeVtuberIds, closeEdgePaths, activeFocusedEntries, scheduleCamera]);
 
   // When filters change, auto-expand all paths that contain matching entries + fit camera + flash
@@ -735,6 +740,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
       }
     }
     return flashMapRef.current.size > 0;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- flashTick is intentionally used to trigger re-computation on tick
   }, [flashTick]);
 
   // Node animation
@@ -780,6 +786,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         canvasRef.current?.fitBounds(bounds.minX, bounds.minY, bounds.maxX, bounds.maxY, ...cameraInsetsRef.current);
       }
     }, 100);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- panToWithInsets is stable (empty deps useCallback)
   }, [bounds, nodes, currentUser, entries, fictionalEntries]);
 
   // Toggle expand/collapse
@@ -852,6 +859,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         }
       }
     }, 300);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- panToWithInsets is stable (empty deps useCallback)
   }, [rootData, fictionalRootData, scheduleCamera]);
 
   // Expand all / collapse all — scoped to activeTree
@@ -1110,6 +1118,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- panToWithInsets/expandBudgetGroupsForUser are stable or intentionally omitted to avoid cascade rebuilds
   }, [focusedEntries, focusedSpeciesIdx, entries, fictionalEntries, focusedUserId, entryToPathKey, scheduleCamera, rootData, fictionalRootData]);
 
   const handleSetFocus = useCallback((entry) => {
@@ -1145,6 +1154,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 200);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- panToWithInsets/expandBudgetGroupsForUser are stable or intentionally omitted
   }, [entries, fictionalEntries, entryToPathKey, scheduleCamera]);
 
   // All entries for the selected vtuber (for trait tabs in detail panel, both real + fictional)
@@ -1153,6 +1163,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     const real = entries ? entries.filter(e => e.user_id === selectedVtuber.user_id) : [];
     const fict = fictionalEntries ? fictionalEntries.filter(e => e.user_id === selectedVtuber.user_id) : [];
     return [...real, ...fict];
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on user_id, not the full object
   }, [selectedVtuber?.user_id, entries, fictionalEntries]);
 
   // Switch entry from detail panel trait tabs — update panel + focus + camera
@@ -1189,6 +1200,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- panToWithInsets/expandBudgetGroupsForUser are stable or intentionally omitted
   }, [entries, fictionalEntries, entryToPathKey, scheduleCamera]);
 
   // Listen for Navbar "refocus self" event
@@ -1216,6 +1228,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 200);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- panToWithInsets is stable; uses refs for latest state
   }, [refocusTick, scheduleCamera]);
 
   // Pan to focused species when user explicitly changes selection
@@ -1253,6 +1266,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         panToWithInsets(targetNode.x, targetNode.y, 0.8);
       }
     }, 100);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- uses refs for entries/focusedEntries; panToWithInsets/expandBudgetGroupsForUser intentionally omitted
   }, [focusedEntryKey, focusedUserId, focusedSpeciesIdx, scheduleCamera]);
 
   // Render state
@@ -1280,6 +1294,7 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     activeFilters: activeFiltersForRender,
     sortKey,
     liveUserIds,
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- flashTick intentionally included to trigger re-memo when flash state changes
   }), [hoveredNode, hoveredBadgeNode, imageCacheRef, focusedUserId, closeVtuberIds, closeEdgePaths, positionMap, flashTick, maxCount, activeFiltersForRender, sortKey, liveUserIds]);
 
   const onRender = useCallback((ctx, transform, canvasSize) => {
