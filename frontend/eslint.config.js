@@ -34,7 +34,8 @@ export default [
       "react-hooks/exhaustive-deps": "warn",
 
       // General quality
-      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "react/jsx-uses-vars": "error",
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
   },

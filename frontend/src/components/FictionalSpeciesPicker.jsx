@@ -565,7 +565,7 @@ function SubContent({ subKey, group, existingSet, onAdd, isSearching, expandedTy
 
 
 /** A type-level row: expandable grouping header, also selectable as trait if typeNode exists */
-function TypeRow({ typeKey, typeName, typeNode, children, existingSet, onAdd, isSearching, expanded, onToggle }) {
+function TypeRow({ typeKey: _typeKey, typeName, typeNode, children, existingSet, onAdd, isSearching: _isSearching, expanded, onToggle }) {
   const hasChildren = children.length > 0;
   const [adding, setAdding] = useState(false);
   const isAdded = typeNode ? existingSet.has(typeNode.id) : false;

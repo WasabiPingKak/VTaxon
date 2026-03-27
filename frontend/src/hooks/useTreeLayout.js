@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { hierarchy, tree } from 'd3-hierarchy';
-import { buildTree, buildFictionalTree, getVisualTier, subtreeHasNormalUser, BUDGET_TIER_DOT, BUDGET_TIER_HIDDEN } from '../lib/treeUtils';
+import { buildTree, buildFictionalTree, getVisualTier, subtreeHasNormalUser } from '../lib/treeUtils';
 
 // ── Layout constants ──
 const NODE_DX = 110;   // base horizontal spacing (used as separation denominator)

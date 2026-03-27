@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, autoExpandPathsUnfiltered, subtreeHasNormalUser, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, collectFictionalPathsToDepth, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths, entryToVtuberPathKey } from '../../lib/treeUtils';
+import { computeHighlightPaths, collectPathsToDepth, collectAllPaths, findNode, autoExpandPaths, autoExpandPathsUnfiltered, subtreeHasNormalUser, computeCloseVtubers, collectCloseVtuberPaths, computeCloseVtubersByRank, computeFictionalHighlightPaths, collectAllFictionalPaths, computeCloseFictionalVtubers, computeCloseFictionalVtubersByRank, collectCloseFictionalVtuberPaths, computeCloseEdgePaths, computeCloseFictionalEdgePaths, entryToVtuberPathKey } from '../../lib/treeUtils';
 import GraphCanvas from './GraphCanvas';
 import { drawGraph, createStarField } from './renderers';
 import useTreeLayout from '../../hooks/useTreeLayout';
@@ -206,11 +206,6 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     const fict = fictionalEntries ? fictionalEntries.filter(e => e.user_id === focusedUserId) : [];
     return [...real, ...fict];
   }, [focusedUserId, entries, fictionalEntries]);
-
-  // Real-only focused entries (for traceBack computation — only applies to real species)
-  const realFocusedEntries = useMemo(() => {
-    return rawFocusedEntries.filter(e => e.taxon_path);
-  }, [rawFocusedEntries]);
 
   // ── Filtering ──
   const filteredEntries = useMemo(() =>
@@ -833,7 +828,6 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
         // Fit bounds to include the clicked node + all expanded descendants
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         let count = 0;
-        const isFictional = pathKey.startsWith('__F__');
         for (const n of currentNodes) {
           const pk = n.data._pathKey;
           // Match the node itself + all descendants
@@ -1056,11 +1050,6 @@ const TaxonomyGraph = forwardRef(function TaxonomyGraph({ currentUser, authLoadi
     const entry = focusedEntries[index];
     if (entry) setFocusedEntryKey(entryToKey(entry));
   }, [focusedEntries]);
-
-  const handleClearFocus = useCallback(() => {
-    setFocusedUserId(null);
-    setFocusedEntryKey(null);
-  }, []);
 
   // Build a vtuber pathKey from an entry (real or fictional)
   const entryToPathKey = useCallback((entry) => {

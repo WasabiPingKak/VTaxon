@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
 import { api } from '../lib/api';
 import DirectoryFilters from '../components/directory/DirectoryFilters';
 import DirectoryCard from '../components/directory/DirectoryCard';
