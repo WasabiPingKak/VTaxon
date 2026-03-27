@@ -116,7 +116,7 @@ def hide_user(report_id):
         return jsonify({'error': '被舉報使用者不存在'}), 404
 
     data = request.get_json() or {}
-    reason = (data.get('reason') or '').strip() or '不符收錄宗旨'
+    reason = (data.get('reason') or '').strip() or '您的頻道內容以真人形象為主，不符合本服務的收錄標準'
 
     reported_user.visibility = 'hidden'
     reported_user.visibility_reason = reason
