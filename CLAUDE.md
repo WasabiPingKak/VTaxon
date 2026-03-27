@@ -43,7 +43,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 
 ### users
 角色主體。一筆 user = 一個 Vtuber 角色。
-- `id` (uuid, PK), `display_name`, `avatar_url`, `role` (admin|user), `organization` (text, nullable), `bio` (text, nullable), `country_flags` (jsonb, default []), `social_links` (jsonb, default {}), `primary_platform` (youtube|twitch, nullable), `profile_data` (jsonb, default {}), `created_at`, `updated_at`
+- `id` (uuid, PK), `display_name`, `avatar_url`, `role` (admin|user), `organization` (text, nullable), `bio` (text, nullable), `country_flags` (jsonb, default []), `social_links` (jsonb, default {}), `primary_platform` (youtube|twitch, nullable), `profile_data` (jsonb, default {}), `visibility` (text, default 'visible': visible|hidden|pending_review), `visibility_reason` (text, nullable), `visibility_changed_at` (timestamptz, nullable), `visibility_changed_by` (uuid, nullable), `vtuber_declaration_at` (timestamptz, nullable), `appeal_note` (text, nullable), `created_at`, `updated_at`
 
 ### oauth_accounts
 平台帳號連結，一個 user 可綁定多個平台。
