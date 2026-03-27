@@ -419,6 +419,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
       .catch(() => { })
       .finally(() => { if (!cancelled) setTraitsLoading(false); });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on specific fields, not the full entry object
   }, [entry?.user_id, entry?.taxon_path, entry?.fictional_species_id]);
 
   // Effective entry/allEntries: use traitsData when available

@@ -243,7 +243,7 @@ const GraphCanvas = forwardRef(function GraphCanvas({
         zoomIdentity.translate(tx, ty).scale(targetScale),
       );
     },
-  }), [requestRender]);
+  }), [requestRender, minZoom]);
 
   return (
     <canvas
