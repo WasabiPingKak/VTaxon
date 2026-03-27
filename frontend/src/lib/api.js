@@ -269,6 +269,11 @@ export const api = {
     return apiFetch(`/users/directory${q ? '?' + q : ''}`);
   },
 
+  // Appeal (user)
+  submitAppeal: (body) => apiFetch('/users/me/appeal', {
+    method: 'POST', body: JSON.stringify(body),
+  }),
+
   // Reports (public / anonymous)
   createReport: (body) => apiFetch('/reports', {
     method: 'POST', body: JSON.stringify(body),
@@ -306,6 +311,9 @@ export const api = {
   updateReport: (id, body) => apiFetch(`/reports/${id}`, {
     method: 'PATCH', body: JSON.stringify(body),
   }),
+  hideReportedUser: (reportId, body) => apiFetch(`/reports/${reportId}/hide`, {
+    method: 'POST', body: JSON.stringify(body),
+  }),
   getBlacklistPreview: (reportId) =>
     apiFetch(`/reports/${reportId}/blacklist-preview`),
   banUser: (reportId, body) => apiFetch(`/reports/${reportId}/ban`, {
@@ -315,6 +323,12 @@ export const api = {
   deleteBlacklistEntry: (id) => apiFetch(`/reports/blacklist/${id}`, {
     method: 'DELETE',
   }),
+
+  // Admin: User visibility
+  setUserVisibility: (userId, body) => apiFetch(`/admin/users/${userId}/visibility`, {
+    method: 'PATCH', body: JSON.stringify(body),
+  }),
+  getPendingReviews: () => apiFetch('/admin/users/pending-reviews'),
 
   // Live status (no session cache — always fresh)
   getLiveStatus: () => apiFetch('/live-status'),

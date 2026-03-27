@@ -27,6 +27,15 @@ class User(db.Model):
                            default=lambda: datetime.now(UTC),
                            onupdate=lambda: datetime.now(UTC))
     last_live_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    # Visibility / shadow-ban system
+    visibility = db.Column(db.Text, nullable=False, default='visible')
+    visibility_reason = db.Column(db.Text)
+    visibility_changed_at = db.Column(db.DateTime(timezone=True))
+    visibility_changed_by = db.Column(db.String(36))
+    vtuber_declaration_at = db.Column(db.DateTime(timezone=True))
+    appeal_note = db.Column(db.Text)
+
     live_primary_real_trait_id = db.Column(db.String(36),
                                            db.ForeignKey('vtuber_traits.id',
                                                          ondelete='SET NULL'))
@@ -68,6 +77,13 @@ class User(db.Model):
             'profile_data': self._computed_profile_data(),
             'live_primary_real_trait_id': self.live_primary_real_trait_id,
             'live_primary_fictional_trait_id': self.live_primary_fictional_trait_id,
+            'visibility': self.visibility or 'visible',
+            'visibility_reason': self.visibility_reason,
+            'visibility_changed_at': (self.visibility_changed_at.isoformat()
+                                      if self.visibility_changed_at else None),
+            'vtuber_declaration_at': (self.vtuber_declaration_at.isoformat()
+                                      if self.vtuber_declaration_at else None),
+            'appeal_note': self.appeal_note,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
         }

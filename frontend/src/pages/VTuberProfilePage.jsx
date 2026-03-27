@@ -137,6 +137,38 @@ export default function VTuberProfilePage() {
     );
   }
 
+  // Shadow ban: show restricted view for hidden/pending_review users
+  const isHidden = user.visibility && user.visibility !== 'visible';
+
+  if (isHidden) {
+    return (
+      <div style={{ maxWidth: 700, margin: '60px auto', padding: '0 20px', textAlign: 'center' }}>
+        <SEOHead title={user.display_name} noindex />
+        <div style={{
+          width: 80, height: 80, borderRadius: '50%', margin: '0 auto 16px',
+          background: 'rgba(255,255,255,0.06)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          fontSize: '2em', color: 'rgba(255,255,255,0.2)',
+        }}>
+          ?
+        </div>
+        <h2 style={{ margin: '0 0 8px', fontSize: '1.2em', color: 'rgba(255,255,255,0.4)' }}>
+          {user.display_name}
+        </h2>
+        <div style={{
+          padding: '16px', marginTop: '24px', borderRadius: '8px',
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+          color: 'rgba(255,255,255,0.5)', fontSize: '0.95em',
+        }}>
+          此帳號目前未公開顯示
+        </div>
+        <div style={{ marginTop: '24px' }}>
+          <Link to="/directory" style={{ color: '#38bdf8', fontSize: '0.9em' }}>返回圖鑑</Link>
+        </div>
+      </div>
+    );
+  }
+
   const oauthAccounts = user.oauth_accounts || [];
   const realTraits = traits.filter(t => t.taxon_id && !t.fictional_species_id);
   const fictionalTraits = traits.filter(t => t.fictional_species_id);
