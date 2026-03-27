@@ -4,7 +4,6 @@ import time
 from unittest.mock import MagicMock, patch
 
 import jwt as pyjwt
-import pytest
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from app.auth import (
@@ -16,7 +15,6 @@ from app.auth import (
     login_required,
 )
 from app.models import AuthIdAlias, User
-
 
 # ---------------------------------------------------------------------------
 # Helpers: generate a real ES256 key pair for test JWTs

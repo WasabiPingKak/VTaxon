@@ -2,9 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-
 # ---------------------------------------------------------------------------
 # Pure functions (no DB / HTTP needed)
 # ---------------------------------------------------------------------------
