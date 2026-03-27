@@ -152,6 +152,7 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     if (user) fetchGroups();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on user id only
   }, [user?.id, fetchGroups]);
 
   const handleMarkAllRead = async () => {

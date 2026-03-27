@@ -66,6 +66,7 @@ export default function SettingsFictional({ traitVersion, onTraitChange }) {
 
   useEffect(() => {
     if (user) loadTraits();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadTraits is redefined each render; keyed on user id only
   }, [user?.id, traitVersion]);
 
   async function loadTraits() {

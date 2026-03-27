@@ -162,6 +162,7 @@ export default function SettingsProfile() {
       const max = maxDaysInMonth(birthdayMonth);
       if (parseInt(birthdayDay) > max) setBirthdayDay(String(max));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only cap day when month changes, not when day itself changes
   }, [birthdayMonth]);
 
   async function handleSubmit(e) {

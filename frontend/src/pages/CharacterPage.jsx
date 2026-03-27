@@ -39,6 +39,7 @@ export default function CharacterPage() {
         .then(data => setOauthAccounts(data.oauth_accounts || []))
         .catch(err => console.error('Failed to load OAuth accounts:', err));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on user id only
   }, [user?.id]);
 
   const openPreview = useCallback(async () => {
@@ -51,6 +52,7 @@ export default function CharacterPage() {
     } catch (err) {
       console.error('Failed to load preview data:', err);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on user id only
   }, [user?.id]);
 
   function setActiveTab(tab) {

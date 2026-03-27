@@ -20,6 +20,7 @@ export default function SettingsAccounts() {
     if (user) {
       loadOAuthAccounts();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on user id only
   }, [user?.id]);
 
   async function loadOAuthAccounts() {

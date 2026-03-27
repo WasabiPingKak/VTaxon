@@ -30,6 +30,7 @@ export default function DirectoryPage() {
   // Force grid view on mobile
   useEffect(() => {
     if (isMobile && viewMode !== 'grid') setViewMode('grid');
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to mobile switch, not viewMode changes
   }, [isMobile]);
 
   const fetchData = useCallback(async (silent = false) => {
