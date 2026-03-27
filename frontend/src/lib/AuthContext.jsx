@@ -66,6 +66,7 @@ export function AuthProvider({ children }) {
       mountedRef.current = false;
       subscription.unsubscribe();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: subscribe to auth state once
   }, []);
 
   async function syncUser(session) {
@@ -284,6 +285,7 @@ export function AuthProvider({ children }) {
     signInWithGoogle, signInWithTwitch, signOut,
     linkProvider, unlinkProvider,
     ytPermissionFailed: ytPermissionModal,
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- stable functions (linkProvider, etc.) intentionally omitted
   }), [session, user, loading, signOut, ytPermissionModal]);
 
   return (

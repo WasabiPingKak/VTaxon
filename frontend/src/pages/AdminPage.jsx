@@ -1168,7 +1168,7 @@ export default function AdminPage() {
   // Re-fetch counts when section changes (counts already pre-filled by fetchAllPendingCounts)
   useEffect(() => {
     if (isAdmin) fetchAllPendingCounts();
-  }, [isAdmin, section]);
+  }, [isAdmin, section, fetchAllPendingCounts]);
 
   const handleUpdate = useCallback(() => {
     fetchRequests(activeTab);
