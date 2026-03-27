@@ -11,7 +11,7 @@ const inputStyle = {
 };
 
 export default function BreedInterceptPanel({ species, onSelectBreed, onSkip, onCancel, hasSearchedLatin }) {
-  const breeds = species._breeds || [];
+  const breeds = useMemo(() => species._breeds || [], [species._breeds]);
   const speciesInfo = species._speciesInfo || species;
   const [filter, setFilter] = useState('');
   const [debouncedFilter, setDebouncedFilter] = useState('');

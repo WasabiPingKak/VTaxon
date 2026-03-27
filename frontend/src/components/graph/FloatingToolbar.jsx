@@ -64,7 +64,8 @@ export default function FloatingToolbar({
 
   // Close expanded panel when switching away from mobile
   useEffect(() => {
-    if (!isMobile) setExpanded(false);
+    if (!isMobile) onExpandedChange?.(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onExpandedChange is a callback prop, only react to isMobile changes
   }, [isMobile]);
 
   // Close sort dropdown on outside click

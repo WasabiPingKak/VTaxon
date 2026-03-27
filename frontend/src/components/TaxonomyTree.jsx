@@ -61,6 +61,7 @@ export default function TaxonomyTree({ currentUser, filters }) {
   const selectedVtuberEntries = useMemo(() => {
     if (!selectedVtuber || !entries) return [];
     return entries.filter(e => e.user_id === selectedVtuber.user_id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on user_id, not the full object
   }, [selectedVtuber?.user_id, entries]);
 
   // Build tree
