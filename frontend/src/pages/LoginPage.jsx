@@ -119,8 +119,8 @@ export default function LoginPage() {
             <span style={{ color: '#f59e0b', fontWeight: 600, fontSize: '0.92em' }}>僅限頻道主</span>
           </div>
           <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.82em', lineHeight: 1.6 }}>
-            本服務僅供 VTuber 及 ACG 角色形象頻道主使用。尚未出道也可以註冊，只要頻道連結能識別你的身份即可。<br />
-            管理員會審核帳號資格，不符資格的帳號可能被停用。
+            本服務僅供以虛擬角色身份進行創作活動的頻道主使用。尚未出道也可以註冊，只要頻道連結能識別你的身份即可。<br />
+            管理團隊保留審核帳號資格的權利，不符標準的帳號可能會被隱藏。
           </p>
         </div>
 
