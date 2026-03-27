@@ -10,7 +10,30 @@ env:
   CLOUD_RUN_SERVICE: vtaxon-api-staging
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint backend (Ruff)
+        uses: astral-sh/ruff-action@v3
+        with:
+          src: backend/
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint frontend (ESLint)
+        working-directory: frontend
+        run: npm run lint
+
   deploy-backend:
+    needs: [lint]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +81,7 @@ jobs:
           CRON_SECRET=CRON_SECRET:latest"
 
   deploy-frontend:
+    needs: [lint]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
