@@ -53,13 +53,45 @@ export default function ShadowBanNotice() {
                   <strong>處分理由：</strong>{user.visibility_reason}
                 </div>
               )}
-              <p style={{ margin: '0 0 12px' }}>
-                這不是永久封鎖。如果您認為此判斷有誤，或已改善相關情況，
-                可以提出申訴，管理團隊會重新審核。
-              </p>
+              {user.appeal_note ? (
+                <>
+                  <div style={{
+                    padding: '12px',
+                    background: 'rgba(239,68,68,0.08)',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(239,68,68,0.15)',
+                    marginBottom: '12px',
+                  }}>
+                    <div style={{ fontWeight: 600, color: '#f87171', marginBottom: '6px' }}>
+                      申訴已審核，維持原判
+                      {user.visibility_changed_at && (
+                        <span style={{ fontWeight: 400, fontSize: '0.85em', color: 'rgba(255,255,255,0.4)', marginLeft: '8px' }}>
+                          {new Date(user.visibility_changed_at).toLocaleDateString('zh-TW')}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.9em', color: 'rgba(255,255,255,0.5)' }}>
+                      您先前的申訴說明：
+                    </div>
+                    <div style={{ marginTop: '4px', whiteSpace: 'pre-wrap' }}>{user.appeal_note}</div>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.9em', color: 'rgba(255,255,255,0.5)' }}>
+                    若您的頻道內容已有實質改變，歡迎透過其他管道聯繫管理團隊。
+                  </p>
+                </>
+              ) : (
+                <p style={{ margin: '0 0 12px' }}>
+                  這不是永久封鎖。如果您認為此判斷有誤，或已改善相關情況，
+                  可以提出申訴，管理團隊會重新審核。
+                </p>
+              )}
             </div>
 
-            {!showAppeal ? (
+            {user.appeal_note ? (
+              <button onClick={() => setDismissed(true)} style={secondaryBtnStyle}>
+                我知道了
+              </button>
+            ) : !showAppeal ? (
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={() => setShowAppeal(true)} style={primaryBtnStyle}>
                   提出申訴

@@ -227,7 +227,10 @@ def set_user_visibility(user_id):
     user.visibility_reason = reason
     user.visibility_changed_at = datetime.now(UTC)
     user.visibility_changed_by = g.current_user_id
-    user.appeal_note = None
+    # Only clear appeal_note when restoring visibility;
+    # keep it when rejecting so frontend can detect "appeal rejected"
+    if new_visibility == 'visible':
+        user.appeal_note = None
 
     db.session.commit()
     invalidate_tree_cache()
