@@ -394,7 +394,7 @@ const ReportCard = memo(function ReportCard({ req, onUpdate }) {
     setHideLoading(true);
     try {
       await api.hideReportedUser(req.id, {
-        reason: '不符收錄宗旨',
+        reason: '您的頻道內容以真人形象為主，不符合本服務的收錄標準',
         admin_note: note || undefined,
       });
       onUpdate();
