@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import 'flag-icons/css/flag-icons.min.css';
 import FilterDropdown from './FilterDropdown';
-import COUNTRIES, { getCountryName } from '../../lib/countries';
+import { getCountryName } from '../../lib/countries';
 import useIsMobile from '../../hooks/useIsMobile';
 
 const SORT_OPTIONS = [
@@ -245,7 +245,7 @@ export default function DirectoryFilters({
       {/* Row 3: Active chips */}
       {chips.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          {chips.map((chip, i) => (
+          {chips.map((chip) => (
             <span
               key={`${chip.key}-${chip.value}`}
               style={{

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
 import { formatAltNamesFull, altNamesTooltip } from '../lib/altNames';
 import { displayScientificName } from '../lib/speciesName';

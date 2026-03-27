@@ -30,7 +30,7 @@ if (typeof document !== 'undefined' && !document.getElementById('vtaxon-pulse-st
 }
 
 export default function TaxonomyTree({ currentUser, filters }) {
-  const { liveUserIds, liveStreams } = useLiveStatus();
+  const { liveUserIds } = useLiveStatus();
   const [entries, setEntries] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

@@ -8,7 +8,7 @@ import {
   FOCUSED_COLOR, FOCUSED_GLOW, CLOSE_COLOR, CLOSE_GLOW,
   LIVE_COLOR, LIVE_GLOW,
   EDGE_ALPHA, EDGE_GLOW_BLUR,
-  LABEL_COLOR, LABEL_DIM, COUNT_BADGE_BG, COUNT_BADGE_TEXT,
+  LABEL_COLOR, LABEL_DIM,
 } from './colors.js';
 import { getActiveFilterBadges, getSortBadge } from '../../lib/filterBadges.js';
 import { getFlagImage } from '../../lib/flagImages.js';
@@ -99,18 +99,6 @@ function drawWrappedText(ctx, lines, x, startY, lineHeight) {
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i], x, startY + i * lineHeight);
   }
-}
-
-/** Truncate text to fit maxWidth, appending '…'. Uses current ctx.font. */
-function truncateText(ctx, text, maxWidth) {
-  if (!text) return '';
-  if (ctx.measureText(text).width <= maxWidth) return text;
-  let t = text;
-  const ellW = ctx.measureText('\u2026').width;
-  while (t.length > 1 && ctx.measureText(t).width + ellW > maxWidth) {
-    t = t.slice(0, -1);
-  }
-  return t + '\u2026';
 }
 
 // ── Edge flash alpha (synced with node flash double-pulse) ──
