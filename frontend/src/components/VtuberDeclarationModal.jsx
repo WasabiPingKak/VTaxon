@@ -41,7 +41,7 @@ export default function VtuberDeclarationModal() {
             為了維護社群品質，請確認您符合以下條件後再繼續使用：
           </p>
           <ul style={{ margin: '0 0 12px', paddingLeft: '20px' }}>
-            <li>您的頻道以虛擬形象（V 皮）活動為主</li>
+            <li>您的頻道以虛擬形象活動為主</li>
             <li>偶爾露臉不影響資格，但虛擬形象應為您的主要活動身份</li>
           </ul>
           <p style={{ margin: 0, fontSize: '0.9em', color: 'rgba(255,255,255,0.6)' }}>
