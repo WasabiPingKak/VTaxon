@@ -391,10 +391,25 @@ const ReportCard = memo(function ReportCard({ req, onUpdate }) {
   };
 
   const handleHide = async () => {
+    const reason = '您的頻道內容以真人形象為主，不符合本服務的收錄標準';
+    const userName = req.reported_user?.display_name || '此使用者';
+    const confirmed = window.confirm(
+      `即將隱藏「${userName}」\n\n`
+      + `對方下次登入時會看到以下通知：\n`
+      + `────────────────\n`
+      + `帳號已被暫時隱藏\n\n`
+      + `經管理團隊審核，您的帳號目前已從分類樹和目錄中隱藏。\n`
+      + `處分理由：${reason}\n\n`
+      + `這不是永久封鎖。如果您認為此判斷有誤，或已改善相關情況，可以提出申訴，管理團隊會重新審核。\n`
+      + `────────────────\n\n`
+      + `確定要執行嗎？`
+    );
+    if (!confirmed) return;
+
     setHideLoading(true);
     try {
       await api.hideReportedUser(req.id, {
-        reason: '您的頻道內容以真人形象為主，不符合本服務的收錄標準',
+        reason,
         admin_note: note || undefined,
       });
       onUpdate();
