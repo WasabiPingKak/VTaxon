@@ -216,7 +216,8 @@ export const api = {
   }),
 
   // Traits
-  getTraits: (userId: string) => apiFetch<VtuberTrait[]>(`/traits?user_id=${userId}`),
+  getTraits: (userId: string) =>
+    apiFetch<{ traits: VtuberTrait[] }>(`/traits?user_id=${userId}`).then(d => d.traits),
   createTrait: (body: Partial<VtuberTrait>) => apiFetch<VtuberTrait>('/traits', {
     method: 'POST', body: JSON.stringify(body),
   }).then(r => { window.dispatchEvent(new CustomEvent('vtaxon:traits-changed')); return r; }),

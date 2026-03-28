@@ -163,8 +163,7 @@ export default function SettingsRealSpecies({ traitVersion, onTraitChange }: Set
 
   async function loadTraits() {
     try {
-      const data = await api.getTraits(user!.id) as unknown as { traits: TraitData[] };
-      const allTraits = data.traits || [];
+      const allTraits = await api.getTraits(user!.id) as unknown as TraitData[];
       setTraits(allTraits.filter(t => t.taxon_id));
       setTotalTraitCount(allTraits.length);
     } catch (err) {

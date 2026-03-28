@@ -476,7 +476,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
     api.getTraits(entry.user_id)
       .then(data => {
         if (cancelled) return;
-        const traits = (data as unknown as { traits?: TraitApiItem[] }).traits || [];
+        const traits = data as unknown as TraitApiItem[];
         if (traits.length > 0) {
           setTraitsData(traits.map(t => mapTraitToEntry(t, entry as DetailEntry)));
         }
