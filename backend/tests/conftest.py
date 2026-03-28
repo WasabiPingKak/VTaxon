@@ -6,12 +6,12 @@ from app import create_app
 from app.extensions import db as _db
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def app():
     """Create a Flask application configured for testing."""
-    app = create_app('testing')
-    app.config['SUPABASE_URL'] = 'https://fake.supabase.co'
-    app.config['SUPABASE_JWT_SECRET'] = 'test-secret'  # pragma: allowlist secret
+    app = create_app("testing")
+    app.config["SUPABASE_URL"] = "https://fake.supabase.co"
+    app.config["SUPABASE_JWT_SECRET"] = "test-secret"  # pragma: allowlist secret
     with app.app_context():
         _db.create_all()
         yield app
