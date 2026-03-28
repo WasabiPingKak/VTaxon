@@ -227,18 +227,18 @@ export const api = {
     .then(r => { window.dispatchEvent(new CustomEvent('vtaxon:traits-changed')); return r; }),
 
   // Taxonomy (session-cached)
-  getTaxonomyTree: async (qs = ''): Promise<TreeEntry[]> => {
+  getTaxonomyTree: async (qs = ''): Promise<{ entries: TreeEntry[] }> => {
     const key = 'real' + qs;
-    if (treeCache.has(key)) return treeCache.get(key)!;
-    const data = await apiFetch<TreeEntry[]>(`/taxonomy/tree${qs}`);
-    boundedSet(treeCache, key, data);
+    if (treeCache.has(key)) return { entries: treeCache.get(key)! };
+    const data = await apiFetch<{ entries: TreeEntry[] }>(`/taxonomy/tree${qs}`);
+    boundedSet(treeCache, key, data.entries);
     return data;
   },
-  getFictionalTree: async (qs = ''): Promise<TreeEntry[]> => {
+  getFictionalTree: async (qs = ''): Promise<{ entries: TreeEntry[] }> => {
     const key = 'fictional' + qs;
-    if (treeCache.has(key)) return treeCache.get(key)!;
-    const data = await apiFetch<TreeEntry[]>(`/taxonomy/fictional-tree${qs}`);
-    boundedSet(treeCache, key, data);
+    if (treeCache.has(key)) return { entries: treeCache.get(key)! };
+    const data = await apiFetch<{ entries: TreeEntry[] }>(`/taxonomy/fictional-tree${qs}`);
+    boundedSet(treeCache, key, data.entries);
     return data;
   },
   clearTreeCache: (): void => { treeCache.clear(); },

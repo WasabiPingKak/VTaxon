@@ -114,12 +114,11 @@ const TaxonomyGraph = forwardRef<TaxonomyGraphHandle, TaxonomyGraphProps>(functi
   const fetchTreeData = useCallback(async ({ refresh = false } = {}): Promise<{ entries: TreeEntry[]; fictionalEntries: TreeEntry[] }> => {
     const qs = refresh ? '?refresh=1' : '';
     const [realData, fictData] = await Promise.all([
-      api.getTaxonomyTree(qs).catch(() => [] as TreeEntry[]),
-      api.getFictionalTree(qs).catch(() => [] as TreeEntry[]),
+      api.getTaxonomyTree(qs).catch(() => ({ entries: [] as TreeEntry[] })),
+      api.getFictionalTree(qs).catch(() => ({ entries: [] as TreeEntry[] })),
     ]);
-    // API returns TreeEntry[] directly
-    const e = Array.isArray(realData) ? realData : [];
-    const fe = Array.isArray(fictData) ? fictData : [];
+    const e = realData.entries || [];
+    const fe = fictData.entries || [];
     setEntries(e);
     setFictionalEntries(fe);
     return { entries: e, fictionalEntries: fe };

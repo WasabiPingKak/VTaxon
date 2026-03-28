@@ -51,8 +51,7 @@ export default function TaxonomyTree({ currentUser, filters }: TaxonomyTreeProps
     api.getTaxonomyTree()
       .then(data => {
         if (cancelled) return;
-        const result = data as unknown as { entries?: TreeEntry[] } | TreeEntry[];
-        setEntries(Array.isArray(result) ? result : result.entries || []);
+        setEntries(data.entries || []);
       })
       .catch(err => {
         if (cancelled) return;
