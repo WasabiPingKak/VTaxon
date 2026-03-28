@@ -46,7 +46,8 @@ def dispatch_task(
     if not _PROJECT_ID or not _SERVICE_URL:
         logger.error(
             "Cloud Tasks config incomplete: PROJECT=%s, SERVICE_URL=%s",
-            _PROJECT_ID, _SERVICE_URL,
+            _PROJECT_ID,
+            _SERVICE_URL,
         )
         return None
 
@@ -58,10 +59,7 @@ def dispatch_task(
         query = "&".join(f"{k}={v}" for k, v in params.items())
         url = f"{url}?{query}"
 
-    http_method = (
-        tasks_v2.HttpMethod.POST if method == "POST"
-        else tasks_v2.HttpMethod.GET
-    )
+    http_method = tasks_v2.HttpMethod.POST if method == "POST" else tasks_v2.HttpMethod.GET
 
     task = {
         "http_request": {
@@ -72,9 +70,7 @@ def dispatch_task(
     }
 
     try:
-        created = client.create_task(
-            request={"parent": queue_path, "task": task}
-        )
+        created = client.create_task(request={"parent": queue_path, "task": task})
         logger.info("Cloud Task created: %s", created.name)
         return created.name
     except GoogleAPICallError:

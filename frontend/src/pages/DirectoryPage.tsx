@@ -30,8 +30,6 @@ interface DirectoryFiltersState {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DirectoryItem = any;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type DirectoryData = any;
 
 interface SelectedEntry {
   user_id: string;
