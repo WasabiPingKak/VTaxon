@@ -5,8 +5,23 @@ repos:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
         exclude: 'node_modules/|frontend/dist/'
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.6
+    hooks:
+      - id: ruff
+        args: ['--config', 'backend/pyproject.toml']
+        files: ^backend/
+      - id: ruff-format
+        args: ['--config', 'backend/pyproject.toml', '--check']
+        files: ^backend/
   - repo: local
     hooks:
+      - id: frontend-lint
+        name: Run ESLint
+        entry: bash -c "cd frontend && npx eslint src/ --no-warn-ignored"
+        language: system
+        pass_filenames: false
+        files: ^frontend/src/
       - id: backend-tests
         name: Run backend tests
         entry: bash -c "cd backend && python -m pytest tests/ -x -q"
