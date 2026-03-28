@@ -101,9 +101,8 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 | Staging | `develop` | vtaxon-api-staging | vtaxon-staging.web.app |
 | Production | `main` | vtaxon-api-prod | vtaxon.com |
 
-- **所有開發都在 `develop` 分支進行**，push 後自動部署到 staging
-- **任何程式碼修改（feature、bugfix、refactor）都必須先從 `develop` 開一個獨立的 feature branch（如 `feature/xxx`、`fix/xxx`），不得直接在 `develop` 上修改。** 完成後再 merge 回 `develop`。
-- Merge `develop` → `main` 後自動部署到 production
+- Push `develop` → 自動部署到 staging；Merge `develop` → `main` → 自動部署到 production
+- Feature branch / worktree 規則見全域 `~/.claude/CLAUDE.md`
 - Staging 使用 DB 的 `staging` schema，Production 使用 `public` schema（同一個 Supabase 專案）
 - CI/CD：`.github/workflows/deploy-staging.yml` / `deploy-prod.yml`
 - DB 初始化腳本：`scripts/init_db.py`（支援 `--target staging/prod`）
@@ -114,7 +113,6 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 
 ## 開發注意事項
 
-- **Feature branch 必須使用獨立 worktree**：開發新功能時，使用 `EnterWorktree` 工具從 `develop` 建立獨立的 git worktree + feature branch。禁止在主 worktree 用 `git checkout -b` 開新分支，以避免 unstaged changes 跨分支汙染。
 - **DB schema 變更必須同時處理 staging 和 prod**：任何 ALTER TABLE、CREATE TABLE 等 schema 變更，都必須在 `supabase/migrations/` 建立 migration 腳本，且 SQL 中要分別寫 `staging.table_name` 和 `public.table_name` 兩段。修改 `supabase/init.sql` 只影響全新建庫，不會自動 migrate 已上線的資料庫。
 - 資料庫選用 Supabase 免費方案，注意儲存空間限制。
 - Google Cloud Run 有冷啟動延遲，Flask 應用應盡量縮短啟動時間（精簡 import、延遲載入非必要模組）。
