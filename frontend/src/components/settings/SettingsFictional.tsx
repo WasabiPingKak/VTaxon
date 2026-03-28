@@ -87,8 +87,7 @@ export default function SettingsFictional({ traitVersion, onTraitChange }: Setti
 
   async function loadTraits() {
     try {
-      const data = await api.getTraits(user!.id) as unknown as { traits: TraitWithFictional[] };
-      const allTraits = data.traits || [];
+      const allTraits = await api.getTraits(user!.id) as unknown as TraitWithFictional[];
       // Only fictional traits (fictional_species_id is set)
       setTraits(allTraits.filter(t => t.fictional_species_id));
       setTotalTraitCount(allTraits.length);
