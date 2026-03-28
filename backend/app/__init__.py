@@ -48,19 +48,25 @@ def create_app(config_name=None):
     from .routes.admin import admin_bp
     from .routes.auth import auth_bp
     from .routes.breeds import breeds_bp
+    from .routes.directory import directory_bp
     from .routes.fictional import fictional_bp
     from .routes.livestream import livestream_bp
     from .routes.notifications import notifications_bp
+    from .routes.oauth import oauth_bp
     from .routes.reports import reports_bp
     from .routes.seo import seo_bp
     from .routes.species import species_bp
     from .routes.ssr import ssr_bp
+    from .routes.subscriptions import subscriptions_bp
     from .routes.taxonomy import taxonomy_bp
     from .routes.traits import traits_bp
     from .routes.users import users_bp
+    from .routes.webhooks import webhooks_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(users_bp, url_prefix="/api/users")
+    app.register_blueprint(directory_bp, url_prefix="/api/users")
+    app.register_blueprint(oauth_bp, url_prefix="/api/users")
     app.register_blueprint(species_bp, url_prefix="/api/species")
     app.register_blueprint(traits_bp, url_prefix="/api/traits")
     app.register_blueprint(taxonomy_bp, url_prefix="/api/taxonomy")
@@ -70,6 +76,8 @@ def create_app(config_name=None):
     app.register_blueprint(notifications_bp, url_prefix="/api/notifications")
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
     app.register_blueprint(livestream_bp, url_prefix="/api")
+    app.register_blueprint(webhooks_bp, url_prefix="/api")
+    app.register_blueprint(subscriptions_bp, url_prefix="/api")
     app.register_blueprint(seo_bp, url_prefix="/api")
     app.register_blueprint(ssr_bp, url_prefix="/vtuber")
 
