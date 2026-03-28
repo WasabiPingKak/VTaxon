@@ -5,3 +5,11 @@ repos:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
         exclude: 'node_modules/|frontend/dist/'
+  - repo: local
+    hooks:
+      - id: backend-tests
+        name: Run backend tests
+        entry: bash -c "cd backend && python -m pytest tests/ -x -q"
+        language: system
+        pass_filenames: false
+        files: ^backend/
