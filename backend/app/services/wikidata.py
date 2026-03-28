@@ -13,20 +13,19 @@ import requests
 from opencc import OpenCC
 
 # Simplified → Traditional (Taiwan phrases) converter
-_s2twp = OpenCC('s2twp')
+_s2twp = OpenCC("s2twp")
 
-WIKIDATA_API = 'https://www.wikidata.org/w/api.php'
-USER_AGENT = 'VTaxon/1.0 (https://github.com/VTaxon)'
+WIKIDATA_API = "https://www.wikidata.org/w/api.php"
+USER_AGENT = "VTaxon/1.0 (https://github.com/VTaxon)"
 
 # Fallback chain: Taiwan Traditional Chinese → Generic Traditional → Generic Chinese
-ZH_LANGS = ('zh-tw', 'zh-hant', 'zh')
+ZH_LANGS = ("zh-tw", "zh-hant", "zh")
 
 
 def _wikidata_get(params):
     """Make a request to the Wikidata API with proper User-Agent."""
-    params.setdefault('format', 'json')
-    resp = requests.get(WIKIDATA_API, params=params,
-                        headers={'User-Agent': USER_AGENT}, timeout=10)
+    params.setdefault("format", "json")
+    resp = requests.get(WIKIDATA_API, params=params, headers={"User-Agent": USER_AGENT}, timeout=10)
     resp.raise_for_status()
     return resp.json()
 
@@ -68,20 +67,22 @@ def get_chinese_names_batch(gbif_taxon_ids):
     results = {}
     qids = list(qid_map.keys())
     for i in range(0, len(qids), 50):
-        batch = qids[i:i + 50]
-        data = _wikidata_get({
-            'action': 'wbgetentities',
-            'ids': '|'.join(batch),
-            'languages': 'zh-tw|zh-hant|zh|en',
-            'props': 'labels',
-        })
-        for qid, entity in data.get('entities', {}).items():
+        batch = qids[i : i + 50]
+        data = _wikidata_get(
+            {
+                "action": "wbgetentities",
+                "ids": "|".join(batch),
+                "languages": "zh-tw|zh-hant|zh|en",
+                "props": "labels",
+            }
+        )
+        for qid, entity in data.get("entities", {}).items():
             gbif_id = qid_map.get(qid)
             if gbif_id is None:
                 continue
-            labels = entity.get('labels', {})
+            labels = entity.get("labels", {})
             zh_name = _pick_zh_label(labels)
-            en_name = labels.get('en', {}).get('value')
+            en_name = labels.get("en", {}).get("value")
             results[gbif_id] = (zh_name, en_name)
 
     return results
@@ -91,15 +92,17 @@ def get_chinese_names_batch(gbif_taxon_ids):
 def _find_entity_by_gbif_id(gbif_taxon_id):
     """Find Wikidata entity QID by GBIF taxon ID (P846)."""
     try:
-        data = _wikidata_get({
-            'action': 'query',
-            'list': 'search',
-            'srsearch': f'haswbstatement:P846={gbif_taxon_id}',
-            'srlimit': 1,
-        })
-        results = data.get('query', {}).get('search', [])
+        data = _wikidata_get(
+            {
+                "action": "query",
+                "list": "search",
+                "srsearch": f"haswbstatement:P846={gbif_taxon_id}",
+                "srlimit": 1,
+            }
+        )
+        results = data.get("query", {}).get("search", [])
         if results:
-            return results[0]['title']  # e.g. "Q42627"
+            return results[0]["title"]  # e.g. "Q42627"
     except (requests.RequestException, ValueError, KeyError):
         pass
     return None
@@ -108,17 +111,19 @@ def _find_entity_by_gbif_id(gbif_taxon_id):
 def _get_labels(qid):
     """Fetch zh-tw and en labels for a single Wikidata entity."""
     try:
-        data = _wikidata_get({
-            'action': 'wbgetentities',
-            'ids': qid,
-            'languages': 'zh-tw|zh-hant|zh|en',
-            'props': 'labels',
-            'languagefallback': '1',
-        })
-        entity = data.get('entities', {}).get(qid, {})
-        labels = entity.get('labels', {})
+        data = _wikidata_get(
+            {
+                "action": "wbgetentities",
+                "ids": qid,
+                "languages": "zh-tw|zh-hant|zh|en",
+                "props": "labels",
+                "languagefallback": "1",
+            }
+        )
+        entity = data.get("entities", {}).get(qid, {})
+        labels = entity.get("labels", {})
         zh_name = _pick_zh_label(labels)
-        en_name = labels.get('en', {}).get('value')
+        en_name = labels.get("en", {}).get("value")
         return zh_name, en_name
     except (requests.RequestException, ValueError, KeyError):
         return None, None
@@ -133,25 +138,27 @@ def get_aliases_by_gbif_id(gbif_taxon_id):
     if not qid:
         return None
     try:
-        data = _wikidata_get({
-            'action': 'wbgetentities',
-            'ids': qid,
-            'languages': 'zh-tw|zh-hant|zh',
-            'props': 'aliases',
-        })
-        entity = data.get('entities', {}).get(qid, {})
-        all_aliases = entity.get('aliases', {})
+        data = _wikidata_get(
+            {
+                "action": "wbgetentities",
+                "ids": qid,
+                "languages": "zh-tw|zh-hant|zh",
+                "props": "aliases",
+            }
+        )
+        entity = data.get("entities", {}).get(qid, {})
+        all_aliases = entity.get("aliases", {})
         seen = set()
         result = []
         for lang in ZH_LANGS:
             for alias in all_aliases.get(lang, []):
-                value = alias.get('value')
+                value = alias.get("value")
                 if value:
                     converted = _s2twp.convert(value)
                     if converted not in seen:
                         seen.add(converted)
                         result.append(converted)
-        return ', '.join(result) if result else None
+        return ", ".join(result) if result else None
     except (requests.RequestException, ValueError, KeyError):
         return None
 
@@ -170,7 +177,7 @@ def _pick_zh_label(labels):
     """
     for lang in ZH_LANGS:
         label = labels.get(lang, {})
-        value = label.get('value')
+        value = label.get("value")
         if value:
             return _s2twp.convert(value)
     return None

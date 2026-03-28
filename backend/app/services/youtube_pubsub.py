@@ -15,14 +15,14 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-HUB_URL = 'https://pubsubhubbub.appspot.com/subscribe'
-TOPIC_TEMPLATE = 'https://www.youtube.com/xml/feeds/videos.xml?channel_id={}'
-YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3'
+HUB_URL = "https://pubsubhubbub.appspot.com/subscribe"
+TOPIC_TEMPLATE = "https://www.youtube.com/xml/feeds/videos.xml?channel_id={}"
+YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3"
 
 # Atom + YouTube XML namespaces
 NS = {
-    'atom': 'http://www.w3.org/2005/Atom',
-    'yt': 'http://www.youtube.com/xml/schemas/2015',
+    "atom": "http://www.w3.org/2005/Atom",
+    "yt": "http://www.youtube.com/xml/schemas/2015",
 }
 
 
@@ -34,11 +34,13 @@ def verify_hub_signature(secret, signature_header, body):
     """
     if not signature_header:
         return False
-    parts = signature_header.split('=', 1)
-    if len(parts) != 2 or parts[0] != 'sha1':
+    parts = signature_header.split("=", 1)
+    if len(parts) != 2 or parts[0] != "sha1":
         return False
     expected = hmac.new(
-        secret.encode(), body.encode(), hashlib.sha1,
+        secret.encode(),
+        body.encode(),
+        hashlib.sha1,
     ).hexdigest()
     return hmac.compare_digest(expected, parts[1])
 
@@ -53,7 +55,7 @@ def extract_channel_id(channel_url):
     """
     if not channel_url:
         return None
-    match = re.search(r'youtube\.com/channel/(UC[\w-]+)', channel_url)
+    match = re.search(r"youtube\.com/channel/(UC[\w-]+)", channel_url)
     return match.group(1) if match else None
 
 
@@ -65,22 +67,23 @@ def subscribe_channel(channel_id, callback_url, secret=None):
     """
     try:
         data = {
-            'hub.mode': 'subscribe',
-            'hub.topic': TOPIC_TEMPLATE.format(channel_id),
-            'hub.callback': callback_url,
-            'hub.verify': 'async',
+            "hub.mode": "subscribe",
+            "hub.topic": TOPIC_TEMPLATE.format(channel_id),
+            "hub.callback": callback_url,
+            "hub.verify": "async",
         }
         if secret:
-            data['hub.secret'] = secret
+            data["hub.secret"] = secret
         resp = requests.post(HUB_URL, data=data, timeout=15)
         if resp.status_code in (202, 204):
-            logger.info('YouTube WebSub subscribe OK for %s', channel_id)
+            logger.info("YouTube WebSub subscribe OK for %s", channel_id)
             return True
-        logger.warning('YouTube WebSub subscribe failed for %s: HTTP %s — %s',
-                     channel_id, resp.status_code, resp.text[:200])
+        logger.warning(
+            "YouTube WebSub subscribe failed for %s: HTTP %s — %s", channel_id, resp.status_code, resp.text[:200]
+        )
         return False
     except requests.RequestException as e:
-        logger.error('YouTube WebSub subscribe error for %s: %s', channel_id, e)
+        logger.error("YouTube WebSub subscribe error for %s: %s", channel_id, e)
         return False
 
 
@@ -91,22 +94,21 @@ def unsubscribe_channel(channel_id, callback_url, secret=None):
     """
     try:
         data = {
-            'hub.mode': 'unsubscribe',
-            'hub.topic': TOPIC_TEMPLATE.format(channel_id),
-            'hub.callback': callback_url,
-            'hub.verify': 'async',
+            "hub.mode": "unsubscribe",
+            "hub.topic": TOPIC_TEMPLATE.format(channel_id),
+            "hub.callback": callback_url,
+            "hub.verify": "async",
         }
         if secret:
-            data['hub.secret'] = secret
+            data["hub.secret"] = secret
         resp = requests.post(HUB_URL, data=data, timeout=15)
         if resp.status_code in (202, 204):
-            logger.info('YouTube WebSub unsubscribe OK for %s', channel_id)
+            logger.info("YouTube WebSub unsubscribe OK for %s", channel_id)
             return True
-        logger.warning('YouTube WebSub unsubscribe failed for %s: HTTP %s',
-                     channel_id, resp.status_code)
+        logger.warning("YouTube WebSub unsubscribe failed for %s: HTTP %s", channel_id, resp.status_code)
         return False
     except requests.RequestException as e:
-        logger.error('YouTube WebSub unsubscribe error for %s: %s', channel_id, e)
+        logger.error("YouTube WebSub unsubscribe error for %s: %s", channel_id, e)
         return False
 
 
@@ -118,16 +120,18 @@ def parse_feed(feed_xml):
     entries = []
     try:
         root = ET.fromstring(feed_xml)
-        for entry in root.findall('atom:entry', NS):
-            video_el = entry.find('yt:videoId', NS)
-            channel_el = entry.find('yt:channelId', NS)
+        for entry in root.findall("atom:entry", NS):
+            video_el = entry.find("yt:videoId", NS)
+            channel_el = entry.find("yt:channelId", NS)
             if video_el is not None and channel_el is not None:
-                entries.append({
-                    'video_id': video_el.text.strip(),
-                    'channel_id': channel_el.text.strip(),
-                })
+                entries.append(
+                    {
+                        "video_id": video_el.text.strip(),
+                        "channel_id": channel_el.text.strip(),
+                    }
+                )
     except ET.ParseError as e:
-        logger.error('Failed to parse YouTube Atom feed: %s', e)
+        logger.error("Failed to parse YouTube Atom feed: %s", e)
     return entries
 
 
@@ -138,36 +142,40 @@ def check_video_is_live(video_id, api_key):
     or None if not live / not a stream / error.
     """
     try:
-        resp = requests.get(f'{YOUTUBE_API_BASE}/videos', params={
-            'part': 'snippet,liveStreamingDetails',
-            'id': video_id,
-            'key': api_key,
-        }, timeout=10)
+        resp = requests.get(
+            f"{YOUTUBE_API_BASE}/videos",
+            params={
+                "part": "snippet,liveStreamingDetails",
+                "id": video_id,
+                "key": api_key,
+            },
+            timeout=10,
+        )
         resp.raise_for_status()
-        items = resp.json().get('items', [])
+        items = resp.json().get("items", [])
         if not items:
             return None
 
         item = items[0]
-        snippet = item.get('snippet', {})
-        live_details = item.get('liveStreamingDetails', {})
+        snippet = item.get("snippet", {})
+        live_details = item.get("liveStreamingDetails", {})
 
         # Must be actively live (not premiere, not upcoming)
-        if snippet.get('liveBroadcastContent') != 'live':
+        if snippet.get("liveBroadcastContent") != "live":
             return None
 
         # Must have started but not ended
-        started_at = live_details.get('actualStartTime')
-        if not started_at or live_details.get('actualEndTime'):
+        started_at = live_details.get("actualStartTime")
+        if not started_at or live_details.get("actualEndTime"):
             return None
 
         return {
-            'is_live': True,
-            'title': snippet.get('title', ''),
-            'started_at': started_at,
+            "is_live": True,
+            "title": snippet.get("title", ""),
+            "started_at": started_at,
         }
     except requests.RequestException as e:
-        logger.error('YouTube API check_video_is_live error for %s: %s', video_id, e)
+        logger.error("YouTube API check_video_is_live error for %s: %s", video_id, e)
         return None
 
 
@@ -180,20 +188,24 @@ def check_streams_ended(video_ids, api_key):
     ended = set()
     # Process in batches of 50 (YouTube API limit)
     for i in range(0, len(video_ids), 50):
-        batch = video_ids[i:i + 50]
+        batch = video_ids[i : i + 50]
         try:
-            resp = requests.get(f'{YOUTUBE_API_BASE}/videos', params={
-                'part': 'liveStreamingDetails,status',
-                'id': ','.join(batch),
-                'key': api_key,
-            }, timeout=10)
+            resp = requests.get(
+                f"{YOUTUBE_API_BASE}/videos",
+                params={
+                    "part": "liveStreamingDetails,status",
+                    "id": ",".join(batch),
+                    "key": api_key,
+                },
+                timeout=10,
+            )
             resp.raise_for_status()
-            items = resp.json().get('items', [])
+            items = resp.json().get("items", [])
 
             # Build lookup of returned items
             found = {}
             for item in items:
-                found[item['id']] = item
+                found[item["id"]] = item
 
             for vid in batch:
                 if vid not in found:
@@ -201,19 +213,19 @@ def check_streams_ended(video_ids, api_key):
                     ended.add(vid)
                     continue
                 item = found[vid]
-                live_details = item.get('liveStreamingDetails', {})
-                status = item.get('status', {})
+                live_details = item.get("liveStreamingDetails", {})
+                status = item.get("status", {})
 
                 # Ended if actualEndTime is set
-                if live_details.get('actualEndTime'):
+                if live_details.get("actualEndTime"):
                     ended.add(vid)
                     continue
                 # Ended if made private or unlisted
-                if status.get('privacyStatus') in ('private', 'unlisted'):
+                if status.get("privacyStatus") in ("private", "unlisted"):
                     ended.add(vid)
 
         except requests.RequestException as e:
-            logger.error('YouTube API check_streams_ended error: %s', e)
+            logger.error("YouTube API check_streams_ended error: %s", e)
             # Don't mark as ended on API error — will retry next cycle
 
     return ended

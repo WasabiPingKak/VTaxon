@@ -9,7 +9,7 @@ import ProfileInfoCard from '../components/ProfileInfoCard';
 import { displayScientificName } from '../lib/speciesName';
 import { YouTubeIcon, TwitchIcon } from '../components/SnsIcons';
 import useLiveStatus from '../hooks/useLiveStatus';
-import type { User, OAuthAccount, VtuberTrait, SpeciesCache } from '../types';
+import type { User, OAuthAccount, VtuberTrait } from '../types';
 
 const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'] as const;
 const RANK_TO_UPPER: Record<string, string> = {

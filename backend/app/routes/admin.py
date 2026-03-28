@@ -1,7 +1,7 @@
 import logging
 from datetime import UTC, datetime
 
-from flask import Blueprint, g, jsonify
+from flask import Blueprint, g, jsonify, request
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -9,7 +9,6 @@ from ..auth import admin_required
 from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
 from ..extensions import db
 from ..models import Breed, BreedRequest, FictionalSpeciesRequest, SpeciesCache, SpeciesNameReport, User, UserReport
-from ..schemas import SetVisibilitySchema, validate_with
 
 logger = logging.getLogger(__name__)
 
@@ -198,15 +197,18 @@ def transition_breeds():
 
 @admin_bp.route("/users/<user_id>/visibility", methods=["PATCH"])
 @admin_required
-@validate_with(SetVisibilitySchema)
-def set_user_visibility(data, user_id):
+def set_user_visibility(user_id):
     """Set a user's visibility (visible/hidden). Admin only."""
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    new_visibility = data["visibility"]
-    reason = data.get("reason") or None
+    data = request.get_json() or {}
+    new_visibility = data.get("visibility")
+    if new_visibility not in ("visible", "hidden"):
+        return jsonify({"error": "visibility must be visible or hidden"}), 400
+
+    reason = (data.get("reason") or "").strip() or None
 
     user.visibility = new_visibility
     user.visibility_reason = reason

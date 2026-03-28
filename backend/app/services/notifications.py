@@ -2,36 +2,35 @@ from ..extensions import db
 from ..models import Notification
 
 TITLE_MAP = {
-    'fictional_request': {
-        'received':    '虛構物種申請已排入待辦',
-        'in_progress': '虛構物種申請處理中',
-        'completed':   '虛構物種申請已完成',
-        'rejected':    '虛構物種申請不處理',
-        'approved':    '虛構物種申請已批准',  # 向下相容
+    "fictional_request": {
+        "received": "虛構物種申請已排入待辦",
+        "in_progress": "虛構物種申請處理中",
+        "completed": "虛構物種申請已完成",
+        "rejected": "虛構物種申請不處理",
+        "approved": "虛構物種申請已批准",  # 向下相容
     },
-    'breed_request': {
-        'received':    '品種申請已排入待辦',
-        'in_progress': '品種申請處理中',
-        'completed':   '品種申請已完成',
-        'rejected':    '品種申請不處理',
-        'approved':    '品種申請已批准',
+    "breed_request": {
+        "received": "品種申請已排入待辦",
+        "in_progress": "品種申請處理中",
+        "completed": "品種申請已完成",
+        "rejected": "品種申請不處理",
+        "approved": "品種申請已批准",
     },
-    'species_name_report': {
-        'received':    '名稱回報已排入待辦',
-        'in_progress': '名稱回報處理中',
-        'completed':   '名稱回報已完成',
-        'rejected':    '名稱回報不處理',
+    "species_name_report": {
+        "received": "名稱回報已排入待辦",
+        "in_progress": "名稱回報處理中",
+        "completed": "名稱回報已完成",
+        "rejected": "名稱回報不處理",
     },
-    'report': {
-        'investigating': '帳號檢舉調查中',
-        'confirmed':     '帳號檢舉已確認處理',
-        'dismissed':     '帳號檢舉不處理',
+    "report": {
+        "investigating": "帳號檢舉調查中",
+        "confirmed": "帳號檢舉已確認處理",
+        "dismissed": "帳號檢舉不處理",
     },
 }
 
 
-def create_notification(user_id, type_, reference_id, status, admin_note=None,
-                        subject_name=None):
+def create_notification(user_id, type_, reference_id, status, admin_note=None, subject_name=None):
     if not user_id:
         return
     titles = TITLE_MAP.get(type_, {})
@@ -40,7 +39,7 @@ def create_notification(user_id, type_, reference_id, status, admin_note=None,
         return
     if subject_name:
         title = f"{title}：{subject_name}"
-    message = (admin_note or '')[:500] or None
+    message = (admin_note or "")[:500] or None
     notif = Notification(
         user_id=str(user_id),
         type=type_,

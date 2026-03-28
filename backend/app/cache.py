@@ -16,7 +16,7 @@ import time
 class TTLCache:
     """Simple in-memory cache with TTL expiration and manual invalidation."""
 
-    __slots__ = ('_data', '_ts', '_ttl')
+    __slots__ = ("_data", "_ts", "_ttl")
 
     def __init__(self, ttl: int = 300):
         self._data = None

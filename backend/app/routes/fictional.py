@@ -3,7 +3,6 @@ from flask import Blueprint, g, jsonify, request
 from ..auth import admin_required, login_required
 from ..extensions import db
 from ..models import FictionalSpecies, FictionalSpeciesRequest
-from ..schemas import CreateFictionalRequestSchema, UpdateRequestStatusSchema, validate_with
 
 fictional_bp = Blueprint("fictional", __name__)
 
@@ -41,24 +40,23 @@ def list_requests():
 
 @fictional_bp.route("/requests/<int:req_id>", methods=["PATCH"])
 @admin_required
-@validate_with(UpdateRequestStatusSchema)
-def update_request(data, req_id):
+def update_request(req_id):
     req = db.session.get(FictionalSpeciesRequest, req_id)
     if not req:
         return jsonify({"error": "Request not found"}), 404
 
-    req.status = data["status"]
+    data = request.get_json() or {}
+    new_status = data.get("status")
+    if new_status not in ("received", "in_progress", "completed", "rejected"):
+        return jsonify({"error": "status must be received, in_progress, completed, or rejected"}), 400
+
+    req.status = new_status
     req.admin_note = data.get("admin_note") or req.admin_note
 
     from ..services.notifications import create_notification
 
     create_notification(
-        req.user_id,
-        "fictional_request",
-        req.id,
-        data["status"],
-        req.admin_note,
-        subject_name=req.name_zh or req.name_en,
+        req.user_id, "fictional_request", req.id, new_status, req.admin_note, subject_name=req.name_zh or req.name_en
     )
 
     db.session.commit()
@@ -68,15 +66,36 @@ def update_request(data, req_id):
 
 @fictional_bp.route("/requests", methods=["POST"])
 @login_required
-@validate_with(CreateFictionalRequestSchema)
-def create_request(data):
+def create_request():
+    data = request.get_json() or {}
+
+    FIELD_LIMITS = {
+        "name_zh": (1, 30),
+        "name_en": (1, 60),
+        "suggested_origin": (2, 60),
+        "description": (10, 500),
+    }
+
+    name_zh = (data.get("name_zh") or "").strip()
+    name_en = (data.get("name_en") or "").strip()
+    suggested_origin = (data.get("suggested_origin") or "").strip()
+    description = (data.get("description") or "").strip()
+
+    if not name_zh:
+        return jsonify({"error": "name_zh is required"}), 400
+
+    for field, (min_len, max_len) in FIELD_LIMITS.items():
+        val = locals().get(field, "")
+        if val and (len(val) < min_len or len(val) > max_len):
+            return jsonify({"error": f"{field} must be {min_len}-{max_len} characters"}), 400
+
     req = FictionalSpeciesRequest(
         user_id=g.current_user_id,
-        name_zh=data["name_zh"],
-        name_en=data.get("name_en") or None,
-        suggested_origin=data.get("suggested_origin") or None,
-        suggested_sub_origin=data.get("suggested_sub_origin") or None,
-        description=data.get("description") or None,
+        name_zh=name_zh,
+        name_en=name_en or None,
+        suggested_origin=suggested_origin or None,
+        suggested_sub_origin=(data.get("suggested_sub_origin") or "").strip() or None,
+        description=description or None,
     )
     db.session.add(req)
     db.session.commit()

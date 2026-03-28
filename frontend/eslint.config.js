@@ -43,6 +43,7 @@ export default [
     },
   },
   {
-    ignores: ["dist/", "node_modules/", "scripts/"],
+    // public/ 內為靜態資源（GA snippet 等），由瀏覽器直接載入，不經過打包與 lint
+    ignores: ["dist/", "node_modules/", "scripts/", "public/"],
   },
 ];

@@ -32,9 +32,9 @@ from .wikidata import get_aliases_by_gbif_id, get_chinese_name_by_gbif_id
 
 logger = logging.getLogger(__name__)
 
-GBIF_BASE = 'https://api.gbif.org/v1'
+GBIF_BASE = "https://api.gbif.org/v1"
 
-RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']
+RANK_ORDER = ["kingdom", "phylum", "class", "order", "family", "genus", "species"]
 _MAX_SYNONYM_RESOLVES = 8
 
 
@@ -50,6 +50,7 @@ def clear_chinese_name_caches():
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def suggest_species(query, limit=10):
     """Autocomplete species search using GBIF /species/suggest.
 
@@ -58,10 +59,14 @@ def suggest_species(query, limit=10):
     """
     # Request more results to capture subspecies alongside species
     fetch_limit = min(limit * 3, 60)
-    resp = requests.get(f'{GBIF_BASE}/species/suggest', params={
-        'q': query,
-        'limit': fetch_limit,
-    }, timeout=10)
+    resp = requests.get(
+        f"{GBIF_BASE}/species/suggest",
+        params={
+            "q": query,
+            "limit": fetch_limit,
+        },
+        timeout=10,
+    )
     resp.raise_for_status()
     results = resp.json()  # suggest returns a plain list, not {results: [...]}
 
@@ -69,24 +74,37 @@ def suggest_species(query, limit=10):
     seen_keys = set()
     synonym_attempts = 0
     for r in results:
-        key = r.get('key')
+        key = r.get("key")
         if not key or key in seen_keys:
             continue
-        status = (r.get('status') or '').upper()
-        rank = (r.get('rank') or '').upper()
-        if rank not in ('KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'SUBCLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY', 'FORM'):
+        status = (r.get("status") or "").upper()
+        rank = (r.get("rank") or "").upper()
+        if rank not in (
+            "KINGDOM",
+            "PHYLUM",
+            "SUBPHYLUM",
+            "CLASS",
+            "SUBCLASS",
+            "ORDER",
+            "FAMILY",
+            "GENUS",
+            "SPECIES",
+            "SUBSPECIES",
+            "VARIETY",
+            "FORM",
+        ):
             continue
         # SYNONYM → resolve to accepted species (cap to avoid HTTP flood)
-        if status == 'SYNONYM':
+        if status == "SYNONYM":
             if synonym_attempts >= _MAX_SYNONYM_RESOLVES:
                 continue
             synonym_attempts += 1
-            resolved = _resolve_synonym(key, r.get('canonicalName'), seen_keys=seen_keys)
-            if resolved and resolved['taxon_id'] not in seen_keys:
-                seen_keys.add(resolved['taxon_id'])
+            resolved = _resolve_synonym(key, r.get("canonicalName"), seen_keys=seen_keys)
+            if resolved and resolved["taxon_id"] not in seen_keys:
+                seen_keys.add(resolved["taxon_id"])
                 species_list.append(resolved)
             continue
-        if status and status != 'ACCEPTED':
+        if status and status != "ACCEPTED":
             continue
         seen_keys.add(key)
         species_list.append(_gbif_result_to_dict(r, key))
@@ -95,8 +113,8 @@ def suggest_species(query, limit=10):
     if not species_list:
         matched = match_species(query)
         if matched:
-            matched.pop('match_type', None)
-            matched.pop('confidence', None)
+            matched.pop("match_type", None)
+            matched.pop("confidence", None)
             species_list.append(matched)
         else:
             species_list = _fallback_taicol_by_name(query, limit=limit)
@@ -105,7 +123,7 @@ def suggest_species(query, limit=10):
     _enrich_chinese_names(species_list)
 
     # Sort by taxon_path for taxonomy tree order
-    species_list.sort(key=lambda s: s.get('taxon_path') or '')
+    species_list.sort(key=lambda s: s.get("taxon_path") or "")
 
     return species_list
 
@@ -115,36 +133,40 @@ def match_species(name):
 
     Returns a single authoritative Backbone result or None.
     """
-    resp = requests.get(f'{GBIF_BASE}/species/match', params={
-        'name': name,
-        'verbose': 'false',
-    }, timeout=10)
+    resp = requests.get(
+        f"{GBIF_BASE}/species/match",
+        params={
+            "name": name,
+            "verbose": "false",
+        },
+        timeout=10,
+    )
     resp.raise_for_status()
     data = resp.json()
 
-    if data.get('matchType') == 'NONE':
+    if data.get("matchType") == "NONE":
         return None
 
-    usage_key = data.get('usageKey')
+    usage_key = data.get("usageKey")
     if not usage_key:
         return None
 
     # If SYNONYM, resolve to accepted species
-    status = (data.get('status') or '').upper()
-    if status == 'SYNONYM':
-        accepted_key = data.get('acceptedUsageKey')
+    status = (data.get("status") or "").upper()
+    if status == "SYNONYM":
+        accepted_key = data.get("acceptedUsageKey")
         if accepted_key:
-            synonym_name = data.get('canonicalName')
+            synonym_name = data.get("canonicalName")
             resolved = _resolve_synonym(usage_key, synonym_name)
             if resolved:
-                resolved['match_type'] = data.get('matchType')
-                resolved['confidence'] = data.get('confidence')
+                resolved["match_type"] = data.get("matchType")
+                resolved["confidence"] = data.get("confidence")
                 _enrich_chinese_names([resolved])
                 return resolved
 
     result = _gbif_result_to_dict(data, usage_key)
-    result['match_type'] = data.get('matchType')
-    result['confidence'] = data.get('confidence')
+    result["match_type"] = data.get("matchType")
+    result["confidence"] = data.get("confidence")
 
     # Enrich with Chinese names
     _enrich_chinese_names([result])
@@ -164,10 +186,8 @@ def search_species(query, limit=20):
         local_results = _search_local_cache_chinese(query, limit=limit)
         taicol_results = _search_via_taicol(query, limit=limit)
         # Merge: local first, then TaiCOL (deduped by taxon_id)
-        seen = {sp['taxon_id'] for sp in local_results}
-        species_results = local_results + [
-            sp for sp in taicol_results if sp['taxon_id'] not in seen
-        ]
+        seen = {sp["taxon_id"] for sp in local_results}
+        species_results = local_results + [sp for sp in taicol_results if sp["taxon_id"] not in seen]
     else:
         species_results = suggest_species(query, limit=limit)
     return breed_results + species_results
@@ -186,20 +206,19 @@ def search_species_stream(query, limit=10):
     # Phase 1: Local breed search — instant results
     breed_results = _search_breeds(query, limit=limit)
     for br in breed_results:
-        yield json.dumps(br, ensure_ascii=False) + '\n'
+        yield json.dumps(br, ensure_ascii=False) + "\n"
 
     # Phase 1.5: Local species_cache Chinese name search (CJK queries only)
     local_seen = set()
     if _has_cjk(query):
         local_results = _search_local_cache_chinese(query, limit=limit)
         for sp in local_results:
-            local_seen.add(sp['taxon_id'])
-            yield json.dumps(sp, ensure_ascii=False) + '\n'
+            local_seen.add(sp["taxon_id"])
+            yield json.dumps(sp, ensure_ascii=False) + "\n"
 
     # Phase 2: GBIF species search — streaming
     if _has_cjk(query):
-        yield from _search_via_taicol_stream(query, limit=limit,
-                                             exclude_ids=local_seen)
+        yield from _search_via_taicol_stream(query, limit=limit, exclude_ids=local_seen)
     else:
         yield from _suggest_species_stream(query, limit=limit)
 
@@ -214,16 +233,11 @@ def _search_breeds(query, limit=10):
         return []
 
     if _has_cjk(query):
-        breeds = (Breed.query
-                  .filter(Breed.name_zh.isnot(None))
-                  .filter(Breed.name_zh.like(f'{query}%'))
-                  .limit(limit)
-                  .all())
+        breeds = (
+            Breed.query.filter(Breed.name_zh.isnot(None)).filter(Breed.name_zh.like(f"{query}%")).limit(limit).all()
+        )
     else:
-        breeds = (Breed.query
-                  .filter(func.lower(Breed.name_en).like(f'{query.lower()}%'))
-                  .limit(limit)
-                  .all())
+        breeds = Breed.query.filter(func.lower(Breed.name_en).like(f"{query.lower()}%")).limit(limit).all()
 
     results = []
     for breed in breeds:
@@ -236,27 +250,27 @@ def _search_breeds(query, limit=10):
             _fill_missing_rank_zh(species_dict, species)
 
         result = {
-            'result_type': 'breed',
-            'breed': breed.to_dict(),
-            'taxon_id': breed.taxon_id,
-            'scientific_name': species_dict.get('scientific_name', ''),
-            'canonical_name': species_dict.get('scientific_name', ''),
-            'common_name_en': species_dict.get('common_name_en'),
-            'common_name_zh': species_dict.get('common_name_zh'),
-            'taxon_rank': species_dict.get('taxon_rank'),
-            'taxon_path': species_dict.get('taxon_path'),
-            'kingdom': species_dict.get('kingdom'),
-            'phylum': species_dict.get('phylum'),
-            'class': species_dict.get('class'),
-            'order': species_dict.get('order'),
-            'family': species_dict.get('family'),
-            'genus': species_dict.get('genus'),
-            'kingdom_zh': species_dict.get('kingdom_zh'),
-            'phylum_zh': species_dict.get('phylum_zh'),
-            'class_zh': species_dict.get('class_zh'),
-            'order_zh': species_dict.get('order_zh'),
-            'family_zh': species_dict.get('family_zh'),
-            'genus_zh': species_dict.get('genus_zh'),
+            "result_type": "breed",
+            "breed": breed.to_dict(),
+            "taxon_id": breed.taxon_id,
+            "scientific_name": species_dict.get("scientific_name", ""),
+            "canonical_name": species_dict.get("scientific_name", ""),
+            "common_name_en": species_dict.get("common_name_en"),
+            "common_name_zh": species_dict.get("common_name_zh"),
+            "taxon_rank": species_dict.get("taxon_rank"),
+            "taxon_path": species_dict.get("taxon_path"),
+            "kingdom": species_dict.get("kingdom"),
+            "phylum": species_dict.get("phylum"),
+            "class": species_dict.get("class"),
+            "order": species_dict.get("order"),
+            "family": species_dict.get("family"),
+            "genus": species_dict.get("genus"),
+            "kingdom_zh": species_dict.get("kingdom_zh"),
+            "phylum_zh": species_dict.get("phylum_zh"),
+            "class_zh": species_dict.get("class_zh"),
+            "order_zh": species_dict.get("order_zh"),
+            "family_zh": species_dict.get("family_zh"),
+            "genus_zh": species_dict.get("genus_zh"),
         }
         results.append(result)
 
@@ -274,13 +288,16 @@ def _search_local_cache_chinese(query, limit=10):
         return []
 
     # Search common_name_zh and alternative_names_zh with substring match
-    rows = (SpeciesCache.query
-            .filter(db.or_(
-                SpeciesCache.common_name_zh.like(f'%{query}%'),
-                SpeciesCache.alternative_names_zh.like(f'%{query}%'),
-            ))
-            .limit(limit)
-            .all())
+    rows = (
+        SpeciesCache.query.filter(
+            db.or_(
+                SpeciesCache.common_name_zh.like(f"%{query}%"),
+                SpeciesCache.alternative_names_zh.like(f"%{query}%"),
+            )
+        )
+        .limit(limit)
+        .all()
+    )
 
     results = []
     for row in rows:
@@ -293,10 +310,14 @@ def _search_local_cache_chinese(query, limit=10):
 def _suggest_species_stream(query, limit=10):
     """Generator: yield one NDJSON line per enriched GBIF suggest result."""
     fetch_limit = min(limit * 3, 60)
-    resp = requests.get(f'{GBIF_BASE}/species/suggest', params={
-        'q': query,
-        'limit': fetch_limit,
-    }, timeout=10)
+    resp = requests.get(
+        f"{GBIF_BASE}/species/suggest",
+        params={
+            "q": query,
+            "limit": fetch_limit,
+        },
+        timeout=10,
+    )
     resp.raise_for_status()
     raw = resp.json()
 
@@ -304,24 +325,37 @@ def _suggest_species_stream(query, limit=10):
     seen_keys = set()
     synonym_attempts = 0
     for r in raw:
-        key = r.get('key')
+        key = r.get("key")
         if not key or key in seen_keys:
             continue
-        status = (r.get('status') or '').upper()
-        rank = (r.get('rank') or '').upper()
-        if rank not in ('KINGDOM', 'PHYLUM', 'SUBPHYLUM', 'CLASS', 'SUBCLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES', 'SUBSPECIES', 'VARIETY', 'FORM'):
+        status = (r.get("status") or "").upper()
+        rank = (r.get("rank") or "").upper()
+        if rank not in (
+            "KINGDOM",
+            "PHYLUM",
+            "SUBPHYLUM",
+            "CLASS",
+            "SUBCLASS",
+            "ORDER",
+            "FAMILY",
+            "GENUS",
+            "SPECIES",
+            "SUBSPECIES",
+            "VARIETY",
+            "FORM",
+        ):
             continue
         # SYNONYM → resolve to accepted species (cap to avoid HTTP flood)
-        if status == 'SYNONYM':
+        if status == "SYNONYM":
             if synonym_attempts >= _MAX_SYNONYM_RESOLVES:
                 continue
             synonym_attempts += 1
-            resolved = _resolve_synonym(key, r.get('canonicalName'), seen_keys=seen_keys)
-            if resolved and resolved['taxon_id'] not in seen_keys:
-                seen_keys.add(resolved['taxon_id'])
+            resolved = _resolve_synonym(key, r.get("canonicalName"), seen_keys=seen_keys)
+            if resolved and resolved["taxon_id"] not in seen_keys:
+                seen_keys.add(resolved["taxon_id"])
                 species_list.append(resolved)
             continue
-        if status and status != 'ACCEPTED':
+        if status and status != "ACCEPTED":
             continue
         seen_keys.add(key)
         species_list.append(_gbif_result_to_dict(r, key))
@@ -330,15 +364,15 @@ def _suggest_species_stream(query, limit=10):
     if not species_list:
         matched = match_species(query)
         if matched:
-            matched.pop('match_type', None)
-            matched.pop('confidence', None)
+            matched.pop("match_type", None)
+            matched.pop("confidence", None)
             species_list.append(matched)
         else:
             species_list = _fallback_taicol_by_name(query, limit=limit)
 
     for sp in species_list:
         _enrich_chinese_names([sp])
-        yield json.dumps(sp, ensure_ascii=False) + '\n'
+        yield json.dumps(sp, ensure_ascii=False) + "\n"
 
 
 def _search_via_taicol_stream(query, limit=10, exclude_ids=None):
@@ -354,7 +388,7 @@ def _search_via_taicol_stream(query, limit=10, exclude_ids=None):
 
     seen_keys = set(exclude_ids or ())
     for tr in taicol_results:
-        scientific_name = tr.get('scientific_name')
+        scientific_name = tr.get("scientific_name")
         if not scientific_name:
             continue
 
@@ -366,15 +400,15 @@ def _search_via_taicol_stream(query, limit=10, exclude_ids=None):
             if not matched:
                 continue
 
-        taxon_id = matched['taxon_id']
+        taxon_id = matched["taxon_id"]
         if taxon_id in seen_keys:
             continue
         seen_keys.add(taxon_id)
 
-        if tr.get('common_name_zh') and not matched.get('common_name_zh'):
-            matched['common_name_zh'] = tr['common_name_zh']
+        if tr.get("common_name_zh") and not matched.get("common_name_zh"):
+            matched["common_name_zh"] = tr["common_name_zh"]
 
-        yield json.dumps(matched, ensure_ascii=False) + '\n'
+        yield json.dumps(matched, ensure_ascii=False) + "\n"
 
 
 def get_species(taxon_id):
@@ -393,15 +427,14 @@ def get_species(taxon_id):
         _fill_missing_rank_zh(d, cached)
         return d
 
-    resp = requests.get(f'{GBIF_BASE}/species/{taxon_id}', timeout=10)
+    resp = requests.get(f"{GBIF_BASE}/species/{taxon_id}", timeout=10)
     if resp.status_code == 404:
         return None
     resp.raise_for_status()
     data = resp.json()
 
     # Fetch Chinese name before caching
-    zh_name = _resolve_chinese_name(
-        taxon_id, data.get('canonicalName') or data.get('scientificName'))
+    zh_name = _resolve_chinese_name(taxon_id, data.get("canonicalName") or data.get("scientificName"))
 
     cached = _cache_species(data, common_name_zh=zh_name)
     if not cached:
@@ -414,9 +447,12 @@ def get_species(taxon_id):
 def _fill_missing_rank_zh(d, species):
     """Fill in missing *_zh fields from static table without overwriting existing values."""
     static_zh = get_taxonomy_zh_for_ranks(
-        kingdom=species.kingdom, phylum=species.phylum,
-        class_=species.class_, order=species.order_,
-        family=species.family, genus=species.genus,
+        kingdom=species.kingdom,
+        phylum=species.phylum,
+        class_=species.class_,
+        order=species.order_,
+        family=species.family,
+        genus=species.genus,
     )
     for key, val in static_zh.items():
         if val and not d.get(key):
@@ -425,7 +461,7 @@ def _fill_missing_rank_zh(d, species):
 
 def cache_from_search_result(gbif_data):
     """Cache a species from a GBIF search/suggest result dict."""
-    usage_key = gbif_data.get('key') or gbif_data.get('usageKey')
+    usage_key = gbif_data.get("key") or gbif_data.get("usageKey")
     if not usage_key:
         return None
 
@@ -433,12 +469,13 @@ def cache_from_search_result(gbif_data):
     if existing:
         return existing
 
-    return _cache_species(gbif_data, common_name_zh=gbif_data.get('common_name_zh'))
+    return _cache_species(gbif_data, common_name_zh=gbif_data.get("common_name_zh"))
 
 
 # ---------------------------------------------------------------------------
 # Chinese name resolution
 # ---------------------------------------------------------------------------
+
 
 @lru_cache(maxsize=500)
 def _resolve_chinese_name(taxon_id, scientific_name):
@@ -461,7 +498,7 @@ def _resolve_chinese_name(taxon_id, scientific_name):
             if zh_name:
                 return zh_name
         except (requests.RequestException, ValueError):
-            logger.debug('TaiCOL lookup failed for %s', scientific_name)
+            logger.debug("TaiCOL lookup failed for %s", scientific_name)
 
     # Fallback to Wikidata
     try:
@@ -469,7 +506,7 @@ def _resolve_chinese_name(taxon_id, scientific_name):
         if zh_name:
             return zh_name
     except (requests.RequestException, ValueError):
-        logger.debug('Wikidata lookup failed for taxon_id=%s', taxon_id)
+        logger.debug("Wikidata lookup failed for taxon_id=%s", taxon_id)
 
     return None
 
@@ -484,7 +521,7 @@ def _resolve_alternative_names(taxon_id, scientific_name, taxon_rank=None):
     # Only species-level taxa have meaningful 俗名
     if taxon_rank:
         rank_upper = taxon_rank.upper()
-        if rank_upper not in ('SPECIES', 'SUBSPECIES', 'VARIETY', 'FORM'):
+        if rank_upper not in ("SPECIES", "SUBSPECIES", "VARIETY", "FORM"):
             return None
     # TaiCOL alternative_name_c
     if scientific_name:
@@ -518,8 +555,7 @@ def resolve_missing_chinese_name(species_cache_obj):
             db.session.commit()
         except SQLAlchemyError:
             db.session.rollback()
-            logger.debug('Failed to persist Chinese name for taxon_id=%s',
-                      species_cache_obj.taxon_id)
+            logger.debug("Failed to persist Chinese name for taxon_id=%s", species_cache_obj.taxon_id)
 
 
 @lru_cache(maxsize=500)
@@ -539,30 +575,28 @@ def _resolve_rank_zh(taxon_name, rank=None):
 
     # GBIF match to get taxon_id, then Wikidata
     try:
-        params = {'name': taxon_name, 'verbose': 'false'}
+        params = {"name": taxon_name, "verbose": "false"}
         if rank:
-            params['rank'] = rank
-        resp = requests.get(f'{GBIF_BASE}/species/match',
-                            params=params, timeout=10)
+            params["rank"] = rank
+        resp = requests.get(f"{GBIF_BASE}/species/match", params=params, timeout=10)
         resp.raise_for_status()
         data = resp.json()
-        match_type = data.get('matchType', '')
-        if match_type in ('HIGHERRANK', 'NONE'):
+        match_type = data.get("matchType", "")
+        if match_type in ("HIGHERRANK", "NONE"):
             return None
-        usage_key = data.get('usageKey')
+        usage_key = data.get("usageKey")
         if usage_key:
             zh_name, _en = get_chinese_name_by_gbif_id(usage_key)
             return zh_name
     except (requests.RequestException, ValueError):
-        logger.debug('rank_zh Wikidata fallback failed for %s (rank=%s)',
-                  taxon_name, rank)
+        logger.debug("rank_zh Wikidata fallback failed for %s (rank=%s)", taxon_name, rank)
 
     return None
 
 
 def _resolve_genus_zh(genus_name):
     """Resolve Chinese name for a genus. Delegates to _resolve_rank_zh."""
-    return _resolve_rank_zh(genus_name, rank='GENUS')
+    return _resolve_rank_zh(genus_name, rank="GENUS")
 
 
 def _enrich_chinese_names(species_list):
@@ -581,91 +615,94 @@ def _enrich_chinese_names(species_list):
     """
     for sp in species_list:
         # Static override takes highest priority (corrects known errors)
-        override = get_species_zh_override(sp.get('taxon_id'))
+        override = get_species_zh_override(sp.get("taxon_id"))
         if override:
-            sp['common_name_zh'] = override
+            sp["common_name_zh"] = override
 
         # Resolve via external APIs (TaiCOL → Wikidata, with LRU in-process cache)
         # Prefer canonical_name (no author) — TaiCOL fails with author strings
-        if not sp.get('common_name_zh'):
-            sp['common_name_zh'] = _resolve_chinese_name(
-                sp['taxon_id'],
-                sp.get('canonical_name') or sp.get('scientific_name') or sp.get('canonicalName'),
+        if not sp.get("common_name_zh"):
+            sp["common_name_zh"] = _resolve_chinese_name(
+                sp["taxon_id"],
+                sp.get("canonical_name") or sp.get("scientific_name") or sp.get("canonicalName"),
             )
 
         # Fallback to DB cache when external APIs returned nothing
-        if not sp.get('common_name_zh'):
+        if not sp.get("common_name_zh"):
             try:
-                cached = db.session.get(SpeciesCache, sp['taxon_id'])
+                cached = db.session.get(SpeciesCache, sp["taxon_id"])
                 if cached:
                     if cached.common_name_zh:
-                        sp['common_name_zh'] = cached.common_name_zh
+                        sp["common_name_zh"] = cached.common_name_zh
                     if cached.alternative_names_zh:
-                        sp['alternative_names_zh'] = cached.alternative_names_zh
+                        sp["alternative_names_zh"] = cached.alternative_names_zh
             except SQLAlchemyError:
                 pass
 
         # Validate: common_name_zh must actually contain CJK characters
-        zh = sp.get('common_name_zh')
+        zh = sp.get("common_name_zh")
         if zh and not _has_cjk(zh):
-            sp['common_name_zh'] = None
+            sp["common_name_zh"] = None
 
         # Fix: strip trailing "屬" (genus suffix) for species/subspecies ranks.
         # Wikidata sometimes returns genus-level names for species-level taxa
         # (e.g. "獰貓屬" instead of "獰貓" for Caracal caracal).
-        zh = sp.get('common_name_zh')
-        taxon_rank = (sp.get('taxon_rank') or '').upper()
-        if (zh and zh.endswith('屬') and len(zh) >= 2
-                and taxon_rank in ('SPECIES', 'SUBSPECIES', 'VARIETY')):
-            sp['common_name_zh'] = zh[:-1]
+        zh = sp.get("common_name_zh")
+        taxon_rank = (sp.get("taxon_rank") or "").upper()
+        if zh and zh.endswith("屬") and len(zh) >= 2 and taxon_rank in ("SPECIES", "SUBSPECIES", "VARIETY"):
+            sp["common_name_zh"] = zh[:-1]
 
         # species_zh alias for breadcrumb consistency
-        sp['species_zh'] = sp.get('common_name_zh')
+        sp["species_zh"] = sp.get("common_name_zh")
 
         # Alternative names (俗名) — resolve if not already from DB cache
-        if not sp.get('alternative_names_zh'):
-            sp['alternative_names_zh'] = _resolve_alternative_names(
-                sp['taxon_id'],
-                sp.get('canonical_name') or sp.get('scientific_name') or sp.get('canonicalName'),
-                taxon_rank=sp.get('taxon_rank'),
+        if not sp.get("alternative_names_zh"):
+            sp["alternative_names_zh"] = _resolve_alternative_names(
+                sp["taxon_id"],
+                sp.get("canonical_name") or sp.get("scientific_name") or sp.get("canonicalName"),
+                taxon_rank=sp.get("taxon_rank"),
             )
 
         # Clean alt names: remove duplicates, genus names, non-CJK
-        sp['alternative_names_zh'] = clean_alt_names(
-            sp.get('alternative_names_zh'), sp.get('common_name_zh')
-        )
+        sp["alternative_names_zh"] = clean_alt_names(sp.get("alternative_names_zh"), sp.get("common_name_zh"))
 
         # Higher taxonomy Chinese names (static table)
         rank_zh = get_taxonomy_zh_for_ranks(
-            kingdom=sp.get('kingdom'), phylum=sp.get('phylum'),
-            class_=sp.get('class'), order=sp.get('order'),
-            family=sp.get('family'), genus=sp.get('genus'),
+            kingdom=sp.get("kingdom"),
+            phylum=sp.get("phylum"),
+            class_=sp.get("class"),
+            order=sp.get("order"),
+            family=sp.get("family"),
+            genus=sp.get("genus"),
         )
 
         # genus_zh Wikidata fallback if static table missed
-        if not rank_zh.get('genus_zh') and sp.get('genus'):
-            rank_zh['genus_zh'] = _resolve_genus_zh(sp['genus'])
+        if not rank_zh.get("genus_zh") and sp.get("genus"):
+            rank_zh["genus_zh"] = _resolve_genus_zh(sp["genus"])
 
         sp.update(rank_zh)
 
         # Fallback: for higher-rank taxa, use {rank}_zh as common_name_zh
-        if not sp.get('common_name_zh'):
-            taxon_rank = (sp.get('taxon_rank') or '').upper()
+        if not sp.get("common_name_zh"):
+            taxon_rank = (sp.get("taxon_rank") or "").upper()
             rank_key_map = {
-                'KINGDOM': 'kingdom_zh', 'PHYLUM': 'phylum_zh',
-                'CLASS': 'class_zh', 'ORDER': 'order_zh',
-                'FAMILY': 'family_zh', 'GENUS': 'genus_zh',
+                "KINGDOM": "kingdom_zh",
+                "PHYLUM": "phylum_zh",
+                "CLASS": "class_zh",
+                "ORDER": "order_zh",
+                "FAMILY": "family_zh",
+                "GENUS": "genus_zh",
             }
             zh_key = rank_key_map.get(taxon_rank)
             if zh_key and sp.get(zh_key):
-                sp['common_name_zh'] = sp[zh_key]
-                sp['species_zh'] = sp[zh_key]
+                sp["common_name_zh"] = sp[zh_key]
+                sp["species_zh"] = sp[zh_key]
 
     # Apply scientific name overrides (e.g. Felis manul → Otocolobus manul)
     for sp in species_list:
-        name_override = get_species_name_override(sp.get('taxon_id'))
+        name_override = get_species_name_override(sp.get("taxon_id"))
         if name_override:
-            sp['display_name_override'] = name_override
+            sp["display_name_override"] = name_override
 
     # Write enriched Chinese names back to DB cache
     _cache_enriched_species(species_list)
@@ -679,42 +716,47 @@ def _cache_enriched_species(species_list):
     """
     try:
         for sp in species_list:
-            taxon_id = sp.get('taxon_id')
+            taxon_id = sp.get("taxon_id")
             if not taxon_id:
                 continue
             # Skip TaiCOL-only results with pseudo IDs — not real GBIF keys
-            if sp.get('_from_taicol'):
+            if sp.get("_from_taicol"):
                 continue
             existing = db.session.get(SpeciesCache, taxon_id)
             if existing:
                 # Core taxonomy fields — always update from fresh GBIF data
                 # so corrupted/stale cache entries get self-corrected.
-                if sp.get('scientific_name') and existing.scientific_name != sp['scientific_name']:
-                    existing.scientific_name = sp['scientific_name']
-                if sp.get('taxon_rank') and existing.taxon_rank != sp['taxon_rank']:
-                    existing.taxon_rank = sp['taxon_rank']
-                if sp.get('taxon_path') and existing.taxon_path != sp['taxon_path']:
-                    existing.taxon_path = sp['taxon_path']
-                for field, attr in [('kingdom', 'kingdom'), ('phylum', 'phylum'),
-                                    ('class', 'class_'), ('order', 'order_'),
-                                    ('family', 'family'), ('genus', 'genus')]:
+                if sp.get("scientific_name") and existing.scientific_name != sp["scientific_name"]:
+                    existing.scientific_name = sp["scientific_name"]
+                if sp.get("taxon_rank") and existing.taxon_rank != sp["taxon_rank"]:
+                    existing.taxon_rank = sp["taxon_rank"]
+                if sp.get("taxon_path") and existing.taxon_path != sp["taxon_path"]:
+                    existing.taxon_path = sp["taxon_path"]
+                for field, attr in [
+                    ("kingdom", "kingdom"),
+                    ("phylum", "phylum"),
+                    ("class", "class_"),
+                    ("order", "order_"),
+                    ("family", "family"),
+                    ("genus", "genus"),
+                ]:
                     val = sp.get(field)
                     if val and getattr(existing, attr) != val:
                         setattr(existing, attr, val)
                 # Update common_name_en if available
-                if sp.get('common_name_en') and not existing.common_name_en:
-                    existing.common_name_en = sp['common_name_en']
+                if sp.get("common_name_en") and not existing.common_name_en:
+                    existing.common_name_en = sp["common_name_en"]
                 # Update common_name_zh: override table wins; otherwise
                 # accept any freshly-resolved name that differs from cache
                 # so stale/wrong cached names get corrected over time.
                 override = get_species_zh_override(taxon_id)
                 if override and existing.common_name_zh != override:
                     existing.common_name_zh = override
-                elif sp.get('common_name_zh') and existing.common_name_zh != sp['common_name_zh']:
-                    existing.common_name_zh = sp['common_name_zh']
+                elif sp.get("common_name_zh") and existing.common_name_zh != sp["common_name_zh"]:
+                    existing.common_name_zh = sp["common_name_zh"]
                 # Backfill alternative_names_zh if empty
-                if sp.get('alternative_names_zh') and not existing.alternative_names_zh:
-                    existing.alternative_names_zh = sp['alternative_names_zh']
+                if sp.get("alternative_names_zh") and not existing.alternative_names_zh:
+                    existing.alternative_names_zh = sp["alternative_names_zh"]
                 # Update path_zh
                 pzh = _build_path_zh(sp)
                 if pzh and existing.path_zh != pzh:
@@ -722,51 +764,51 @@ def _cache_enriched_species(species_list):
             else:
                 entry = SpeciesCache(
                     taxon_id=taxon_id,
-                    scientific_name=sp.get('scientific_name', ''),
-                    common_name_en=sp.get('common_name_en'),
-                    common_name_zh=sp.get('common_name_zh'),
-                    alternative_names_zh=sp.get('alternative_names_zh'),
-                    taxon_rank=sp.get('taxon_rank'),
-                    taxon_path=sp.get('taxon_path'),
-                    kingdom=sp.get('kingdom'),
-                    phylum=sp.get('phylum'),
-                    class_=sp.get('class'),
-                    order_=sp.get('order'),
-                    family=sp.get('family'),
-                    genus=sp.get('genus'),
+                    scientific_name=sp.get("scientific_name", ""),
+                    common_name_en=sp.get("common_name_en"),
+                    common_name_zh=sp.get("common_name_zh"),
+                    alternative_names_zh=sp.get("alternative_names_zh"),
+                    taxon_rank=sp.get("taxon_rank"),
+                    taxon_path=sp.get("taxon_path"),
+                    kingdom=sp.get("kingdom"),
+                    phylum=sp.get("phylum"),
+                    class_=sp.get("class"),
+                    order_=sp.get("order"),
+                    family=sp.get("family"),
+                    genus=sp.get("genus"),
                     path_zh=_build_path_zh(sp),
                 )
                 db.session.add(entry)
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
-        logger.debug('Failed to cache enriched species data', exc_info=True)
+        logger.debug("Failed to cache enriched species data", exc_info=True)
 
 
 # ---------------------------------------------------------------------------
 # Subspecies (children) API
 # ---------------------------------------------------------------------------
 
+
 def get_subspecies(species_key, limit=50):
     """Fetch subspecies of a species via GBIF children API.
 
     Returns a list of enriched subspecies dicts.
     """
-    resp = requests.get(f'{GBIF_BASE}/species/{species_key}/children',
-                        params={'limit': limit}, timeout=10)
+    resp = requests.get(f"{GBIF_BASE}/species/{species_key}/children", params={"limit": limit}, timeout=10)
     resp.raise_for_status()
-    results = resp.json().get('results', [])
+    results = resp.json().get("results", [])
 
     subspecies = []
     seen_keys = set()
     for r in results:
-        rank = (r.get('rank') or '').upper()
-        status = (r.get('taxonomicStatus') or r.get('status') or '').upper()
-        if rank not in ('SUBSPECIES', 'VARIETY', 'FORM'):
+        rank = (r.get("rank") or "").upper()
+        status = (r.get("taxonomicStatus") or r.get("status") or "").upper()
+        if rank not in ("SUBSPECIES", "VARIETY", "FORM"):
             continue
-        if status and status != 'ACCEPTED':
+        if status and status != "ACCEPTED":
             continue
-        key = r.get('key')
+        key = r.get("key")
         if not key or key in seen_keys:
             continue
         seen_keys.add(key)
@@ -775,31 +817,32 @@ def get_subspecies(species_key, limit=50):
     _enrich_chinese_names(subspecies)
 
     # Sort: entries with Chinese names first, then alphabetically by scientific name
-    subspecies.sort(key=lambda s: (
-        0 if s.get('common_name_zh') else 1,
-        s.get('scientific_name') or '',
-    ))
+    subspecies.sort(
+        key=lambda s: (
+            0 if s.get("common_name_zh") else 1,
+            s.get("scientific_name") or "",
+        )
+    )
 
     return subspecies
 
 
 def get_subspecies_stream(species_key, limit=50):
     """Streaming version of get_subspecies — yields one NDJSON line per result."""
-    resp = requests.get(f'{GBIF_BASE}/species/{species_key}/children',
-                        params={'limit': limit}, timeout=10)
+    resp = requests.get(f"{GBIF_BASE}/species/{species_key}/children", params={"limit": limit}, timeout=10)
     resp.raise_for_status()
-    results = resp.json().get('results', [])
+    results = resp.json().get("results", [])
 
     subspecies = []
     seen_keys = set()
     for r in results:
-        rank = (r.get('rank') or '').upper()
-        status = (r.get('taxonomicStatus') or r.get('status') or '').upper()
-        if rank not in ('SUBSPECIES', 'VARIETY', 'FORM'):
+        rank = (r.get("rank") or "").upper()
+        status = (r.get("taxonomicStatus") or r.get("status") or "").upper()
+        if rank not in ("SUBSPECIES", "VARIETY", "FORM"):
             continue
-        if status and status != 'ACCEPTED':
+        if status and status != "ACCEPTED":
             continue
-        key = r.get('key')
+        key = r.get("key")
         if not key or key in seen_keys:
             continue
         seen_keys.add(key)
@@ -807,12 +850,13 @@ def get_subspecies_stream(species_key, limit=50):
 
     for sp in subspecies:
         _enrich_chinese_names([sp])
-        yield json.dumps(sp, ensure_ascii=False) + '\n'
+        yield json.dumps(sp, ensure_ascii=False) + "\n"
 
 
 # ---------------------------------------------------------------------------
 # Alt-name cleaning
 # ---------------------------------------------------------------------------
+
 
 def clean_alt_names(alt_str, primary_zh):
     """Clean alternative names: remove duplicates, genus names, non-CJK entries.
@@ -824,12 +868,13 @@ def clean_alt_names(alt_str, primary_zh):
         cleaned comma-separated string, or None if empty after cleaning.
     """
     import unicodedata
+
     if not alt_str:
         return None
     # Normalize to NFC to handle CJK compatibility chars (e.g. U+F9FE → U+8336)
-    alt_str = unicodedata.normalize('NFC', alt_str)
-    primary_norm = unicodedata.normalize('NFC', primary_zh) if primary_zh else None
-    parts = [n.strip() for n in alt_str.split(',')]
+    alt_str = unicodedata.normalize("NFC", alt_str)
+    primary_norm = unicodedata.normalize("NFC", primary_zh) if primary_zh else None
+    parts = [n.strip() for n in alt_str.split(",")]
     cleaned = []
     for n in parts:
         if not n:
@@ -838,25 +883,25 @@ def clean_alt_names(alt_str, primary_zh):
         if primary_norm and n == primary_norm:
             continue
         # Skip taxonomy-style names ending with 屬 (genus) or 科 (family)
-        if n.endswith('屬') or n.endswith('科'):
+        if n.endswith("屬") or n.endswith("科"):
             continue
         # Skip non-CJK entries (e.g. Latin scientific names)
         if not _has_cjk(n):
             continue
         cleaned.append(n)
-    return ', '.join(cleaned) if cleaned else None
+    return ", ".join(cleaned) if cleaned else None
 
 
 # ---------------------------------------------------------------------------
 # CJK detection and TaiCOL-based Chinese search
 # ---------------------------------------------------------------------------
 
+
 def _has_cjk(text):
     """Check if text contains CJK (Chinese/Japanese/Korean) characters."""
     for ch in text:
         cp = ord(ch)
-        if (0x4E00 <= cp <= 0x9FFF or 0x3400 <= cp <= 0x4DBF
-                or 0xF900 <= cp <= 0xFAFF):
+        if 0x4E00 <= cp <= 0x9FFF or 0x3400 <= cp <= 0x4DBF or 0xF900 <= cp <= 0xFAFF:
             return True
     return False
 
@@ -877,8 +922,8 @@ def _fallback_taicol_by_name(query, limit=10):
     # TaiCOL knows this name — try GBIF match first
     matched = match_species(query)
     if matched:
-        if not matched.get('common_name_zh'):
-            matched['common_name_zh'] = zh_name
+        if not matched.get("common_name_zh"):
+            matched["common_name_zh"] = zh_name
         return [matched]
 
     # GBIF also has no match — build from TaiCOL data
@@ -904,7 +949,7 @@ def _search_via_taicol(query, limit=10):
     species_list = []
     seen_keys = set()
     for tr in taicol_results:
-        scientific_name = tr.get('scientific_name')
+        scientific_name = tr.get("scientific_name")
         if not scientific_name:
             continue
 
@@ -917,14 +962,14 @@ def _search_via_taicol(query, limit=10):
             if not matched:
                 continue
 
-        taxon_id = matched['taxon_id']
+        taxon_id = matched["taxon_id"]
         if taxon_id in seen_keys:
             continue
         seen_keys.add(taxon_id)
 
         # Prefer TaiCOL's Chinese name (authoritative for zh-tw)
-        if tr.get('common_name_zh') and not matched.get('common_name_zh'):
-            matched['common_name_zh'] = tr['common_name_zh']
+        if tr.get("common_name_zh") and not matched.get("common_name_zh"):
+            matched["common_name_zh"] = tr["common_name_zh"]
 
         species_list.append(matched)
 
@@ -935,6 +980,7 @@ def _search_via_taicol(query, limit=10):
 # TaiCOL fallback builder (for taxa missing from GBIF Backbone)
 # ---------------------------------------------------------------------------
 
+
 def _build_from_taicol(tr):
     """Build a species dict from TaiCOL data when GBIF Backbone has no match.
 
@@ -943,11 +989,11 @@ def _build_from_taicol(tr):
     Uses TaiCOL higherTaxa API to fill in the full taxonomy hierarchy.
     Writes result to species_cache so trait creation can find it later.
     """
-    scientific_name = tr.get('scientific_name')
+    scientific_name = tr.get("scientific_name")
     if not scientific_name:
         return None
 
-    rank = (tr.get('rank') or '').upper()
+    rank = (tr.get("rank") or "").upper()
     if not rank:
         return None
 
@@ -961,97 +1007,103 @@ def _build_from_taicol(tr):
         _fill_missing_rank_zh(d, cached)
         return d
 
-    common_name_zh = tr.get('common_name_zh')
+    common_name_zh = tr.get("common_name_zh")
 
     # Build hierarchy from TaiCOL higherTaxa API
     hierarchy = {}
-    taicol_taxon_id = tr.get('taicol_taxon_id')
+    taicol_taxon_id = tr.get("taicol_taxon_id")
     if taicol_taxon_id:
         higher_taxa = taicol_get_higher_taxa_zh(taicol_taxon_id)
         for ht in higher_taxa:
-            ht_rank = (ht.get('rank') or '').upper()
-            ht_name = ht.get('name')
+            ht_rank = (ht.get("rank") or "").upper()
+            ht_name = ht.get("name")
             if ht_rank and ht_name:
                 rank_field_map = {
-                    'KINGDOM': 'kingdom', 'PHYLUM': 'phylum',
-                    'CLASS': 'class', 'ORDER': 'order',
-                    'FAMILY': 'family', 'GENUS': 'genus',
+                    "KINGDOM": "kingdom",
+                    "PHYLUM": "phylum",
+                    "CLASS": "class",
+                    "ORDER": "order",
+                    "FAMILY": "family",
+                    "GENUS": "genus",
                 }
                 field = rank_field_map.get(ht_rank)
                 if field:
                     hierarchy[field] = ht_name
 
     # Use kingdom from TaiCOL result if not in hierarchy
-    kingdom = tr.get('kingdom')
-    if kingdom and 'kingdom' not in hierarchy:
-        hierarchy['kingdom'] = kingdom
+    kingdom = tr.get("kingdom")
+    if kingdom and "kingdom" not in hierarchy:
+        hierarchy["kingdom"] = kingdom
 
     # Build taxon_path from hierarchy
-    rank_order = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus']
-    parts = [hierarchy.get(r, '') for r in rank_order]
+    rank_order = ["kingdom", "phylum", "class", "order", "family", "genus"]
+    parts = [hierarchy.get(r, "") for r in rank_order]
     last_non_empty = -1
     for i, v in enumerate(parts):
         if v:
             last_non_empty = i
-    taxon_path = '|'.join(parts[:last_non_empty + 1]) if last_non_empty >= 0 else None
+    taxon_path = "|".join(parts[: last_non_empty + 1]) if last_non_empty >= 0 else None
 
     result = {
-        'taxon_id': taxon_id,
-        'scientific_name': scientific_name,
-        'canonical_name': scientific_name,
-        'common_name_en': None,
-        'common_name_zh': common_name_zh,
-        'taxon_rank': rank,
-        'species_binomial': None,
-        'species_key': None,
-        'kingdom': hierarchy.get('kingdom'),
-        'phylum': hierarchy.get('phylum'),
-        'class': hierarchy.get('class'),
-        'order': hierarchy.get('order'),
-        'family': hierarchy.get('family'),
-        'genus': hierarchy.get('genus'),
-        'taxon_path': taxon_path,
-        '_from_taicol': True,
+        "taxon_id": taxon_id,
+        "scientific_name": scientific_name,
+        "canonical_name": scientific_name,
+        "common_name_en": None,
+        "common_name_zh": common_name_zh,
+        "taxon_rank": rank,
+        "species_binomial": None,
+        "species_key": None,
+        "kingdom": hierarchy.get("kingdom"),
+        "phylum": hierarchy.get("phylum"),
+        "class": hierarchy.get("class"),
+        "order": hierarchy.get("order"),
+        "family": hierarchy.get("family"),
+        "genus": hierarchy.get("genus"),
+        "taxon_path": taxon_path,
+        "_from_taicol": True,
     }
 
     # Fill *_zh fields from static table + Wikidata fallback
     rank_zh = get_taxonomy_zh_for_ranks(
-        kingdom=hierarchy.get('kingdom'), phylum=hierarchy.get('phylum'),
-        class_=hierarchy.get('class'), order=hierarchy.get('order'),
-        family=hierarchy.get('family'), genus=hierarchy.get('genus'),
+        kingdom=hierarchy.get("kingdom"),
+        phylum=hierarchy.get("phylum"),
+        class_=hierarchy.get("class"),
+        order=hierarchy.get("order"),
+        family=hierarchy.get("family"),
+        genus=hierarchy.get("genus"),
     )
     # genus_zh Wikidata fallback if static table missed
-    if not rank_zh.get('genus_zh') and hierarchy.get('genus'):
-        rank_zh['genus_zh'] = _resolve_genus_zh(hierarchy['genus'])
+    if not rank_zh.get("genus_zh") and hierarchy.get("genus"):
+        rank_zh["genus_zh"] = _resolve_genus_zh(hierarchy["genus"])
     result.update(rank_zh)
-    result['species_zh'] = result.get('common_name_zh')
+    result["species_zh"] = result.get("common_name_zh")
 
     # Try to get higher taxonomy zh from static table
     zh = get_taxonomy_zh(scientific_name)
     if zh and not common_name_zh:
-        result['common_name_zh'] = zh
+        result["common_name_zh"] = zh
 
     # Write to species_cache for trait creation
     try:
         entry = SpeciesCache(
             taxon_id=taxon_id,
             scientific_name=scientific_name,
-            common_name_zh=result.get('common_name_zh'),
+            common_name_zh=result.get("common_name_zh"),
             taxon_rank=rank,
             taxon_path=taxon_path,
-            kingdom=hierarchy.get('kingdom'),
-            phylum=hierarchy.get('phylum'),
-            class_=hierarchy.get('class'),
-            order_=hierarchy.get('order'),
-            family=hierarchy.get('family'),
-            genus=hierarchy.get('genus'),
+            kingdom=hierarchy.get("kingdom"),
+            phylum=hierarchy.get("phylum"),
+            class_=hierarchy.get("class"),
+            order_=hierarchy.get("order"),
+            family=hierarchy.get("family"),
+            genus=hierarchy.get("genus"),
             path_zh=_build_path_zh(result),
         )
         db.session.add(entry)
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
-        logger.debug('Failed to cache TaiCOL-only taxon %s', scientific_name)
+        logger.debug("Failed to cache TaiCOL-only taxon %s", scientific_name)
 
     return result
 
@@ -1060,6 +1112,7 @@ def _build_from_taicol(tr):
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _build_path_zh(data):
     """Build path_zh dict from static table + Wikidata fallback.
 
@@ -1067,36 +1120,41 @@ def _build_path_zh(data):
     only happen at cache-write time, never on the /tree read path.
     """
     result = {}
-    for field, rank in [('kingdom', 'KINGDOM'), ('phylum', 'PHYLUM'),
-                        ('class', 'CLASS'), ('order', 'ORDER'),
-                        ('family', 'FAMILY'), ('genus', 'GENUS')]:
-        latin = data.get(field) or data.get(field + '_')
+    for field, rank in [
+        ("kingdom", "KINGDOM"),
+        ("phylum", "PHYLUM"),
+        ("class", "CLASS"),
+        ("order", "ORDER"),
+        ("family", "FAMILY"),
+        ("genus", "GENUS"),
+    ]:
+        latin = data.get(field) or data.get(field + "_")
         if latin:
             zh = get_taxonomy_zh(latin) or _resolve_rank_zh(latin, rank=rank)
             result[field] = zh
 
     # For SUBPHYLUM/SUBCLASS taxa, add sub-rank zh from static table
-    taxon_rank = (data.get('taxon_rank') or data.get('rank') or '').upper()
-    if taxon_rank == 'SUBPHYLUM':
-        canonical = data.get('canonical_name') or data.get('canonicalName') or data.get('scientific_name', '')
+    taxon_rank = (data.get("taxon_rank") or data.get("rank") or "").upper()
+    if taxon_rank == "SUBPHYLUM":
+        canonical = data.get("canonical_name") or data.get("canonicalName") or data.get("scientific_name", "")
         if canonical:
             zh = get_taxonomy_zh(canonical)
             if zh:
-                result['subphylum'] = zh
-    elif taxon_rank == 'SUBCLASS':
-        canonical = data.get('canonical_name') or data.get('canonicalName') or data.get('scientific_name', '')
+                result["subphylum"] = zh
+    elif taxon_rank == "SUBCLASS":
+        canonical = data.get("canonical_name") or data.get("canonicalName") or data.get("scientific_name", "")
         if canonical:
             zh = get_taxonomy_zh(canonical)
             if zh:
-                result['subclass'] = zh
-    elif taxon_rank in ('SUBSPECIES', 'VARIETY', 'FORM'):
+                result["subclass"] = zh
+    elif taxon_rank in ("SUBSPECIES", "VARIETY", "FORM"):
         # Resolve parent species Chinese name for the "species" row in path display
-        species_key = data.get('speciesKey') or data.get('species_key')
-        species_binomial = data.get('species') or data.get('species_binomial')
+        species_key = data.get("speciesKey") or data.get("species_key")
+        species_binomial = data.get("species") or data.get("species_binomial")
         if species_key:
             species_zh = _resolve_chinese_name(species_key, species_binomial)
             if species_zh:
-                result['species'] = species_zh
+                result["species"] = species_zh
 
     return result
 
@@ -1113,29 +1171,35 @@ def _realign_taxon_path(species):
     Returns the corrected path and whether it changed.
     """
     rank_fields = [
-        species.kingdom, species.phylum, species.class_,
-        species.order_, species.family, species.genus,
+        species.kingdom,
+        species.phylum,
+        species.class_,
+        species.order_,
+        species.family,
+        species.genus,
     ]
     # Include species-level name if the taxon is SPECIES or sub-species rank
-    taxon_rank = (species.taxon_rank or '').upper()
-    if taxon_rank == 'SPECIES':
+    taxon_rank = (species.taxon_rank or "").upper()
+    if taxon_rank == "SPECIES":
         # Strip author citations (e.g. "Felis catus Linnaeus, 1758" → "Felis catus")
         name = re.sub(
-            r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '',
-            species.scientific_name or '',
+            r"\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$",
+            "",
+            species.scientific_name or "",
         ).strip()
         rank_fields.append(name or species.scientific_name)
-    elif taxon_rank in ('SUBSPECIES', 'VARIETY', 'FORM'):
+    elif taxon_rank in ("SUBSPECIES", "VARIETY", "FORM"):
         sci_name = re.sub(
-            r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '',
-            species.scientific_name or '',
+            r"\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$",
+            "",
+            species.scientific_name or "",
         ).strip()
         # Extract parent binomial (first two words) as 7th segment
         parts = sci_name.split()
-        parent_binomial = ' '.join(parts[:2]) if len(parts) >= 2 else sci_name
-        rank_fields.append(parent_binomial)   # 7th: parent species
+        parent_binomial = " ".join(parts[:2]) if len(parts) >= 2 else sci_name
+        rank_fields.append(parent_binomial)  # 7th: parent species
         if sci_name != parent_binomial:
-            rank_fields.append(sci_name)      # 8th: subspecies trinomial
+            rank_fields.append(sci_name)  # 8th: subspecies trinomial
 
     last_non_empty = -1
     for i, v in enumerate(rank_fields):
@@ -1144,16 +1208,17 @@ def _realign_taxon_path(species):
     if last_non_empty < 0:
         return species.taxon_path, False
 
-    aligned = '|'.join((v or '') for v in rank_fields[:last_non_empty + 1])
+    aligned = "|".join((v or "") for v in rank_fields[: last_non_empty + 1])
 
     # For SUBPHYLUM/SUBCLASS, append scientific_name after standard hierarchy
-    if taxon_rank in ('SUBPHYLUM', 'SUBCLASS'):
+    if taxon_rank in ("SUBPHYLUM", "SUBCLASS"):
         sci_name = re.sub(
-            r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '',
-            species.scientific_name or '',
+            r"\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$",
+            "",
+            species.scientific_name or "",
         ).strip()
         if sci_name and not aligned.endswith(sci_name):
-            aligned = aligned + '|' + sci_name
+            aligned = aligned + "|" + sci_name
 
     changed = aligned != species.taxon_path
     if changed:
@@ -1163,7 +1228,7 @@ def _realign_taxon_path(species):
 
 def _cache_species(data, common_name_zh=None):
     """Create or update a SpeciesCache entry from GBIF data."""
-    usage_key = data.get('key') or data.get('usageKey')
+    usage_key = data.get("key") or data.get("usageKey")
     if not usage_key:
         return None
 
@@ -1177,13 +1242,18 @@ def _cache_species(data, common_name_zh=None):
     existing = db.session.get(SpeciesCache, usage_key)
     if existing:
         # Always refresh core taxonomy fields from authoritative GBIF data
-        sci_name = data.get('scientificName', data.get('canonicalName', ''))
+        sci_name = data.get("scientificName", data.get("canonicalName", ""))
         if sci_name and existing.scientific_name != sci_name:
             existing.scientific_name = sci_name
-        for gbif_key, attr in [('rank', 'taxon_rank'), ('kingdom', 'kingdom'),
-                                ('phylum', 'phylum'), ('class', 'class_'),
-                                ('order', 'order_'), ('family', 'family'),
-                                ('genus', 'genus')]:
+        for gbif_key, attr in [
+            ("rank", "taxon_rank"),
+            ("kingdom", "kingdom"),
+            ("phylum", "phylum"),
+            ("class", "class_"),
+            ("order", "order_"),
+            ("family", "family"),
+            ("genus", "genus"),
+        ]:
             val = data.get(gbif_key)
             if val and getattr(existing, attr) != val:
                 setattr(existing, attr, val)
@@ -1197,17 +1267,17 @@ def _cache_species(data, common_name_zh=None):
 
     species = SpeciesCache(
         taxon_id=usage_key,
-        scientific_name=data.get('scientificName', data.get('canonicalName', '')),
-        common_name_en=data.get('vernacularName'),
+        scientific_name=data.get("scientificName", data.get("canonicalName", "")),
+        common_name_en=data.get("vernacularName"),
         common_name_zh=common_name_zh,
-        taxon_rank=data.get('rank'),
+        taxon_rank=data.get("rank"),
         taxon_path=taxon_path,
-        kingdom=data.get('kingdom'),
-        phylum=data.get('phylum'),
-        class_=data.get('class'),
-        order_=data.get('order'),
-        family=data.get('family'),
-        genus=data.get('genus'),
+        kingdom=data.get("kingdom"),
+        phylum=data.get("phylum"),
+        class_=data.get("class"),
+        order_=data.get("order"),
+        family=data.get("family"),
+        genus=data.get("genus"),
         path_zh=path_zh,
     )
     db.session.add(species)
@@ -1228,47 +1298,43 @@ def _build_taxon_path(data):
          Hydroidolina → Animalia|Cnidaria|Hydrozoa|Hydroidolina
     """
     field_map = {
-        'kingdom': 'kingdom',
-        'phylum': 'phylum',
-        'class': 'class',
-        'order': 'order',
-        'family': 'family',
-        'genus': 'genus',
-        'species': 'species',
+        "kingdom": "kingdom",
+        "phylum": "phylum",
+        "class": "class",
+        "order": "order",
+        "family": "family",
+        "genus": "genus",
+        "species": "species",
     }
     parts = []
     last_non_empty = -1
     for i, rank in enumerate(RANK_ORDER):
         value = data.get(field_map[rank])
-        parts.append(value or '')
+        parts.append(value or "")
         if value:
             last_non_empty = i
     if last_non_empty < 0:
         return None
-    path = '|'.join(parts[:last_non_empty + 1])
+    path = "|".join(parts[: last_non_empty + 1])
 
     # For SUBPHYLUM/SUBCLASS, append canonical name so the path includes
     # the sub-rank taxon itself (not just its parent hierarchy)
-    taxon_rank = (data.get('rank') or '').upper()
-    if taxon_rank in ('SUBPHYLUM', 'SUBCLASS'):
-        canonical = data.get('canonicalName') or data.get('scientificName', '')
+    taxon_rank = (data.get("rank") or "").upper()
+    if taxon_rank in ("SUBPHYLUM", "SUBCLASS"):
+        canonical = data.get("canonicalName") or data.get("scientificName", "")
         if canonical:
             # Strip author citation
-            canonical = re.sub(
-                r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '', canonical
-            ).strip()
+            canonical = re.sub(r"\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$", "", canonical).strip()
             if canonical and not path.endswith(canonical):
-                path = path + '|' + canonical
-    elif taxon_rank in ('SUBSPECIES', 'VARIETY', 'FORM'):
+                path = path + "|" + canonical
+    elif taxon_rank in ("SUBSPECIES", "VARIETY", "FORM"):
         # species field (field_map) already provides the parent binomial (7th segment).
         # Append the full trinomial (canonicalName) as the 8th segment.
-        canonical = data.get('canonicalName') or data.get('scientificName', '')
+        canonical = data.get("canonicalName") or data.get("scientificName", "")
         if canonical:
-            canonical = re.sub(
-                r'\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$', '', canonical
-            ).strip()
+            canonical = re.sub(r"\s+\(?[A-Z][\w.\s,\'\'-]*,\s*\d{4}\)?$", "", canonical).strip()
             if canonical and not path.endswith(canonical):
-                path = path + '|' + canonical
+                path = path + "|" + canonical
 
     return path
 
@@ -1284,11 +1350,11 @@ def _resolve_synonym(synonym_key, synonym_canonical_name, seen_keys=None):
     Returns an accepted species dict with synonym_name attached, or None.
     """
     try:
-        resp = requests.get(f'{GBIF_BASE}/species/{synonym_key}', timeout=10)
+        resp = requests.get(f"{GBIF_BASE}/species/{synonym_key}", timeout=10)
         if resp.status_code != 200:
             return None
         data = resp.json()
-        accepted_key = data.get('acceptedKey')
+        accepted_key = data.get("acceptedKey")
         if not accepted_key:
             return None
 
@@ -1297,35 +1363,35 @@ def _resolve_synonym(synonym_key, synonym_canonical_name, seen_keys=None):
             return None
 
         # Fetch the accepted species
-        resp2 = requests.get(f'{GBIF_BASE}/species/{accepted_key}', timeout=10)
+        resp2 = requests.get(f"{GBIF_BASE}/species/{accepted_key}", timeout=10)
         if resp2.status_code != 200:
             return None
         accepted = resp2.json()
 
         result = _gbif_result_to_dict(accepted, accepted_key)
-        result['synonym_name'] = synonym_canonical_name or data.get('canonicalName')
+        result["synonym_name"] = synonym_canonical_name or data.get("canonicalName")
         return result
     except requests.RequestException:
-        logger.debug('Failed to resolve synonym key=%s', synonym_key)
+        logger.debug("Failed to resolve synonym key=%s", synonym_key)
         return None
 
 
 def _gbif_result_to_dict(r, usage_key):
     """Convert a GBIF API result to a simplified dict."""
     return {
-        'taxon_id': usage_key,
-        'scientific_name': r.get('scientificName', r.get('canonicalName', '')),
-        'canonical_name': r.get('canonicalName'),    # clean name without author
-        'common_name_en': r.get('vernacularName'),
-        'common_name_zh': None,
-        'taxon_rank': r.get('rank'),
-        'species_binomial': r.get('species'),       # e.g. "Milvus migrans" (parent species)
-        'species_key': r.get('speciesKey'),          # for subspecies grouping
-        'kingdom': r.get('kingdom'),
-        'phylum': r.get('phylum'),
-        'class': r.get('class'),
-        'order': r.get('order'),
-        'family': r.get('family'),
-        'genus': r.get('genus'),
-        'taxon_path': _build_taxon_path(r),
+        "taxon_id": usage_key,
+        "scientific_name": r.get("scientificName", r.get("canonicalName", "")),
+        "canonical_name": r.get("canonicalName"),  # clean name without author
+        "common_name_en": r.get("vernacularName"),
+        "common_name_zh": None,
+        "taxon_rank": r.get("rank"),
+        "species_binomial": r.get("species"),  # e.g. "Milvus migrans" (parent species)
+        "species_key": r.get("speciesKey"),  # for subspecies grouping
+        "kingdom": r.get("kingdom"),
+        "phylum": r.get("phylum"),
+        "class": r.get("class"),
+        "order": r.get("order"),
+        "family": r.get("family"),
+        "genus": r.get("genus"),
+        "taxon_path": _build_taxon_path(r),
     }

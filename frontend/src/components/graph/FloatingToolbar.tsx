@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { ReactNode, CSSProperties } from 'react';
+import type { ReactNode } from 'react';
 import { countActiveFilters } from '../../lib/treeFilters';
 import BottomSheet from '../BottomSheet';
 import type { TreeFilters, SortKey, SortOrder, ActiveTree } from '../../types/tree';

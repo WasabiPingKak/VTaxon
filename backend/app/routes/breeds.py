@@ -8,7 +8,6 @@ from ..auth import admin_required, login_required
 from ..cache import invalidate_tree_cache
 from ..extensions import db
 from ..models import Breed, BreedRequest, SpeciesCache
-from ..schemas import CreateBreedRequestSchema, CreateBreedSchema, UpdateRequestStatusSchema, validate_with
 
 logger = logging.getLogger(__name__)
 
@@ -116,13 +115,19 @@ def search_breeds():
 
 @breeds_bp.route("", methods=["POST"])
 @admin_required
-@validate_with(CreateBreedSchema)
-def create_breed(data):
+def create_breed():
+    data = request.get_json() or {}
+
+    taxon_id = data.get("taxon_id")
+    name_en = (data.get("name_en") or "").strip()
+    if not taxon_id or not name_en:
+        return jsonify({"error": "taxon_id and name_en required"}), 400
+
     breed = Breed(
-        taxon_id=data["taxon_id"],
-        name_en=data["name_en"],
-        name_zh=data.get("name_zh") or None,
-        breed_group=data.get("breed_group") or None,
+        taxon_id=taxon_id,
+        name_en=name_en,
+        name_zh=(data.get("name_zh") or "").strip() or None,
+        breed_group=(data.get("breed_group") or "").strip() or None,
     )
     db.session.add(breed)
     try:
@@ -141,14 +146,25 @@ def create_breed(data):
 
 @breeds_bp.route("/requests", methods=["POST"])
 @login_required
-@validate_with(CreateBreedRequestSchema)
-def create_breed_request(data):
+def create_breed_request():
+    data = request.get_json() or {}
+
+    name_zh = (data.get("name_zh") or "").strip()
+    name_en = (data.get("name_en") or "").strip()
+    if not name_zh:
+        return jsonify({"error": "請填寫品種中文名稱"}), 400
+    if not name_en:
+        return jsonify({"error": "請填寫品種英文名稱"}), 400
+    description = (data.get("description") or "").strip()
+    if not description:
+        return jsonify({"error": "請填寫補充說明並附上參考來源連結"}), 400
+
     req = BreedRequest(
         user_id=g.current_user_id,
         taxon_id=data.get("taxon_id"),
-        name_zh=data["name_zh"],
-        name_en=data["name_en"],
-        description=data["description"],
+        name_zh=name_zh,
+        name_en=name_en,
+        description=description,
     )
     db.session.add(req)
     db.session.commit()
@@ -174,19 +190,23 @@ def list_breed_requests():
 
 @breeds_bp.route("/requests/<int:req_id>", methods=["PATCH"])
 @admin_required
-@validate_with(UpdateRequestStatusSchema)
-def update_breed_request(data, req_id):
+def update_breed_request(req_id):
     req = db.session.get(BreedRequest, req_id)
     if not req:
         return jsonify({"error": "Request not found"}), 404
 
-    req.status = data["status"]
+    data = request.get_json() or {}
+    new_status = data.get("status")
+    if new_status not in ("received", "in_progress", "completed", "rejected"):
+        return jsonify({"error": "status must be received, in_progress, completed, or rejected"}), 400
+
+    req.status = new_status
     req.admin_note = data.get("admin_note") or req.admin_note
 
     from ..services.notifications import create_notification
 
     create_notification(
-        req.user_id, "breed_request", req.id, data["status"], req.admin_note, subject_name=req.name_zh or req.name_en
+        req.user_id, "breed_request", req.id, new_status, req.admin_note, subject_name=req.name_zh or req.name_en
     )
 
     db.session.commit()

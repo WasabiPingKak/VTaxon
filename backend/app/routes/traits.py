@@ -4,7 +4,6 @@ from ..auth import login_required
 from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
 from ..extensions import db
 from ..models import Breed, FictionalSpecies, SpeciesCache, VtuberTrait
-from ..schemas import CreateTraitSchema, UpdateTraitSchema, validate_with
 from ..services.gbif import get_species
 
 traits_bp = Blueprint("traits", __name__)
@@ -59,10 +58,14 @@ def _breed_matches_taxon(breed, taxon_id):
 
 @traits_bp.route("", methods=["POST"])
 @login_required
-@validate_with(CreateTraitSchema)
-def create_trait(data):
+def create_trait():
+    data = request.get_json() or {}
+
     taxon_id = data.get("taxon_id")
     fictional_species_id = data.get("fictional_species_id")
+
+    if not taxon_id and not fictional_species_id:
+        return jsonify({"error": "taxon_id or fictional_species_id required"}), 400
 
     replaced_info = None
 
@@ -219,13 +222,14 @@ def list_traits():
 
 @traits_bp.route("/<trait_id>", methods=["PATCH"])
 @login_required
-@validate_with(UpdateTraitSchema)
-def update_trait(data, trait_id):
+def update_trait(trait_id):
     trait = db.session.get(VtuberTrait, trait_id)
     if not trait:
         return jsonify({"error": "Trait not found"}), 404
     if str(trait.user_id) != str(g.current_user_id):
         return jsonify({"error": "Not authorized to update this trait"}), 403
+
+    data = request.get_json() or {}
 
     if "breed_id" in data:
         breed_id = data["breed_id"]

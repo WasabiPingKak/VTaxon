@@ -3,7 +3,6 @@ from flask import Blueprint, g, jsonify, request
 from ..auth import login_required
 from ..extensions import db
 from ..models import BreedRequest, FictionalSpeciesRequest, Notification, UserReport
-from ..schemas import MarkReadSchema, validate_with
 
 notifications_bp = Blueprint("notifications", __name__)
 
@@ -114,12 +113,17 @@ def unread_count():
 
 @notifications_bp.route("/read", methods=["POST"])
 @login_required
-@validate_with(MarkReadSchema)
-def mark_read(data):
+def mark_read():
+    data = request.get_json() or {}
     query = Notification.query.filter_by(user_id=str(g.current_user_id), is_read=False)
     if data.get("all"):
         query.update({"is_read": True})
     elif data.get("ids"):
-        query.filter(Notification.id.in_(data["ids"])).update({"is_read": True})
+        ids = data["ids"]
+        if not isinstance(ids, list):
+            return jsonify({"error": "ids must be a list"}), 400
+        query.filter(Notification.id.in_(ids)).update({"is_read": True})
+    else:
+        return jsonify({"error": "Provide all:true or ids:[...]"}), 400
     db.session.commit()
     return jsonify({"ok": True})

@@ -7,7 +7,7 @@ import { displayScientificName } from '../../lib/speciesName';
 import SpeciesSearch from '../SpeciesSearch';
 import RankBadge from '../RankBadge';
 import AiPromptBlock from '../AiPromptBlock';
-import type { SpeciesCache, VtuberTrait } from '../../types/models';
+import type { SpeciesCache } from '../../types/models';
 
 const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'] as const;
 const RANK_TO_UPPER: Record<string, string> = {

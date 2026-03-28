@@ -7,29 +7,33 @@ from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
 from ..extensions import db
 from ..limiter import limiter
 from ..models import Blacklist, OAuthAccount, User, UserReport
-from ..schemas import (
-    BanUserSchema,
-    CreateReportSchema,
-    HideUserSchema,
-    UpdateReportSchema,
-    validate_with,
-)
 
 reports_bp = Blueprint("reports", __name__)
 limiter.limit("5/minute")(reports_bp)
 
 
 @reports_bp.route("", methods=["POST"])
-@validate_with(CreateReportSchema)
-def create_report(data):
+def create_report():
     """Submit an impersonation report. No login required (anonymous allowed)."""
+    # Optionally identify the reporter
     reporter_id = get_current_user()
 
-    reported_user_id = data["reported_user_id"]
-    reason = data["reason"]
-    evidence_url = data.get("evidence_url") or None
+    data = request.get_json() or {}
+    reported_user_id = data.get("reported_user_id")
+    report_type = data.get("report_type", "impersonation")
+    reason = (data.get("reason") or "").strip()
+    evidence_url = (data.get("evidence_url") or "").strip() or None
 
-    # Business logic: verify reported user exists
+    if report_type not in ("impersonation", "not_vtuber"):
+        return jsonify({"error": "無效的檢舉類型"}), 400
+    if not reported_user_id:
+        return jsonify({"error": "缺少被舉報使用者 ID"}), 400
+    if not reason:
+        return jsonify({"error": "請填寫舉報理由"}), 400
+    if len(reason) > 2000:
+        return jsonify({"error": "理由不得超過 2000 字"}), 400
+
+    # Verify reported user exists
     reported = db.session.get(User, reported_user_id)
     if not reported:
         return jsonify({"error": "被舉報使用者不存在"}), 404
@@ -41,7 +45,7 @@ def create_report(data):
     report = UserReport(
         reporter_id=reporter_id,
         reported_user_id=reported_user_id,
-        report_type=data["report_type"],
+        report_type=report_type,
         reason=reason,
         evidence_url=evidence_url,
     )
@@ -70,17 +74,20 @@ def list_reports():
 
 @reports_bp.route("/<int:report_id>", methods=["PATCH"])
 @admin_required
-@validate_with(UpdateReportSchema)
-def update_report(data, report_id):
+def update_report(report_id):
     """Update report status (confirmed/dismissed). Admin only."""
     report = db.session.get(UserReport, report_id)
     if not report:
         return jsonify({"error": "Report not found"}), 404
 
+    data = request.get_json() or {}
     new_status = data.get("status")
+    if new_status and new_status not in ("investigating", "confirmed", "dismissed"):
+        return jsonify({"error": "Invalid status"}), 400
+
     if new_status:
         report.status = new_status
-    if data.get("admin_note") is not None:
+    if "admin_note" in data:
         report.admin_note = data["admin_note"] or None
 
     if new_status:
@@ -94,8 +101,7 @@ def update_report(data, report_id):
 
 @reports_bp.route("/<int:report_id>/hide", methods=["POST"])
 @admin_required
-@validate_with(HideUserSchema)
-def hide_user(data, report_id):
+def hide_user(report_id):
     """Hide the reported user (shadow ban) instead of full ban. Admin only."""
     report = db.session.get(UserReport, report_id)
     if not report:
@@ -107,7 +113,8 @@ def hide_user(data, report_id):
     if not reported_user:
         return jsonify({"error": "被舉報使用者不存在"}), 404
 
-    reason = data.get("reason") or "您的頻道內容以真人形象為主，不符合本服務的收錄標準"
+    data = request.get_json() or {}
+    reason = (data.get("reason") or "").strip() or "您的頻道內容以真人形象為主，不符合本服務的收錄標準"
 
     reported_user.visibility = "hidden"
     reported_user.visibility_reason = reason
@@ -116,7 +123,7 @@ def hide_user(data, report_id):
     reported_user.appeal_note = None
 
     report.status = "confirmed"
-    if data.get("admin_note") is not None:
+    if "admin_note" in data:
         report.admin_note = data["admin_note"] or None
 
     from ..services.notifications import create_notification
@@ -174,8 +181,7 @@ def blacklist_preview(report_id):
 
 @reports_bp.route("/<int:report_id>/ban", methods=["POST"])
 @admin_required
-@validate_with(BanUserSchema)
-def ban_user(data, report_id):
+def ban_user(report_id):
     """Ban identifiers and delete the reported user. Admin only."""
     report = db.session.get(UserReport, report_id)
     if not report:
@@ -183,8 +189,12 @@ def ban_user(data, report_id):
     if not report.reported_user_id:
         return jsonify({"error": "被舉報使用者已刪除"}), 404
 
-    identifiers = data["identifiers"]
+    data = request.get_json() or {}
+    identifiers = data.get("identifiers", [])
     reason = data.get("reason") or report.reason
+
+    if not identifiers:
+        return jsonify({"error": "請選擇至少一個要封鎖的帳號"}), 400
 
     reported_user = db.session.get(User, report.reported_user_id)
     if not reported_user:
@@ -215,7 +225,8 @@ def ban_user(data, report_id):
         db.session.add(entry)
         banned_count += 1
 
-    # Also blacklist the Supabase user ID (JWT sub)
+    # Also blacklist the Supabase user ID (JWT sub) so auth/callback
+    # blocks re-registration even before OAuth account sync.
     existing_sub = Blacklist.query.filter_by(
         identifier_type="supabase_uid",
         identifier_value=str(report.reported_user_id),
@@ -255,7 +266,7 @@ def ban_user(data, report_id):
 
     # Mark report as confirmed
     report.status = "confirmed"
-    if data.get("admin_note") is not None:
+    if "admin_note" in data:
         report.admin_note = data["admin_note"] or None
 
     from ..services.notifications import create_notification

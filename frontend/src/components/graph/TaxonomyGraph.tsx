@@ -16,7 +16,7 @@ import FocusHUD from './FocusHUD';
 import { filterEntries, computeFacets, countActiveFilters, emptyFilters } from '../../lib/treeFilters';
 import useIsMobile from '../../hooks/useIsMobile';
 import useLiveStatus from '../../hooks/useLiveStatus';
-import type { TreeEntry, TaxonomyTreeNode, TreeFilters, ActiveTree, SortKey, SortOrder } from '../../types';
+import type { TreeEntry, TreeFilters, ActiveTree, SortKey, SortOrder } from '../../types';
 
 // ── Local types ──
 

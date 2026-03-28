@@ -1,0 +1,4 @@
+[flake8]
+max-line-length = 120
+# E203: ruff/black 風格在 slice 前加空格，與 flake8 預設衝突
+extend-ignore = E203

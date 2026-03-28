@@ -14,7 +14,6 @@ from ..cache import invalidate_tree_cache
 from ..extensions import db
 from ..limiter import limiter
 from ..models import Blacklist, Breed, FictionalSpecies, OAuthAccount, SpeciesCache, User, VtuberTrait
-from ..schemas import AppealSchema, UpdateProfileSchema, validate_with
 
 logger = logging.getLogger(__name__)
 
@@ -468,12 +467,12 @@ def get_me():
 
 @users_bp.route("/me", methods=["PATCH"])
 @login_required
-@validate_with(UpdateProfileSchema)
-def update_me(data):
+def update_me():
     user = db.session.get(User, g.current_user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 
+    data = request.get_json() or {}
     allowed = {
         "display_name",
         "organization",
@@ -488,37 +487,152 @@ def update_me(data):
         "vtuber_declaration_at",
     }
 
-    # Schema already validated types, enums, and lengths.
-    # Handle business logic that requires DB access below.
+    ALLOWED_SNS_KEYS = {
+        "twitter",
+        "threads",
+        "instagram",
+        "bluesky",
+        "discord",
+        "facebook",
+        "marshmallow",
+        "email",
+    }
 
-    if data.get("org_type") == "indie":
-        data["organization"] = None
+    if "org_type" in data:
+        if data["org_type"] not in ("indie", "corporate", "club"):
+            return jsonify({"error": "org_type must be indie, corporate, or club"}), 400
+        if data["org_type"] == "indie":
+            data["organization"] = None
 
-    if data.get("country_flags") is not None:
-        data["country_flags"] = [f.upper() for f in data["country_flags"]]
+    if "social_links" in data:
+        links = data["social_links"]
+        if not isinstance(links, dict):
+            return jsonify({"error": "social_links must be an object"}), 400
+        cleaned_links = {}
+        for k, v in links.items():
+            if k not in ALLOWED_SNS_KEYS:
+                return jsonify({"error": f"Unknown SNS key: {k}"}), 400
+            if v and not isinstance(v, str):
+                return jsonify({"error": f"SNS value for {k} must be a string"}), 400
+            if v and len(v) > 500:
+                return jsonify({"error": f"SNS value for {k} is too long"}), 400
+            if v:
+                cleaned_links[k] = v.strip()
+        data["social_links"] = cleaned_links
 
-    if data.get("social_links") is not None:
-        data["social_links"] = {k: v.strip() for k, v in data["social_links"].items() if v}
+    if "bio" in data:
+        bio = data["bio"]
+        if bio is not None:
+            if not isinstance(bio, str):
+                return jsonify({"error": "bio must be a string"}), 400
+            if len(bio) > 500:
+                return jsonify({"error": "bio must be 500 characters or less"}), 400
+            data["bio"] = bio.strip() or None
 
-    if data.get("bio") is not None:
-        data["bio"] = data["bio"].strip() or None
+    if "country_flags" in data:
+        flags = data["country_flags"]
+        if not isinstance(flags, list):
+            return jsonify({"error": "country_flags must be a list"}), 400
+        cleaned = []
+        for f in flags:
+            if not isinstance(f, str) or len(f) != 2:
+                return jsonify({"error": "Each flag must be a 2-character country code"}), 400
+            cleaned.append(f.upper())
+        data["country_flags"] = cleaned
 
-    # Convert profile_data nested schema back to plain dict for JSON column
-    if data.get("profile_data") is not None:
+    if "profile_data" in data:
         pd = data["profile_data"]
-        # Remove None values so we only store explicitly set fields
-        data["profile_data"] = {k: v for k, v in pd.items() if v is not None}
+        if not isinstance(pd, dict):
+            return jsonify({"error": "profile_data must be an object"}), 400
+
+        ALLOWED_PD_KEYS = {
+            "debut_date",
+            "birthday_month",
+            "birthday_day",
+            "blood_type",
+            "mbti",
+            "gender",
+            "representative_emoji",
+            "fan_name",
+            "activity_status",
+            "illustrators",
+            "riggers",
+            "modelers_3d",
+            "hashtags",
+            "debut_video_url",
+        }
+        for key in pd:
+            if key not in ALLOWED_PD_KEYS:
+                return jsonify({"error": f"Unknown profile_data key: {key}"}), 400
+
+        # Validate string fields
+        for str_key in (
+            "debut_date",
+            "blood_type",
+            "mbti",
+            "gender",
+            "representative_emoji",
+            "fan_name",
+            "activity_status",
+            "debut_video_url",
+        ):
+            if str_key in pd and pd[str_key] is not None:
+                if not isinstance(pd[str_key], str):
+                    return jsonify({"error": f"{str_key} must be a string"}), 400
+
+        # Validate integer fields
+        for int_key in ("birthday_month", "birthday_day"):
+            if int_key in pd and pd[int_key] is not None:
+                if not isinstance(pd[int_key], int):
+                    return jsonify({"error": f"{int_key} must be an integer"}), 400
+
+        # Validate creator fields — list of {name, url?} objects
+        for creator_key in ("illustrators", "riggers", "modelers_3d"):
+            if creator_key in pd and pd[creator_key] is not None:
+                if not isinstance(pd[creator_key], list):
+                    return jsonify({"error": f"{creator_key} must be a list"}), 400
+                for item in pd[creator_key]:
+                    if not isinstance(item, dict) or "name" not in item:
+                        return jsonify({"error": f"{creator_key} items must have a name"}), 400
+                    if not isinstance(item["name"], str):
+                        return jsonify({"error": f"{creator_key} name must be a string"}), 400
+                    if "url" in item and item["url"] is not None and not isinstance(item["url"], str):
+                        return jsonify({"error": f"{creator_key} url must be a string"}), 400
+
+        # Validate hashtags — array of strings
+        if "hashtags" in pd and pd["hashtags"] is not None:
+            if not isinstance(pd["hashtags"], list):
+                return jsonify({"error": "hashtags must be a list"}), 400
+            if any(not isinstance(item, str) for item in pd["hashtags"]):
+                return jsonify({"error": "hashtags items must be strings"}), 400
+
+        # Validate specific values
+        if pd.get("blood_type") and pd["blood_type"] not in ("A", "B", "O", "AB"):
+            return jsonify({"error": "Invalid blood_type"}), 400
+        if pd.get("activity_status") and pd["activity_status"] not in (
+            "active",
+            "hiatus",
+            "preparing",
+        ):
+            return jsonify({"error": "Invalid activity_status"}), 400
+        if pd.get("birthday_month") and not (1 <= pd["birthday_month"] <= 12):
+            return jsonify({"error": "birthday_month must be 1-12"}), 400
+        if pd.get("birthday_day") and not (1 <= pd["birthday_day"] <= 31):
+            return jsonify({"error": "birthday_day must be 1-31"}), 400
+
+        data["profile_data"] = pd
 
     # VTuber declaration: write-once timestamp
-    if data.get("vtuber_declaration_at"):
+    if "vtuber_declaration_at" in data:
         if user.vtuber_declaration_at is not None:
             return jsonify({"error": "VTuber declaration already submitted"}), 400
         data["vtuber_declaration_at"] = datetime.now(UTC)
-    else:
-        data.pop("vtuber_declaration_at", None)
 
-    if data.get("primary_platform"):
+    if "primary_platform" in data:
         pp = data["primary_platform"]
+        if pp not in ("youtube", "twitch"):
+            return jsonify({"error": "primary_platform must be youtube or twitch"}), 400
+        # Verify the user actually has an OAuthAccount for this platform
         has_account = OAuthAccount.query.filter_by(user_id=g.current_user_id, provider=pp).first()
         if not has_account:
             return jsonify({"error": f"No {pp} account linked"}), 400
@@ -528,19 +642,21 @@ def update_me(data):
         ("live_primary_real_trait_id", "taxon_id"),
         ("live_primary_fictional_trait_id", "fictional_species_id"),
     ]:
-        if field in data and data[field] is not None:
-            trait = db.session.get(VtuberTrait, data[field])
-            if not trait or str(trait.user_id) != str(g.current_user_id):
-                return jsonify({"error": f"Invalid {field}"}), 400
-            if getattr(trait, fk_col) is None:
-                return jsonify({"error": f"Trait type mismatch for {field}"}), 400
+        if field in data:
+            trait_id = data[field]
+            if trait_id is not None:
+                trait = db.session.get(VtuberTrait, trait_id)
+                if not trait or str(trait.user_id) != str(g.current_user_id):
+                    return jsonify({"error": f"Invalid {field}"}), 400
+                if getattr(trait, fk_col) is None:
+                    return jsonify({"error": f"Trait type mismatch for {field}"}), 400
 
     for key in allowed:
-        if key in data and data[key] is not None:
+        if key in data:
             setattr(user, key, data[key])
 
     # Auto-update avatar_url when primary_platform changes
-    if data.get("primary_platform"):
+    if "primary_platform" in data:
         primary_account = OAuthAccount.query.filter_by(
             user_id=g.current_user_id, provider=data["primary_platform"]
         ).first()
@@ -565,8 +681,7 @@ def get_user(user_id):
 
 @users_bp.route("/me/appeal", methods=["POST"])
 @login_required
-@validate_with(AppealSchema)
-def submit_appeal(data):
+def submit_appeal():
     """Submit an appeal to request visibility review."""
     user = db.session.get(User, g.current_user_id)
     if not user:
@@ -575,8 +690,15 @@ def submit_appeal(data):
     if user.visibility != "hidden":
         return jsonify({"error": "目前帳號狀態不允許申訴"}), 400
 
+    data = request.get_json() or {}
+    appeal_note = (data.get("appeal_note") or "").strip()
+    if not appeal_note:
+        return jsonify({"error": "請填寫申訴說明"}), 400
+    if len(appeal_note) > 2000:
+        return jsonify({"error": "申訴說明不得超過 2000 字"}), 400
+
     user.visibility = "pending_review"
-    user.appeal_note = data["appeal_note"]
+    user.appeal_note = appeal_note
     user.updated_at = datetime.now(UTC)
 
     db.session.commit()
