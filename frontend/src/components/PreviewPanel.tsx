@@ -4,7 +4,7 @@ import OrgBadge from './OrgBadge';
 import LinksRow from './LinksRow';
 import ProfileInfoCard from './ProfileInfoCard';
 import { displayScientificName } from '../lib/speciesName';
-import type { OAuthAccount, VtuberTrait, FictionalSpecies } from '../types';
+import type { OAuthAccount } from '../types';
 
 const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'] as const;
 const RANK_TO_UPPER: Record<string, string> = {
