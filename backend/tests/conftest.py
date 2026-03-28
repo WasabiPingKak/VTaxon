@@ -1,7 +1,6 @@
 """Shared fixtures for backend unit tests."""
 
 import uuid
-from contextlib import contextmanager
 from unittest.mock import patch
 
 import pytest
@@ -17,6 +16,10 @@ def app():
     app = create_app("testing")
     app.config["SUPABASE_URL"] = "https://fake.supabase.co"
     app.config["SUPABASE_JWT_SECRET"] = "test-secret"  # pragma: allowlist secret
+    # Disable rate limiting in tests
+    from app.limiter import limiter
+
+    limiter.enabled = False
     with app.app_context():
         _db.create_all()
         yield app
@@ -29,40 +32,56 @@ def client(app):
     return app.test_client()
 
 
+@pytest.fixture(autouse=True)
+def _clean_tables(app):
+    """Truncate all tables after each test for proper isolation."""
+    yield
+    with app.app_context():
+        for table in reversed(_db.metadata.sorted_tables):
+            _db.session.execute(table.delete())
+        _db.session.commit()
+
+
 @pytest.fixture()
 def db_session(app):
-    """Per-test DB session with automatic rollback."""
+    """Per-test DB session."""
     with app.app_context():
-        _db.session.begin_nested()
         yield _db.session
-        _db.session.rollback()
+
+
+# ── Auth helpers for route tests ──
+
+
+@pytest.fixture()
+def mock_auth():
+    """Return a context manager that mocks get_current_user to return user_id.
+
+    Usage:
+        with mock_auth('user-123'):
+            resp = client.post('/api/traits', ...)
+    """
+
+    def _mock(user_id):
+        return patch("app.auth.get_current_user", return_value=user_id)
+
+    return _mock
 
 
 @pytest.fixture()
 def sample_user(db_session):
-    """A regular user persisted in the DB."""
-    user = User(id=str(uuid.uuid4()), display_name="TestUser", role="user")
+    """Create a regular user and return it."""
+    uid = f"user-{uuid.uuid4().hex[:8]}"
+    user = User(id=uid, display_name="TestUser", role="user")
     db_session.add(user)
-    db_session.flush()
+    db_session.commit()
     return user
 
 
 @pytest.fixture()
 def admin_user(db_session):
-    """An admin user persisted in the DB."""
-    user = User(id=str(uuid.uuid4()), display_name="AdminUser", role="admin")
+    """Create an admin user and return it."""
+    uid = f"admin-{uuid.uuid4().hex[:8]}"
+    user = User(id=uid, display_name="AdminUser", role="admin")
     db_session.add(user)
-    db_session.flush()
+    db_session.commit()
     return user
-
-
-@pytest.fixture()
-def mock_auth():
-    """Context manager that patches get_current_user to return a given user_id."""
-
-    @contextmanager
-    def _mock(user_id):
-        with patch("app.auth.get_current_user", return_value=user_id):
-            yield
-
-    return _mock
