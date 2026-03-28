@@ -231,7 +231,7 @@ class TestMatchSpecies:
             }
 
             with patch("app.services.gbif.requests.get", return_value=mock_resp):
-                with patch("app.services.gbif._enrich_chinese_names"):
+                with patch("app.services.chinese_names._enrich_chinese_names"):
                     result = match_species("Felis catus")
                     assert result is not None
                     assert result["taxon_id"] == 9685
@@ -279,7 +279,7 @@ class TestMatchSpecies:
 
             with patch("app.services.gbif.requests.get", return_value=mock_resp):
                 with patch("app.services.gbif._resolve_synonym", return_value=resolved):
-                    with patch("app.services.gbif._enrich_chinese_names"):
+                    with patch("app.services.chinese_names._enrich_chinese_names"):
                         result = match_species("Old name")
                         assert result is not None
                         assert result["taxon_id"] == 200
@@ -357,7 +357,7 @@ class TestResolveChineseName:
 
             _resolve_chinese_name.cache_clear()
 
-            with patch("app.services.gbif.get_species_zh_override", return_value="手動覆蓋"):
+            with patch("app.services.chinese_names.get_species_zh_override", return_value="手動覆蓋"):
                 result = _resolve_chinese_name(9685, "Felis catus")
                 assert result == "手動覆蓋"
 
@@ -367,8 +367,8 @@ class TestResolveChineseName:
 
             _resolve_chinese_name.cache_clear()
 
-            with patch("app.services.gbif.get_species_zh_override", return_value=None):
-                with patch("app.services.gbif.taicol_get_chinese_name", return_value=("家貓", None)):
+            with patch("app.services.chinese_names.get_species_zh_override", return_value=None):
+                with patch("app.services.chinese_names.taicol_get_chinese_name", return_value=("家貓", None)):
                     result = _resolve_chinese_name(9685, "Felis catus")
                     assert result == "家貓"
 
@@ -378,9 +378,9 @@ class TestResolveChineseName:
 
             _resolve_chinese_name.cache_clear()
 
-            with patch("app.services.gbif.get_species_zh_override", return_value=None):
-                with patch("app.services.gbif.taicol_get_chinese_name", return_value=(None, None)):
-                    with patch("app.services.gbif.get_chinese_name_by_gbif_id", return_value=("貓", "Cat")):
+            with patch("app.services.chinese_names.get_species_zh_override", return_value=None):
+                with patch("app.services.chinese_names.taicol_get_chinese_name", return_value=(None, None)):
+                    with patch("app.services.chinese_names.get_chinese_name_by_gbif_id", return_value=("貓", "Cat")):
                         result = _resolve_chinese_name(9685, "Felis catus")
                         assert result == "貓"
 
@@ -390,9 +390,9 @@ class TestResolveChineseName:
 
             _resolve_chinese_name.cache_clear()
 
-            with patch("app.services.gbif.get_species_zh_override", return_value=None):
-                with patch("app.services.gbif.taicol_get_chinese_name", return_value=(None, None)):
-                    with patch("app.services.gbif.get_chinese_name_by_gbif_id", return_value=(None, None)):
+            with patch("app.services.chinese_names.get_species_zh_override", return_value=None):
+                with patch("app.services.chinese_names.taicol_get_chinese_name", return_value=(None, None)):
+                    with patch("app.services.chinese_names.get_chinese_name_by_gbif_id", return_value=(None, None)):
                         result = _resolve_chinese_name(99999, "Unknown sp.")
                         assert result is None
 
@@ -430,7 +430,7 @@ class TestSuggestSpecies:
             ]
 
             with patch("app.services.gbif.requests.get", return_value=mock_resp):
-                with patch("app.services.gbif._enrich_chinese_names"):
+                with patch("app.services.chinese_names._enrich_chinese_names"):
                     results = suggest_species("Felis", limit=10)
                     assert len(results) == 1
                     assert results[0]["taxon_id"] == 1
@@ -459,7 +459,7 @@ class TestSuggestSpecies:
             ]
 
             with patch("app.services.gbif.requests.get", return_value=mock_resp):
-                with patch("app.services.gbif._enrich_chinese_names"):
+                with patch("app.services.chinese_names._enrich_chinese_names"):
                     results = suggest_species("Sp", limit=10)
                     assert len(results) == 1
 
@@ -476,7 +476,7 @@ class TestSearchSpecies:
 
             with patch("app.services.gbif._search_breeds", return_value=[]):
                 with patch("app.services.gbif._search_local_cache_chinese", return_value=[local_result]):
-                    with patch("app.services.gbif._search_via_taicol", return_value=[taicol_result]):
+                    with patch("app.services.chinese_names._search_via_taicol", return_value=[taicol_result]):
                         results = search_species("貓")
                         assert len(results) == 2
                         ids = [r["taxon_id"] for r in results]
@@ -491,7 +491,7 @@ class TestSearchSpecies:
 
             with patch("app.services.gbif._search_breeds", return_value=[]):
                 with patch("app.services.gbif._search_local_cache_chinese", return_value=[same_result]):
-                    with patch("app.services.gbif._search_via_taicol", return_value=[same_result]):
+                    with patch("app.services.chinese_names._search_via_taicol", return_value=[same_result]):
                         results = search_species("貓")
                         assert len(results) == 1
 
