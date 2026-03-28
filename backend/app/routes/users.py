@@ -15,7 +15,7 @@ from ..extensions import db
 from ..limiter import limiter
 from ..models import Blacklist, Breed, FictionalSpecies, OAuthAccount, SpeciesCache, User, VtuberTrait
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 users_bp = Blueprint('users', __name__)
 
@@ -853,9 +853,9 @@ def sync_oauth_accounts():
             try:
                 from .livestream import subscribe_twitch_user
                 subscribe_twitch_user(account.provider_account_id, oauth_account=account)
-            except Exception as e:
-                log.warning('Failed to subscribe Twitch EventSub for %s: %s',
-                            account.provider_account_id, e)
+            except requests.RequestException:
+                logger.exception('Failed to subscribe Twitch EventSub for %s',
+                              account.provider_account_id)
 
     # Subscribe new YouTube accounts to WebSub (non-blocking)
     for account in synced:
@@ -865,9 +865,9 @@ def sync_oauth_accounts():
             try:
                 from .livestream import subscribe_youtube_user
                 subscribe_youtube_user(account.channel_url, oauth_account=account)
-            except Exception as e:
-                log.warning('Failed to subscribe YouTube WebSub for %s: %s',
-                            account.channel_url, e)
+            except requests.RequestException:
+                logger.exception('Failed to subscribe YouTube WebSub for %s',
+                              account.channel_url)
 
     # Sync avatar_url from primary platform account
     user = db.session.get(User, g.current_user_id)
@@ -962,14 +962,14 @@ def refresh_oauth_account(account_id):
                 elif account.provider == 'twitch' and account.provider_account_id:
                     from .livestream import subscribe_twitch_user
                     subscribe_twitch_user(account.provider_account_id, oauth_account=account)
-            except Exception as e:
-                log.warning('Failed to subscribe %s after refresh: %s',
-                            account.provider, e)
+            except requests.RequestException:
+                logger.exception('Failed to subscribe %s after refresh',
+                              account.provider)
 
         return jsonify(account.to_dict())
 
     except requests.RequestException as e:
-        log.error('OAuth account sync failed: %s', e)
+        logger.error('OAuth account sync failed: %s', e)
         return jsonify({'error': '同步失敗，請稍後再試'}), 502
 
 
@@ -998,9 +998,9 @@ def update_oauth_account(account_id):
             elif account.provider == 'twitch' and account.provider_account_id:
                 from .livestream import subscribe_twitch_user
                 subscribe_twitch_user(account.provider_account_id, oauth_account=account)
-        except Exception as e:
-            log.warning('Failed to re-subscribe %s for %s: %s',
-                        account.provider, account.channel_url, e)
+        except requests.RequestException:
+            logger.exception('Failed to re-subscribe %s for %s',
+                          account.provider, account.channel_url)
 
     return jsonify(account.to_dict())
 
@@ -1026,18 +1026,18 @@ def delete_oauth_account(account_id):
         try:
             from .livestream import unsubscribe_twitch_user
             unsubscribe_twitch_user(deleted_provider_id)
-        except Exception as e:
-            log.warning('Failed to unsubscribe Twitch EventSub for %s: %s',
-                        deleted_provider_id, e)
+        except requests.RequestException:
+            logger.exception('Failed to unsubscribe Twitch EventSub for %s',
+                          deleted_provider_id)
 
     # Clean up WebSub for YouTube accounts
     if deleted_provider == 'youtube' and account.channel_url:
         try:
             from .livestream import unsubscribe_youtube_user
             unsubscribe_youtube_user(account.channel_url)
-        except Exception as e:
-            log.warning('Failed to unsubscribe YouTube WebSub for %s: %s',
-                        account.channel_url, e)
+        except requests.RequestException:
+            logger.exception('Failed to unsubscribe YouTube WebSub for %s',
+                          account.channel_url)
 
     from ..models import LiveStream
     LiveStream.query.filter_by(

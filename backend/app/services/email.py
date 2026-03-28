@@ -51,7 +51,7 @@ def send_admin_notification(subject, html_body):
                 'html': html_body,
             })
             logger.info('Admin notification sent: %s', subject)
-        except Exception:
+        except (resend.exceptions.ResendError, ConnectionError, ValueError):
             logger.exception('Failed to send admin notification: %s', subject)
 
     thread = threading.Thread(target=_send, daemon=True)

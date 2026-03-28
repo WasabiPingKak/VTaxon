@@ -1,12 +1,16 @@
+import logging
 from datetime import UTC, datetime
 
 from flask import Blueprint, g, jsonify, request
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..auth import admin_required
 from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
 from ..extensions import db
 from ..models import Breed, BreedRequest, FictionalSpeciesRequest, SpeciesCache, SpeciesNameReport, User, UserReport
+
+logger = logging.getLogger(__name__)
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -177,9 +181,10 @@ def transition_fictional():
         )
     try:
         db.session.commit()
-    except Exception as e:
+    except SQLAlchemyError:
         db.session.rollback()
-        return jsonify({'error': f'批量轉移失敗：{e}'}), 500
+        logger.exception('批量轉移虛構物種回報失敗')
+        return jsonify({'error': '批量轉移失敗，請稍後再試'}), 500
     return jsonify({'updated': len(reqs)})
 
 
@@ -202,9 +207,10 @@ def transition_breeds():
         )
     try:
         db.session.commit()
-    except Exception as e:
+    except SQLAlchemyError:
         db.session.rollback()
-        return jsonify({'error': f'批量轉移失敗：{e}'}), 500
+        logger.exception('批量轉移品種回報失敗')
+        return jsonify({'error': '批量轉移失敗，請稍後再試'}), 500
     return jsonify({'updated': len(reqs)})
 
 

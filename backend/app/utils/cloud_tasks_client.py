@@ -3,9 +3,10 @@
 import logging
 import os
 
+from google.api_core.exceptions import GoogleAPICallError
 from google.cloud import tasks_v2
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 _PROJECT_ID = None
 _LOCATION = None
@@ -43,7 +44,7 @@ def dispatch_task(
     _load_config()
 
     if not _PROJECT_ID or not _SERVICE_URL:
-        log.error(
+        logger.error(
             "Cloud Tasks config incomplete: PROJECT=%s, SERVICE_URL=%s",
             _PROJECT_ID, _SERVICE_URL,
         )
@@ -74,10 +75,10 @@ def dispatch_task(
         created = client.create_task(
             request={"parent": queue_path, "task": task}
         )
-        log.info("Cloud Task created: %s", created.name)
+        logger.info("Cloud Task created: %s", created.name)
         return created.name
-    except Exception:
-        log.error("Failed to create Cloud Task: %s", url, exc_info=True)
+    except GoogleAPICallError:
+        logger.error("Failed to create Cloud Task: %s", url, exc_info=True)
         return None
 
 

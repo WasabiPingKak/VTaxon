@@ -13,7 +13,7 @@ import xml.etree.ElementTree as ET
 
 import requests
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 HUB_URL = 'https://pubsubhubbub.appspot.com/subscribe'
 TOPIC_TEMPLATE = 'https://www.youtube.com/xml/feeds/videos.xml?channel_id={}'
@@ -74,13 +74,13 @@ def subscribe_channel(channel_id, callback_url, secret=None):
             data['hub.secret'] = secret
         resp = requests.post(HUB_URL, data=data, timeout=15)
         if resp.status_code in (202, 204):
-            log.info('YouTube WebSub subscribe OK for %s', channel_id)
+            logger.info('YouTube WebSub subscribe OK for %s', channel_id)
             return True
-        log.warning('YouTube WebSub subscribe failed for %s: HTTP %s — %s',
+        logger.warning('YouTube WebSub subscribe failed for %s: HTTP %s — %s',
                      channel_id, resp.status_code, resp.text[:200])
         return False
     except requests.RequestException as e:
-        log.error('YouTube WebSub subscribe error for %s: %s', channel_id, e)
+        logger.error('YouTube WebSub subscribe error for %s: %s', channel_id, e)
         return False
 
 
@@ -100,13 +100,13 @@ def unsubscribe_channel(channel_id, callback_url, secret=None):
             data['hub.secret'] = secret
         resp = requests.post(HUB_URL, data=data, timeout=15)
         if resp.status_code in (202, 204):
-            log.info('YouTube WebSub unsubscribe OK for %s', channel_id)
+            logger.info('YouTube WebSub unsubscribe OK for %s', channel_id)
             return True
-        log.warning('YouTube WebSub unsubscribe failed for %s: HTTP %s',
+        logger.warning('YouTube WebSub unsubscribe failed for %s: HTTP %s',
                      channel_id, resp.status_code)
         return False
     except requests.RequestException as e:
-        log.error('YouTube WebSub unsubscribe error for %s: %s', channel_id, e)
+        logger.error('YouTube WebSub unsubscribe error for %s: %s', channel_id, e)
         return False
 
 
@@ -127,7 +127,7 @@ def parse_feed(feed_xml):
                     'channel_id': channel_el.text.strip(),
                 })
     except ET.ParseError as e:
-        log.error('Failed to parse YouTube Atom feed: %s', e)
+        logger.error('Failed to parse YouTube Atom feed: %s', e)
     return entries
 
 
@@ -167,7 +167,7 @@ def check_video_is_live(video_id, api_key):
             'started_at': started_at,
         }
     except requests.RequestException as e:
-        log.error('YouTube API check_video_is_live error for %s: %s', video_id, e)
+        logger.error('YouTube API check_video_is_live error for %s: %s', video_id, e)
         return None
 
 
@@ -213,7 +213,7 @@ def check_streams_ended(video_ids, api_key):
                     ended.add(vid)
 
         except requests.RequestException as e:
-            log.error('YouTube API check_streams_ended error: %s', e)
+            logger.error('YouTube API check_streams_ended error: %s', e)
             # Don't mark as ended on API error — will retry next cycle
 
     return ended

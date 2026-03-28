@@ -4,6 +4,7 @@ import time
 from unittest.mock import MagicMock, patch
 
 import jwt as pyjwt
+import requests
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from app.auth import (
@@ -107,7 +108,7 @@ class TestGetJwks:
         _jwks_cache['fetched_at'] = 0  # expired
 
         with app.app_context():
-            with patch('app.auth.requests.get', side_effect=Exception('timeout')):
+            with patch('app.auth.requests.get', side_effect=requests.RequestException('timeout')):
                 keys = _get_jwks()
                 assert keys == [{'kid': 'stale'}]
 
@@ -150,7 +151,7 @@ class TestGetSigningKey:
         _jwks_cache['fetched_at'] = 0
 
         with app.app_context():
-            with patch('app.auth.requests.get', side_effect=Exception('fail')):
+            with patch('app.auth.requests.get', side_effect=requests.RequestException('fail')):
                 key = _get_signing_key('x.y.z')
                 assert key is None
 

@@ -2,6 +2,7 @@ import logging
 
 from flask import Blueprint, jsonify, request
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..auth import admin_required
 from ..cache import (
@@ -18,7 +19,7 @@ from ..models import FictionalSpecies, OAuthAccount, SpeciesCache, User, VtuberT
 from ..services.gbif import _build_path_zh, _realign_taxon_path
 from ..services.taxonomy_zh import get_parent_species_zh_by_name, get_species_zh_override
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 taxonomy_bp = Blueprint('taxonomy', __name__)
 limiter.limit("30/minute")(taxonomy_bp)
@@ -316,8 +317,9 @@ def get_taxonomy_tree():
     if needs_commit:
         try:
             db.session.commit()
-        except Exception:
+        except SQLAlchemyError:
             db.session.rollback()
+            logger.exception('Failed to persist path_zh updates')
 
     # Post-process: inject Medusozoa subphylum for display
     _inject_medusozoa(entries)

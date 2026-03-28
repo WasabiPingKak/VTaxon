@@ -1,5 +1,6 @@
 import logging
 
+import requests as _requests
 from flask import Blueprint, Response, g, jsonify, request, stream_with_context
 
 from ..auth import admin_required, login_required
@@ -16,7 +17,7 @@ from ..services.gbif import (
     search_species_stream,
 )
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 species_bp = Blueprint('species', __name__)
 limiter.limit("30/minute")(species_bp)
@@ -33,8 +34,8 @@ def search():
 
     try:
         results = search_species(q, limit=limit)
-    except Exception as e:
-        log.error('GBIF search failed: %s', e)
+    except _requests.RequestException:
+        logger.exception('GBIF search failed')
         return jsonify({'error': '物種搜尋暫時無法使用，請稍後再試'}), 502
 
     return jsonify({'results': results})
@@ -58,9 +59,10 @@ def search_stream():
         try:
             for line in search_species_stream(q, limit=limit):
                 yield line
-        except Exception as e:
+        except _requests.RequestException:
             import json
-            yield json.dumps({'error': str(e)}, ensure_ascii=False) + '\n'
+            logger.exception('Streaming species search failed')
+            yield json.dumps({'error': '物種搜尋暫時無法使用，請稍後再試'}, ensure_ascii=False) + '\n'
 
     return Response(
         stream_with_context(generate()),
@@ -84,8 +86,8 @@ def match():
 
     try:
         result = match_species(name)
-    except Exception as e:
-        log.error('GBIF match failed: %s', e)
+    except _requests.RequestException:
+        logger.exception('GBIF match failed')
         return jsonify({'error': '物種比對暫時無法使用，請稍後再試'}), 502
 
     if not result:
@@ -107,8 +109,8 @@ def get_children(taxon_id):
     """Fetch subspecies/children of a species via GBIF children API."""
     try:
         subspecies = get_subspecies(taxon_id)
-    except Exception as e:
-        log.error('Failed to fetch children for taxon %s: %s', taxon_id, e)
+    except _requests.RequestException:
+        logger.exception('Failed to fetch children for taxon %s', taxon_id)
         return jsonify({'error': '子分類查詢暫時無法使用，請稍後再試'}), 502
     return jsonify({'results': subspecies})
 
@@ -120,9 +122,10 @@ def get_children_stream(taxon_id):
         try:
             for line in get_subspecies_stream(taxon_id):
                 yield line
-        except Exception as e:
+        except _requests.RequestException:
             import json
-            yield json.dumps({'error': str(e)}, ensure_ascii=False) + '\n'
+            logger.exception('Streaming subspecies fetch failed for taxon %s', taxon_id)
+            yield json.dumps({'error': '子分類查詢暫時無法使用，請稍後再試'}, ensure_ascii=False) + '\n'
 
     return Response(
         stream_with_context(generate()),

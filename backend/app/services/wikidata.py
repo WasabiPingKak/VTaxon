@@ -100,7 +100,7 @@ def _find_entity_by_gbif_id(gbif_taxon_id):
         results = data.get('query', {}).get('search', [])
         if results:
             return results[0]['title']  # e.g. "Q42627"
-    except Exception:
+    except (requests.RequestException, ValueError, KeyError):
         pass
     return None
 
@@ -120,7 +120,7 @@ def _get_labels(qid):
         zh_name = _pick_zh_label(labels)
         en_name = labels.get('en', {}).get('value')
         return zh_name, en_name
-    except Exception:
+    except (requests.RequestException, ValueError, KeyError):
         return None, None
 
 
@@ -152,7 +152,7 @@ def get_aliases_by_gbif_id(gbif_taxon_id):
                         seen.add(converted)
                         result.append(converted)
         return ', '.join(result) if result else None
-    except Exception:
+    except (requests.RequestException, ValueError, KeyError):
         return None
 
 

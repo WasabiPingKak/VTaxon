@@ -7,7 +7,7 @@ import time
 
 import requests
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 # Module-level App Access Token cache (Client Credentials flow)
 _token_cache = {'access_token': None, 'expires_at': 0}
@@ -29,7 +29,7 @@ def get_app_access_token(client_id, client_secret):
 
     _token_cache['access_token'] = data['access_token']
     _token_cache['expires_at'] = now + data.get('expires_in', 3600)
-    log.info('Twitch App Access Token refreshed, expires in %ds', data.get('expires_in', 0))
+    logger.info('Twitch App Access Token refreshed, expires in %ds', data.get('expires_in', 0))
     return _token_cache['access_token']
 
 
@@ -53,7 +53,7 @@ def create_eventsub_subscription(client_id, client_secret, broadcaster_user_id,
     }, timeout=10)
     # 409 = subscription already exists — treat as success
     if resp.status_code == 409:
-        log.info('Twitch EventSub %s already exists for %s, skipping',
+        logger.info('Twitch EventSub %s already exists for %s, skipping',
                  event_type, broadcaster_user_id)
         return {'status': 'already_exists'}
     resp.raise_for_status()
@@ -115,8 +115,8 @@ def get_stream_title(client_id, client_secret, broadcaster_id):
         data = resp.json().get('data', [])
         if data:
             return data[0].get('title')
-    except Exception as e:
-        log.warning('Failed to fetch Twitch stream title for %s: %s', broadcaster_id, e)
+    except requests.RequestException as e:
+        logger.warning('Failed to fetch Twitch stream title for %s: %s', broadcaster_id, e)
     return None
 
 

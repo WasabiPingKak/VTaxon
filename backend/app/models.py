@@ -38,10 +38,12 @@ class User(db.Model):
 
     live_primary_real_trait_id = db.Column(db.String(36),
                                            db.ForeignKey('vtuber_traits.id',
-                                                         ondelete='SET NULL'))
+                                                         ondelete='SET NULL',
+                                                         use_alter=True))
     live_primary_fictional_trait_id = db.Column(db.String(36),
                                                 db.ForeignKey('vtuber_traits.id',
-                                                              ondelete='SET NULL'))
+                                                              ondelete='SET NULL',
+                                                              use_alter=True))
 
     oauth_accounts = db.relationship('OAuthAccount', backref='user',
                                      lazy='dynamic', cascade='all, delete-orphan')

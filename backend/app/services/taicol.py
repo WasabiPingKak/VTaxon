@@ -45,7 +45,7 @@ def search_by_chinese(query, limit=10):
         }, timeout=10)
         if resp.status_code == 200:
             _collect(resp.json().get('data', []))
-    except Exception:
+    except (requests.RequestException, ValueError):
         pass
 
     # Supplement: search by taxon_group (broader, includes partial matches)
@@ -62,7 +62,7 @@ def search_by_chinese(query, limit=10):
                 total = (body.get('info') or {}).get('total', 0)
                 if total <= 5000:
                     _collect(body.get('data', []))
-        except Exception:
+        except (requests.RequestException, ValueError):
             pass
 
     return results[:limit]
@@ -90,7 +90,7 @@ def get_chinese_name(scientific_name):
 
         entry = data[0]
         return entry.get('common_name_c'), entry.get('alternative_name_c')
-    except Exception:
+    except (requests.RequestException, ValueError):
         return None, None
 
 
@@ -119,7 +119,7 @@ def search_by_scientific_name(scientific_name, limit=10):
                 'taicol_taxon_id': entry.get('taxon_id'),
             })
         return results
-    except Exception:
+    except (requests.RequestException, ValueError):
         return []
 
 
@@ -149,5 +149,5 @@ def get_higher_taxa_zh(taicol_taxon_id):
             }
             for item in data
         ]
-    except Exception:
+    except (requests.RequestException, ValueError):
         return []

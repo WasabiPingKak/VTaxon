@@ -62,7 +62,7 @@ def _fetch_spa_html():
         _spa_html_cache_time = now
         logger.info('Fetched SPA index.html from %s', frontend_url)
         return _spa_html_cache
-    except Exception:
+    except http_requests.RequestException:
         logger.exception('Failed to fetch SPA index.html from %s', frontend_url)
         if _spa_html_cache:
             return _spa_html_cache

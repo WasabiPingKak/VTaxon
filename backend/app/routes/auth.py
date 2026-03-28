@@ -47,7 +47,7 @@ def _verify_link_token(token):
         return None
     try:
         payload = json.loads(base64.urlsafe_b64decode(payload_b64))
-    except Exception:
+    except (ValueError, KeyError):
         return None
     if payload.get('exp', 0) < time.time():
         return None
