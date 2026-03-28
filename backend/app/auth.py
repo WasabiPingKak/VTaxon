@@ -32,7 +32,7 @@ def _get_jwks(force_refresh=False):
         _jwks_cache['keys'] = jwks_data['keys']
         _jwks_cache['fetched_at'] = now
         return _jwks_cache['keys']
-    except Exception as e:
+    except (requests.RequestException, ValueError, KeyError) as e:
         logger.error('Failed to fetch JWKS from %s: %s', jwks_url, e)
         # Return stale cache if available
         return _jwks_cache['keys']
@@ -59,7 +59,7 @@ def _get_signing_key(token):
         try:
             public_key = jwt.algorithms.ECAlgorithm.from_jwk(key_data)
             return public_key
-        except Exception:
+        except (jwt.PyJWTError, ValueError):
             continue
 
     return None

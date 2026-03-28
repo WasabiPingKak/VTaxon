@@ -2,6 +2,7 @@ import os
 
 from flask import Flask, jsonify
 from flask_cors import CORS
+from sqlalchemy.exc import SQLAlchemyError
 
 from .config import config
 from .extensions import db
@@ -95,7 +96,7 @@ def create_app(config_name=None):
         try:
             db.session.execute(db.text('SELECT 1'))
             db_status = 'connected'
-        except Exception as e:
+        except SQLAlchemyError as e:
             app.logger.error('Health check DB error: %s', e)
             db_status = 'error'
         return jsonify({

@@ -17,6 +17,7 @@ from functools import lru_cache
 
 import requests
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models import Breed, SpeciesCache
@@ -29,7 +30,7 @@ from .taxonomy_zh import get_species_name_override, get_species_zh_override, get
 from .wikidata import clear_cache as wikidata_clear_cache
 from .wikidata import get_aliases_by_gbif_id, get_chinese_name_by_gbif_id
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 GBIF_BASE = 'https://api.gbif.org/v1'
 
@@ -385,7 +386,7 @@ def get_species(taxon_id):
         if path_changed:
             try:
                 db.session.commit()
-            except Exception:
+            except SQLAlchemyError:
                 db.session.rollback()
         d = cached.to_dict()
         # Fill in any missing *_zh from static table (backward compat for old rows)
@@ -459,16 +460,16 @@ def _resolve_chinese_name(taxon_id, scientific_name):
             zh_name, _alt = taicol_get_chinese_name(scientific_name)
             if zh_name:
                 return zh_name
-        except Exception:
-            log.debug('TaiCOL lookup failed for %s', scientific_name)
+        except (requests.RequestException, ValueError):
+            logger.debug('TaiCOL lookup failed for %s', scientific_name)
 
     # Fallback to Wikidata
     try:
         zh_name, _en_name = get_chinese_name_by_gbif_id(taxon_id)
         if zh_name:
             return zh_name
-    except Exception:
-        log.debug('Wikidata lookup failed for taxon_id=%s', taxon_id)
+    except (requests.RequestException, ValueError):
+        logger.debug('Wikidata lookup failed for taxon_id=%s', taxon_id)
 
     return None
 
@@ -491,7 +492,7 @@ def _resolve_alternative_names(taxon_id, scientific_name, taxon_rank=None):
             _zh, alt = taicol_get_chinese_name(scientific_name)
             if alt:
                 return alt
-        except Exception:
+        except (requests.RequestException, ValueError):
             pass
 
     # Wikidata aliases fallback
@@ -499,7 +500,7 @@ def _resolve_alternative_names(taxon_id, scientific_name, taxon_rank=None):
         aliases = get_aliases_by_gbif_id(taxon_id)
         if aliases:
             return aliases
-    except Exception:
+    except (requests.RequestException, ValueError):
         pass
 
     return None
@@ -515,9 +516,9 @@ def resolve_missing_chinese_name(species_cache_obj):
         species_cache_obj.common_name_zh = zh
         try:
             db.session.commit()
-        except Exception:
+        except SQLAlchemyError:
             db.session.rollback()
-            log.debug('Failed to persist Chinese name for taxon_id=%s',
+            logger.debug('Failed to persist Chinese name for taxon_id=%s',
                       species_cache_obj.taxon_id)
 
 
@@ -552,8 +553,8 @@ def _resolve_rank_zh(taxon_name, rank=None):
         if usage_key:
             zh_name, _en = get_chinese_name_by_gbif_id(usage_key)
             return zh_name
-    except Exception:
-        log.debug('rank_zh Wikidata fallback failed for %s (rank=%s)',
+    except (requests.RequestException, ValueError):
+        logger.debug('rank_zh Wikidata fallback failed for %s (rank=%s)',
                   taxon_name, rank)
 
     return None
@@ -601,7 +602,7 @@ def _enrich_chinese_names(species_list):
                         sp['common_name_zh'] = cached.common_name_zh
                     if cached.alternative_names_zh:
                         sp['alternative_names_zh'] = cached.alternative_names_zh
-            except Exception:
+            except SQLAlchemyError:
                 pass
 
         # Validate: common_name_zh must actually contain CJK characters
@@ -737,9 +738,9 @@ def _cache_enriched_species(species_list):
                 )
                 db.session.add(entry)
         db.session.commit()
-    except Exception:
+    except SQLAlchemyError:
         db.session.rollback()
-        log.debug('Failed to cache enriched species data', exc_info=True)
+        logger.debug('Failed to cache enriched species data', exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -867,7 +868,7 @@ def _fallback_taicol_by_name(query, limit=10):
     """
     try:
         zh_name, _alt = taicol_get_chinese_name(query)
-    except Exception:
+    except (requests.RequestException, ValueError):
         zh_name = None
 
     if not zh_name:
@@ -1048,9 +1049,9 @@ def _build_from_taicol(tr):
         )
         db.session.add(entry)
         db.session.commit()
-    except Exception:
+    except SQLAlchemyError:
         db.session.rollback()
-        log.debug('Failed to cache TaiCOL-only taxon %s', scientific_name)
+        logger.debug('Failed to cache TaiCOL-only taxon %s', scientific_name)
 
     return result
 
@@ -1304,8 +1305,8 @@ def _resolve_synonym(synonym_key, synonym_canonical_name, seen_keys=None):
         result = _gbif_result_to_dict(accepted, accepted_key)
         result['synonym_name'] = synonym_canonical_name or data.get('canonicalName')
         return result
-    except Exception:
-        log.debug('Failed to resolve synonym key=%s', synonym_key)
+    except requests.RequestException:
+        logger.debug('Failed to resolve synonym key=%s', synonym_key)
         return None
 
 

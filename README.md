@@ -98,6 +98,16 @@ npm run dev
 
 開啟瀏覽器至 http://localhost:5173
 
+### 執行測試
+
+```bash
+cd backend
+pip install pytest
+pytest tests -q
+```
+
+目前測試覆蓋 JWT/JWKS 驗證、權限裝飾器、GBIF 物種搜尋與中文名稱 fallback 等核心邏輯（51 tests）。CI pipeline 會在每次部署前自動執行。
+
 ## 前端頁面
 
 | 路由 | 頁面 | 說明 |

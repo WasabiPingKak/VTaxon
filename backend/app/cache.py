@@ -1,7 +1,7 @@
-"""In-process cache for taxonomy tree data.
+"""In-process TTL cache for expensive query results.
 
-Avoids re-querying the DB on every /api/taxonomy/tree request.
-TTL-based with manual invalidation when traits/breeds change.
+Avoids re-querying the DB on every request for taxonomy trees and stats.
+TTL-based with manual invalidation when underlying data changes.
 
 Limitation: This is a per-process cache. In multi-worker deployments
 (e.g. gunicorn with 2+ workers), each worker maintains its own copy.
@@ -12,60 +12,69 @@ consider migrating to Redis as a shared cache backend.
 
 import time
 
-_tree_cache = {"data": None, "ts": 0, "ttl": 300}
+
+class TTLCache:
+    """Simple in-memory cache with TTL expiration and manual invalidation."""
+
+    __slots__ = ('_data', '_ts', '_ttl')
+
+    def __init__(self, ttl: int = 300):
+        self._data = None
+        self._ts: float = 0
+        self._ttl = ttl
+
+    def get(self):
+        if self._data is not None and (time.time() - self._ts) < self._ttl:
+            return self._data
+        return None
+
+    def set(self, data):
+        self._data = data
+        self._ts = time.time()
+
+    def invalidate(self):
+        self._data = None
+        self._ts = 0
 
 
+# ── Cache instances ──
+_tree_cache = TTLCache()
+_fictional_tree_cache = TTLCache()
+_stats_cache = TTLCache()
+
+
+# ── Public API (backward-compatible) ──
 def get_tree_cache():
-    if _tree_cache["data"] and (time.time() - _tree_cache["ts"]) < _tree_cache["ttl"]:
-        return _tree_cache["data"]
-    return None
+    return _tree_cache.get()
 
 
 def set_tree_cache(data):
-    _tree_cache["data"] = data
-    _tree_cache["ts"] = time.time()
+    _tree_cache.set(data)
 
 
 def invalidate_tree_cache():
-    _tree_cache["data"] = None
-    _tree_cache["ts"] = 0
-
-
-# ── Fictional tree cache ──
-_fictional_tree_cache = {"data": None, "ts": 0, "ttl": 300}
+    _tree_cache.invalidate()
 
 
 def get_fictional_tree_cache():
-    if _fictional_tree_cache["data"] and (time.time() - _fictional_tree_cache["ts"]) < _fictional_tree_cache["ttl"]:
-        return _fictional_tree_cache["data"]
-    return None
+    return _fictional_tree_cache.get()
 
 
 def set_fictional_tree_cache(data):
-    _fictional_tree_cache["data"] = data
-    _fictional_tree_cache["ts"] = time.time()
+    _fictional_tree_cache.set(data)
 
 
 def invalidate_fictional_tree_cache():
-    _fictional_tree_cache["data"] = None
-    _fictional_tree_cache["ts"] = 0
-
-
-# ── Stats cache ──
-_stats_cache = {"data": None, "ts": 0, "ttl": 300}
+    _fictional_tree_cache.invalidate()
 
 
 def get_stats_cache():
-    if _stats_cache["data"] and (time.time() - _stats_cache["ts"]) < _stats_cache["ttl"]:
-        return _stats_cache["data"]
-    return None
+    return _stats_cache.get()
 
 
 def set_stats_cache(data):
-    _stats_cache["data"] = data
-    _stats_cache["ts"] = time.time()
+    _stats_cache.set(data)
 
 
 def invalidate_stats_cache():
-    _stats_cache["data"] = None
-    _stats_cache["ts"] = 0
+    _stats_cache.invalidate()

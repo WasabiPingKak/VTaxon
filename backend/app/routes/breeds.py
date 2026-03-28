@@ -1,10 +1,15 @@
+import logging
+
 from flask import Blueprint, g, jsonify, request
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..auth import admin_required, login_required
 from ..cache import invalidate_tree_cache
 from ..extensions import db
 from ..models import Breed, BreedRequest, SpeciesCache
+
+logger = logging.getLogger(__name__)
 
 breeds_bp = Blueprint('breeds', __name__)
 
@@ -141,8 +146,9 @@ def create_breed():
     try:
         db.session.commit()
         invalidate_tree_cache()
-    except Exception:
+    except SQLAlchemyError:
         db.session.rollback()
+        logger.exception('Failed to create breed for taxon_id=%s', data.get('taxon_id'))
         return jsonify({'error': 'Breed already exists for this species'}), 409
 
     return jsonify(breed.to_dict()), 201

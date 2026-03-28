@@ -5,6 +5,7 @@ import os
 import time
 from datetime import UTC, datetime, timedelta
 
+import requests as _requests
 from flask import Blueprint, jsonify, request
 
 from ..auth import admin_required
@@ -12,7 +13,7 @@ from ..extensions import db
 from ..limiter import limiter
 from ..models import LiveStream, OAuthAccount, User
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 livestream_bp = Blueprint('livestream', __name__)
 
@@ -76,13 +77,13 @@ def twitch_webhook():
 
     webhook_secret = os.environ.get('TWITCH_WEBHOOK_SECRET', '')
     if not webhook_secret:
-        log.error('TWITCH_WEBHOOK_SECRET not configured')
+        logger.error('TWITCH_WEBHOOK_SECRET not configured')
         return '', 500
 
     body = request.get_data(as_text=True)
 
     if not verify_webhook_signature(request.headers, body, webhook_secret):
-        log.warning('Twitch webhook signature verification failed')
+        logger.warning('Twitch webhook signature verification failed')
         return '', 403
 
     msg_type = request.headers.get('Twitch-Eventsub-Message-Type', '')
@@ -96,7 +97,7 @@ def twitch_webhook():
     # Revocation
     if msg_type == 'revocation':
         sub = payload.get('subscription', {})
-        log.warning('Twitch EventSub revocation: type=%s, status=%s',
+        logger.warning('Twitch EventSub revocation: type=%s, status=%s',
                     sub.get('type'), sub.get('status'))
         return '', 204
 
@@ -110,7 +111,7 @@ def twitch_webhook():
         elif sub_type == 'stream.offline':
             _handle_stream_offline(event)
         else:
-            log.info('Unhandled Twitch EventSub type: %s', sub_type)
+            logger.info('Unhandled Twitch EventSub type: %s', sub_type)
 
         return '', 204
 
@@ -128,7 +129,7 @@ def _handle_stream_online(event):
         provider='twitch', provider_account_id=broadcaster_id
     ).first()
     if not account:
-        log.info('Twitch stream.online for unknown broadcaster %s', broadcaster_id)
+        logger.info('Twitch stream.online for unknown broadcaster %s', broadcaster_id)
         return
 
     broadcaster_login = event.get('broadcaster_user_login', '')
@@ -169,7 +170,7 @@ def _handle_stream_online(event):
 
     db.session.commit()
     invalidate_live_cache()
-    log.info('Twitch stream.online: user_id=%s, broadcaster=%s, title=%s',
+    logger.info('Twitch stream.online: user_id=%s, broadcaster=%s, title=%s',
              account.user_id, broadcaster_id, stream_title)
 
 
@@ -195,7 +196,7 @@ def _handle_stream_offline(event):
     ).delete()
     db.session.commit()
     invalidate_live_cache()
-    log.info('Twitch stream.offline: user_id=%s, broadcaster=%s', account.user_id, broadcaster_id)
+    logger.info('Twitch stream.offline: user_id=%s, broadcaster=%s', account.user_id, broadcaster_id)
 
 
 # ── YouTube PubSubHubbub Webhook (placeholder) ──
@@ -222,7 +223,7 @@ def youtube_webhook_notify():
     if hub_secret:
         sig = request.headers.get('X-Hub-Signature', '')
         if not verify_hub_signature(hub_secret, sig, feed_xml):
-            log.warning('YouTube WebSub signature verification failed')
+            logger.warning('YouTube WebSub signature verification failed')
             return '', 403
 
     api_key = os.environ.get('YOUTUBE_API_KEY', '')
@@ -238,16 +239,16 @@ def youtube_webhook_notify():
             OAuthAccount.channel_url.ilike(f'%/channel/{channel_id}%'),
         ).first()
         if not account:
-            log.debug('YouTube WebSub notification for unknown channel %s', channel_id)
+            logger.debug('YouTube WebSub notification for unknown channel %s', channel_id)
             continue
 
         if not api_key:
-            log.warning('YOUTUBE_API_KEY not configured, cannot verify live status')
+            logger.warning('YOUTUBE_API_KEY not configured, cannot verify live status')
             continue
 
         live_info = check_video_is_live(video_id, api_key)
         if not live_info:
-            log.debug('YouTube video %s is not a live stream, skipping', video_id)
+            logger.debug('YouTube video %s is not a live stream, skipping', video_id)
             continue
 
         _handle_youtube_live(
@@ -296,7 +297,7 @@ def _handle_youtube_live(user_id, video_id, title, channel_url, started_at):
 
     db.session.commit()
     invalidate_live_cache()
-    log.info('YouTube live: user_id=%s, video=%s, title=%s', user_id, video_id, title)
+    logger.info('YouTube live: user_id=%s, video=%s, title=%s', user_id, video_id, title)
 
 
 # ── YouTube cron endpoints (authenticated by X-Cron-Secret) ──
@@ -344,7 +345,7 @@ def youtube_check_offline():
         db.session.commit()
         invalidate_live_cache()
 
-    log.info('YouTube check-offline: checked=%d, ended=%d', len(video_ids), len(ended_ids))
+    logger.info('YouTube check-offline: checked=%d, ended=%d', len(video_ids), len(ended_ids))
     return jsonify({'checked': len(video_ids), 'ended': len(ended_ids)})
 
 
@@ -385,7 +386,7 @@ def youtube_renew_subs():
             '/api/livestream/youtube-subscribe-one',
             params_list=params_list,
         )
-        log.info(
+        logger.info(
             'YouTube renew-subs via Cloud Tasks: total=%d, dispatched=%d, failed=%d, skipped=%d',
             len(accounts), result['dispatched'], result['failed'], skipped,
         )
@@ -423,7 +424,7 @@ def youtube_renew_subs():
             errors += 1
     db.session.commit()
 
-    log.info('YouTube renew-subs (sync fallback): total=%d, renewed=%d, skipped=%d, errors=%d',
+    logger.info('YouTube renew-subs (sync fallback): total=%d, renewed=%d, skipped=%d, errors=%d',
              len(accounts), renewed, skipped, errors)
     return jsonify({
         'mode': 'sync',
@@ -476,10 +477,10 @@ def youtube_subscribe_one():
         db.session.commit()
 
     if ok:
-        log.info('YouTube subscribe-one OK: %s', channel_id)
+        logger.info('YouTube subscribe-one OK: %s', channel_id)
         return jsonify({'channel_id': channel_id, 'status': 'subscribed'})
 
-    log.warning('YouTube subscribe-one FAILED: %s', channel_id)
+    logger.warning('YouTube subscribe-one FAILED: %s', channel_id)
     return jsonify({'channel_id': channel_id, 'status': 'failed'}), 500
 
 
@@ -499,9 +500,9 @@ def list_twitch_subs():
     try:
         subs = list_eventsub_subscriptions(client_id, client_secret)
         return jsonify({'subscriptions': subs, 'total': len(subs)})
-    except Exception as e:
-        log.error('Failed to list Twitch EventSub subscriptions: %s', e)
-        return jsonify({'error': str(e)}), 502
+    except _requests.RequestException:
+        logger.exception('Failed to list Twitch EventSub subscriptions')
+        return jsonify({'error': 'Twitch API 暫時無法使用，請稍後再試'}), 502
 
 
 @livestream_bp.route('/livestream/rebuild-twitch-subs', methods=['POST'])
@@ -543,10 +544,10 @@ def rebuild_twitch_subs():
                 try:
                     delete_eventsub_subscription(client_id, client_secret, sub['id'])
                     deleted += 1
-                except Exception as e:
-                    log.warning('Failed to delete subscription %s: %s', sub['id'], e)
-        except Exception as e:
-            log.error('Failed to list existing subscriptions: %s', e)
+                except _requests.RequestException:
+                    logger.exception('Failed to delete subscription %s', sub['id'])
+        except _requests.RequestException:
+            logger.exception('Failed to list existing subscriptions')
 
     # Get paginated Twitch accounts
     total_accounts = OAuthAccount.query.filter_by(provider='twitch').count()
@@ -568,11 +569,11 @@ def rebuild_twitch_subs():
                 )
                 created += 1
                 account_success += 1
-            except Exception as e:
-                log.error('Failed to create %s sub for %s: %s',
-                          event_type, broadcaster_id, e)
+            except _requests.RequestException:
+                logger.exception('Failed to create %s sub for %s',
+                              event_type, broadcaster_id)
                 errors += 1
-                error_details.append(f'{broadcaster_id}:{event_type}:{e}')
+                error_details.append(f'{broadcaster_id}:{event_type}:request_failed')
         account.live_sub_status = 'subscribed' if account_success == 2 else 'failed'
         account.live_sub_at = datetime.now(UTC)
 
@@ -605,7 +606,7 @@ def subscribe_twitch_user(provider_account_id, oauth_account=None):
     webhook_base_url = os.environ.get('WEBHOOK_BASE_URL', '')
 
     if not all([client_id, client_secret, webhook_secret, webhook_base_url]):
-        log.warning('Twitch EventSub not configured, skipping subscription for %s',
+        logger.warning('Twitch EventSub not configured, skipping subscription for %s',
                     provider_account_id)
         if oauth_account:
             oauth_account.live_sub_status = 'failed'
@@ -622,11 +623,11 @@ def subscribe_twitch_user(provider_account_id, oauth_account=None):
                 client_id, client_secret, provider_account_id,
                 event_type, callback_url, webhook_secret,
             )
-            log.info('Created Twitch EventSub %s for %s', event_type, provider_account_id)
+            logger.info('Created Twitch EventSub %s for %s', event_type, provider_account_id)
             success_count += 1
-        except Exception as e:
-            log.error('Failed to create Twitch EventSub %s for %s: %s',
-                      event_type, provider_account_id, e)
+        except _requests.RequestException:
+            logger.exception('Failed to create Twitch EventSub %s for %s',
+                          event_type, provider_account_id)
 
     if oauth_account:
         oauth_account.live_sub_status = 'subscribed' if success_count == 2 else 'failed'
@@ -654,11 +655,11 @@ def unsubscribe_twitch_user(provider_account_id):
             if condition.get('broadcaster_user_id') == provider_account_id:
                 try:
                     delete_eventsub_subscription(client_id, client_secret, sub['id'])
-                    log.info('Deleted Twitch EventSub %s for %s', sub['id'], provider_account_id)
-                except Exception as e:
-                    log.warning('Failed to delete sub %s: %s', sub['id'], e)
-    except Exception as e:
-        log.error('Failed to clean up Twitch EventSub for %s: %s', provider_account_id, e)
+                    logger.info('Deleted Twitch EventSub %s for %s', sub['id'], provider_account_id)
+                except _requests.RequestException:
+                    logger.exception('Failed to delete sub %s', sub['id'])
+    except _requests.RequestException:
+        logger.exception('Failed to clean up Twitch EventSub for %s', provider_account_id)
 
 
 # ── Admin endpoints for YouTube WebSub management ──
@@ -763,7 +764,7 @@ def subscribe_youtube_user(channel_url, oauth_account=None):
 
     webhook_base_url = os.environ.get('WEBHOOK_BASE_URL', '')
     if not webhook_base_url:
-        log.warning('WEBHOOK_BASE_URL not configured, skipping YouTube WebSub for %s',
+        logger.warning('WEBHOOK_BASE_URL not configured, skipping YouTube WebSub for %s',
                     channel_url)
         if oauth_account:
             oauth_account.live_sub_status = 'failed'
@@ -773,7 +774,7 @@ def subscribe_youtube_user(channel_url, oauth_account=None):
 
     channel_id = extract_channel_id(channel_url)
     if not channel_id:
-        log.warning('Could not extract channel ID from %s', channel_url)
+        logger.warning('Could not extract channel ID from %s', channel_url)
         if oauth_account:
             oauth_account.live_sub_status = 'failed'
             oauth_account.live_sub_at = datetime.now(UTC)
