@@ -1,8 +1,10 @@
 import logging
 import os
+import uuid
 
-from flask import Flask, jsonify
+from flask import Flask, g, jsonify, request
 from flask_cors import CORS
+from pythonjsonlogger import json as json_log
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.exceptions import HTTPException
 
@@ -13,12 +15,35 @@ from .limiter import limiter
 logger = logging.getLogger(__name__)
 
 
+def _setup_logging(app):
+    """Configure JSON structured logging for all loggers."""
+
+    class _RequestFormatter(json_log.JsonFormatter):
+        def add_fields(self, log_record, record, message_dict):
+            super().add_fields(log_record, record, message_dict)
+            log_record["logger"] = record.name
+            log_record["level"] = record.levelname
+            # Attach request_id when inside a request context
+            log_record["request_id"] = getattr(g, "request_id", None)
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(_RequestFormatter("%(asctime)s %(level)s %(logger)s %(message)s"))
+
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+    root.setLevel(logging.DEBUG if app.debug else logging.INFO)
+
+
 def create_app(config_name=None):
     if config_name is None:
         config_name = os.environ.get("FLASK_ENV", "development")
 
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+
+    # Structured logging (JSON to stdout — Cloud Run picks it up)
+    _setup_logging(app)
 
     # Run config-specific init (e.g. ProductionConfig checks ALLOWED_ORIGINS)
     config_cls = config[config_name]
@@ -84,6 +109,11 @@ def create_app(config_name=None):
     app.register_blueprint(subscriptions_bp, url_prefix="/api")
     app.register_blueprint(seo_bp, url_prefix="/api")
     app.register_blueprint(ssr_bp, url_prefix="/vtuber")
+
+    # Assign a request_id for log correlation
+    @app.before_request
+    def assign_request_id():
+        g.request_id = request.headers.get("X-Request-Id") or uuid.uuid4().hex[:12]
 
     # Security headers for all responses
     @app.after_request
