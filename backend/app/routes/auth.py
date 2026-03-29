@@ -60,10 +60,22 @@ def _verify_link_token(token):
 @auth_bp.route("/link-token", methods=["POST"])
 @login_required
 def create_link_token():
-    """Issue a signed link token for the current user.
-
-    Used before OAuth redirect so the callback can securely bind a new
-    auth identity to this user without exposing the raw user_id.
+    """發行帶簽章的帳號連結 token。
+    ---
+    tags:
+      - Auth
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: 連結 token
+        schema:
+          type: object
+          properties:
+            link_token:
+              type: string
+      404:
+        description: 使用者不存在
     """
     from flask import g
 
@@ -78,11 +90,37 @@ def create_link_token():
 @auth_bp.route("/callback", methods=["POST"])
 @login_required
 def auth_callback():
-    """After Supabase OAuth completes, create or update the user record.
-
-    The frontend calls this with the JWT from Supabase Auth.
-    The JWT's `sub` claim is the Supabase auth user ID, which we use as
-    our users.id.
+    """OAuth 完成後建立或更新使用者紀錄。
+    ---
+    tags:
+      - Auth
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            display_name:
+              type: string
+            avatar_url:
+              type: string
+            login_provider:
+              type: string
+              enum: [google, twitch]
+            link_token:
+              type: string
+              description: 跨 email 帳號綁定用的簽章 token
+            yt_avatar:
+              type: boolean
+    responses:
+      200:
+        description: 使用者資料
+      400:
+        description: link_token 無效或過期
+      403:
+        description: 帳號已被停用
     """
     from flask import g
 

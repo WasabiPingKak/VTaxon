@@ -22,6 +22,20 @@ oauth_bp = Blueprint("oauth", __name__)
 @oauth_bp.route("/me/oauth-accounts", methods=["GET"])
 @login_required
 def get_my_oauth_accounts():
+    """列出目前使用者的 OAuth 帳號。
+    ---
+    tags:
+      - OAuth
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: OAuth 帳號清單
+        schema:
+          type: array
+          items:
+            type: object
+    """
     accounts = OAuthAccount.query.filter_by(user_id=g.current_user_id).all()
     return jsonify([a.to_dict() for a in accounts])
 
@@ -29,6 +43,44 @@ def get_my_oauth_accounts():
 @oauth_bp.route("/me/oauth-accounts/sync", methods=["POST"])
 @login_required
 def sync_oauth_accounts():
+    """同步 OAuth 帳號（從 Supabase identities）。
+    ---
+    tags:
+      - OAuth
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            identities:
+              type: array
+              items:
+                type: object
+            channel_url:
+              type: string
+            provider_for_url:
+              type: string
+            provider_avatar_url:
+              type: string
+            avatar_for_provider:
+              type: string
+            channel_display_name:
+              type: string
+            provider_token:
+              type: string
+            token_provider:
+              type: string
+            create_missing:
+              type: boolean
+    responses:
+      200:
+        description: 同步後的帳號清單
+      403:
+        description: 帳號已被停用
+    """
     data = request.get_json() or {}
     identities = data.get("identities", [])
     channel_url_input = data.get("channel_url")
@@ -173,6 +225,27 @@ def sync_oauth_accounts():
 @oauth_bp.route("/me/oauth-accounts/<account_id>/refresh", methods=["POST"])
 @login_required
 def refresh_oauth_account(account_id):
+    """從 YouTube/Twitch API 刷新 OAuth 帳號資料。
+    ---
+    tags:
+      - OAuth
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: account_id
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: 更新後的帳號資料
+      401:
+        description: 授權已過期
+      404:
+        description: 帳號不存在
+      502:
+        description: 同步失敗
+    """
     account = db.session.get(OAuthAccount, account_id)
     if not account or str(account.user_id) != str(g.current_user_id):
         return jsonify({"error": "Account not found"}), 404
@@ -263,6 +336,32 @@ def refresh_oauth_account(account_id):
 @oauth_bp.route("/me/oauth-accounts/<account_id>", methods=["PATCH"])
 @login_required
 def update_oauth_account(account_id):
+    """更新 OAuth 帳號設定。
+    ---
+    tags:
+      - OAuth
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: account_id
+        in: path
+        type: string
+        required: true
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            show_on_profile:
+              type: boolean
+            channel_url:
+              type: string
+    responses:
+      200:
+        description: 更新後的帳號資料
+      404:
+        description: 帳號不存在
+    """
     account = db.session.get(OAuthAccount, account_id)
     if not account or str(account.user_id) != str(g.current_user_id):
         return jsonify({"error": "Account not found"}), 404
@@ -296,6 +395,25 @@ def update_oauth_account(account_id):
 @oauth_bp.route("/me/oauth-accounts/<account_id>", methods=["DELETE"])
 @login_required
 def delete_oauth_account(account_id):
+    """刪除 OAuth 帳號綁定（至少保留一個）。
+    ---
+    tags:
+      - OAuth
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: account_id
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: 刪除成功
+      400:
+        description: 無法解除最後一個帳號
+      404:
+        description: 帳號不存在
+    """
     account = db.session.get(OAuthAccount, account_id)
     if not account or str(account.user_id) != str(g.current_user_id):
         return jsonify({"error": "Account not found"}), 404
@@ -350,7 +468,31 @@ def delete_oauth_account(account_id):
 @login_required
 @limiter.limit("3/minute")
 def resubscribe_live():
-    """Re-subscribe a user's account to live stream notifications."""
+    """重新訂閱直播通知（限速 3 次/分鐘）。
+    ---
+    tags:
+      - OAuth
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - account_id
+          properties:
+            account_id:
+              type: string
+    responses:
+      200:
+        description: 重新訂閱成功
+      400:
+        description: 缺少 account_id 或頻道資訊
+      404:
+        description: 帳號不存在
+    """
     data = request.get_json() or {}
     account_id = data.get("account_id")
     if not account_id:

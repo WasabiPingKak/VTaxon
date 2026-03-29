@@ -15,6 +15,44 @@ directory_bp = Blueprint("directory", __name__)
 
 @directory_bp.route("/recent", methods=["GET"])
 def recent_users():
+    """取得最近加入且有物種特徵的使用者。
+    ---
+    tags:
+      - Directory
+    parameters:
+      - name: since
+        in: query
+        type: string
+        format: date-time
+        required: true
+        description: ISO 8601 時間戳，只回傳此時間之後新增特徵的使用者
+      - name: limit
+        in: query
+        type: integer
+        default: 5
+        minimum: 1
+        maximum: 10
+    responses:
+      200:
+        description: 最近加入的使用者清單
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              display_name:
+                type: string
+              avatar_url:
+                type: string
+              created_at:
+                type: string
+              species_summary:
+                type: string
+      400:
+        description: since 格式不正確
+    """
     since_str = request.args.get("since", "").strip()
     if not since_str:
         return jsonify([])
@@ -101,6 +139,83 @@ def recent_users():
 
 @directory_bp.route("/directory", methods=["GET"])
 def directory():
+    """分頁使用者名錄（支援多種篩選與排序）。
+    ---
+    tags:
+      - Directory
+    parameters:
+      - name: q
+        in: query
+        type: string
+        description: 依名稱模糊搜尋
+      - name: country
+        in: query
+        type: string
+        description: 國旗篩選（逗號分隔，支援 NONE）
+      - name: gender
+        in: query
+        type: string
+        description: 性別篩選（逗號分隔，支援 unset/other）
+      - name: status
+        in: query
+        type: string
+        description: 活動狀態（active/hiatus/preparing）
+      - name: org_type
+        in: query
+        type: string
+        enum: [indie, corporate, club]
+      - name: platform
+        in: query
+        type: string
+        description: 平台篩選（youtube/twitch，逗號分隔）
+      - name: has_traits
+        in: query
+        type: string
+        enum: ["true", "false"]
+      - name: sort
+        in: query
+        type: string
+        enum: [created_at, name, debut_date, active_first, organization]
+        default: created_at
+      - name: order
+        in: query
+        type: string
+        enum: [asc, desc]
+        default: desc
+      - name: live_first
+        in: query
+        type: string
+        enum: ["true", "false"]
+      - name: page
+        in: query
+        type: integer
+        default: 1
+      - name: per_page
+        in: query
+        type: integer
+        default: 24
+        maximum: 100
+    responses:
+      200:
+        description: 分頁使用者清單與 facet 統計
+        schema:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+            total:
+              type: integer
+            page:
+              type: integer
+            per_page:
+              type: integer
+            total_pages:
+              type: integer
+            facets:
+              type: object
+    """
     q = request.args.get("q", "").strip()
     country = request.args.get("country", "").strip()
     gender = request.args.get("gender", "").strip()

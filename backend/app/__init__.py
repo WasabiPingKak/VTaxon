@@ -117,6 +117,14 @@ def create_app(config_name=None):
     app.register_blueprint(seo_bp, url_prefix="/api")
     app.register_blueprint(ssr_bp, url_prefix="/vtuber")
 
+    # OpenAPI / Swagger UI (via Flasgger)
+    if app.config.get("ENABLE_SWAGGER", config_name == "development"):
+        from flasgger import Swagger
+
+        from .swagger import SWAGGER_CONFIG, SWAGGER_TEMPLATE
+
+        Swagger(app, template=SWAGGER_TEMPLATE, config=SWAGGER_CONFIG)
+
     # Assign a request_id for log correlation
     @app.before_request
     def assign_request_id():
@@ -164,6 +172,23 @@ def create_app(config_name=None):
     @app.route("/api/health")
     @app.route("/health")
     def health():
+        """健康檢查（含資料庫連線狀態）。
+        ---
+        tags:
+          - Health
+        responses:
+          200:
+            description: 服務狀態
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: ok
+                database:
+                  type: string
+                  enum: [connected, error]
+        """
         try:
             db.session.execute(db.text("SELECT 1"))
             db_status = "connected"

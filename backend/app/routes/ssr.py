@@ -188,7 +188,23 @@ def _inject_meta_tags(html, *, title, description, image, url, json_ld):
 
 @ssr_bp.route("/<user_id>")
 def vtuber_profile_ssr(user_id):
-    """Serve SPA HTML with injected meta tags for a VTuber profile."""
+    """VTuber 個人頁面 SSR（注入 meta tag 供爬蟲使用）。
+    ---
+    tags:
+      - SSR
+    produces:
+      - text/html
+    parameters:
+      - name: user_id
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: 含 meta tag 的 SPA HTML
+      503:
+        description: 無法取得前端 HTML
+    """
     spa_html = _fetch_spa_html()
     if not spa_html:
         return Response("Service temporarily unavailable", status=503)

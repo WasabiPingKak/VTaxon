@@ -22,6 +22,16 @@ STATIC_LASTMOD = "2026-03-05"
 
 @seo_bp.route("/sitemap.xml")
 def sitemap():
+    """產生 XML sitemap。
+    ---
+    tags:
+      - SEO
+    produces:
+      - application/xml
+    responses:
+      200:
+        description: XML sitemap
+    """
     ns = "http://www.sitemaps.org/schemas/sitemap/0.9"
     urlset = Element("urlset", xmlns=ns)
 
