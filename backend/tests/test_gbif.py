@@ -230,7 +230,7 @@ class TestMatchSpecies:
                 "species": "Felis catus",
             }
 
-            with patch("app.services.gbif.requests.get", return_value=mock_resp):
+            with patch("app.services.gbif.external_session.get", return_value=mock_resp):
                 with patch("app.services.chinese_names._enrich_chinese_names"):
                     result = match_species("Felis catus")
                     assert result is not None
@@ -246,7 +246,7 @@ class TestMatchSpecies:
             mock_resp.raise_for_status = MagicMock()
             mock_resp.json.return_value = {"matchType": "NONE"}
 
-            with patch("app.services.gbif.requests.get", return_value=mock_resp):
+            with patch("app.services.gbif.external_session.get", return_value=mock_resp):
                 result = match_species("NotARealSpecies")
                 assert result is None
 
@@ -277,7 +277,7 @@ class TestMatchSpecies:
                 "taxon_path": "Animalia",
             }
 
-            with patch("app.services.gbif.requests.get", return_value=mock_resp):
+            with patch("app.services.gbif.external_session.get", return_value=mock_resp):
                 with patch("app.services.gbif._resolve_synonym", return_value=resolved):
                     with patch("app.services.chinese_names._enrich_chinese_names"):
                         result = match_species("Old name")
@@ -318,7 +318,7 @@ class TestResolveSynonym:
                 "species": "Accepted sp.",
             }
 
-            with patch("app.services.gbif.requests.get", side_effect=[resp1, resp2]):
+            with patch("app.services.gbif.external_session.get", side_effect=[resp1, resp2]):
                 result = _resolve_synonym(100, "Synonym name")
                 assert result is not None
                 assert result["taxon_id"] == 200
@@ -332,7 +332,7 @@ class TestResolveSynonym:
             resp1.status_code = 200
             resp1.json.return_value = {"key": 100, "acceptedKey": 200}
 
-            with patch("app.services.gbif.requests.get", return_value=resp1):
+            with patch("app.services.gbif.external_session.get", return_value=resp1):
                 result = _resolve_synonym(100, "X", seen_keys={200})
                 assert result is None
 
@@ -343,7 +343,7 @@ class TestResolveSynonym:
             resp = MagicMock()
             resp.status_code = 404
 
-            with patch("app.services.gbif.requests.get", return_value=resp):
+            with patch("app.services.gbif.external_session.get", return_value=resp):
                 result = _resolve_synonym(999, "Ghost")
                 assert result is None
 
@@ -429,7 +429,7 @@ class TestSuggestSpecies:
                 },
             ]
 
-            with patch("app.services.gbif.requests.get", return_value=mock_resp):
+            with patch("app.services.gbif.external_session.get", return_value=mock_resp):
                 with patch("app.services.chinese_names._enrich_chinese_names"):
                     results = suggest_species("Felis", limit=10)
                     assert len(results) == 1
@@ -458,7 +458,7 @@ class TestSuggestSpecies:
                 },
             ]
 
-            with patch("app.services.gbif.requests.get", return_value=mock_resp):
+            with patch("app.services.gbif.external_session.get", return_value=mock_resp):
                 with patch("app.services.chinese_names._enrich_chinese_names"):
                     results = suggest_species("Sp", limit=10)
                     assert len(results) == 1

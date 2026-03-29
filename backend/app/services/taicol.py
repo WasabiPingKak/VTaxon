@@ -9,6 +9,8 @@ from functools import lru_cache
 
 import requests
 
+from .http_client import external_session
+
 TAICOL_BASE = "https://api.taicol.tw/v2"
 
 
@@ -41,7 +43,7 @@ def search_by_chinese(query, limit=10):
 
     # Primary: search by common_name (exact Chinese name match)
     try:
-        resp = requests.get(
+        resp = external_session.get(
             f"{TAICOL_BASE}/taxon",
             params={
                 "common_name": query,
@@ -59,7 +61,7 @@ def search_by_chinese(query, limit=10):
     # so we check info.total and discard if suspiciously large.
     if len(results) < limit:
         try:
-            resp = requests.get(
+            resp = external_session.get(
                 f"{TAICOL_BASE}/taxon",
                 params={
                     "taxon_group": query,
@@ -87,7 +89,7 @@ def get_chinese_name(scientific_name):
     alternative_names is a string of comma-separated alternatives, or None.
     """
     try:
-        resp = requests.get(
+        resp = external_session.get(
             f"{TAICOL_BASE}/taxon",
             params={
                 "scientific_name": scientific_name,
@@ -115,7 +117,7 @@ def search_by_scientific_name(scientific_name, limit=10):
     a list of dicts with all fields needed by _build_from_taicol().
     """
     try:
-        resp = requests.get(
+        resp = external_session.get(
             f"{TAICOL_BASE}/taxon",
             params={
                 "scientific_name": scientific_name,
@@ -154,7 +156,7 @@ def get_higher_taxa_zh(taicol_taxon_id):
     Returns list of dicts: [{'rank': 'Kingdom', 'name': 'Animalia', 'name_zh': '動物界'}, ...]
     """
     try:
-        resp = requests.get(
+        resp = external_session.get(
             f"{TAICOL_BASE}/higherTaxa",
             params={
                 "taxon_id": taicol_taxon_id,
