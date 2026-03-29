@@ -83,7 +83,7 @@ jobs:
             --allow-unauthenticated \
             --min-instances 0 \
             --max-instances 3 \
-            --set-env-vars "^||^FLASK_ENV=staging||DB_SCHEMA=staging||ALLOWED_ORIGINS=https://vtaxon-staging.web.app||WEBHOOK_BASE_URL=https://vtaxon-api-staging-135773662063.asia-east1.run.app||GOOGLE_CLOUD_PROJECT=${{ secrets.GCP_PROJECT_ID }}||CLOUD_TASKS_LOCATION=${{ env.GCP_REGION }}||CLOUD_TASKS_QUEUE=websub-subscribe||CLOUD_RUN_SERVICE_URL=https://vtaxon-api-staging-135773662063.asia-east1.run.app||ENABLE_SWAGGER=true" \
+            --set-env-vars "^||^FLASK_ENV=staging||DB_SCHEMA=staging||ENABLE_SWAGGER=true||ALLOWED_ORIGINS=https://vtaxon-staging.web.app||WEBHOOK_BASE_URL=https://vtaxon-api-staging-135773662063.asia-east1.run.app||GOOGLE_CLOUD_PROJECT=${{ secrets.GCP_PROJECT_ID }}||CLOUD_TASKS_LOCATION=${{ env.GCP_REGION }}||CLOUD_TASKS_QUEUE=websub-subscribe||CLOUD_RUN_SERVICE_URL=https://vtaxon-api-staging-135773662063.asia-east1.run.app" \
             --set-secrets "\
           DATABASE_URL=DATABASE_URL_STAGING:latest,\
           SUPABASE_URL=SUPABASE_URL:latest,\

@@ -118,7 +118,7 @@ def create_app(config_name=None):
     app.register_blueprint(ssr_bp, url_prefix="/vtuber")
 
     # OpenAPI / Swagger UI (via Flasgger)
-    enable_swagger = os.environ.get("ENABLE_SWAGGER", "").lower() in ("true", "1")
+    enable_swagger = os.environ.get("ENABLE_SWAGGER", "").lower() in ("1", "true")
     if app.config.get("ENABLE_SWAGGER", enable_swagger or config_name == "development"):
         from flasgger import Swagger
 
