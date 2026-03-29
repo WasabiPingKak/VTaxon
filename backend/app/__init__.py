@@ -7,6 +7,7 @@ from flask_cors import CORS
 from pythonjsonlogger import json as json_log
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import config
 from .extensions import db
@@ -41,6 +42,12 @@ def create_app(config_name=None):
 
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+
+    # Trust proxy headers from Cloud Run load balancer
+    # x_for=1: trust 1 level of X-Forwarded-For
+    # x_proto=1: trust X-Forwarded-Proto
+    # x_host=1: trust X-Forwarded-Host
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     # Structured logging (JSON to stdout — Cloud Run picks it up)
     _setup_logging(app)
