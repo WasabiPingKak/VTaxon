@@ -12,7 +12,7 @@ repos:
         args: ['--config', 'backend/pyproject.toml']
         files: ^backend/
       - id: ruff-format
-        args: ['--config', 'backend/pyproject.toml', '--check']
+        args: ['--config', 'backend/pyproject.toml']
         files: ^backend/
   - repo: local
     hooks:
