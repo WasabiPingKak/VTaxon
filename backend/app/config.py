@@ -35,24 +35,48 @@ class DevelopmentConfig(Config):
     DB_SCHEMA = os.environ.get("DB_SCHEMA", "staging")
 
 
+def _check_required_env(app, required):
+    """Validate that required env vars are set; raise RuntimeError if any missing."""
+    missing = [key for key in required if not app.config.get(key)]
+    if missing:
+        raise RuntimeError(
+            f"Missing required config: {', '.join(missing)}. Set them as environment variables before starting the app."
+        )
+
+
 class ProductionConfig(Config):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
 
+    # Env vars required for production to function correctly
+    REQUIRED_ENV = [
+        "SQLALCHEMY_DATABASE_URI",
+        "ALLOWED_ORIGINS",
+        "SUPABASE_URL",
+        "SUPABASE_ANON_KEY",
+        "CRON_SECRET",
+    ]
+
     @classmethod
     def init_app(cls, app):
-        origins = app.config.get("ALLOWED_ORIGINS", "")
-        if not origins:
-            raise RuntimeError(
-                "ALLOWED_ORIGINS must be set in production. "
-                "Example: ALLOWED_ORIGINS=https://vtaxon.com,https://vtaxon.web.app"
-            )
+        _check_required_env(app, cls.REQUIRED_ENV)
 
 
 class StagingConfig(Config):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     DB_SCHEMA = os.environ.get("DB_SCHEMA", "staging")
+
+    REQUIRED_ENV = [
+        "SQLALCHEMY_DATABASE_URI",
+        "SUPABASE_URL",
+        "SUPABASE_ANON_KEY",
+        "CRON_SECRET",
+    ]
+
+    @classmethod
+    def init_app(cls, app):
+        _check_required_env(app, cls.REQUIRED_ENV)
 
 
 class TestingConfig(Config):
