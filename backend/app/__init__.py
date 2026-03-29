@@ -1,12 +1,16 @@
+import logging
 import os
 
 from flask import Flask, jsonify
 from flask_cors import CORS
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.exceptions import HTTPException
 
 from .config import config
 from .extensions import db
 from .limiter import limiter
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(config_name=None):
@@ -96,6 +100,30 @@ def create_app(config_name=None):
             response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
         return response
 
+    # ------------------------------------------------------------------
+    # Global error handlers
+    # ------------------------------------------------------------------
+    @app.errorhandler(HTTPException)
+    def handle_http_exception(exc):
+        """Return JSON instead of HTML for HTTP errors (404, 405, etc.)."""
+        return jsonify({"error": exc.description}), exc.code
+
+    @app.errorhandler(SQLAlchemyError)
+    def handle_db_error(exc):
+        """Catch unhandled database errors — log and return 500."""
+        db.session.rollback()
+        logger.exception("Unhandled database error")
+        return jsonify({"error": "資料庫操作失敗，請稍後再試"}), 500
+
+    @app.errorhandler(Exception)
+    def handle_unexpected_error(exc):
+        """Last-resort handler for anything not caught above."""
+        logger.exception("Unhandled exception")
+        return jsonify({"error": "伺服器內部錯誤"}), 500
+
+    # ------------------------------------------------------------------
+    # Health check
+    # ------------------------------------------------------------------
     @app.route("/api/health")
     @app.route("/health")
     def health():
