@@ -6,10 +6,10 @@ repos:
         args: ['--baseline', '.secrets.baseline']
         exclude: 'node_modules/|frontend/dist/'
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.6
+    rev: v0.12.0
     hooks:
       - id: ruff
-        args: ['--config', 'backend/pyproject.toml']
+        args: ['--fix', '--config', 'backend/pyproject.toml']
         files: ^backend/
       - id: ruff-format
         args: ['--config', 'backend/pyproject.toml']
@@ -19,6 +19,12 @@ repos:
       - id: frontend-lint
         name: Run ESLint
         entry: bash -c "cd frontend && npx eslint src/ --no-warn-ignored"
+        language: system
+        pass_filenames: false
+        files: ^frontend/src/
+      - id: frontend-tsc
+        name: tsc (frontend type check)
+        entry: bash -c "cd frontend && npx tsc --noEmit"
         language: system
         pass_filenames: false
         files: ^frontend/src/
