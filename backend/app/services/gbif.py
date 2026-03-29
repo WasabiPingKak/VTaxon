@@ -27,6 +27,7 @@ from .chinese_names import (  # noqa: F401
     clear_chinese_name_caches,
     resolve_missing_chinese_name,
 )
+from .http_client import external_session
 from .species_cache import (  # noqa: F401
     _build_path_zh,
     _build_taxon_path,
@@ -60,7 +61,7 @@ def suggest_species(query, limit=10):
 
     # Request more results to capture subspecies alongside species
     fetch_limit = min(limit * 3, 60)
-    resp = requests.get(
+    resp = external_session.get(
         f"{GBIF_BASE}/species/suggest",
         params={
             "q": query,
@@ -136,7 +137,7 @@ def match_species(name):
     """
     from .chinese_names import _enrich_chinese_names
 
-    resp = requests.get(
+    resp = external_session.get(
         f"{GBIF_BASE}/species/match",
         params={
             "name": name,
@@ -328,7 +329,7 @@ def _suggest_species_stream(query, limit=10):
     from .chinese_names import _enrich_chinese_names, _fallback_taicol_by_name
 
     fetch_limit = min(limit * 3, 60)
-    resp = requests.get(
+    resp = external_session.get(
         f"{GBIF_BASE}/species/suggest",
         params={
             "q": query,
@@ -413,7 +414,7 @@ def _resolve_synonym(synonym_key, synonym_canonical_name, seen_keys=None):
     Returns an accepted species dict with synonym_name attached, or None.
     """
     try:
-        resp = requests.get(f"{GBIF_BASE}/species/{synonym_key}", timeout=10)
+        resp = external_session.get(f"{GBIF_BASE}/species/{synonym_key}", timeout=10)
         if resp.status_code != 200:
             return None
         data = resp.json()

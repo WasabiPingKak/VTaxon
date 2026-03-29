@@ -12,6 +12,8 @@ from functools import lru_cache
 import requests
 from opencc import OpenCC
 
+from .http_client import external_session
+
 # Simplified → Traditional (Taiwan phrases) converter
 _s2twp = OpenCC("s2twp")
 
@@ -25,7 +27,7 @@ ZH_LANGS = ("zh-tw", "zh-hant", "zh")
 def _wikidata_get(params):
     """Make a request to the Wikidata API with proper User-Agent."""
     params.setdefault("format", "json")
-    resp = requests.get(WIKIDATA_API, params=params, headers={"User-Agent": USER_AGENT}, timeout=10)
+    resp = external_session.get(WIKIDATA_API, params=params, headers={"User-Agent": USER_AGENT}, timeout=10)
     resp.raise_for_status()
     return resp.json()
 
