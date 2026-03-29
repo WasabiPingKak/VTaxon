@@ -14,7 +14,39 @@ limiter.limit("5/minute")(reports_bp)
 
 @reports_bp.route("", methods=["POST"])
 def create_report():
-    """Submit an impersonation report. No login required (anonymous allowed)."""
+    """提交檢舉（冒充或非 VTuber）。無需登入。
+    ---
+    tags:
+      - Reports
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - reported_user_id
+            - reason
+          properties:
+            reported_user_id:
+              type: string
+            report_type:
+              type: string
+              enum: [impersonation, not_vtuber]
+              default: impersonation
+            reason:
+              type: string
+              maxLength: 2000
+            evidence_url:
+              type: string
+    responses:
+      201:
+        description: 檢舉已建立
+      400:
+        description: 驗證錯誤
+      404:
+        description: 被舉報使用者不存在
+    """
     # Optionally identify the reporter
     reporter_id = get_current_user()
 
@@ -62,7 +94,22 @@ def create_report():
 @reports_bp.route("", methods=["GET"])
 @admin_required
 def list_reports():
-    """List reports filtered by status. Admin only."""
+    """列出檢舉（管理員）。
+    ---
+    tags:
+      - Reports
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: status
+        in: query
+        type: string
+        default: pending
+        enum: [pending, investigating, confirmed, dismissed]
+    responses:
+      200:
+        description: 檢舉清單
+    """
     status = request.args.get("status", "pending")
     if status not in ("pending", "investigating", "confirmed", "dismissed"):
         return jsonify({"error": "Invalid status"}), 400
@@ -75,7 +122,33 @@ def list_reports():
 @reports_bp.route("/<int:report_id>", methods=["PATCH"])
 @admin_required
 def update_report(report_id):
-    """Update report status (confirmed/dismissed). Admin only."""
+    """更新檢舉狀態（管理員）。
+    ---
+    tags:
+      - Reports
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: report_id
+        in: path
+        type: integer
+        required: true
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [investigating, confirmed, dismissed]
+            admin_note:
+              type: string
+    responses:
+      200:
+        description: 更新後的檢舉
+      404:
+        description: 檢舉不存在
+    """
     report = db.session.get(UserReport, report_id)
     if not report:
         return jsonify({"error": "Report not found"}), 404
@@ -102,7 +175,32 @@ def update_report(report_id):
 @reports_bp.route("/<int:report_id>/hide", methods=["POST"])
 @admin_required
 def hide_user(report_id):
-    """Hide the reported user (shadow ban) instead of full ban. Admin only."""
+    """隱藏被舉報使用者（影子封鎖）。管理員。
+    ---
+    tags:
+      - Reports
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: report_id
+        in: path
+        type: integer
+        required: true
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            reason:
+              type: string
+            admin_note:
+              type: string
+    responses:
+      200:
+        description: 使用者已隱藏
+      404:
+        description: 檢舉或使用者不存在
+    """
     report = db.session.get(UserReport, report_id)
     if not report:
         return jsonify({"error": "Report not found"}), 404
@@ -147,7 +245,23 @@ def hide_user(report_id):
 @reports_bp.route("/<int:report_id>/blacklist-preview", methods=["GET"])
 @admin_required
 def blacklist_preview(report_id):
-    """Preview the reported user's OAuth accounts for banning. Admin only."""
+    """預覽被舉報使用者的帳號（用於封鎖）。管理員。
+    ---
+    tags:
+      - Reports
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: report_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: 帳號識別碼清單
+      404:
+        description: 檢舉不存在
+    """
     report = db.session.get(UserReport, report_id)
     if not report:
         return jsonify({"error": "Report not found"}), 404
@@ -182,7 +296,46 @@ def blacklist_preview(report_id):
 @reports_bp.route("/<int:report_id>/ban", methods=["POST"])
 @admin_required
 def ban_user(report_id):
-    """Ban identifiers and delete the reported user. Admin only."""
+    """封鎖帳號識別碼並刪除使用者。管理員。
+    ---
+    tags:
+      - Reports
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: report_id
+        in: path
+        type: integer
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - identifiers
+          properties:
+            identifiers:
+              type: array
+              items:
+                type: object
+                properties:
+                  identifier_type:
+                    type: string
+                  identifier_value:
+                    type: string
+            reason:
+              type: string
+            admin_note:
+              type: string
+    responses:
+      200:
+        description: 封鎖與刪除成功
+      400:
+        description: 未選擇要封鎖的帳號
+      404:
+        description: 檢舉或使用者不存在
+    """
     report = db.session.get(UserReport, report_id)
     if not report:
         return jsonify({"error": "Report not found"}), 404
@@ -291,7 +444,16 @@ def ban_user(report_id):
 @reports_bp.route("/blacklist", methods=["GET"])
 @admin_required
 def list_blacklist():
-    """List all blacklisted identifiers. Admin only."""
+    """列出所有黑名單。管理員。
+    ---
+    tags:
+      - Reports
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: 黑名單清單
+    """
     entries = Blacklist.query.order_by(Blacklist.created_at.desc()).all()
     return jsonify({"blacklist": [e.to_dict() for e in entries]})
 
@@ -299,7 +461,23 @@ def list_blacklist():
 @reports_bp.route("/blacklist/<int:entry_id>", methods=["DELETE"])
 @admin_required
 def delete_blacklist_entry(entry_id):
-    """Remove a blacklist entry. Admin only."""
+    """移除黑名單項目。管理員。
+    ---
+    tags:
+      - Reports
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: entry_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: 移除成功
+      404:
+        description: 項目不存在
+    """
     entry = db.session.get(Blacklist, entry_id)
     if not entry:
         return jsonify({"error": "Blacklist entry not found"}), 404

@@ -59,6 +59,41 @@ def _breed_matches_taxon(breed, taxon_id):
 @traits_bp.route("", methods=["POST"])
 @login_required
 def create_trait():
+    """建立角色物種特徵。
+    ---
+    tags:
+      - Traits
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            taxon_id:
+              type: integer
+              description: 現實物種 ID（與 fictional_species_id 二擇一）
+            fictional_species_id:
+              type: integer
+              description: 虛構物種 ID（與 taxon_id 二擇一）
+            breed_id:
+              type: integer
+            breed_name:
+              type: string
+            trait_note:
+              type: string
+    responses:
+      201:
+        description: 特徵已建立
+      400:
+        description: 驗證錯誤或分類階層不允許
+      404:
+        description: 物種或品種不存在
+      409:
+        description: 重複或祖先衝突
+    """
     data = request.get_json() or {}
 
     taxon_id = data.get("taxon_id")
@@ -212,6 +247,28 @@ def create_trait():
 
 @traits_bp.route("", methods=["GET"])
 def list_traits():
+    """列出指定使用者的物種特徵。
+    ---
+    tags:
+      - Traits
+    parameters:
+      - name: user_id
+        in: query
+        type: string
+        required: true
+    responses:
+      200:
+        description: 特徵清單
+        schema:
+          type: object
+          properties:
+            traits:
+              type: array
+              items:
+                type: object
+      400:
+        description: 缺少 user_id
+    """
     user_id = request.args.get("user_id")
     if not user_id:
         return jsonify({"error": "user_id query parameter required"}), 400
@@ -223,6 +280,36 @@ def list_traits():
 @traits_bp.route("/<trait_id>", methods=["PATCH"])
 @login_required
 def update_trait(trait_id):
+    """更新物種特徵（品種、備註）。
+    ---
+    tags:
+      - Traits
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: trait_id
+        in: path
+        type: string
+        required: true
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            breed_id:
+              type: integer
+            breed_name:
+              type: string
+            trait_note:
+              type: string
+    responses:
+      200:
+        description: 更新後的特徵
+      403:
+        description: 無權限
+      404:
+        description: 特徵不存在
+    """
     trait = db.session.get(VtuberTrait, trait_id)
     if not trait:
         return jsonify({"error": "Trait not found"}), 404
@@ -256,6 +343,25 @@ def update_trait(trait_id):
 @traits_bp.route("/<trait_id>", methods=["DELETE"])
 @login_required
 def delete_trait(trait_id):
+    """刪除物種特徵。
+    ---
+    tags:
+      - Traits
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: trait_id
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: 特徵已刪除
+      403:
+        description: 無權限
+      404:
+        description: 特徵不存在
+    """
     trait = db.session.get(VtuberTrait, trait_id)
     if not trait:
         return jsonify({"error": "Trait not found"}), 404

@@ -28,7 +28,25 @@ def _invalidate_live_cache():
 @webhooks_bp.route("/webhooks/twitch", methods=["POST"])
 @limiter.exempt
 def twitch_webhook():
-    """Handle Twitch EventSub webhook callbacks."""
+    """接收 Twitch EventSub webhook 回呼。
+    ---
+    tags:
+      - Webhooks
+    parameters:
+      - name: Twitch-Eventsub-Message-Type
+        in: header
+        type: string
+      - name: Twitch-Eventsub-Message-Signature
+        in: header
+        type: string
+    responses:
+      200:
+        description: Challenge 驗證回應
+      204:
+        description: 通知已處理
+      403:
+        description: 簽章驗證失敗
+    """
     from ..services.twitch import verify_webhook_signature
 
     webhook_secret = os.environ.get("TWITCH_WEBHOOK_SECRET", "")
@@ -149,7 +167,20 @@ def _handle_stream_offline(event):
 @webhooks_bp.route("/webhooks/youtube", methods=["GET"])
 @limiter.exempt
 def youtube_webhook_verify():
-    """PubSubHubbub subscription verification — return hub.challenge."""
+    """YouTube PubSubHubbub 訂閱驗證。
+    ---
+    tags:
+      - Webhooks
+    parameters:
+      - name: hub.challenge
+        in: query
+        type: string
+    responses:
+      200:
+        description: 回傳 hub.challenge
+      404:
+        description: 缺少 challenge
+    """
     challenge = request.args.get("hub.challenge", "")
     if challenge:
         return challenge, 200, {"Content-Type": "text/plain"}
@@ -159,7 +190,22 @@ def youtube_webhook_verify():
 @webhooks_bp.route("/webhooks/youtube", methods=["POST"])
 @limiter.exempt
 def youtube_webhook_notify():
-    """Receive YouTube PubSubHubbub Atom feed notification."""
+    """接收 YouTube PubSubHubbub Atom feed 通知。
+    ---
+    tags:
+      - Webhooks
+    parameters:
+      - name: X-Hub-Signature
+        in: header
+        type: string
+    consumes:
+      - application/atom+xml
+    responses:
+      204:
+        description: 通知已處理
+      403:
+        description: 簽章驗證失敗
+    """
     from ..services.youtube_pubsub import check_video_is_live, parse_feed, verify_hub_signature
 
     hub_secret = os.environ.get("CRON_SECRET", "")

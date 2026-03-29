@@ -18,7 +18,29 @@ admin_bp = Blueprint("admin", __name__)
 @admin_bp.route("/request-counts")
 @admin_required
 def get_request_counts():
-    """Return status counts for all admin request types in one call."""
+    """取得所有管理請求的狀態統計。管理員。
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: 各類請求的狀態計數
+        schema:
+          type: object
+          properties:
+            fictional:
+              type: object
+            breed:
+              type: object
+            name_report:
+              type: object
+            report:
+              type: object
+            visibility:
+              type: object
+    """
     # Fictional species requests: group by status
     fictional_rows = (
         db.session.query(FictionalSpeciesRequest.status, func.count()).group_by(FictionalSpeciesRequest.status).all()
@@ -54,7 +76,16 @@ def get_request_counts():
 @admin_bp.route("/export-fictional")
 @admin_required
 def export_fictional():
-    """Export all received fictional species requests with reference data."""
+    """匯出已收到的虛構物種請求。管理員。
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: 匯出資料（含指示說明）
+    """
     requests = (
         FictionalSpeciesRequest.query.filter_by(status="received").order_by(FictionalSpeciesRequest.created_at).all()
     )
@@ -93,7 +124,16 @@ def export_fictional():
 @admin_bp.route("/export-breeds")
 @admin_required
 def export_breeds():
-    """Export all received breed requests with species context."""
+    """匯出已收到的品種請求（含物種上下文）。管理員。
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: 匯出資料
+    """
     requests = BreedRequest.query.filter_by(status="received").order_by(BreedRequest.created_at).all()
 
     result_requests = []
@@ -148,7 +188,23 @@ def export_breeds():
 @admin_bp.route("/transition-fictional", methods=["POST"])
 @admin_required
 def transition_fictional():
-    """Batch transition all received fictional requests to in_progress."""
+    """批量將虛構物種請求從 received 轉為 in_progress。管理員。
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: 轉移成功
+        schema:
+          type: object
+          properties:
+            updated:
+              type: integer
+      500:
+        description: 轉移失敗
+    """
     from ..services.notifications import create_notification
 
     reqs = FictionalSpeciesRequest.query.filter_by(status="received").all()
@@ -173,7 +229,23 @@ def transition_fictional():
 @admin_bp.route("/transition-breeds", methods=["POST"])
 @admin_required
 def transition_breeds():
-    """Batch transition all received breed requests to in_progress."""
+    """批量將品種請求從 received 轉為 in_progress。管理員。
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: 轉移成功
+        schema:
+          type: object
+          properties:
+            updated:
+              type: integer
+      500:
+        description: 轉移失敗
+    """
     from ..services.notifications import create_notification
 
     reqs = BreedRequest.query.filter_by(status="received").all()
@@ -198,7 +270,38 @@ def transition_breeds():
 @admin_bp.route("/users/<user_id>/visibility", methods=["PATCH"])
 @admin_required
 def set_user_visibility(user_id):
-    """Set a user's visibility (visible/hidden). Admin only."""
+    """設定使用者能見度。管理員。
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: user_id
+        in: path
+        type: string
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - visibility
+          properties:
+            visibility:
+              type: string
+              enum: [visible, hidden]
+            reason:
+              type: string
+    responses:
+      200:
+        description: 更新成功
+      400:
+        description: 無效的 visibility
+      404:
+        description: 使用者不存在
+    """
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -235,7 +338,16 @@ def set_user_visibility(user_id):
 @admin_bp.route("/users/pending-reviews", methods=["GET"])
 @admin_required
 def pending_reviews():
-    """List users with pending_review visibility (appealed). Admin only."""
+    """列出待審核的申訴使用者。管理員。
+    ---
+    tags:
+      - Admin
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: 待審核使用者清單
+    """
     users = User.query.filter_by(visibility="pending_review").order_by(User.updated_at.desc()).all()
     return jsonify(
         {

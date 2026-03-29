@@ -9,6 +9,26 @@ fictional_bp = Blueprint("fictional", __name__)
 
 @fictional_bp.route("", methods=["GET"])
 def list_fictional_species():
+    """列出虛構物種。
+    ---
+    tags:
+      - Fictional
+    parameters:
+      - name: origin
+        in: query
+        type: string
+        description: 依來源篩選
+    responses:
+      200:
+        description: 虛構物種清單
+        schema:
+          type: object
+          properties:
+            species:
+              type: array
+              items:
+                type: object
+    """
     query = FictionalSpecies.query
 
     origin = request.args.get("origin")
@@ -27,6 +47,22 @@ def list_fictional_species():
 @fictional_bp.route("/requests", methods=["GET"])
 @admin_required
 def list_requests():
+    """列出虛構物種請求（管理員）。
+    ---
+    tags:
+      - Fictional
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: status
+        in: query
+        type: string
+        default: pending
+        enum: [pending, received, in_progress, completed, approved, rejected]
+    responses:
+      200:
+        description: 請求清單
+    """
     status = request.args.get("status", "pending")
     if status not in ("pending", "received", "in_progress", "completed", "approved", "rejected"):
         return jsonify({"error": "Invalid status filter"}), 400
@@ -41,6 +77,35 @@ def list_requests():
 @fictional_bp.route("/requests/<int:req_id>", methods=["PATCH"])
 @admin_required
 def update_request(req_id):
+    """更新虛構物種請求狀態（管理員）。
+    ---
+    tags:
+      - Fictional
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: req_id
+        in: path
+        type: integer
+        required: true
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [received, in_progress, completed, rejected]
+            admin_note:
+              type: string
+    responses:
+      200:
+        description: 更新後的請求
+      400:
+        description: 無效的狀態
+      404:
+        description: 請求不存在
+    """
     req = db.session.get(FictionalSpeciesRequest, req_id)
     if not req:
         return jsonify({"error": "Request not found"}), 404
@@ -67,6 +132,41 @@ def update_request(req_id):
 @fictional_bp.route("/requests", methods=["POST"])
 @login_required
 def create_request():
+    """提交虛構物種新增請求。
+    ---
+    tags:
+      - Fictional
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - name_zh
+          properties:
+            name_zh:
+              type: string
+              maxLength: 30
+            name_en:
+              type: string
+              maxLength: 60
+            suggested_origin:
+              type: string
+              maxLength: 60
+            suggested_sub_origin:
+              type: string
+            description:
+              type: string
+              maxLength: 500
+    responses:
+      201:
+        description: 請求已建立
+      400:
+        description: 驗證錯誤
+    """
     data = request.get_json() or {}
 
     FIELD_LIMITS = {

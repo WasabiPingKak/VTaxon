@@ -18,7 +18,23 @@ _live_cache = {"data": None, "ts": 0, "ttl": 15}
 @livestream_bp.route("/live-status", methods=["GET"])
 @limiter.limit("60/minute")
 def live_status():
-    """Public endpoint: return all currently live users."""
+    """取得目前所有直播中的使用者。
+    ---
+    tags:
+      - Livestream
+    responses:
+      200:
+        description: 直播狀態（快取 15 秒）
+        schema:
+          type: object
+          properties:
+            live:
+              type: array
+              items:
+                type: object
+            primaries:
+              type: object
+    """
     now = time.time()
     if _live_cache["data"] is not None and (now - _live_cache["ts"]) < _live_cache["ttl"]:
         return jsonify(_live_cache["data"])

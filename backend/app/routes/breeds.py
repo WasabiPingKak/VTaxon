@@ -16,7 +16,21 @@ breeds_bp = Blueprint("breeds", __name__)
 
 @breeds_bp.route("/categories", methods=["GET"])
 def list_breed_categories():
-    """Return species that have breeds, with breed count and species info."""
+    """列出有品種的物種及品種數量。
+    ---
+    tags:
+      - Breeds
+    responses:
+      200:
+        description: 品種分類清單
+        schema:
+          type: object
+          properties:
+            categories:
+              type: array
+              items:
+                type: object
+    """
     from ..services.gbif import resolve_missing_chinese_name
 
     rows = db.session.query(Breed.taxon_id, func.count(Breed.id).label("breed_count")).group_by(Breed.taxon_id).all()
@@ -41,6 +55,30 @@ def list_breed_categories():
 
 @breeds_bp.route("", methods=["GET"])
 def list_breeds():
+    """列出指定物種的品種。
+    ---
+    tags:
+      - Breeds
+    parameters:
+      - name: taxon_id
+        in: query
+        type: integer
+        required: true
+    responses:
+      200:
+        description: 品種清單與物種資訊
+        schema:
+          type: object
+          properties:
+            breeds:
+              type: array
+              items:
+                type: object
+            species:
+              type: object
+      400:
+        description: 缺少 taxon_id
+    """
     taxon_id = request.args.get("taxon_id", type=int)
     if not taxon_id:
         return jsonify({"error": "taxon_id query parameter required"}), 400
@@ -85,7 +123,26 @@ def list_breeds():
 
 @breeds_bp.route("/search", methods=["GET"])
 def search_breeds():
-    """Search breeds by name (Chinese substring or English case-insensitive substring)."""
+    """搜尋品種（中文子字串或英文不分大小寫）。
+    ---
+    tags:
+      - Breeds
+    parameters:
+      - name: q
+        in: query
+        type: string
+        required: true
+      - name: limit
+        in: query
+        type: integer
+        default: 20
+        maximum: 50
+    responses:
+      200:
+        description: 品種搜尋結果
+      400:
+        description: 缺少搜尋關鍵字
+    """
     q = request.args.get("q", "").strip()
     if not q:
         return jsonify({"error": "Query parameter q is required"}), 400
@@ -116,6 +173,38 @@ def search_breeds():
 @breeds_bp.route("", methods=["POST"])
 @admin_required
 def create_breed():
+    """新增品種（管理員）。
+    ---
+    tags:
+      - Breeds
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - taxon_id
+            - name_en
+          properties:
+            taxon_id:
+              type: integer
+            name_en:
+              type: string
+            name_zh:
+              type: string
+            breed_group:
+              type: string
+    responses:
+      201:
+        description: 品種已建立
+      400:
+        description: 缺少必填欄位
+      409:
+        description: 品種已存在
+    """
     data = request.get_json() or {}
 
     taxon_id = data.get("taxon_id")
@@ -147,6 +236,37 @@ def create_breed():
 @breeds_bp.route("/requests", methods=["POST"])
 @login_required
 def create_breed_request():
+    """提交品種新增請求。
+    ---
+    tags:
+      - Breeds
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - name_zh
+            - name_en
+            - description
+          properties:
+            taxon_id:
+              type: integer
+            name_zh:
+              type: string
+            name_en:
+              type: string
+            description:
+              type: string
+    responses:
+      201:
+        description: 請求已建立
+      400:
+        description: 驗證錯誤
+    """
     data = request.get_json() or {}
 
     name_zh = (data.get("name_zh") or "").strip()
@@ -179,6 +299,22 @@ def create_breed_request():
 @breeds_bp.route("/requests", methods=["GET"])
 @admin_required
 def list_breed_requests():
+    """列出品種請求（管理員）。
+    ---
+    tags:
+      - Breeds
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: status
+        in: query
+        type: string
+        default: pending
+        enum: [pending, received, in_progress, completed, approved, rejected]
+    responses:
+      200:
+        description: 請求清單
+    """
     status = request.args.get("status", "pending")
     if status not in ("pending", "received", "in_progress", "completed", "approved", "rejected"):
         return jsonify({"error": "Invalid status filter"}), 400
@@ -191,6 +327,35 @@ def list_breed_requests():
 @breeds_bp.route("/requests/<int:req_id>", methods=["PATCH"])
 @admin_required
 def update_breed_request(req_id):
+    """更新品種請求狀態（管理員）。
+    ---
+    tags:
+      - Breeds
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: req_id
+        in: path
+        type: integer
+        required: true
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [received, in_progress, completed, rejected]
+            admin_note:
+              type: string
+    responses:
+      200:
+        description: 更新後的請求
+      400:
+        description: 無效的狀態
+      404:
+        description: 請求不存在
+    """
     req = db.session.get(BreedRequest, req_id)
     if not req:
         return jsonify({"error": "Request not found"}), 404

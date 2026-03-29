@@ -25,6 +25,36 @@ limiter.limit("30/minute")(species_bp)
 
 @species_bp.route("/search", methods=["GET"])
 def search():
+    """搜尋物種（依名稱）。
+    ---
+    tags:
+      - Species
+    parameters:
+      - name: q
+        in: query
+        type: string
+        required: true
+        description: 搜尋關鍵字
+      - name: limit
+        in: query
+        type: integer
+        default: 10
+        maximum: 50
+    responses:
+      200:
+        description: 搜尋結果
+        schema:
+          type: object
+          properties:
+            results:
+              type: array
+              items:
+                type: object
+      400:
+        description: 缺少搜尋關鍵字
+      502:
+        description: GBIF 暫時無法使用
+    """
     q = request.args.get("q", "").strip()
     if not q:
         return jsonify({"error": "Query parameter q is required"}), 400
@@ -43,10 +73,27 @@ def search():
 
 @species_bp.route("/search/stream", methods=["GET"])
 def search_stream():
-    """Streaming species search — returns NDJSON (one JSON object per line).
-
-    Results are sent incrementally as each species is enriched with Chinese names,
-    so the frontend can render them one by one instead of waiting for all results.
+    """串流物種搜尋（NDJSON 格式，逐筆回傳）。
+    ---
+    tags:
+      - Species
+    produces:
+      - application/x-ndjson
+    parameters:
+      - name: q
+        in: query
+        type: string
+        required: true
+      - name: limit
+        in: query
+        type: integer
+        default: 10
+        maximum: 50
+    responses:
+      200:
+        description: NDJSON 串流，每行一個 JSON 物件
+      400:
+        description: 缺少搜尋關鍵字
     """
     q = request.args.get("q", "").strip()
     if not q:
@@ -77,9 +124,25 @@ def search_stream():
 
 @species_bp.route("/match", methods=["GET"])
 def match():
-    """Exact match a species name against GBIF Backbone Taxonomy.
-
-    Returns a single best match with confidence score.
+    """精確比對物種名稱（GBIF Backbone Taxonomy）。
+    ---
+    tags:
+      - Species
+    parameters:
+      - name: name
+        in: query
+        type: string
+        required: true
+        description: 物種名稱
+    responses:
+      200:
+        description: 比對結果
+      400:
+        description: 缺少 name 參數
+      404:
+        description: 無匹配結果
+      502:
+        description: GBIF 暫時無法使用
     """
     name = request.args.get("name", "").strip()
     if not name:
@@ -99,6 +162,21 @@ def match():
 
 @species_bp.route("/<int:taxon_id>", methods=["GET"])
 def get_one(taxon_id):
+    """取得單一物種資料。
+    ---
+    tags:
+      - Species
+    parameters:
+      - name: taxon_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: 物種資料
+      404:
+        description: 物種不存在
+    """
     result = get_species(taxon_id)
     if not result:
         return jsonify({"error": "Species not found"}), 404
@@ -107,7 +185,28 @@ def get_one(taxon_id):
 
 @species_bp.route("/<int:taxon_id>/children", methods=["GET"])
 def get_children(taxon_id):
-    """Fetch subspecies/children of a species via GBIF children API."""
+    """取得物種的子分類（亞種等）。
+    ---
+    tags:
+      - Species
+    parameters:
+      - name: taxon_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: 子分類清單
+        schema:
+          type: object
+          properties:
+            results:
+              type: array
+              items:
+                type: object
+      502:
+        description: GBIF 暫時無法使用
+    """
     try:
         subspecies = get_subspecies(taxon_id)
     except _requests.RequestException:
@@ -118,7 +217,21 @@ def get_children(taxon_id):
 
 @species_bp.route("/<int:taxon_id>/children/stream", methods=["GET"])
 def get_children_stream(taxon_id):
-    """Streaming subspecies fetch — returns NDJSON (one JSON object per line)."""
+    """串流取得子分類（NDJSON 格式）。
+    ---
+    tags:
+      - Species
+    produces:
+      - application/x-ndjson
+    parameters:
+      - name: taxon_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: NDJSON 串流
+    """
 
     def generate():
         try:
@@ -143,10 +256,36 @@ def get_children_stream(taxon_id):
 @species_bp.route("/cache/clear", methods=["POST"])
 @admin_required
 def clear_cache():
-    """Clear Chinese name caches (admin only).
-
-    Clears both in-memory LRU caches and DB species_cache.common_name_zh.
-    Optional JSON body: {"taxon_ids": [12345, 67890]} to target specific taxa.
+    """清除中文名稱快取（管理員）。
+    ---
+    tags:
+      - Species
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            taxon_ids:
+              type: array
+              items:
+                type: integer
+              description: 指定要清除的 taxon_id，省略則清除全部
+    responses:
+      200:
+        description: 清除結果
+        schema:
+          type: object
+          properties:
+            cleared_count:
+              type: integer
+            lru_caches_cleared:
+              type: boolean
+            scope:
+              type: string
+              enum: [specific, all]
     """
     # 1. Clear all in-memory LRU caches
     clear_chinese_name_caches()
@@ -187,7 +326,37 @@ def clear_cache():
 @species_bp.route("/name-reports", methods=["POST"])
 @login_required
 def create_name_report():
-    """Submit a species name report (missing or wrong Chinese name)."""
+    """提交物種名稱回報（中文名稱缺漏或錯誤）。
+    ---
+    tags:
+      - Species
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - report_type
+            - suggested_name_zh
+          properties:
+            taxon_id:
+              type: integer
+            report_type:
+              type: string
+              enum: [missing_zh, wrong_zh, not_found]
+            suggested_name_zh:
+              type: string
+            description:
+              type: string
+    responses:
+      201:
+        description: 回報已建立
+      400:
+        description: 驗證錯誤
+    """
     data = request.get_json() or {}
     taxon_id = data.get("taxon_id")
     report_type = data.get("report_type")
@@ -229,7 +398,21 @@ def create_name_report():
 @species_bp.route("/name-reports", methods=["GET"])
 @admin_required
 def list_name_reports():
-    """List species name reports (admin only)."""
+    """列出物種名稱回報（管理員）。
+    ---
+    tags:
+      - Species
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: status
+        in: query
+        type: string
+        default: pending
+    responses:
+      200:
+        description: 回報清單
+    """
     status = request.args.get("status", "pending")
     reports = SpeciesNameReport.query.filter_by(status=status).order_by(SpeciesNameReport.created_at.desc()).all()
     return jsonify({"reports": [r.to_dict() for r in reports]})
@@ -238,7 +421,32 @@ def list_name_reports():
 @species_bp.route("/name-reports/<int:report_id>", methods=["PATCH"])
 @admin_required
 def update_name_report(report_id):
-    """Update a species name report (admin only)."""
+    """更新物種名稱回報狀態（管理員）。
+    ---
+    tags:
+      - Species
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: report_id
+        in: path
+        type: integer
+        required: true
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            admin_note:
+              type: string
+    responses:
+      200:
+        description: 更新後的回報
+      404:
+        description: 回報不存在
+    """
     report = db.session.get(SpeciesNameReport, report_id)
     if not report:
         return jsonify({"error": "Report not found"}), 404

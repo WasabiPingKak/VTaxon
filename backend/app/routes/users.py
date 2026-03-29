@@ -16,6 +16,18 @@ users_bp = Blueprint("users", __name__)
 @users_bp.route("/me", methods=["GET"])
 @login_required
 def get_me():
+    """取得目前登入使用者的個人資料。
+    ---
+    tags:
+      - Users
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: 使用者資料
+      404:
+        description: 使用者不存在
+    """
     user = db.session.get(User, g.current_user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -25,6 +37,52 @@ def get_me():
 @users_bp.route("/me", methods=["PATCH"])
 @login_required
 def update_me():
+    """更新目前登入使用者的個人資料。
+    ---
+    tags:
+      - Users
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: body
+        schema:
+          type: object
+          properties:
+            display_name:
+              type: string
+            organization:
+              type: string
+            bio:
+              type: string
+              maxLength: 500
+            country_flags:
+              type: array
+              items:
+                type: string
+                minLength: 2
+                maxLength: 2
+            social_links:
+              type: object
+            primary_platform:
+              type: string
+              enum: [youtube, twitch]
+            profile_data:
+              type: object
+            org_type:
+              type: string
+              enum: [indie, corporate, club]
+            vtuber_declaration_at:
+              type: boolean
+              description: 設為 true 觸發 VTuber 聲明（僅限一次）
+    responses:
+      200:
+        description: 更新後的使用者資料
+      400:
+        description: 驗證錯誤
+      404:
+        description: 使用者不存在
+    """
     user = db.session.get(User, g.current_user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -222,6 +280,21 @@ def update_me():
 
 @users_bp.route("/<user_id>", methods=["GET"])
 def get_user(user_id):
+    """取得指定使用者的公開資料。
+    ---
+    tags:
+      - Users
+    parameters:
+      - name: user_id
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: 使用者資料（含公開 OAuth 帳號）
+      404:
+        description: 使用者不存在
+    """
     user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -235,7 +308,38 @@ def get_user(user_id):
 @login_required
 @validate_with(AppealSchema)
 def submit_appeal(data):
-    """Submit an appeal to request visibility review."""
+    """提交申訴以請求能見度審查。
+    ---
+    tags:
+      - Users
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - appeal_note
+          properties:
+            appeal_note:
+              type: string
+    responses:
+      200:
+        description: 申訴已提交
+        schema:
+          type: object
+          properties:
+            ok:
+              type: boolean
+            visibility:
+              type: string
+      400:
+        description: 目前帳號狀態不允許申訴
+      404:
+        description: 使用者不存在
+    """
     user = db.session.get(User, g.current_user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404

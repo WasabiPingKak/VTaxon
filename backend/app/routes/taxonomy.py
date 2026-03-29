@@ -169,10 +169,25 @@ def _rebuild_path_zh(species):
 
 @taxonomy_bp.route("/tree", methods=["GET"])
 def get_taxonomy_tree():
-    """Return all vtuber traits with real species, joined with user and species data.
-
-    Frontend builds the tree structure from the flat list using taxon_path.
-    Uses in-process cache (TTL 5 min) to avoid repeated DB queries.
+    """取得完整的現實物種分類樹。
+    ---
+    tags:
+      - Taxonomy
+    parameters:
+      - name: refresh
+        in: query
+        type: string
+        description: 設為 1 強制刷新快取（需管理員權限）
+    responses:
+      200:
+        description: 分類樹資料（含所有 trait entries）
+        schema:
+          type: object
+          properties:
+            entries:
+              type: array
+              items:
+                type: object
     """
     # refresh=1 requires admin authentication
     use_cache = True
@@ -348,7 +363,16 @@ def get_taxonomy_tree():
 @taxonomy_bp.route("/cache", methods=["DELETE"])
 @admin_required
 def clear_cache():
-    """Clear all in-process taxonomy caches. Admin only."""
+    """清除所有分類樹快取（管理員）。
+    ---
+    tags:
+      - Taxonomy
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: 快取已清除
+    """
     invalidate_tree_cache()
     invalidate_fictional_tree_cache()
     return jsonify({"message": "Cache cleared"}), 200
@@ -356,7 +380,26 @@ def clear_cache():
 
 @taxonomy_bp.route("/fictional-tree", methods=["GET"])
 def get_fictional_tree():
-    """Return all vtuber traits with fictional species, joined with user and fictional_species data."""
+    """取得完整的虛構物種分類樹。
+    ---
+    tags:
+      - Taxonomy
+    parameters:
+      - name: refresh
+        in: query
+        type: string
+        description: 設為 1 強制刷新快取（需管理員權限）
+    responses:
+      200:
+        description: 虛構分類樹資料
+        schema:
+          type: object
+          properties:
+            entries:
+              type: array
+              items:
+                type: object
+    """
     # refresh=1 requires admin authentication
     use_cache = True
     if request.args.get("refresh"):

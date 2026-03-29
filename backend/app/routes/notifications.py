@@ -10,6 +10,26 @@ notifications_bp = Blueprint("notifications", __name__)
 @notifications_bp.route("", methods=["GET"])
 @login_required
 def list_notifications():
+    """列出通知。
+    ---
+    tags:
+      - Notifications
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: unread_only
+        in: query
+        type: string
+        enum: ["true", "false"]
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        maximum: 200
+    responses:
+      200:
+        description: 通知清單
+    """
     query = Notification.query.filter_by(user_id=str(g.current_user_id))
     if request.args.get("unread_only") == "true":
         query = query.filter_by(is_read=False)
@@ -22,7 +42,28 @@ def list_notifications():
 @notifications_bp.route("/grouped", methods=["GET"])
 @login_required
 def grouped_notifications():
-    """Return notifications grouped by (type, reference_id) as a timeline."""
+    """取得分組通知時間線。
+    ---
+    tags:
+      - Notifications
+    security:
+      - BearerAuth: []
+    parameters:
+      - name: type
+        in: query
+        type: string
+        description: 依類型篩選
+    responses:
+      200:
+        description: 分組通知
+        schema:
+          type: object
+          properties:
+            groups:
+              type: array
+              items:
+                type: object
+    """
     uid = str(g.current_user_id)
     notifs = Notification.query.filter_by(user_id=uid).order_by(Notification.created_at.desc()).all()
 
@@ -107,6 +148,21 @@ def grouped_notifications():
 @notifications_bp.route("/unread-count", methods=["GET"])
 @login_required
 def unread_count():
+    """取得未讀通知數量。
+    ---
+    tags:
+      - Notifications
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: 未讀數量
+        schema:
+          type: object
+          properties:
+            count:
+              type: integer
+    """
     count = Notification.query.filter_by(user_id=str(g.current_user_id), is_read=False).count()
     return jsonify({"count": count})
 
@@ -114,6 +170,33 @@ def unread_count():
 @notifications_bp.route("/read", methods=["POST"])
 @login_required
 def mark_read():
+    """標記通知為已讀。
+    ---
+    tags:
+      - Notifications
+    security:
+      - BearerAuth: []
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            all:
+              type: boolean
+              description: 設為 true 標記全部已讀
+            ids:
+              type: array
+              items:
+                type: string
+              description: 指定要標記的通知 ID
+    responses:
+      200:
+        description: 標記成功
+      400:
+        description: 需提供 all 或 ids
+    """
     data = request.get_json() or {}
     query = Notification.query.filter_by(user_id=str(g.current_user_id), is_read=False)
     if data.get("all"):
