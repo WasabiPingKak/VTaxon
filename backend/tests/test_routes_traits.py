@@ -115,7 +115,7 @@ class TestCreateTrait:
         from unittest.mock import patch
 
         with mock_auth(sample_user.id):
-            with patch("app.routes.traits.get_species", return_value=None):
+            with patch("app.services.traits.get_species", return_value=None):
                 resp = client.post("/api/traits", json={"taxon_id": 99999})
         assert resp.status_code == 404
 
