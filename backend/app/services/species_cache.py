@@ -8,11 +8,11 @@ import json
 import logging
 import re
 
-import requests
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models import SpeciesCache
+from .http_client import external_session
 from .taxonomy_zh import get_species_zh_override, get_taxonomy_zh, get_taxonomy_zh_for_ranks
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ def get_species(taxon_id):
         _fill_missing_rank_zh(d, cached)
         return d
 
-    resp = requests.get(f"{GBIF_BASE}/species/{taxon_id}", timeout=10)
+    resp = external_session.get(f"{GBIF_BASE}/species/{taxon_id}", timeout=10)
     if resp.status_code == 404:
         return None
     resp.raise_for_status()
@@ -103,7 +103,7 @@ def get_subspecies(species_key, limit=50):
     from .chinese_names import _enrich_chinese_names
     from .gbif import _gbif_result_to_dict
 
-    resp = requests.get(f"{GBIF_BASE}/species/{species_key}/children", params={"limit": limit}, timeout=10)
+    resp = external_session.get(f"{GBIF_BASE}/species/{species_key}/children", params={"limit": limit}, timeout=10)
     resp.raise_for_status()
     results = resp.json().get("results", [])
 
@@ -140,7 +140,7 @@ def get_subspecies_stream(species_key, limit=50):
     from .chinese_names import _enrich_chinese_names
     from .gbif import _gbif_result_to_dict
 
-    resp = requests.get(f"{GBIF_BASE}/species/{species_key}/children", params={"limit": limit}, timeout=10)
+    resp = external_session.get(f"{GBIF_BASE}/species/{species_key}/children", params={"limit": limit}, timeout=10)
     resp.raise_for_status()
     results = resp.json().get("results", [])
 

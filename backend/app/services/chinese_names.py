@@ -17,6 +17,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models import SpeciesCache
+from .http_client import external_session
 from .taicol import clear_cache as taicol_clear_cache
 from .taicol import get_chinese_name as taicol_get_chinese_name
 from .taicol import get_higher_taxa_zh as taicol_get_higher_taxa_zh
@@ -145,7 +146,7 @@ def _resolve_rank_zh(taxon_name, rank=None):
         params = {"name": taxon_name, "verbose": "false"}
         if rank:
             params["rank"] = rank
-        resp = requests.get(f"{GBIF_BASE}/species/match", params=params, timeout=10)
+        resp = external_session.get(f"{GBIF_BASE}/species/match", params=params, timeout=10)
         resp.raise_for_status()
         data = resp.json()
         match_type = data.get("matchType", "")
