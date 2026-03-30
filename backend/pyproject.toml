@@ -24,3 +24,9 @@ known-first-party = ["app"]
 [tool.pytest.ini_options]
 addopts = "--cov=app --cov-report=term-missing -x -q"
 testpaths = ["tests"]
+filterwarnings = [
+  "error",
+  # SQLite in-memory + SQLAlchemy pool: GC may finalize pooled connections
+  # during pytest teardown. Not an issue in production (PostgreSQL).
+  "ignore::pytest.PytestUnraisableExceptionWarning",
+]

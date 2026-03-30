@@ -427,7 +427,7 @@ def _resolve_synonym(synonym_key, synonym_canonical_name, seen_keys=None):
             return None
 
         # Fetch the accepted species
-        resp2 = requests.get(f"{GBIF_BASE}/species/{accepted_key}", timeout=10)
+        resp2 = external_session.get(f"{GBIF_BASE}/species/{accepted_key}", timeout=10)
         if resp2.status_code != 200:
             return None
         accepted = resp2.json()

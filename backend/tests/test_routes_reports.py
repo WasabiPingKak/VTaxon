@@ -16,9 +16,9 @@ from app.models import Blacklist, OAuthAccount, User, UserReport
 def _mock_email_and_notifications():
     """Mock external services used by reports routes."""
     with (
-        patch("app.routes.reports.notify_new_report", create=True),
+        patch("app.services.moderation.notify_new_report", create=True),
         patch("app.services.email.notify_new_report", create=True),
-        patch("app.services.notifications.create_notification", create=True),
+        patch("app.services.moderation.create_notification", create=True),
     ):
         yield
 

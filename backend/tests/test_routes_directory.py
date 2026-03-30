@@ -126,7 +126,7 @@ class TestRecentUsers:
 
 
 class TestDirectory:
-    @patch("app.routes.directory._compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
     def test_default_pagination(self, mock_facets, client, db_session):
         _user(db_session, name="Alpha")
         resp = client.get("/api/users/directory")
@@ -138,7 +138,7 @@ class TestDirectory:
         assert data["per_page"] == 24
         assert "facets" in data
 
-    @patch("app.routes.directory._compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
     def test_search_by_name(self, mock_facets, client, db_session):
         _user(db_session, name="UniqueVtuberName")
         _user(db_session, name="OtherUser")
@@ -148,7 +148,7 @@ class TestDirectory:
         assert data["total"] == 1
         assert data["items"][0]["display_name"] == "UniqueVtuberName"
 
-    @patch("app.routes.directory._compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
     def test_has_traits_filter(self, mock_facets, client, db_session):
         u_with = _user(db_session, name="WithTrait")
         _user(db_session, name="WithoutTrait")
@@ -161,7 +161,7 @@ class TestDirectory:
         assert "WithTrait" in names
         assert "WithoutTrait" not in names
 
-    @patch("app.routes.directory._compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
     def test_sort_by_name_asc(self, mock_facets, client, db_session):
         _user(db_session, name="Zebra")
         _user(db_session, name="Apple")
@@ -171,13 +171,13 @@ class TestDirectory:
         assert items[0]["display_name"] == "Apple"
         assert items[1]["display_name"] == "Zebra"
 
-    @patch("app.routes.directory._compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
     def test_per_page_capped(self, mock_facets, client, db_session):
         _user(db_session)
         resp = client.get("/api/users/directory?per_page=999")
         assert resp.get_json()["per_page"] == 100
 
-    @patch("app.routes.directory._compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
     def test_items_include_platforms(self, mock_facets, client, db_session):
         user = _user(db_session, name="PlatformUser")
         acct = OAuthAccount(
@@ -192,7 +192,7 @@ class TestDirectory:
         item = next(i for i in resp.get_json()["items"] if i["display_name"] == "PlatformUser")
         assert "twitch" in item["platforms"]
 
-    @patch("app.routes.directory._compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
     def test_items_include_species_names(self, mock_facets, client, db_session):
         user = _user(db_session, name="SpeciesUser")
         sp = _species(db_session, 500, name="Felis catus", zh="貓")
@@ -203,7 +203,7 @@ class TestDirectory:
         assert item["has_traits"] is True
         assert len(item["species_names"]) >= 1
 
-    @patch("app.routes.directory._compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
     def test_hidden_user_excluded(self, mock_facets, client, db_session):
         user = _user(db_session, name="Invisible")
         user.visibility = "hidden"

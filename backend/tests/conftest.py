@@ -23,7 +23,9 @@ def app():
     with app.app_context():
         _db.create_all()
         yield app
+        _db.session.remove()
         _db.drop_all()
+        _db.engine.dispose()
 
 
 @pytest.fixture()
