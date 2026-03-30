@@ -3,6 +3,12 @@ import os
 
 class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": 5,
+        "max_overflow": 5,
+        "pool_timeout": 30,
+        "pool_recycle": 1800,
+    }
 
     # Supabase
     SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -82,6 +88,7 @@ class StagingConfig(Config):
 class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    SQLALCHEMY_ENGINE_OPTIONS = {}
     RATELIMIT_ENABLED = False
 
 
