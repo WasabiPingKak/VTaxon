@@ -1,10 +1,15 @@
 """Business logic for user reports, moderation (hide/ban), and blacklist management."""
 
+import logging
 from datetime import UTC, datetime
+
+from sqlalchemy.exc import IntegrityError
 
 from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
 from ..extensions import db
 from ..models import AuthIdAlias, Blacklist, OAuthAccount, User, UserReport
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Create report
@@ -205,66 +210,61 @@ def ban_user(report_id, admin_user_id, data):
 
 
 def _add_identifiers_to_blacklist(identifiers, user_id, reason, banned_by):
-    """Add OAuth identifiers to blacklist. Returns count of new entries."""
+    """Add OAuth identifiers to blacklist. Returns count of new entries.
+
+    Uses savepoint per entry so a concurrent duplicate doesn't abort the
+    entire batch.
+    """
     count = 0
     for ident in identifiers:
         id_type = ident.get("identifier_type")
         id_value = ident.get("identifier_value")
         if not id_type or not id_value:
             continue
-        existing = Blacklist.query.filter_by(identifier_type=id_type, identifier_value=id_value).first()
-        if existing:
-            continue
-        db.session.add(
-            Blacklist(
-                identifier_type=id_type,
-                identifier_value=id_value,
-                user_id=user_id,
-                reason=reason,
-                banned_by=banned_by,
-            )
-        )
-        count += 1
+        try:
+            with db.session.begin_nested():
+                db.session.add(
+                    Blacklist(
+                        identifier_type=id_type,
+                        identifier_value=id_value,
+                        user_id=user_id,
+                        reason=reason,
+                        banned_by=banned_by,
+                    )
+                )
+            count += 1
+        except IntegrityError:
+            logger.debug("Blacklist entry already exists: %s/%s", id_type, id_value)
     return count
 
 
 def _blacklist_supabase_uids(user_id, reason, banned_by):
-    """Blacklist the Supabase UID and any auth_id_aliases. Returns count."""
-    count = 0
+    """Blacklist the Supabase UID and any auth_id_aliases. Returns count.
 
-    existing_sub = Blacklist.query.filter_by(
-        identifier_type="supabase_uid",
-        identifier_value=str(user_id),
-    ).first()
-    if not existing_sub:
-        db.session.add(
-            Blacklist(
-                identifier_type="supabase_uid",
-                identifier_value=str(user_id),
-                user_id=user_id,
-                reason=reason,
-                banned_by=banned_by,
-            )
-        )
-        count += 1
+    Uses savepoint per entry so a concurrent duplicate doesn't abort the
+    entire batch.
+    """
+    count = 0
+    uid_values = [str(user_id)]
 
     aliases = AuthIdAlias.query.filter_by(user_id=str(user_id)).all()
-    for alias in aliases:
-        existing_alias = Blacklist.query.filter_by(
-            identifier_type="supabase_uid",
-            identifier_value=alias.auth_id,
-        ).first()
-        if not existing_alias:
-            db.session.add(
-                Blacklist(
-                    identifier_type="supabase_uid",
-                    identifier_value=alias.auth_id,
-                    user_id=user_id,
-                    reason=reason,
-                    banned_by=banned_by,
+    uid_values.extend(alias.auth_id for alias in aliases)
+
+    for uid_value in uid_values:
+        try:
+            with db.session.begin_nested():
+                db.session.add(
+                    Blacklist(
+                        identifier_type="supabase_uid",
+                        identifier_value=uid_value,
+                        user_id=user_id,
+                        reason=reason,
+                        banned_by=banned_by,
+                    )
                 )
-            )
             count += 1
+        except IntegrityError:
+            logger.debug("Blacklist supabase_uid already exists: %s", uid_value)
 
     return count
 
