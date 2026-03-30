@@ -135,38 +135,38 @@ class CreatorSchema(Schema):
 
 
 class ProfileDataSchema(Schema):
-    """Nested schema for profile_data JSON field."""
+    """Nested schema for profile_data JSON field.
 
-    debut_date = fields.String(load_default=None, allow_none=True)
+    No ``load_default`` — only keys actually sent by the client appear in the
+    result dict, preserving PATCH semantics for the parent schema.
+    """
+
+    debut_date = fields.String(allow_none=True)
     birthday_month = fields.Integer(
-        load_default=None,
         allow_none=True,
         validate=validate.Range(min=1, max=12, error="birthday_month must be 1-12"),
     )
     birthday_day = fields.Integer(
-        load_default=None,
         allow_none=True,
         validate=validate.Range(min=1, max=31, error="birthday_day must be 1-31"),
     )
     blood_type = fields.String(
-        load_default=None,
         allow_none=True,
         validate=validate.OneOf(("A", "B", "O", "AB"), error="Invalid blood_type"),
     )
-    mbti = fields.String(load_default=None, allow_none=True)
-    gender = fields.String(load_default=None, allow_none=True)
-    representative_emoji = fields.String(load_default=None, allow_none=True)
-    fan_name = fields.String(load_default=None, allow_none=True)
+    mbti = fields.String(allow_none=True)
+    gender = fields.String(allow_none=True)
+    representative_emoji = fields.String(allow_none=True)
+    fan_name = fields.String(allow_none=True)
     activity_status = fields.String(
-        load_default=None,
         allow_none=True,
         validate=validate.OneOf(("active", "hiatus", "preparing"), error="Invalid activity_status"),
     )
-    illustrators = fields.List(fields.Nested(CreatorSchema), load_default=None, allow_none=True)
-    riggers = fields.List(fields.Nested(CreatorSchema), load_default=None, allow_none=True)
-    modelers_3d = fields.List(fields.Nested(CreatorSchema), load_default=None, allow_none=True)
-    hashtags = fields.List(fields.String(), load_default=None, allow_none=True)
-    debut_video_url = fields.String(load_default=None, allow_none=True)
+    illustrators = fields.List(fields.Nested(CreatorSchema), allow_none=True)
+    riggers = fields.List(fields.Nested(CreatorSchema), allow_none=True)
+    modelers_3d = fields.List(fields.Nested(CreatorSchema), allow_none=True)
+    hashtags = fields.List(fields.String(), allow_none=True)
+    debut_video_url = fields.String(allow_none=True)
 
     class Meta:
         # Reject unknown keys
@@ -174,34 +174,36 @@ class ProfileDataSchema(Schema):
 
 
 class UpdateProfileSchema(Schema):
-    display_name = fields.String(load_default=None)
-    organization = fields.String(load_default=None, allow_none=True)
+    """Profile update schema for PATCH /me.
+
+    No ``load_default`` on any field — marshmallow will only include keys that
+    the client actually sent, so ``'key' in data`` correctly detects which
+    fields were submitted (PATCH semantics).
+    """
+
+    display_name = fields.String()
+    organization = fields.String(allow_none=True)
     bio = TrimString(
-        load_default=None,
         allow_none=True,
         validate=validate.Length(max=500, error="bio must be 500 characters or less"),
     )
     country_flags = fields.List(
         fields.String(validate=validate.Length(equal=2, error="Each flag must be a 2-character country code")),
-        load_default=None,
     )
     social_links = fields.Dict(
         keys=fields.String(validate=validate.OneOf(ALLOWED_SNS_KEYS)),
         values=fields.String(validate=validate.Length(max=500)),
-        load_default=None,
     )
     primary_platform = fields.String(
-        load_default=None,
         validate=validate.OneOf(("youtube", "twitch"), error="primary_platform must be youtube or twitch"),
     )
-    profile_data = fields.Nested(ProfileDataSchema, load_default=None)
+    profile_data = fields.Nested(ProfileDataSchema)
     org_type = fields.String(
-        load_default=None,
         validate=validate.OneOf(("indie", "corporate", "club"), error="org_type must be indie, corporate, or club"),
     )
-    live_primary_real_trait_id = fields.String(load_default=None, allow_none=True)
-    live_primary_fictional_trait_id = fields.String(load_default=None, allow_none=True)
-    vtuber_declaration_at = fields.Boolean(load_default=None)
+    live_primary_real_trait_id = fields.String(allow_none=True)
+    live_primary_fictional_trait_id = fields.String(allow_none=True)
+    vtuber_declaration_at = fields.Boolean()
 
     class Meta:
         unknown = "EXCLUDE"
