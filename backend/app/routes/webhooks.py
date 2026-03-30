@@ -5,6 +5,7 @@ import os
 from datetime import UTC, datetime
 
 from flask import Blueprint, request
+from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
 from ..limiter import limiter
@@ -20,6 +21,51 @@ def _invalidate_live_cache():
     from .livestream import invalidate_live_cache
 
     invalidate_live_cache()
+
+
+def _upsert_live_stream(*, user_id, provider, stream_id, stream_url, stream_title, started_at):
+    """Insert or update a live_streams record, handling concurrent duplicates.
+
+    Uses optimistic INSERT with IntegrityError fallback to UPDATE,
+    ensuring webhook notifications are never silently dropped.
+    """
+    existing = LiveStream.query.filter_by(user_id=user_id, provider=provider).first()
+    if existing:
+        existing.stream_id = stream_id
+        existing.stream_url = stream_url
+        existing.stream_title = stream_title
+        existing.started_at = started_at
+    else:
+        stream = LiveStream(
+            user_id=user_id,
+            provider=provider,
+            stream_id=stream_id,
+            stream_url=stream_url,
+            stream_title=stream_title,
+            started_at=started_at,
+        )
+        db.session.add(stream)
+
+    try:
+        user = db.session.get(User, user_id)
+        if user:
+            user.last_live_at = datetime.now(UTC)
+        db.session.commit()
+    except IntegrityError:
+        # Concurrent INSERT hit the unique constraint — retry as UPDATE
+        db.session.rollback()
+        existing = LiveStream.query.filter_by(user_id=user_id, provider=provider).first()
+        if existing:
+            existing.stream_id = stream_id
+            existing.stream_url = stream_url
+            existing.stream_title = stream_title
+            existing.started_at = started_at
+        user = db.session.get(User, user_id)
+        if user:
+            user.last_live_at = datetime.now(UTC)
+        db.session.commit()
+
+    _invalidate_live_cache()
 
 
 # ── Twitch EventSub Webhook ──
@@ -113,29 +159,14 @@ def _handle_stream_online(event):
     if client_id and client_secret:
         stream_title = get_stream_title(client_id, client_secret, broadcaster_id)
 
-    existing = LiveStream.query.filter_by(user_id=account.user_id, provider="twitch").first()
-    if existing:
-        existing.stream_id = event.get("id")
-        existing.stream_url = stream_url
-        existing.stream_title = stream_title
-        existing.started_at = datetime.now(UTC)
-    else:
-        stream = LiveStream(
-            user_id=account.user_id,
-            provider="twitch",
-            stream_id=event.get("id"),
-            stream_url=stream_url,
-            stream_title=stream_title,
-            started_at=datetime.now(UTC),
-        )
-        db.session.add(stream)
-
-    user = db.session.get(User, account.user_id)
-    if user:
-        user.last_live_at = datetime.now(UTC)
-
-    db.session.commit()
-    _invalidate_live_cache()
+    _upsert_live_stream(
+        user_id=account.user_id,
+        provider="twitch",
+        stream_id=event.get("id"),
+        stream_url=stream_url,
+        stream_title=stream_title,
+        started_at=datetime.now(UTC),
+    )
     logger.info(
         "Twitch stream.online: user_id=%s, broadcaster=%s, title=%s", account.user_id, broadcaster_id, stream_title
     )
@@ -260,27 +291,12 @@ def _handle_youtube_live(user_id, video_id, title, channel_url, started_at):
     except (ValueError, TypeError, AttributeError):
         started_dt = datetime.now(UTC)
 
-    existing = LiveStream.query.filter_by(user_id=user_id, provider="youtube").first()
-    if existing:
-        existing.stream_id = video_id
-        existing.stream_url = stream_url
-        existing.stream_title = title
-        existing.started_at = started_dt
-    else:
-        stream = LiveStream(
-            user_id=user_id,
-            provider="youtube",
-            stream_id=video_id,
-            stream_url=stream_url,
-            stream_title=title,
-            started_at=started_dt,
-        )
-        db.session.add(stream)
-
-    user = db.session.get(User, user_id)
-    if user:
-        user.last_live_at = datetime.now(UTC)
-
-    db.session.commit()
-    _invalidate_live_cache()
+    _upsert_live_stream(
+        user_id=user_id,
+        provider="youtube",
+        stream_id=video_id,
+        stream_url=stream_url,
+        stream_title=title,
+        started_at=started_dt,
+    )
     logger.info("YouTube live: user_id=%s, video=%s, title=%s", user_id, video_id, title)
