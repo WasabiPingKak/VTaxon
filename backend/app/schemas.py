@@ -7,7 +7,7 @@ Business logic validation (DB lookups, ownership, conflicts) stays in routes.
 from functools import wraps
 
 from flask import jsonify, request
-from marshmallow import Schema, ValidationError, fields, validate, validates_schema
+from marshmallow import Schema, ValidationError, fields, post_load, validate, validates_schema
 
 from app.constants import ReportStatus, ReportType, RequestStatus, Visibility
 
@@ -28,7 +28,9 @@ def validate_with(schema_cls):
         def wrapper(*args, **kwargs):
             raw = request.get_json() or {}
             try:
-                data = schema_cls().load(raw)
+                schema = schema_cls()
+                schema.context = {"raw": raw}
+                data = schema.load(raw)
             except ValidationError as err:
                 return jsonify({"error": "Validation failed", "details": err.messages}), 400
             return f(data, *args, **kwargs)
@@ -207,6 +209,25 @@ class UpdateProfileSchema(Schema):
 
     class Meta:
         unknown = "EXCLUDE"
+
+    @post_load
+    def normalize(self, data, **kwargs):
+        raw = self.context.get("raw", {})
+        # Only keep fields the client actually sent
+        data = {k: v for k, v in data.items() if k in raw}
+        # Uppercase country flags
+        if "country_flags" in data and data["country_flags"] is not None:
+            data["country_flags"] = [f.upper() for f in data["country_flags"]]
+        # indie org_type clears organization
+        if data.get("org_type") == "indie":
+            data["organization"] = None
+        # Strip social_links values
+        if "social_links" in data and data["social_links"] is not None:
+            data["social_links"] = {k: v.strip() for k, v in data["social_links"].items() if v}
+        # Normalize bio
+        if "bio" in data and data["bio"] is not None:
+            data["bio"] = data["bio"].strip() or None
+        return data
 
 
 class AppealSchema(Schema):
