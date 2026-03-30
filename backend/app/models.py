@@ -142,6 +142,18 @@ class OAuthAccount(db.Model):
 
 
 class SpeciesCache(db.Model):
+    """Local cache of GBIF species data.
+
+    NOTE: GBIF may reassign taxon keys (usageKey) for the same species over
+    time. When this happens, the old cache row remains (FK references from
+    vtuber_traits, breeds, etc. still point to it), but a new row with the
+    updated key may also be created. This can cause the same species to appear
+    as two separate nodes in the taxonomy tree. Currently only breeds.py has
+    a fallback that matches by canonical scientific name. If this becomes a
+    real issue, consider a periodic reconciliation job that merges old/new
+    keys and updates FK references across all related tables.
+    """
+
     __tablename__ = "species_cache"
 
     taxon_id = db.Column(db.Integer, primary_key=True)
