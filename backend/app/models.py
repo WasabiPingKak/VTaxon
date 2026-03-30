@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
 
 from .extensions import db
+from .utils.encrypted_type import EncryptedText
 
 
 class User(db.Model):
@@ -107,8 +108,8 @@ class OAuthAccount(db.Model):
     provider_avatar_url = db.Column(db.Text)
     channel_url = db.Column(db.Text)
     show_on_profile = db.Column(db.Boolean, nullable=False, default=True)
-    access_token = db.Column(db.Text)
-    refresh_token = db.Column(db.Text)
+    access_token = db.Column(EncryptedText)
+    refresh_token = db.Column(EncryptedText)
     token_expires_at = db.Column(db.DateTime(timezone=True))
     live_sub_status = db.Column(db.Text)
     live_sub_at = db.Column(db.DateTime(timezone=True))
