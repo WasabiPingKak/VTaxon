@@ -529,7 +529,6 @@ class VtuberTrait(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     taxon_id = db.Column(db.Integer, db.ForeignKey("species_cache.taxon_id"))
     fictional_species_id = db.Column(db.Integer, db.ForeignKey("fictional_species.id"))
-    display_name = db.Column(db.Text)  # deprecated, kept for migration compat
     breed_name = db.Column(db.Text)  # legacy free-text, prefer breed_id
     breed_id = db.Column(db.Integer, db.ForeignKey("breeds.id", ondelete="SET NULL"))
     trait_note = db.Column(db.Text)
@@ -550,12 +549,12 @@ class VtuberTrait(db.Model):
     )
 
     def computed_display_name(self):
-        """Compute display_name from related species/fictional for backward compat."""
+        """Compute display name from related species or fictional species."""
         if self.species:
             return self.species._effective_common_name_zh() or self.species.scientific_name
         if self.fictional:
             return self.fictional.name_zh or self.fictional.name
-        return self.display_name
+        return None
 
     def to_dict(self):
         # Prefer breed object name over legacy free-text breed_name
