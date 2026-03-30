@@ -36,7 +36,7 @@ def list_breed_categories():
     rows = db.session.query(Breed.taxon_id, func.count(Breed.id).label("breed_count")).group_by(Breed.taxon_id).all()
     categories = []
     for taxon_id, breed_count in rows:
-        sp = SpeciesCache.query.get(taxon_id)
+        sp = db.session.get(SpeciesCache, taxon_id)
         entry = {
             "taxon_id": taxon_id,
             "breed_count": breed_count,
@@ -90,7 +90,7 @@ def list_breeds():
     # exact taxon_id, look for breeds under other taxon_ids that share the
     # same canonical scientific name (e.g. "Canis lupus familiaris").
     if not breeds:
-        sp = SpeciesCache.query.get(taxon_id)
+        sp = db.session.get(SpeciesCache, taxon_id)
         if sp:
             # Extract canonical name: genus (upper) + lowercase epithets,
             # stop at author (next uppercase word after genus).
@@ -115,7 +115,7 @@ def list_breeds():
                     break
 
     # Include parent species info so frontend can construct full onSelect payload
-    sp = SpeciesCache.query.get(actual_taxon_id)
+    sp = db.session.get(SpeciesCache, actual_taxon_id)
     species_info = sp.to_dict() if sp else None
 
     return jsonify({"breeds": [b.to_dict() for b in breeds], "species": species_info})
