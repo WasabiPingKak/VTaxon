@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
 
+from .constants import ReportStatus, ReportType, RequestStatus, Visibility
 from .extensions import db
 from .utils.encrypted_type import EncryptedText
 
@@ -31,7 +32,7 @@ class User(db.Model):
     last_live_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     # Visibility / shadow-ban system
-    visibility = db.Column(db.Text, nullable=False, default="visible")
+    visibility = db.Column(db.Text, nullable=False, default=Visibility.VISIBLE)
     visibility_reason = db.Column(db.Text)
     visibility_changed_at = db.Column(db.DateTime(timezone=True))
     visibility_changed_by = db.Column(db.String(36))
@@ -79,7 +80,7 @@ class User(db.Model):
             "profile_data": self._computed_profile_data(),
             "live_primary_real_trait_id": self.live_primary_real_trait_id,
             "live_primary_fictional_trait_id": self.live_primary_fictional_trait_id,
-            "visibility": self.visibility or "visible",
+            "visibility": self.visibility or Visibility.VISIBLE,
             "visibility_reason": self.visibility_reason,
             "visibility_changed_at": (self.visibility_changed_at.isoformat() if self.visibility_changed_at else None),
             "vtuber_declaration_at": (self.vtuber_declaration_at.isoformat() if self.vtuber_declaration_at else None),
@@ -249,7 +250,7 @@ class FictionalSpeciesRequest(db.Model):
     suggested_origin = db.Column(db.Text)
     suggested_sub_origin = db.Column(db.Text)
     description = db.Column(db.Text)
-    status = db.Column(db.Text, nullable=False, default="pending")
+    status = db.Column(db.Text, nullable=False, default=RequestStatus.PENDING)
     admin_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
@@ -312,7 +313,7 @@ class BreedRequest(db.Model):
     name_zh = db.Column(db.Text)
     name_en = db.Column(db.Text)
     description = db.Column(db.Text)
-    status = db.Column(db.Text, nullable=False, default="pending")
+    status = db.Column(db.Text, nullable=False, default=RequestStatus.PENDING)
     admin_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
@@ -352,7 +353,7 @@ class SpeciesNameReport(db.Model):
     current_name_zh = db.Column(db.Text)
     suggested_name_zh = db.Column(db.Text, nullable=False)
     description = db.Column(db.Text)
-    status = db.Column(db.Text, nullable=False, default="pending")
+    status = db.Column(db.Text, nullable=False, default=RequestStatus.PENDING)
     admin_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
@@ -390,10 +391,10 @@ class UserReport(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     reporter_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="SET NULL"))
     reported_user_id = db.Column(db.String(36), db.ForeignKey("users.id", ondelete="SET NULL"))
-    report_type = db.Column(db.Text, nullable=False, default="impersonation")
+    report_type = db.Column(db.Text, nullable=False, default=ReportType.IMPERSONATION)
     reason = db.Column(db.Text, nullable=False)
     evidence_url = db.Column(db.Text)
-    status = db.Column(db.Text, nullable=False, default="pending")
+    status = db.Column(db.Text, nullable=False, default=ReportStatus.PENDING)
     admin_note = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 

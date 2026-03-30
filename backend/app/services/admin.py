@@ -7,6 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
+from ..constants import RequestStatus, Visibility
 from ..extensions import db
 from ..models import Breed, BreedRequest, FictionalSpeciesRequest, SpeciesCache, SpeciesNameReport, User, UserReport
 
@@ -26,14 +27,14 @@ def get_request_counts():
     breed_rows = db.session.query(BreedRequest.status, func.count()).group_by(BreedRequest.status).all()
     name_report_rows = db.session.query(SpeciesNameReport.status, func.count()).group_by(SpeciesNameReport.status).all()
     report_rows = db.session.query(UserReport.status, func.count()).group_by(UserReport.status).all()
-    pending_review_count = User.query.filter_by(visibility="pending_review").count()
+    pending_review_count = User.query.filter_by(visibility=Visibility.PENDING_REVIEW).count()
 
     return {
         "fictional": {status: count for status, count in fictional_rows},
         "breed": {status: count for status, count in breed_rows},
         "name_report": {status: count for status, count in name_report_rows},
         "report": {status: count for status, count in report_rows},
-        "visibility": {"pending_review": pending_review_count},
+        "visibility": {Visibility.PENDING_REVIEW: pending_review_count},
     }
 
 
@@ -45,7 +46,9 @@ def get_request_counts():
 def export_fictional():
     """Export received fictional species requests."""
     requests = (
-        FictionalSpeciesRequest.query.filter_by(status="received").order_by(FictionalSpeciesRequest.created_at).all()
+        FictionalSpeciesRequest.query.filter_by(status=RequestStatus.RECEIVED)
+        .order_by(FictionalSpeciesRequest.created_at)
+        .all()
     )
     return {
         "export_metadata": {
@@ -78,7 +81,7 @@ def export_fictional():
 
 def export_breeds():
     """Export received breed requests with species context."""
-    requests = BreedRequest.query.filter_by(status="received").order_by(BreedRequest.created_at).all()
+    requests = BreedRequest.query.filter_by(status=RequestStatus.RECEIVED).order_by(BreedRequest.created_at).all()
 
     result_requests = []
     for r in requests:
@@ -139,10 +142,10 @@ def transition_fictional():
     """
     from .notifications import create_notification
 
-    reqs = FictionalSpeciesRequest.query.filter_by(status="received").all()
+    reqs = FictionalSpeciesRequest.query.filter_by(status=RequestStatus.RECEIVED).all()
     for r in reqs:
-        r.status = "in_progress"
-        create_notification(r.user_id, "fictional_request", r.id, "in_progress", subject_name=r.name_zh)
+        r.status = RequestStatus.IN_PROGRESS
+        create_notification(r.user_id, "fictional_request", r.id, RequestStatus.IN_PROGRESS, subject_name=r.name_zh)
     try:
         db.session.commit()
     except SQLAlchemyError:
@@ -159,10 +162,12 @@ def transition_breeds():
     """
     from .notifications import create_notification
 
-    reqs = BreedRequest.query.filter_by(status="received").all()
+    reqs = BreedRequest.query.filter_by(status=RequestStatus.RECEIVED).all()
     for r in reqs:
-        r.status = "in_progress"
-        create_notification(r.user_id, "breed_request", r.id, "in_progress", subject_name=r.name_zh or r.name_en)
+        r.status = RequestStatus.IN_PROGRESS
+        create_notification(
+            r.user_id, "breed_request", r.id, RequestStatus.IN_PROGRESS, subject_name=r.name_zh or r.name_en
+        )
     try:
         db.session.commit()
     except SQLAlchemyError:
@@ -184,7 +189,7 @@ def set_user_visibility(user_id, admin_user_id, data):
         return {"error": "User not found"}, 404
 
     new_visibility = data.get("visibility")
-    if new_visibility not in ("visible", "hidden"):
+    if new_visibility not in Visibility.ADMIN_SETTABLE:
         return {"error": "visibility must be visible or hidden"}, 400
 
     reason = (data.get("reason") or "").strip() or None
@@ -193,7 +198,7 @@ def set_user_visibility(user_id, admin_user_id, data):
     user.visibility_reason = reason
     user.visibility_changed_at = datetime.now(UTC)
     user.visibility_changed_by = admin_user_id
-    if new_visibility == "visible":
+    if new_visibility == Visibility.VISIBLE:
         user.appeal_note = None
 
     db.session.commit()

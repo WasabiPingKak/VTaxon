@@ -1,6 +1,7 @@
 from flask import Blueprint, g, jsonify, request
 
 from ..auth import admin_required, login_required
+from ..constants import RequestStatus
 from ..extensions import db
 from ..models import FictionalSpecies, FictionalSpeciesRequest
 
@@ -63,8 +64,8 @@ def list_requests():
       200:
         description: 請求清單
     """
-    status = request.args.get("status", "pending")
-    if status not in ("pending", "received", "in_progress", "completed", "approved", "rejected"):
+    status = request.args.get("status", RequestStatus.PENDING)
+    if status not in RequestStatus.ALL:
         return jsonify({"error": "Invalid status filter"}), 400
 
     reqs = (
@@ -112,7 +113,7 @@ def update_request(req_id):
 
     data = request.get_json() or {}
     new_status = data.get("status")
-    if new_status not in ("received", "in_progress", "completed", "rejected"):
+    if new_status not in RequestStatus.UPDATABLE:
         return jsonify({"error": "status must be received, in_progress, completed, or rejected"}), 400
 
     req.status = new_status

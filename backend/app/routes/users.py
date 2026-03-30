@@ -6,6 +6,7 @@ from flask import Blueprint, g, jsonify, request
 
 from ..auth import login_required
 from ..cache import invalidate_tree_cache
+from ..constants import Visibility
 from ..extensions import db
 from ..models import OAuthAccount, User, VtuberTrait
 from ..schemas import AppealSchema, validate_with
@@ -344,10 +345,10 @@ def submit_appeal(data):
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    if user.visibility != "hidden":
+    if user.visibility != Visibility.HIDDEN:
         return jsonify({"error": "目前帳號狀態不允許申訴"}), 400
 
-    user.visibility = "pending_review"
+    user.visibility = Visibility.PENDING_REVIEW
     user.appeal_note = data["appeal_note"]
     user.updated_at = datetime.now(UTC)
 

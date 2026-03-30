@@ -4,6 +4,7 @@ import requests as _requests
 from flask import Blueprint, Response, g, jsonify, request, stream_with_context
 
 from ..auth import admin_required, login_required
+from ..constants import RequestStatus
 from ..extensions import db
 from ..limiter import limiter
 from ..models import SpeciesCache, SpeciesNameReport
@@ -413,7 +414,7 @@ def list_name_reports():
       200:
         description: 回報清單
     """
-    status = request.args.get("status", "pending")
+    status = request.args.get("status", RequestStatus.PENDING)
     reports = SpeciesNameReport.query.filter_by(status=status).order_by(SpeciesNameReport.created_at.desc()).all()
     return jsonify({"reports": [r.to_dict() for r in reports]})
 

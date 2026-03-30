@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from sqlalchemy.exc import IntegrityError
 
 from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
+from ..constants import ReportStatus, ReportType, Visibility
 from ..extensions import db
 from ..models import AuthIdAlias, Blacklist, OAuthAccount, User, UserReport
 
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def create_report(*, reporter_id, reported_user_id, report_type, reason, evidence_url):
     """Validate and create a user report. Returns (result_dict, http_status)."""
-    if report_type not in ("impersonation", "not_vtuber"):
+    if report_type not in ReportType.ALL:
         return {"error": "無效的檢舉類型"}, 400
     if not reported_user_id:
         return {"error": "缺少被舉報使用者 ID"}, 400
@@ -63,7 +64,7 @@ def update_report(report_id, data):
         return {"error": "Report not found"}, 404
 
     new_status = data.get("status")
-    if new_status and new_status not in ("investigating", "confirmed", "dismissed"):
+    if new_status and new_status not in ReportStatus.UPDATABLE:
         return {"error": "Invalid status"}, 400
 
     if new_status:
@@ -99,19 +100,19 @@ def hide_user(report_id, admin_user_id, data):
 
     reason = (data.get("reason") or "").strip() or "您的頻道內容以真人形象為主，不符合本服務的收錄標準"
 
-    reported_user.visibility = "hidden"
+    reported_user.visibility = Visibility.HIDDEN
     reported_user.visibility_reason = reason
     reported_user.visibility_changed_at = datetime.now(UTC)
     reported_user.visibility_changed_by = admin_user_id
     reported_user.appeal_note = None
 
-    report.status = "confirmed"
+    report.status = ReportStatus.CONFIRMED
     if "admin_note" in data:
         report.admin_note = data["admin_note"] or None
 
     from .notifications import create_notification
 
-    create_notification(report.reporter_id, "report", report.id, "confirmed", report.admin_note)
+    create_notification(report.reporter_id, "report", report.id, ReportStatus.CONFIRMED, report.admin_note)
 
     db.session.commit()
     invalidate_tree_cache()
@@ -120,7 +121,7 @@ def hide_user(report_id, admin_user_id, data):
     return {
         "ok": True,
         "user_id": reported_user.id,
-        "visibility": "hidden",
+        "visibility": Visibility.HIDDEN,
         "message": f"已隱藏使用者 {reported_user.display_name}",
     }, 200
 
@@ -189,13 +190,13 @@ def ban_user(report_id, admin_user_id, data):
     banned_count += _blacklist_supabase_uids(report.reported_user_id, reason, admin_user_id)
 
     # Mark report as confirmed
-    report.status = "confirmed"
+    report.status = ReportStatus.CONFIRMED
     if "admin_note" in data:
         report.admin_note = data["admin_note"] or None
 
     from .notifications import create_notification
 
-    create_notification(report.reporter_id, "report", report.id, "confirmed", report.admin_note)
+    create_notification(report.reporter_id, "report", report.id, ReportStatus.CONFIRMED, report.admin_note)
 
     # Delete the reported user
     db.session.delete(reported_user)
