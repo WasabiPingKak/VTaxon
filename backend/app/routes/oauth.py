@@ -186,7 +186,7 @@ def sync_oauth_accounts():
             and (datetime.now(UTC) - account.created_at).total_seconds() < 30
         ):
             try:
-                from .subscriptions import subscribe_twitch_user
+                from ..services.subscriptions import subscribe_twitch_user
 
                 subscribe_twitch_user(account.provider_account_id, oauth_account=account)
             except requests.RequestException:
@@ -201,7 +201,7 @@ def sync_oauth_accounts():
             and (datetime.now(UTC) - account.created_at).total_seconds() < 30
         ):
             try:
-                from .subscriptions import subscribe_youtube_user
+                from ..services.subscriptions import subscribe_youtube_user
 
                 subscribe_youtube_user(account.channel_url, oauth_account=account)
             except requests.RequestException:
@@ -316,11 +316,11 @@ def refresh_oauth_account(account_id):
         if account.channel_url:
             try:
                 if account.provider == "youtube":
-                    from .subscriptions import subscribe_youtube_user
+                    from ..services.subscriptions import subscribe_youtube_user
 
                     subscribe_youtube_user(account.channel_url, oauth_account=account)
                 elif account.provider == "twitch" and account.provider_account_id:
-                    from .subscriptions import subscribe_twitch_user
+                    from ..services.subscriptions import subscribe_twitch_user
 
                     subscribe_twitch_user(account.provider_account_id, oauth_account=account)
             except requests.RequestException:
@@ -379,11 +379,11 @@ def update_oauth_account(account_id):
     if "channel_url" in data and account.channel_url and account.channel_url != old_channel_url:
         try:
             if account.provider == "youtube":
-                from .subscriptions import subscribe_youtube_user
+                from ..services.subscriptions import subscribe_youtube_user
 
                 subscribe_youtube_user(account.channel_url, oauth_account=account)
             elif account.provider == "twitch" and account.provider_account_id:
-                from .subscriptions import subscribe_twitch_user
+                from ..services.subscriptions import subscribe_twitch_user
 
                 subscribe_twitch_user(account.provider_account_id, oauth_account=account)
         except requests.RequestException:
@@ -428,7 +428,7 @@ def delete_oauth_account(account_id):
     # Clean up EventSub + live_streams for Twitch accounts
     if deleted_provider == "twitch" and deleted_provider_id:
         try:
-            from .subscriptions import unsubscribe_twitch_user
+            from ..services.subscriptions import unsubscribe_twitch_user
 
             unsubscribe_twitch_user(deleted_provider_id)
         except requests.RequestException:
@@ -437,7 +437,7 @@ def delete_oauth_account(account_id):
     # Clean up WebSub for YouTube accounts
     if deleted_provider == "youtube" and account.channel_url:
         try:
-            from .subscriptions import unsubscribe_youtube_user
+            from ..services.subscriptions import unsubscribe_youtube_user
 
             unsubscribe_youtube_user(account.channel_url)
         except requests.RequestException:
@@ -505,11 +505,11 @@ def resubscribe_live():
     if account.provider == "youtube":
         if not account.channel_url:
             return jsonify({"error": "尚未取得 YouTube 頻道資訊，請先重新登入授權"}), 400
-        from .subscriptions import subscribe_youtube_user
+        from ..services.subscriptions import subscribe_youtube_user
 
         subscribe_youtube_user(account.channel_url, oauth_account=account)
     elif account.provider == "twitch":
-        from .subscriptions import subscribe_twitch_user
+        from ..services.subscriptions import subscribe_twitch_user
 
         subscribe_twitch_user(account.provider_account_id, oauth_account=account)
     else:
