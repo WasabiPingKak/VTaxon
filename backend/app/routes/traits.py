@@ -49,8 +49,8 @@ def _breed_matches_taxon(breed, taxon_id):
     if breed.taxon_id == taxon_id:
         return True
     # Fallback: compare canonical scientific names
-    sp = SpeciesCache.query.get(taxon_id)
-    breed_sp = SpeciesCache.query.get(breed.taxon_id)
+    sp = db.session.get(SpeciesCache, taxon_id)
+    breed_sp = db.session.get(SpeciesCache, breed.taxon_id)
     if sp and breed_sp:
         return _canonical_name(sp.scientific_name) == _canonical_name(breed_sp.scientific_name)
     return False
