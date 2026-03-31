@@ -101,6 +101,7 @@ ON CONFLICT(name) DO NOTHING;
 INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
 ('Dragon (Western)', '西方龍', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|西方龍', '噴火飛翼巨龍'),
 ('Vampire', '吸血鬼', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|不死族|Vampire', '吸食血液的不死生物'),
+('Dullahan', '杜拉漢', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|不死族|Dullahan', '愛爾蘭/凱爾特民間傳說中的無頭騎士，手持自己的頭顱騎馬奔馳，是死亡的預兆。'),
 ('Werewolf', '狼人', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|魔物|Werewolf', '能變身為狼的人類'),
 ('Fairy', '妖精', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|精靈仙族|Fairy', '擁有翅膀的小型魔法生物'),
 ('Unicorn', '獨角獸', '西方神話', '歐洲民間傳說', '西方神話|歐洲民間傳說|神獸幻獸|Unicorn', '額頭長有螺旋角的神馬'),

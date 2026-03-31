@@ -9,7 +9,7 @@ repos:
     rev: v0.12.0
     hooks:
       - id: ruff
-        args: ['--fix', '--config', 'backend/pyproject.toml']
+        args: ['--config', 'backend/pyproject.toml']
         files: ^backend/
       - id: ruff-format
         args: ['--config', 'backend/pyproject.toml']
