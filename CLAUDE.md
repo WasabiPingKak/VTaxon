@@ -83,7 +83,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 
 ### vtuber_traits
 角色與物種的多對多關聯。一筆 trait 可關聯現實物種或奇幻生物（至少一個）。
-- `id` (uuid, PK), `user_id` (FK → users), `taxon_id` (FK → species_cache, nullable), `fictional_species_id` (FK → fictional_species, nullable), `display_name` (text, deprecated), `breed_name`, `breed_id` (FK → breeds, nullable), `trait_note`, `created_at`, `updated_at`
+- `id` (uuid, PK), `user_id` (FK → users), `taxon_id` (FK → species_cache, nullable), `fictional_species_id` (FK → fictional_species, nullable), `display_name` (text, DB 欄位保留但 ORM 已移除), `breed_name`, `breed_id` (FK → breeds, nullable), `trait_note`, `created_at`, `updated_at`
 - CHECK constraint: `taxon_id IS NOT NULL OR fictional_species_id IS NOT NULL`
 - Partial unique index: (user_id, taxon_id) WHERE taxon_id IS NOT NULL
 - Partial unique index: (user_id, fictional_species_id) WHERE fictional_species_id IS NOT NULL
