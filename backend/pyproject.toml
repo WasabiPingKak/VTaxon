@@ -21,6 +21,22 @@ known-first-party = ["app"]
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # unused imports in __init__ are intentional
 
+[tool.mypy]
+python_version = "3.12"
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+show_error_codes = true
+enable_error_code = ["ignore-without-code"]
+
+[[tool.mypy.overrides]]
+module = "app.utils.*"
+disallow_untyped_defs = true
+warn_return_any = true
+
 [tool.pytest.ini_options]
 addopts = "--cov=app --cov-report=term-missing -x -q"
 testpaths = ["tests"]

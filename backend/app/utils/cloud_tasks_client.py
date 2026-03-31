@@ -8,15 +8,15 @@ from google.cloud import tasks_v2
 
 logger = logging.getLogger(__name__)
 
-_PROJECT_ID = None
-_LOCATION = None
-_QUEUE_NAME = None
-_SERVICE_URL = None
+_PROJECT_ID: str | None = None
+_LOCATION: str | None = None
+_QUEUE_NAME: str | None = None
+_SERVICE_URL: str | None = None
 
-_client = None
+_client: tasks_v2.CloudTasksClient | None = None
 
 
-def _load_config():
+def _load_config() -> None:
     global _PROJECT_ID, _LOCATION, _QUEUE_NAME, _SERVICE_URL
     _PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
     _LOCATION = os.environ.get("CLOUD_TASKS_LOCATION", "asia-east1")
@@ -52,7 +52,7 @@ def dispatch_task(
         return None
 
     client = _get_client()
-    queue_path = client.queue_path(_PROJECT_ID, _LOCATION, _QUEUE_NAME)
+    queue_path = client.queue_path(_PROJECT_ID or "", _LOCATION or "", _QUEUE_NAME or "")
 
     url = f"{_SERVICE_URL.rstrip('/')}{path}"
     if params:

@@ -50,7 +50,7 @@ def kms_encrypt(plaintext: str) -> str:
     if not key_name:
         return plaintext
 
-    from google.cloud import kms
+    from google.cloud import kms  # type: ignore[attr-defined]
 
     client = kms.KeyManagementServiceClient()
     response = client.encrypt(
@@ -83,7 +83,7 @@ def kms_decrypt(ciphertext: str) -> str:
         # Not base64 → unencrypted legacy value
         return ciphertext
 
-    from google.cloud import kms
+    from google.cloud import kms  # type: ignore[attr-defined]
 
     client = kms.KeyManagementServiceClient()
     try:
@@ -93,7 +93,8 @@ def kms_decrypt(ciphertext: str) -> str:
                 "ciphertext": ciphertext_bytes,
             }
         )
-        return response.plaintext.decode("utf-8")
+        result: str = response.plaintext.decode("utf-8")
+        return result
     except Exception:
         logger.warning("KMS decrypt failed, treating as unencrypted legacy value")
         return ciphertext
