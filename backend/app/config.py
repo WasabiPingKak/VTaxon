@@ -1,5 +1,7 @@
 import os
 
+from flask import Flask
+
 
 class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -41,7 +43,7 @@ class DevelopmentConfig(Config):
     DB_SCHEMA = os.environ.get("DB_SCHEMA", "staging")
 
 
-def _check_required_env(app, required):
+def _check_required_env(app: Flask, required: list[str]) -> None:
     """Validate that required env vars are set; raise RuntimeError if any missing."""
     missing = [key for key in required if not app.config.get(key)]
     if missing:
@@ -64,7 +66,7 @@ class ProductionConfig(Config):
     ]
 
     @classmethod
-    def init_app(cls, app):
+    def init_app(cls, app: Flask) -> None:
         _check_required_env(app, cls.REQUIRED_ENV)
 
 
@@ -81,7 +83,7 @@ class StagingConfig(Config):
     ]
 
     @classmethod
-    def init_app(cls, app):
+    def init_app(cls, app: Flask) -> None:
         _check_required_env(app, cls.REQUIRED_ENV)
 
 
@@ -92,7 +94,7 @@ class TestingConfig(Config):
     RATELIMIT_ENABLED = False
 
 
-config = {
+config: dict[str, type[Config]] = {
     "development": DevelopmentConfig,
     "production": ProductionConfig,
     "staging": StagingConfig,

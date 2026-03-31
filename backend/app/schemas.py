@@ -4,9 +4,11 @@ Each schema defines the expected input shape for a route endpoint.
 Business logic validation (DB lookups, ownership, conflicts) stays in routes.
 """
 
+from collections.abc import Callable
 from functools import wraps
+from typing import Any
 
-from flask import jsonify, request
+from flask import Response, jsonify, request
 from marshmallow import Schema, ValidationError, fields, validate, validates_schema
 
 # ---------------------------------------------------------------------------
@@ -14,16 +16,16 @@ from marshmallow import Schema, ValidationError, fields, validate, validates_sch
 # ---------------------------------------------------------------------------
 
 
-def validate_with(schema_cls):
+def validate_with(schema_cls: type[Schema]) -> Callable[..., Any]:
     """Decorator that validates request JSON against a marshmallow schema.
 
     On success, injects validated data as first argument.
     On failure, returns 400 with structured error messages.
     """
 
-    def decorator(f):
+    def decorator(f: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(f)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> tuple[Response, int] | Any:
             raw = request.get_json() or {}
             try:
                 data = schema_cls().load(raw)
@@ -46,7 +48,7 @@ TrimmedString = fields.String
 class TrimString(fields.String):
     """String field that strips whitespace on deserialization."""
 
-    def _deserialize(self, value, attr, data, **kwargs):
+    def _deserialize(self, value: Any, attr: str | None, data: Any, **kwargs: Any) -> str:
         val = super()._deserialize(value, attr, data, **kwargs)
         return val.strip() if val else val
 
@@ -107,7 +109,7 @@ class CreateTraitSchema(Schema):
     trait_note = fields.String(load_default=None)
 
     @validates_schema
-    def require_species(self, data, **kwargs):
+    def require_species(self, data: dict[str, Any], **kwargs: Any) -> None:
         if not data.get("taxon_id") and not data.get("fictional_species_id"):
             raise ValidationError("taxon_id or fictional_species_id required")
 
@@ -289,7 +291,7 @@ class MarkReadSchema(Schema):
     ids = fields.List(fields.Integer(), load_default=None)
 
     @validates_schema
-    def require_all_or_ids(self, data, **kwargs):
+    def require_all_or_ids(self, data: dict[str, Any], **kwargs: Any) -> None:
         if not data.get("all") and not data.get("ids"):
             raise ValidationError("Provide all:true or ids:[...]")
 

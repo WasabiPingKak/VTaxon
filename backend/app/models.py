@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
 
@@ -50,7 +51,7 @@ class User(db.Model):
         "VtuberTrait", backref="user", lazy="dynamic", cascade="all, delete-orphan", foreign_keys="VtuberTrait.user_id"
     )
 
-    def _computed_profile_data(self):
+    def _computed_profile_data(self) -> dict[str, Any]:
         """Return profile_data with computed fields (auto-switch preparing→active)."""
         from datetime import date as _date
 
@@ -64,7 +65,7 @@ class User(db.Model):
                 pass
         return pd
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "display_name": self.display_name,
@@ -120,7 +121,7 @@ class OAuthAccount(db.Model):
         db.CheckConstraint("provider IN ('youtube', 'twitch')", name="ck_oauth_provider"),
     )
 
-    def to_dict(self, public=False):
+    def to_dict(self, public: bool = False) -> dict[str, Any]:
         result = {
             "id": self.id,
             "provider": self.provider,
@@ -172,7 +173,7 @@ class SpeciesCache(db.Model):
     path_zh = db.Column(db.JSON, default=dict)
     cached_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
-    def _effective_common_name_zh(self):
+    def _effective_common_name_zh(self) -> str | None:
         """Return common_name_zh with genus suffix '屬' stripped for species-level taxa."""
         zh = self.common_name_zh
         if (
@@ -184,7 +185,7 @@ class SpeciesCache(db.Model):
             return zh[:-1]
         return zh
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         from .services.taxonomy_zh import get_species_name_override
 
         path_zh = self.path_zh or {}
@@ -227,7 +228,7 @@ class FictionalSpecies(db.Model):
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "name": self.name,
@@ -255,7 +256,7 @@ class FictionalSpeciesRequest(db.Model):
 
     user = db.relationship("User", backref="fictional_requests", lazy="joined")
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         result = {
             "id": self.id,
             "user_id": self.user_id,
@@ -293,7 +294,7 @@ class Breed(db.Model):
 
     __table_args__ = (db.UniqueConstraint("taxon_id", "name_en", name="uq_breed_taxon_name"),)
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "taxon_id": self.taxon_id,
@@ -319,7 +320,7 @@ class BreedRequest(db.Model):
     user = db.relationship("User", backref="breed_requests", lazy="joined")
     species = db.relationship("SpeciesCache", lazy="joined")
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         result = {
             "id": self.id,
             "user_id": self.user_id,
@@ -359,7 +360,7 @@ class SpeciesNameReport(db.Model):
     user = db.relationship("User", backref="species_name_reports", lazy="joined")
     species = db.relationship("SpeciesCache", lazy="joined")
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         result = {
             "id": self.id,
             "user_id": self.user_id,
@@ -400,7 +401,7 @@ class UserReport(db.Model):
     reporter = db.relationship("User", foreign_keys=[reporter_id], backref="submitted_reports", lazy="joined")
     reported_user = db.relationship("User", foreign_keys=[reported_user_id], backref="received_reports", lazy="joined")
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         result = {
             "id": self.id,
             "reporter_id": self.reporter_id,
@@ -443,7 +444,7 @@ class Blacklist(db.Model):
 
     __table_args__ = (db.UniqueConstraint("identifier_type", "identifier_value", name="uq_blacklist_identifier"),)
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         result = {
             "id": self.id,
             "identifier_type": self.identifier_type,
@@ -480,7 +481,7 @@ class Notification(db.Model):
     is_read = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "type": self.type,
@@ -510,7 +511,7 @@ class LiveStream(db.Model):
         db.CheckConstraint("provider IN ('youtube', 'twitch')", name="ck_live_stream_provider"),
     )
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         return {
             "user_id": self.user_id,
             "provider": self.provider,
@@ -548,7 +549,7 @@ class VtuberTrait(db.Model):
         db.CheckConstraint("taxon_id IS NOT NULL OR fictional_species_id IS NOT NULL", name="ck_trait_has_species"),
     )
 
-    def computed_display_name(self):
+    def computed_display_name(self) -> str | None:
         """Compute display_name from related species/fictional for backward compat."""
         if self.species:
             return self.species._effective_common_name_zh() or self.species.scientific_name
@@ -556,7 +557,7 @@ class VtuberTrait(db.Model):
             return self.fictional.name_zh or self.fictional.name
         return self.display_name
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         # Prefer breed object name over legacy free-text breed_name
         breed_display = None
         if self.breed:

@@ -33,9 +33,21 @@ show_error_codes = true
 enable_error_code = ["ignore-without-code"]
 
 [[tool.mypy.overrides]]
-module = "app.utils.*"
+module = [
+    "app.utils.*",
+    "app.cache",
+    "app.config",
+    "app.extensions",
+    "app.limiter",
+    "app.swagger",
+]
 disallow_untyped_defs = true
 warn_return_any = true
+
+# flask-sqlalchemy db.Model is dynamically created — mypy cannot resolve it
+[[tool.mypy.overrides]]
+module = "app.models"
+disable_error_code = ["name-defined"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=app --cov-report=term-missing -x -q"

@@ -1,10 +1,12 @@
 import logging
 import time
+from collections.abc import Callable
 from functools import wraps
+from typing import Any
 
 import jwt
 import requests
-from flask import current_app, g, jsonify, request
+from flask import Response, current_app, g, jsonify, request
 
 from .models import AuthIdAlias, User
 
@@ -12,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 # Module-level cache for JWKS with TTL (1 hour)
 _JWKS_TTL = 3600
-_jwks_cache = {"keys": None, "fetched_at": 0}
+_jwks_cache: dict[str, Any] = {"keys": None, "fetched_at": 0}
 
 
-def _get_jwks(force_refresh=False):
+def _get_jwks(force_refresh: bool = False) -> list[dict[str, Any]] | None:
     """Fetch and cache JWKS from Supabase with 1-hour TTL."""
     now = time.monotonic()
     if not force_refresh and _jwks_cache["keys"] is not None and (now - _jwks_cache["fetched_at"]) < _JWKS_TTL:
@@ -36,7 +38,7 @@ def _get_jwks(force_refresh=False):
         return _jwks_cache["keys"]
 
 
-def _get_signing_key(token):
+def _get_signing_key(token: str) -> Any:
     """Get the correct public key from JWKS to verify the token."""
     keys = _get_jwks()
     if not keys:
@@ -63,7 +65,7 @@ def _get_signing_key(token):
     return None
 
 
-def get_current_user():
+def get_current_user() -> str | None:
     """Extract and verify JWT from Authorization header."""
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
@@ -107,11 +109,11 @@ def get_current_user():
     return None
 
 
-def login_required(f):
+def login_required(f: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator that requires a valid JWT."""
 
     @wraps(f)
-    def decorated(*args, **kwargs):
+    def decorated(*args: Any, **kwargs: Any) -> tuple[Response, int] | Any:
         from .extensions import db
 
         user_id = get_current_user()
@@ -129,12 +131,12 @@ def login_required(f):
     return decorated
 
 
-def admin_required(f):
+def admin_required(f: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator that requires the authenticated user to have admin role."""
 
     @wraps(f)
     @login_required
-    def decorated(*args, **kwargs):
+    def decorated(*args: Any, **kwargs: Any) -> tuple[Response, int] | Any:
         from .extensions import db
 
         user = db.session.get(User, g.current_user_id)

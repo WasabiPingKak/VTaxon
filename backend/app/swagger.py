@@ -1,6 +1,8 @@
 """Flasgger (OpenAPI/Swagger) configuration for VTaxon API."""
 
-SWAGGER_TEMPLATE = {
+from typing import Any
+
+SWAGGER_TEMPLATE: dict[str, Any] = {
     "info": {
         "title": "VTaxon API",
         "description": "VTuber 生物分類系統 API",
@@ -36,7 +38,7 @@ SWAGGER_TEMPLATE = {
     ],
 }
 
-SWAGGER_CONFIG = {
+SWAGGER_CONFIG: dict[str, Any] = {
     "headers": [],
     "specs": [
         {
