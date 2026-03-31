@@ -2,8 +2,9 @@
 
 import time
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, Response, jsonify
 
 from ..extensions import db
 from ..limiter import limiter
@@ -12,12 +13,12 @@ from ..models import LiveStream, User
 livestream_bp = Blueprint("livestream", __name__)
 
 # ── In-process cache for /api/live-status (TTL 15s) ──
-_live_cache = {"data": None, "ts": 0, "ttl": 15}
+_live_cache: dict[str, Any] = {"data": None, "ts": 0, "ttl": 15}
 
 
 @livestream_bp.route("/live-status", methods=["GET"])
 @limiter.limit("60/minute")
-def live_status():
+def live_status() -> tuple[Response, int]:
     """取得目前所有直播中的使用者。
     ---
     tags:
@@ -37,7 +38,7 @@ def live_status():
     """
     now = time.time()
     if _live_cache["data"] is not None and (now - _live_cache["ts"]) < _live_cache["ttl"]:
-        return jsonify(_live_cache["data"])
+        return jsonify(_live_cache["data"]), 200
 
     # Clean up ghost records (started > 24h ago)
     cutoff = datetime.now(UTC) - timedelta(hours=24)
@@ -68,10 +69,10 @@ def live_status():
     _live_cache["data"] = result
     _live_cache["ts"] = time.time()
 
-    return jsonify(result)
+    return jsonify(result), 200
 
 
-def invalidate_live_cache():
+def invalidate_live_cache() -> None:
     """Invalidate the live status cache after DB changes."""
     _live_cache["data"] = None
     _live_cache["ts"] = 0

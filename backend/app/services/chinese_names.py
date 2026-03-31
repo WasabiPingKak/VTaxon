@@ -10,7 +10,9 @@ Fallback chain for species-level Chinese names:
 import json
 import logging
 import unicodedata
+from collections.abc import Generator
 from functools import lru_cache
+from typing import Any
 
 import requests
 from sqlalchemy.exc import SQLAlchemyError
@@ -32,7 +34,7 @@ logger = logging.getLogger(__name__)
 GBIF_BASE = "https://api.gbif.org/v1"
 
 
-def clear_chinese_name_caches():
+def clear_chinese_name_caches() -> None:
     """Clear all in-memory Chinese name LRU caches across all services."""
     _resolve_chinese_name.cache_clear()
     _resolve_rank_zh.cache_clear()
@@ -46,7 +48,7 @@ def clear_chinese_name_caches():
 
 
 @lru_cache(maxsize=500)
-def _resolve_chinese_name(taxon_id, scientific_name):
+def _resolve_chinese_name(taxon_id: int, scientific_name: str | None) -> str | None:
     """Resolve Chinese name through the fallback chain.
 
     0. Static override table (corrects known Wikidata errors)
@@ -80,7 +82,7 @@ def _resolve_chinese_name(taxon_id, scientific_name):
 
 
 @lru_cache(maxsize=500)
-def _resolve_alternative_names(taxon_id, scientific_name, taxon_rank=None):
+def _resolve_alternative_names(taxon_id: int, scientific_name: str | None, taxon_rank: str | None = None) -> str | None:
     """Resolve alternative Chinese names through TaiCOL -> Wikidata aliases.
 
     Only resolves for SPECIES/SUBSPECIES/VARIETY ranks - higher ranks return None.
@@ -111,7 +113,7 @@ def _resolve_alternative_names(taxon_id, scientific_name, taxon_rank=None):
     return None
 
 
-def resolve_missing_chinese_name(species_cache_obj):
+def resolve_missing_chinese_name(species_cache_obj: SpeciesCache) -> None:
     """Back-fill common_name_zh on a SpeciesCache row and persist to DB."""
     zh = _resolve_chinese_name(
         species_cache_obj.taxon_id,
@@ -127,7 +129,7 @@ def resolve_missing_chinese_name(species_cache_obj):
 
 
 @lru_cache(maxsize=500)
-def _resolve_rank_zh(taxon_name, rank=None):
+def _resolve_rank_zh(taxon_name: str | None, rank: str | None = None) -> str | None:
     """Resolve Chinese name for any taxon via static table -> GBIF match -> Wikidata.
 
     Cached to avoid repeated lookups for the same taxon.
@@ -162,12 +164,12 @@ def _resolve_rank_zh(taxon_name, rank=None):
     return None
 
 
-def _resolve_genus_zh(genus_name):
+def _resolve_genus_zh(genus_name: str) -> str | None:
     """Resolve Chinese name for a genus. Delegates to _resolve_rank_zh."""
     return _resolve_rank_zh(genus_name, rank="GENUS")
 
 
-def _enrich_chinese_names(species_list):
+def _enrich_chinese_names(species_list: list[dict[str, Any]]) -> None:
     """Enrich a list of species dicts with Chinese names.
 
     Adds:
@@ -186,7 +188,7 @@ def _enrich_chinese_names(species_list):
 
     for sp in species_list:
         # Static override takes highest priority (corrects known errors)
-        override = get_species_zh_override(sp.get("taxon_id"))
+        override = get_species_zh_override(sp["taxon_id"])
         if override:
             sp["common_name_zh"] = override
 
@@ -270,7 +272,7 @@ def _enrich_chinese_names(species_list):
 
     # Apply scientific name overrides (e.g. Felis manul -> Otocolobus manul)
     for sp in species_list:
-        name_override = get_species_name_override(sp.get("taxon_id"))
+        name_override = get_species_name_override(sp["taxon_id"])
         if name_override:
             sp["display_name_override"] = name_override
 
@@ -283,7 +285,7 @@ def _enrich_chinese_names(species_list):
 # ---------------------------------------------------------------------------
 
 
-def clean_alt_names(alt_str, primary_zh):
+def clean_alt_names(alt_str: str | None, primary_zh: str | None) -> str | None:
     """Clean alternative names: remove duplicates, genus names, non-CJK entries.
 
     Args:
@@ -322,7 +324,7 @@ def clean_alt_names(alt_str, primary_zh):
 # ---------------------------------------------------------------------------
 
 
-def _fallback_taicol_by_name(query, limit=10):
+def _fallback_taicol_by_name(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """Fallback for Latin queries: search TaiCOL by scientific_name when GBIF has no results.
 
     Returns a list of species dicts built from TaiCOL + GBIF match.
@@ -354,7 +356,7 @@ def _fallback_taicol_by_name(query, limit=10):
     return results
 
 
-def _search_via_taicol(query, limit=10):
+def _search_via_taicol(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """Search by Chinese name via TaiCOL, then enrich with GBIF data.
 
     Flow: TaiCOL (Chinese search) -> GBIF /species/match (full taxonomy)
@@ -396,7 +398,9 @@ def _search_via_taicol(query, limit=10):
     return species_list
 
 
-def _search_via_taicol_stream(query, limit=10, exclude_ids=None):
+def _search_via_taicol_stream(
+    query: str, limit: int = 10, exclude_ids: set[int] | None = None
+) -> Generator[str, None, None]:
     """Streaming version of _search_via_taicol - yields one NDJSON line per result.
 
     Args:
@@ -439,7 +443,7 @@ def _search_via_taicol_stream(query, limit=10, exclude_ids=None):
 # ---------------------------------------------------------------------------
 
 
-def _build_from_taicol(tr):
+def _build_from_taicol(tr: dict[str, Any]) -> dict[str, Any] | None:
     """Build a species dict from TaiCOL data when GBIF Backbone has no match.
 
     Uses a negative ID derived from the scientific name hash to avoid

@@ -1,4 +1,6 @@
-from flask import Blueprint, g, jsonify, request
+from typing import Any
+
+from flask import Blueprint, Response, g, jsonify, request
 
 from ..auth import login_required
 from ..extensions import db
@@ -9,7 +11,7 @@ notifications_bp = Blueprint("notifications", __name__)
 
 @notifications_bp.route("", methods=["GET"])
 @login_required
-def list_notifications():
+def list_notifications() -> Response:
     """列出通知。
     ---
     tags:
@@ -41,7 +43,7 @@ def list_notifications():
 
 @notifications_bp.route("/grouped", methods=["GET"])
 @login_required
-def grouped_notifications():
+def grouped_notifications() -> Response:
     """取得分組通知時間線。
     ---
     tags:
@@ -68,7 +70,7 @@ def grouped_notifications():
     notifs = Notification.query.filter_by(user_id=uid).order_by(Notification.created_at.desc()).all()
 
     # Group by (type, reference_id)
-    groups = {}
+    groups: dict[tuple[str, Any], list[dict[str, Any]]] = {}
     for n in notifs:
         key = (n.type, n.reference_id)
         if key not in groups:
@@ -88,7 +90,7 @@ def grouped_notifications():
     breed_map = {r.id: r for r in BreedRequest.query.filter(BreedRequest.id.in_(breed_ids)).all()} if breed_ids else {}
     report_map = {r.id: r for r in UserReport.query.filter(UserReport.id.in_(report_ids)).all()} if report_ids else {}
 
-    def _build_summary(type_, ref_id):
+    def _build_summary(type_: str, ref_id: Any) -> dict[str, Any] | None:
         if type_ == "fictional_request":
             r = fictional_map.get(ref_id)
             if not r:
@@ -147,7 +149,7 @@ def grouped_notifications():
 
 @notifications_bp.route("/unread-count", methods=["GET"])
 @login_required
-def unread_count():
+def unread_count() -> Response:
     """取得未讀通知數量。
     ---
     tags:
@@ -169,7 +171,7 @@ def unread_count():
 
 @notifications_bp.route("/read", methods=["POST"])
 @login_required
-def mark_read():
+def mark_read() -> tuple[Response, int] | Response:
     """標記通知為已讀。
     ---
     tags:

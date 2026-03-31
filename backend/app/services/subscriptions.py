@@ -3,6 +3,7 @@
 import logging
 import os
 from datetime import UTC, datetime
+from typing import Any
 
 import requests as _requests
 
@@ -12,7 +13,7 @@ from ..models import LiveStream, OAuthAccount, User
 logger = logging.getLogger(__name__)
 
 
-def _invalidate_live_cache():
+def _invalidate_live_cache() -> None:
     from ..routes.livestream import invalidate_live_cache
 
     invalidate_live_cache()
@@ -23,7 +24,7 @@ def _invalidate_live_cache():
 # ---------------------------------------------------------------------------
 
 
-def youtube_check_offline(api_key):
+def youtube_check_offline(api_key: str) -> dict[str, Any]:
     """Check YouTube streams that have ended. Returns result dict."""
     from .youtube_pubsub import check_streams_ended
 
@@ -51,7 +52,7 @@ def youtube_check_offline(api_key):
     return {"checked": len(video_ids), "ended": len(ended_ids)}
 
 
-def youtube_renew_subs():
+def youtube_renew_subs() -> dict[str, Any] | None:
     """Batch renew YouTube WebSub subscriptions. Returns result dict."""
     from .youtube_pubsub import extract_channel_id
 
@@ -126,7 +127,7 @@ def youtube_renew_subs():
     return {"mode": "sync", "total": len(accounts), "renewed": renewed, "skipped": skipped, "errors": errors}
 
 
-def youtube_subscribe_one(channel_id):
+def youtube_subscribe_one(channel_id: str) -> tuple[dict[str, Any], int]:
     """Subscribe a single YouTube channel. Returns (result_dict, http_status)."""
     from .youtube_pubsub import subscribe_channel
 
@@ -160,7 +161,7 @@ def youtube_subscribe_one(channel_id):
 # ---------------------------------------------------------------------------
 
 
-def list_twitch_subs():
+def list_twitch_subs() -> tuple[dict[str, Any], int]:
     """List all Twitch EventSub subscriptions. Returns (result_dict, http_status)."""
     from .twitch import list_eventsub_subscriptions
 
@@ -177,7 +178,7 @@ def list_twitch_subs():
         return {"error": "Twitch API 暫時無法使用，請稍後再試"}, 502
 
 
-def rebuild_twitch_subs(*, offset, limit, clean):
+def rebuild_twitch_subs(*, offset: int, limit: int, clean: bool) -> tuple[dict[str, Any], int]:
     """Batch rebuild Twitch EventSub subscriptions. Returns (result_dict, http_status)."""
     from .twitch import create_eventsub_subscription, delete_eventsub_subscription, list_eventsub_subscriptions
 
@@ -253,7 +254,7 @@ def rebuild_twitch_subs(*, offset, limit, clean):
 # ---------------------------------------------------------------------------
 
 
-def list_youtube_subs():
+def list_youtube_subs() -> dict[str, Any]:
     """List all YouTube WebSub subscription statuses."""
     from .youtube_pubsub import extract_channel_id
 
@@ -274,7 +275,7 @@ def list_youtube_subs():
     return {"accounts": result, "total": len(result)}
 
 
-def rebuild_youtube_subs(*, offset, limit, clean):
+def rebuild_youtube_subs(*, offset: int, limit: int, clean: bool) -> tuple[dict[str, Any], int]:
     """Batch rebuild YouTube WebSub subscriptions. Returns (result_dict, http_status)."""
     from .youtube_pubsub import extract_channel_id, subscribe_channel, unsubscribe_channel
 
@@ -339,7 +340,7 @@ def rebuild_youtube_subs(*, offset, limit, clean):
 # ---------------------------------------------------------------------------
 
 
-def subscribe_twitch_user(provider_account_id, oauth_account=None):
+def subscribe_twitch_user(provider_account_id: str, oauth_account: OAuthAccount | None = None) -> None:
     """Subscribe to stream.online + stream.offline for a Twitch broadcaster."""
     from .twitch import create_eventsub_subscription
 
@@ -375,7 +376,7 @@ def subscribe_twitch_user(provider_account_id, oauth_account=None):
         db.session.commit()
 
 
-def unsubscribe_twitch_user(provider_account_id):
+def unsubscribe_twitch_user(provider_account_id: str) -> None:
     """Remove all EventSub subscriptions for a Twitch broadcaster."""
     from .twitch import delete_eventsub_subscription, list_eventsub_subscriptions
 
@@ -399,7 +400,7 @@ def unsubscribe_twitch_user(provider_account_id):
         logger.exception("Failed to clean up Twitch EventSub for %s", provider_account_id)
 
 
-def subscribe_youtube_user(channel_url, oauth_account=None):
+def subscribe_youtube_user(channel_url: str, oauth_account: OAuthAccount | None = None) -> None:
     """Subscribe to YouTube WebSub for a channel."""
     from .youtube_pubsub import extract_channel_id, subscribe_channel
 
@@ -431,7 +432,7 @@ def subscribe_youtube_user(channel_url, oauth_account=None):
         db.session.commit()
 
 
-def unsubscribe_youtube_user(channel_url):
+def unsubscribe_youtube_user(channel_url: str) -> None:
     """Unsubscribe from YouTube WebSub for a channel."""
     from .youtube_pubsub import extract_channel_id, unsubscribe_channel
 

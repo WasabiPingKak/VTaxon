@@ -332,7 +332,7 @@ SPECIES_ZH_OVERRIDES = {
 }
 
 
-def get_species_zh_override(taxon_id):
+def get_species_zh_override(taxon_id: int) -> str | None:
     """Return overridden Chinese name for a taxon_id, or None."""
     return SPECIES_ZH_OVERRIDES.get(taxon_id)
 
@@ -347,7 +347,7 @@ PARENT_SPECIES_NAME_ZH = {
 }
 
 
-def get_parent_species_zh_by_name(parent_binomial):
+def get_parent_species_zh_by_name(parent_binomial: str) -> str | None:
     """Return overridden Chinese name for a parent species binomial, or None."""
     return PARENT_SPECIES_NAME_ZH.get(parent_binomial)
 
@@ -365,12 +365,12 @@ SPECIES_NAME_OVERRIDES = {
 }
 
 
-def get_species_name_override(taxon_id):
+def get_species_name_override(taxon_id: int) -> str | None:
     """Return overridden scientific name for a taxon_id, or None."""
     return SPECIES_NAME_OVERRIDES.get(taxon_id)
 
 
-def get_taxonomy_zh(name):
+def get_taxonomy_zh(name: str) -> str | None:
     """Look up the Chinese name for a taxonomy term.
 
     Args:
@@ -382,7 +382,14 @@ def get_taxonomy_zh(name):
     return TAXONOMY_ZH.get(name)
 
 
-def get_taxonomy_zh_for_ranks(kingdom=None, phylum=None, class_=None, order=None, family=None, genus=None):
+def get_taxonomy_zh_for_ranks(
+    kingdom: str | None = None,
+    phylum: str | None = None,
+    class_: str | None = None,
+    order: str | None = None,
+    family: str | None = None,
+    genus: str | None = None,
+) -> dict[str, str | None]:
     """Get Chinese names for all provided taxonomy ranks.
 
     Returns dict with keys like 'kingdom_zh', 'phylum_zh', etc.

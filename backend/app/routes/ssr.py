@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import time
+from typing import Any
 
 import requests as http_requests
 from flask import Blueprint, Response
@@ -26,12 +27,12 @@ DEFAULT_DESCRIPTION = "VTaxon — 將 VTuber 角色形象對應到生物分類�
 
 # --- SPA HTML cache ---
 
-_spa_html_cache = None
-_spa_html_cache_time = 0
-_SPA_CACHE_TTL = 3600  # 1 hour
+_spa_html_cache: str | None = None
+_spa_html_cache_time: float = 0
+_SPA_CACHE_TTL: int = 3600  # 1 hour
 
 
-def _get_frontend_url():
+def _get_frontend_url() -> str:
     """Derive the frontend URL from ALLOWED_ORIGINS env var."""
     origins = os.environ.get("ALLOWED_ORIGINS", "")
     if origins:
@@ -39,7 +40,7 @@ def _get_frontend_url():
     return "http://localhost:5173"
 
 
-def _fetch_spa_html():
+def _fetch_spa_html() -> str | None:
     """Fetch and cache the SPA index.html from the frontend."""
     global _spa_html_cache, _spa_html_cache_time
 
@@ -69,12 +70,12 @@ def _fetch_spa_html():
 # --- Meta tag injection ---
 
 
-def _escape_html(text):
+def _escape_html(text: str) -> str:
     """Escape HTML special characters for safe attribute insertion."""
     return text.replace("&", "&amp;").replace('"', "&quot;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def _build_species_description(user, traits):
+def _build_species_description(user: Any, traits: list[Any]) -> str:
     """Build a description string from user bio and species traits."""
     display_name = user.display_name or "VTuber"
 
@@ -100,23 +101,24 @@ def _build_species_description(user, traits):
     return f"{display_name} 的 VTuber 角色檔案"
 
 
-def _build_json_ld(user, user_id):
+def _build_json_ld(user: Any, user_id: str) -> str:
     """Build JSON-LD structured data for a user profile."""
-    ld = {
-        "@context": "https://schema.org",
-        "@type": "ProfilePage",
-        "mainEntity": {
-            "@type": "Person",
-            "name": user.display_name or "VTuber",
-            "url": f"{SITE_URL}/vtuber/{user_id}",
-        },
+    main_entity: dict[str, str] = {
+        "@type": "Person",
+        "name": user.display_name or "VTuber",
+        "url": f"{SITE_URL}/vtuber/{user_id}",
     }
     if user.avatar_url:
-        ld["mainEntity"]["image"] = user.avatar_url
+        main_entity["image"] = user.avatar_url
+    ld: dict[str, Any] = {
+        "@context": "https://schema.org",
+        "@type": "ProfilePage",
+        "mainEntity": main_entity,
+    }
     return json.dumps(ld, ensure_ascii=False)
 
 
-def _inject_meta_tags(html, *, title, description, image, url, json_ld):
+def _inject_meta_tags(html: str, *, title: str, description: str, image: str, url: str, json_ld: str | None) -> str:
     """Replace default meta tags in the SPA HTML with user-specific values."""
     title_full = f"{_escape_html(title)} | VTaxon"
     desc_safe = _escape_html(description)
@@ -187,7 +189,7 @@ def _inject_meta_tags(html, *, title, description, image, url, json_ld):
 
 
 @ssr_bp.route("/<user_id>")
-def vtuber_profile_ssr(user_id):
+def vtuber_profile_ssr(user_id: str) -> Response:
     """VTuber 個人頁面 SSR（注入 meta tag 供爬蟲使用）。
     ---
     tags:

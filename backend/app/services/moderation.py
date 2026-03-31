@@ -2,6 +2,7 @@
 
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.exc import IntegrityError
 
@@ -17,7 +18,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def create_report(*, reporter_id, reported_user_id, report_type, reason, evidence_url):
+def create_report(
+    *, reporter_id: str | None, reported_user_id: str, report_type: str, reason: str, evidence_url: str | None
+) -> tuple[dict[str, Any], int]:
     """Validate and create a user report. Returns (result_dict, http_status)."""
     if report_type not in ReportType.ALL:
         return {"error": "無效的檢舉類型"}, 400
@@ -57,7 +60,7 @@ def create_report(*, reporter_id, reported_user_id, report_type, reason, evidenc
 # ---------------------------------------------------------------------------
 
 
-def update_report(report_id, data):
+def update_report(report_id: int, data: dict[str, Any]) -> tuple[dict[str, Any], int]:
     """Update report status. Returns (result_dict, http_status)."""
     report = db.session.get(UserReport, report_id)
     if not report:
@@ -86,7 +89,7 @@ def update_report(report_id, data):
 # ---------------------------------------------------------------------------
 
 
-def hide_user(report_id, admin_user_id, data):
+def hide_user(report_id: int, admin_user_id: str, data: dict[str, Any]) -> tuple[dict[str, Any], int]:
     """Hide the reported user. Returns (result_dict, http_status)."""
     report = db.session.get(UserReport, report_id)
     if not report:
@@ -131,7 +134,7 @@ def hide_user(report_id, admin_user_id, data):
 # ---------------------------------------------------------------------------
 
 
-def blacklist_preview(report_id):
+def blacklist_preview(report_id: int) -> tuple[dict[str, Any], int]:
     """Preview identifiers for banning. Returns (result_dict, http_status)."""
     report = db.session.get(UserReport, report_id)
     if not report:
@@ -168,7 +171,7 @@ def blacklist_preview(report_id):
 # ---------------------------------------------------------------------------
 
 
-def ban_user(report_id, admin_user_id, data):
+def ban_user(report_id: int, admin_user_id: str, data: dict[str, Any]) -> tuple[dict[str, Any], int]:
     """Ban identifiers and delete user. Returns (result_dict, http_status)."""
     report = db.session.get(UserReport, report_id)
     if not report:
@@ -210,7 +213,7 @@ def ban_user(report_id, admin_user_id, data):
     }, 200
 
 
-def _add_identifiers_to_blacklist(identifiers, user_id, reason, banned_by):
+def _add_identifiers_to_blacklist(identifiers: list[dict[str, Any]], user_id: str, reason: str, banned_by: str) -> int:
     """Add OAuth identifiers to blacklist. Returns count of new entries.
 
     Uses savepoint per entry so a concurrent duplicate doesn't abort the
@@ -239,7 +242,7 @@ def _add_identifiers_to_blacklist(identifiers, user_id, reason, banned_by):
     return count
 
 
-def _blacklist_supabase_uids(user_id, reason, banned_by):
+def _blacklist_supabase_uids(user_id: str, reason: str, banned_by: str) -> int:
     """Blacklist the Supabase UID and any auth_id_aliases. Returns count.
 
     Uses savepoint per entry so a concurrent duplicate doesn't abort the
@@ -275,7 +278,7 @@ def _blacklist_supabase_uids(user_id, reason, banned_by):
 # ---------------------------------------------------------------------------
 
 
-def delete_blacklist_entry(entry_id):
+def delete_blacklist_entry(entry_id: int) -> tuple[dict[str, Any], int]:
     """Delete a blacklist entry. Returns (result_dict, http_status)."""
     entry = db.session.get(Blacklist, entry_id)
     if not entry:

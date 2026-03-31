@@ -21,6 +21,22 @@ known-first-party = ["app"]
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # unused imports in __init__ are intentional
 
+[tool.mypy]
+python_version = "3.12"
+strict = true
+show_error_codes = true
+enable_error_code = ["ignore-without-code"]
+
+# Libraries without type stubs
+[[tool.mypy.overrides]]
+module = ["resend.*", "flasgger.*", "pythonjsonlogger.*", "opencc.*", "flask_cors.*"]
+ignore_missing_imports = true
+
+# flask-sqlalchemy db.Model is dynamically created — mypy cannot resolve it
+[[tool.mypy.overrides]]
+module = "app.models"
+disable_error_code = ["name-defined", "misc", "no-any-return"]
+
 [tool.pytest.ini_options]
 addopts = "--cov=app --cov-report=term-missing -x -q"
 testpaths = ["tests"]

@@ -1,8 +1,9 @@
 import logging
 import os
 import uuid
+from typing import Any
 
-from flask import Flask, g, jsonify, request
+from flask import Flask, Response, g, jsonify, request
 from flask_cors import CORS
 from pythonjsonlogger import json as json_log
 from sqlalchemy.exc import SQLAlchemyError
@@ -16,11 +17,13 @@ from .limiter import limiter
 logger = logging.getLogger(__name__)
 
 
-def _setup_logging(app):
+def _setup_logging(app: Flask) -> None:
     """Configure JSON structured logging for all loggers."""
 
     class _RequestFormatter(json_log.JsonFormatter):
-        def add_fields(self, log_record, record, message_dict):
+        def add_fields(
+            self, log_record: dict[str, Any], record: logging.LogRecord, message_dict: dict[str, Any]
+        ) -> None:
             super().add_fields(log_record, record, message_dict)
             log_record["logger"] = record.name
             log_record["level"] = record.levelname
@@ -36,7 +39,7 @@ def _setup_logging(app):
     root.setLevel(logging.DEBUG if app.debug else logging.INFO)
 
 
-def create_app(config_name=None):
+def create_app(config_name: str | None = None) -> Flask:
     if config_name is None:
         config_name = os.environ.get("FLASK_ENV", "development")
 
@@ -47,7 +50,7 @@ def create_app(config_name=None):
     # x_for=1: trust 1 level of X-Forwarded-For
     # x_proto=1: trust X-Forwarded-Proto
     # x_host=1: trust X-Forwarded-Host
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)  # type: ignore[method-assign]
 
     # Structured logging (JSON to stdout — Cloud Run picks it up)
     _setup_logging(app)
@@ -128,12 +131,12 @@ def create_app(config_name=None):
 
     # Assign a request_id for log correlation
     @app.before_request
-    def assign_request_id():
+    def assign_request_id() -> None:
         g.request_id = request.headers.get("X-Request-Id") or uuid.uuid4().hex[:12]
 
     # Security headers for all responses
     @app.after_request
-    def set_security_headers(response):
+    def set_security_headers(response: Response) -> Response:
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
@@ -150,19 +153,19 @@ def create_app(config_name=None):
     # Global error handlers
     # ------------------------------------------------------------------
     @app.errorhandler(HTTPException)
-    def handle_http_exception(exc):
+    def handle_http_exception(exc: HTTPException) -> tuple[Response, int]:
         """Return JSON instead of HTML for HTTP errors (404, 405, etc.)."""
-        return jsonify({"error": exc.description}), exc.code
+        return jsonify({"error": exc.description}), exc.code or 500
 
     @app.errorhandler(SQLAlchemyError)
-    def handle_db_error(exc):
+    def handle_db_error(exc: SQLAlchemyError) -> tuple[Response, int]:
         """Catch unhandled database errors — log and return 500."""
         db.session.rollback()
         logger.exception("Unhandled database error")
         return jsonify({"error": "資料庫操作失敗，請稍後再試"}), 500
 
     @app.errorhandler(Exception)
-    def handle_unexpected_error(exc):
+    def handle_unexpected_error(exc: Exception) -> tuple[Response, int]:
         """Last-resort handler for anything not caught above."""
         logger.exception("Unhandled exception")
         return jsonify({"error": "伺服器內部錯誤"}), 500
@@ -172,7 +175,7 @@ def create_app(config_name=None):
     # ------------------------------------------------------------------
     @app.route("/api/health")
     @app.route("/health")
-    def health():
+    def health() -> Response:
         """健康檢查（含資料庫連線狀態）。
         ---
         tags:

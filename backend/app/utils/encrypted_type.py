@@ -1,11 +1,14 @@
 """SQLAlchemy custom type that transparently encrypts/decrypts via KMS."""
 
+from typing import Any
+
 import sqlalchemy as sa
+from sqlalchemy.engine import Dialect
 
 from .kms_crypto import kms_decrypt, kms_encrypt
 
 
-class EncryptedText(sa.TypeDecorator):
+class EncryptedText(sa.TypeDecorator[str]):
     """A Text column that encrypts on write and decrypts on read via KMS.
 
     - Write: plaintext → kms_encrypt() → stored as base64 ciphertext
@@ -18,12 +21,12 @@ class EncryptedText(sa.TypeDecorator):
     impl = sa.Text
     cache_ok = True
 
-    def process_bind_param(self, value, dialect):
+    def process_bind_param(self, value: str | None, dialect: Dialect) -> str | None:
         if value is None:
             return None
         return kms_encrypt(value)
 
-    def process_result_value(self, value, dialect):
+    def process_result_value(self, value: Any, dialect: Dialect) -> str | None:
         if value is None:
             return None
         return kms_decrypt(value)

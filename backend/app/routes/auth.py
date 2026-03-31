@@ -6,7 +6,7 @@ import os
 import time
 import uuid
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
 from ..auth import login_required
@@ -21,11 +21,11 @@ limiter.limit("10/minute")(auth_bp)
 _LINK_TOKEN_TTL = 600  # 10 minutes
 
 
-def _get_link_secret():
+def _get_link_secret() -> bytes:
     return os.environ.get("SUPABASE_JWT_SECRET", "").encode()
 
 
-def _sign_link_token(user_id):
+def _sign_link_token(user_id: str) -> str:
     payload = json.dumps(
         {
             "user_id": str(user_id),
@@ -39,7 +39,7 @@ def _sign_link_token(user_id):
     return f"{payload_b64}.{sig}"
 
 
-def _verify_link_token(token):
+def _verify_link_token(token: str) -> str | None:
     """Verify a link token and return the user_id, or None if invalid."""
     try:
         payload_b64, sig = token.rsplit(".", 1)
@@ -54,12 +54,13 @@ def _verify_link_token(token):
         return None
     if payload.get("exp", 0) < time.time():
         return None
-    return payload.get("user_id")
+    user_id: str | None = payload.get("user_id")
+    return user_id
 
 
 @auth_bp.route("/link-token", methods=["POST"])
 @login_required
-def create_link_token():
+def create_link_token() -> tuple[Response, int]:
     """發行帶簽章的帳號連結 token。
     ---
     tags:
@@ -89,7 +90,7 @@ def create_link_token():
 
 @auth_bp.route("/callback", methods=["POST"])
 @login_required
-def auth_callback():
+def auth_callback() -> tuple[Response, int]:
     """OAuth 完成後建立或更新使用者紀錄。
     ---
     tags:
@@ -211,4 +212,6 @@ def auth_callback():
         else:
             db.session.commit()
 
+    if user is None:
+        return jsonify({"error": "user_not_found"}), 404
     return jsonify(user.to_dict()), 200

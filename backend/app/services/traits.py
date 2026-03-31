@@ -1,9 +1,11 @@
 """Business logic for VTuber trait CRUD — validation, conflict detection, persistence."""
 
+from typing import Any
+
 from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
 from ..extensions import db
 from ..models import Breed, FictionalSpecies, SpeciesCache, User, VtuberTrait
-from .gbif import get_species
+from .gbif import get_species  # type: ignore[attr-defined]
 
 ALLOWED_RANKS = {
     "SUBPHYLUM",
@@ -34,7 +36,7 @@ BLOCKED_HIGH_RANKS = {"KINGDOM", "PHYLUM", "SUPERCLASS"}
 # ---------------------------------------------------------------------------
 
 
-def _canonical_name(scientific_name):
+def _canonical_name(scientific_name: str) -> str:
     """Extract canonical name (genus + lowercase epithets), stripping author."""
     parts = scientific_name.split()
     canon = [parts[0]]
@@ -46,7 +48,7 @@ def _canonical_name(scientific_name):
     return " ".join(canon)
 
 
-def _breed_matches_taxon(breed, taxon_id):
+def _breed_matches_taxon(breed: Breed, taxon_id: int) -> bool:
     """Check if a breed belongs to this taxon, tolerating GBIF key changes."""
     if breed.taxon_id == taxon_id:
         return True
@@ -62,7 +64,7 @@ def _breed_matches_taxon(breed, taxon_id):
 # ---------------------------------------------------------------------------
 
 
-def create_trait(user_id, data):
+def create_trait(user_id: str, data: dict[str, Any]) -> tuple[dict[str, Any], int]:
     """Validate and create a trait. Returns (result_dict, http_status)."""
     taxon_id = data.get("taxon_id")
     fictional_species_id = data.get("fictional_species_id")
@@ -115,14 +117,16 @@ def create_trait(user_id, data):
     if fictional_species_id:
         invalidate_fictional_tree_cache()
 
-    result = trait.to_dict()
+    trait_dict = trait.to_dict()
     if replaced_info:
-        result["replaced"] = replaced_info
+        trait_dict["replaced"] = replaced_info
 
-    return result, 201
+    return trait_dict, 201
 
 
-def _validate_real_species(taxon_id, user_id):
+def _validate_real_species(
+    taxon_id: int, user_id: str
+) -> tuple[tuple[dict[str, Any], int] | None, dict[str, Any] | None] | None:
     """Validate a real species: existence, rank, ancestor/descendant conflicts.
 
     Returns None if species not found.
@@ -186,7 +190,9 @@ def _validate_real_species(taxon_id, user_id):
     return None, replaced_info
 
 
-def _validate_fictional_species(fictional_species_id, user_id):
+def _validate_fictional_species(
+    fictional_species_id: int, user_id: str
+) -> tuple[tuple[dict[str, Any], int] | None, dict[str, Any] | None] | None:
     """Validate a fictional species: existence, path conflicts.
 
     Returns None if species not found.
@@ -235,7 +241,7 @@ def _validate_fictional_species(fictional_species_id, user_id):
     return None, replaced_info
 
 
-def _validate_breed(breed_id, taxon_id):
+def _validate_breed(breed_id: int, taxon_id: int | None) -> tuple[dict[str, Any], int] | None:
     """Validate breed existence and taxon match. Returns error tuple or None."""
     breed = db.session.get(Breed, breed_id)
     if not breed:
@@ -250,7 +256,7 @@ def _validate_breed(breed_id, taxon_id):
 # ---------------------------------------------------------------------------
 
 
-def update_trait(trait_id, user_id, data):
+def update_trait(trait_id: str, user_id: str, data: dict[str, Any]) -> tuple[dict[str, Any], int]:
     """Validate and update a trait. Returns (result_dict, http_status)."""
     trait = db.session.get(VtuberTrait, trait_id)
     if not trait:
@@ -283,7 +289,7 @@ def update_trait(trait_id, user_id, data):
 # ---------------------------------------------------------------------------
 
 
-def delete_trait(trait_id, user_id):
+def delete_trait(trait_id: str, user_id: str) -> tuple[dict[str, Any], int]:
     """Delete a trait. Returns (result_dict, http_status)."""
     trait = db.session.get(VtuberTrait, trait_id)
     if not trait:

@@ -5,7 +5,7 @@ import os
 from datetime import UTC, datetime
 
 import requests
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
 from ..auth import login_required
@@ -21,7 +21,7 @@ oauth_bp = Blueprint("oauth", __name__)
 
 @oauth_bp.route("/me/oauth-accounts", methods=["GET"])
 @login_required
-def get_my_oauth_accounts():
+def get_my_oauth_accounts() -> Response:
     """列出目前使用者的 OAuth 帳號。
     ---
     tags:
@@ -42,7 +42,7 @@ def get_my_oauth_accounts():
 
 @oauth_bp.route("/me/oauth-accounts/sync", methods=["POST"])
 @login_required
-def sync_oauth_accounts():
+def sync_oauth_accounts() -> tuple[Response, int] | Response:
     """同步 OAuth 帳號（從 Supabase identities）。
     ---
     tags:
@@ -224,7 +224,7 @@ def sync_oauth_accounts():
 
 @oauth_bp.route("/me/oauth-accounts/<account_id>/refresh", methods=["POST"])
 @login_required
-def refresh_oauth_account(account_id):
+def refresh_oauth_account(account_id: str) -> tuple[Response, int] | Response:
     """從 YouTube/Twitch API 刷新 OAuth 帳號資料。
     ---
     tags:
@@ -335,7 +335,7 @@ def refresh_oauth_account(account_id):
 
 @oauth_bp.route("/me/oauth-accounts/<account_id>", methods=["PATCH"])
 @login_required
-def update_oauth_account(account_id):
+def update_oauth_account(account_id: str) -> tuple[Response, int] | Response:
     """更新 OAuth 帳號設定。
     ---
     tags:
@@ -394,7 +394,7 @@ def update_oauth_account(account_id):
 
 @oauth_bp.route("/me/oauth-accounts/<account_id>", methods=["DELETE"])
 @login_required
-def delete_oauth_account(account_id):
+def delete_oauth_account(account_id: str) -> tuple[Response, int] | Response:
     """刪除 OAuth 帳號綁定（至少保留一個）。
     ---
     tags:
@@ -467,7 +467,7 @@ def delete_oauth_account(account_id):
 @oauth_bp.route("/me/resubscribe", methods=["POST"])
 @login_required
 @limiter.limit("3/minute")
-def resubscribe_live():
+def resubscribe_live() -> tuple[Response, int] | Response:
     """重新訂閱直播通知（限速 3 次/分鐘）。
     ---
     tags:

@@ -11,6 +11,7 @@ consider migrating to Redis as a shared cache backend.
 """
 
 import time
+from typing import Any
 
 
 class TTLCache:
@@ -18,21 +19,21 @@ class TTLCache:
 
     __slots__ = ("_data", "_ts", "_ttl")
 
-    def __init__(self, ttl: int = 300):
-        self._data = None
+    def __init__(self, ttl: int = 300) -> None:
+        self._data: Any = None
         self._ts: float = 0
         self._ttl = ttl
 
-    def get(self):
+    def get(self) -> Any:
         if self._data is not None and (time.time() - self._ts) < self._ttl:
             return self._data
         return None
 
-    def set(self, data):
+    def set(self, data: Any) -> None:
         self._data = data
         self._ts = time.time()
 
-    def invalidate(self):
+    def invalidate(self) -> None:
         self._data = None
         self._ts = 0
 
@@ -44,37 +45,37 @@ _stats_cache = TTLCache()
 
 
 # ── Public API (backward-compatible) ──
-def get_tree_cache():
+def get_tree_cache() -> Any:
     return _tree_cache.get()
 
 
-def set_tree_cache(data):
+def set_tree_cache(data: Any) -> None:
     _tree_cache.set(data)
 
 
-def invalidate_tree_cache():
+def invalidate_tree_cache() -> None:
     _tree_cache.invalidate()
 
 
-def get_fictional_tree_cache():
+def get_fictional_tree_cache() -> Any:
     return _fictional_tree_cache.get()
 
 
-def set_fictional_tree_cache(data):
+def set_fictional_tree_cache(data: Any) -> None:
     _fictional_tree_cache.set(data)
 
 
-def invalidate_fictional_tree_cache():
+def invalidate_fictional_tree_cache() -> None:
     _fictional_tree_cache.invalidate()
 
 
-def get_stats_cache():
+def get_stats_cache() -> Any:
     return _stats_cache.get()
 
 
-def set_stats_cache(data):
+def set_stats_cache(data: Any) -> None:
     _stats_cache.set(data)
 
 
-def invalidate_stats_cache():
+def invalidate_stats_cache() -> None:
     _stats_cache.invalidate()

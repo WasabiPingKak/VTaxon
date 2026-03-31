@@ -15,3 +15,5 @@ flasgger~=0.9
 google-cloud-tasks~=2.16
 google-cloud-kms~=2.24
 pytest-cov~=6.1
+mypy~=1.14
+types-requests~=2.31

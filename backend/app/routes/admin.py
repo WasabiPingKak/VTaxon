@@ -1,6 +1,6 @@
 """Admin management routes — request counts, exports, transitions, visibility."""
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 
 from ..auth import admin_required
 from ..constants import Visibility
@@ -12,7 +12,7 @@ admin_bp = Blueprint("admin", __name__)
 
 @admin_bp.route("/request-counts")
 @admin_required
-def get_request_counts():
+def get_request_counts() -> tuple[Response, int]:
     """取得所有管理請求的狀態統計。管理員。
     ---
     tags:
@@ -36,12 +36,12 @@ def get_request_counts():
             visibility:
               type: object
     """
-    return jsonify(admin_svc.get_request_counts())
+    return jsonify(admin_svc.get_request_counts()), 200
 
 
 @admin_bp.route("/export-fictional")
 @admin_required
-def export_fictional():
+def export_fictional() -> tuple[Response, int]:
     """匯出已收到的虛構物種請求。管理員。
     ---
     tags:
@@ -52,12 +52,12 @@ def export_fictional():
       200:
         description: 匯出資料（含指示說明）
     """
-    return jsonify(admin_svc.export_fictional())
+    return jsonify(admin_svc.export_fictional()), 200
 
 
 @admin_bp.route("/export-breeds")
 @admin_required
-def export_breeds():
+def export_breeds() -> tuple[Response, int]:
     """匯出已收到的品種請求（含物種上下文）。管理員。
     ---
     tags:
@@ -68,12 +68,12 @@ def export_breeds():
       200:
         description: 匯出資料
     """
-    return jsonify(admin_svc.export_breeds())
+    return jsonify(admin_svc.export_breeds()), 200
 
 
 @admin_bp.route("/transition-fictional", methods=["POST"])
 @admin_required
-def transition_fictional():
+def transition_fictional() -> tuple[Response, int]:
     """批量將虛構物種請求從 received 轉為 in_progress。管理員。
     ---
     tags:
@@ -97,7 +97,7 @@ def transition_fictional():
 
 @admin_bp.route("/transition-breeds", methods=["POST"])
 @admin_required
-def transition_breeds():
+def transition_breeds() -> tuple[Response, int]:
     """批量將品種請求從 received 轉為 in_progress。管理員。
     ---
     tags:
@@ -121,7 +121,7 @@ def transition_breeds():
 
 @admin_bp.route("/users/<user_id>/visibility", methods=["PATCH"])
 @admin_required
-def set_user_visibility(user_id):
+def set_user_visibility(user_id: str) -> tuple[Response, int]:
     """設定使用者能見度。管理員。
     ---
     tags:
@@ -161,7 +161,7 @@ def set_user_visibility(user_id):
 
 @admin_bp.route("/users/pending-reviews", methods=["GET"])
 @admin_required
-def pending_reviews():
+def pending_reviews() -> tuple[Response, int]:
     """列出待審核的申訴使用者。管理員。
     ---
     tags:
@@ -183,4 +183,4 @@ def pending_reviews():
                 for u in users
             ],
         }
-    )
+    ), 200

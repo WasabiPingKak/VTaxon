@@ -4,20 +4,26 @@ Sends admin notifications when new requests/reports are created.
 Silently skips if RESEND_API_KEY is not configured.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import threading
+from typing import TYPE_CHECKING, Any
 
 import resend
 
 from ..constants import ReportType
+
+if TYPE_CHECKING:
+    from ..models import BreedRequest, FictionalSpeciesRequest, UserReport
 
 logger = logging.getLogger(__name__)
 
 ADMIN_PANEL_URL = "https://vtaxon.com/admin"
 
 
-def _get_config():
+def _get_config() -> dict[str, Any] | None:
     api_key = os.environ.get("RESEND_API_KEY", "").strip()
     emails_raw = os.environ.get("ADMIN_NOTIFY_EMAILS", "").strip()
     email_from = os.environ.get("EMAIL_FROM", "VTaxon <noreply@vtaxon.com>").strip()
@@ -36,14 +42,14 @@ def _get_config():
     }
 
 
-def send_admin_notification(subject, html_body):
+def send_admin_notification(subject: str, html_body: str) -> None:
     """Send email to all admin notification recipients in a background thread."""
     config = _get_config()
     if not config:
         logger.debug("Email notification skipped: RESEND_API_KEY or ADMIN_NOTIFY_EMAILS not set")
         return
 
-    def _send():
+    def _send() -> None:
         try:
             resend.api_key = config["api_key"]
             resend.Emails.send(
@@ -62,14 +68,14 @@ def send_admin_notification(subject, html_body):
     thread.start()
 
 
-def _user_info_html(user):
+def _user_info_html(user: Any) -> str:
     """Generate HTML snippet for user info."""
     if not user:
         return "<p>申請者：匿名</p>"
     return f"<p>申請者：{user.display_name or '未命名'} (<code>{user.id}</code>)</p>"
 
 
-def notify_new_fictional_request(req):
+def notify_new_fictional_request(req: FictionalSpeciesRequest) -> None:
     """Notify admins about a new fictional species request."""
     subject = f"[VTaxon] 新虛構物種申請：{req.name_zh or req.name_en or '未命名'}"
     html = f"""
@@ -87,7 +93,7 @@ def notify_new_fictional_request(req):
     send_admin_notification(subject, html)
 
 
-def notify_new_breed_request(req):
+def notify_new_breed_request(req: BreedRequest) -> None:
     """Notify admins about a new breed request."""
     species_name = ""
     if req.species:
@@ -108,7 +114,7 @@ def notify_new_breed_request(req):
     send_admin_notification(subject, html)
 
 
-def notify_new_report(report):
+def notify_new_report(report: UserReport) -> None:
     """Notify admins about a new user report."""
     type_labels = {
         ReportType.IMPERSONATION: "冒充",

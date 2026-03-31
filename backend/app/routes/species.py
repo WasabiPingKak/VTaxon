@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Generator
 
 import requests as _requests
 from flask import Blueprint, Response, g, jsonify, request, stream_with_context
@@ -8,7 +9,7 @@ from ..constants import RequestStatus
 from ..extensions import db
 from ..limiter import limiter
 from ..models import SpeciesCache, SpeciesNameReport
-from ..services.gbif import (
+from ..services.gbif import (  # type: ignore[attr-defined]
     clear_chinese_name_caches,
     get_species,
     get_subspecies,
@@ -25,7 +26,7 @@ limiter.limit("30/minute")(species_bp)
 
 
 @species_bp.route("/search", methods=["GET"])
-def search():
+def search() -> tuple[Response, int] | Response:
     """搜尋物種（依名稱）。
     ---
     tags:
@@ -73,7 +74,7 @@ def search():
 
 
 @species_bp.route("/search/stream", methods=["GET"])
-def search_stream():
+def search_stream() -> tuple[Response, int] | Response:
     """串流物種搜尋（NDJSON 格式，逐筆回傳）。
     ---
     tags:
@@ -103,7 +104,7 @@ def search_stream():
     limit = request.args.get("limit", 10, type=int)
     limit = min(limit, 50)
 
-    def generate():
+    def generate() -> Generator[str, None, None]:
         try:
             for line in search_species_stream(q, limit=limit):
                 yield line
@@ -124,7 +125,7 @@ def search_stream():
 
 
 @species_bp.route("/match", methods=["GET"])
-def match():
+def match() -> tuple[Response, int] | Response:
     """精確比對物種名稱（GBIF Backbone Taxonomy）。
     ---
     tags:
@@ -162,7 +163,7 @@ def match():
 
 
 @species_bp.route("/<int:taxon_id>", methods=["GET"])
-def get_one(taxon_id):
+def get_one(taxon_id: int) -> tuple[Response, int] | Response:
     """取得單一物種資料。
     ---
     tags:
@@ -185,7 +186,7 @@ def get_one(taxon_id):
 
 
 @species_bp.route("/<int:taxon_id>/children", methods=["GET"])
-def get_children(taxon_id):
+def get_children(taxon_id: int) -> tuple[Response, int] | Response:
     """取得物種的子分類（亞種等）。
     ---
     tags:
@@ -217,7 +218,7 @@ def get_children(taxon_id):
 
 
 @species_bp.route("/<int:taxon_id>/children/stream", methods=["GET"])
-def get_children_stream(taxon_id):
+def get_children_stream(taxon_id: int) -> Response:
     """串流取得子分類（NDJSON 格式）。
     ---
     tags:
@@ -234,7 +235,7 @@ def get_children_stream(taxon_id):
         description: NDJSON 串流
     """
 
-    def generate():
+    def generate() -> Generator[str, None, None]:
         try:
             for line in get_subspecies_stream(taxon_id):
                 yield line
@@ -256,7 +257,7 @@ def get_children_stream(taxon_id):
 
 @species_bp.route("/cache/clear", methods=["POST"])
 @admin_required
-def clear_cache():
+def clear_cache() -> Response:
     """清除中文名稱快取（管理員）。
     ---
     tags:
@@ -326,7 +327,7 @@ def clear_cache():
 
 @species_bp.route("/name-reports", methods=["POST"])
 @login_required
-def create_name_report():
+def create_name_report() -> tuple[Response, int] | Response:
     """提交物種名稱回報（中文名稱缺漏或錯誤）。
     ---
     tags:
@@ -398,7 +399,7 @@ def create_name_report():
 
 @species_bp.route("/name-reports", methods=["GET"])
 @admin_required
-def list_name_reports():
+def list_name_reports() -> Response:
     """列出物種名稱回報（管理員）。
     ---
     tags:
@@ -421,7 +422,7 @@ def list_name_reports():
 
 @species_bp.route("/name-reports/<int:report_id>", methods=["PATCH"])
 @admin_required
-def update_name_report(report_id):
+def update_name_report(report_id: int) -> tuple[Response, int] | Response:
     """更新物種名稱回報狀態（管理員）。
     ---
     tags:

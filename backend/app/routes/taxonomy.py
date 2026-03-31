@@ -1,6 +1,7 @@
 import logging
+from typing import Any
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -17,7 +18,7 @@ from ..constants import Visibility
 from ..extensions import db
 from ..limiter import limiter
 from ..models import FictionalSpecies, OAuthAccount, SpeciesCache, User, VtuberTrait
-from ..services.gbif import _build_path_zh, _realign_taxon_path
+from ..services.gbif import _build_path_zh, _realign_taxon_path  # type: ignore[attr-defined]
 from ..services.taxonomy_zh import get_parent_species_zh_by_name, get_species_zh_override
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ _STANDARD_RANKS = ["KINGDOM", "PHYLUM", "CLASS", "ORDER", "FAMILY", "GENUS", "SP
 _MEDUSOZOA_CLASSES = {"Scyphozoa", "Cubozoa", "Staurozoa", "Hydrozoa"}
 
 
-def _compute_path_ranks(taxon_path, taxon_rank):
+def _compute_path_ranks(taxon_path: str | None, taxon_rank: str | None) -> list[str]:
     """Compute a rank label array for each segment of taxon_path.
 
     Standard 7-segment paths map 1:1 to _STANDARD_RANKS.
@@ -68,7 +69,7 @@ def _compute_path_ranks(taxon_path, taxon_rank):
     return list(_STANDARD_RANKS[:n])
 
 
-def _assign_default_primary(entries):
+def _assign_default_primary(entries: list[dict[str, Any]]) -> None:
     """For users without an explicit live primary trait, mark their first entry."""
     users_with_primary = set()
     for e in entries:
@@ -82,7 +83,7 @@ def _assign_default_primary(entries):
             e["is_live_primary"] = True
 
 
-def _inject_medusozoa(entries):
+def _inject_medusozoa(entries: list[dict[str, Any]]) -> None:
     """Post-process entries to inject Medusozoa subphylum between Cnidaria and its classes.
 
     Only modifies entries where phylum=Cnidaria and class is one of the
@@ -133,7 +134,7 @@ def _inject_medusozoa(entries):
             entry["path_zh"] = pzh
 
 
-def _rebuild_path_zh(species):
+def _rebuild_path_zh(species: SpeciesCache) -> dict[str, str | None] | None:
     """Rebuild path_zh using full fallback chain (static table + Wikidata).
 
     Uses _build_path_zh which has @lru_cache on Wikidata calls,
@@ -169,7 +170,7 @@ def _rebuild_path_zh(species):
 
 
 @taxonomy_bp.route("/tree", methods=["GET"])
-def get_taxonomy_tree():
+def get_taxonomy_tree() -> Response:
     """取得完整的現實物種分類樹。
     ---
     tags:
@@ -234,7 +235,7 @@ def get_taxonomy_tree():
         if user_ids
         else []
     )
-    user_platforms = {}
+    user_platforms: dict[str, list[str]] = {}
     for uid, provider in platform_rows:
         user_platforms.setdefault(uid, []).append(provider)
 
@@ -249,11 +250,11 @@ def get_taxonomy_tree():
         if user_ids
         else []
     )
-    user_trait_counts = dict(trait_count_rows)
+    user_trait_counts: dict[str, int] = dict(trait_count_rows)
 
     needs_commit = False
-    entries = []
-    _parent_override_cache = {}  # parent_binomial → override zh or None
+    entries: list[dict[str, Any]] = []
+    _parent_override_cache: dict[str, str | None] = {}  # parent_binomial → override zh or None
     for trait, species, user in rows:
         # Read pre-computed path_zh from DB (written at cache-time by _cache_species)
         path_zh = species.path_zh or {}
@@ -288,7 +289,7 @@ def get_taxonomy_tree():
                         else get_parent_species_zh_by_name(parent_binomial)
                     )
                 parent_zh = _parent_override_cache[parent_binomial]
-                if parent_zh and path_zh.get("species") != parent_zh:
+                if parent_zh and path_zh and path_zh.get("species") != parent_zh:
                     path_zh = dict(path_zh) if path_zh else {}
                     path_zh["species"] = parent_zh
                     species.path_zh = path_zh
@@ -363,7 +364,7 @@ def get_taxonomy_tree():
 
 @taxonomy_bp.route("/cache", methods=["DELETE"])
 @admin_required
-def clear_cache():
+def clear_cache() -> tuple[Response, int]:
     """清除所有分類樹快取（管理員）。
     ---
     tags:
@@ -380,7 +381,7 @@ def clear_cache():
 
 
 @taxonomy_bp.route("/fictional-tree", methods=["GET"])
-def get_fictional_tree():
+def get_fictional_tree() -> Response:
     """取得完整的虛構物種分類樹。
     ---
     tags:
@@ -445,7 +446,7 @@ def get_fictional_tree():
         if user_ids
         else []
     )
-    user_platforms = {}
+    user_platforms: dict[str, list[str]] = {}
     for uid, provider in platform_rows:
         user_platforms.setdefault(uid, []).append(provider)
 
@@ -460,9 +461,9 @@ def get_fictional_tree():
         if user_ids
         else []
     )
-    user_trait_counts = dict(trait_count_rows)
+    user_trait_counts: dict[str, int] = dict(trait_count_rows)
 
-    entries = []
+    entries: list[dict[str, Any]] = []
     for trait, fictional, user in rows:
         # Use category_path directly; fallback to legacy construction
         fictional_path = fictional.category_path

@@ -3,7 +3,9 @@
 import math
 from datetime import UTC, datetime, timedelta
 from datetime import date as _date
+from typing import Any
 
+from flask_sqlalchemy.query import Query
 from sqlalchemy import case, func, literal, or_, text
 
 from ..constants import Visibility
@@ -11,7 +13,7 @@ from ..extensions import db
 from ..models import Breed, FictionalSpecies, LiveStream, OAuthAccount, SpeciesCache, User, VtuberTrait
 
 
-def query_recent_users(since, limit):
+def query_recent_users(since: datetime, limit: int) -> list[dict[str, Any]]:
     """Return recently-joined users who have at least one trait since *since*."""
     latest_trait = func.max(VtuberTrait.created_at).label("latest_trait_at")
     rows = (
@@ -40,7 +42,7 @@ def query_recent_users(since, limit):
     ]
 
 
-def _collect_species_names(user_ids, since):
+def _collect_species_names(user_ids: list[Any], since: datetime) -> dict[str, list[str]]:
     """Batch-load species display names for the given users (traits after *since*)."""
     if not user_ids:
         return {}
@@ -64,7 +66,7 @@ def _collect_species_names(user_ids, since):
         .all()
     )
 
-    names = {}
+    names: dict[str, list[str]] = {}
     for uid, sp_zh, sp_sci, sp_rank, br_zh, br_en, fi_zh, fi_en in trait_rows:
         if (
             sp_zh
@@ -94,8 +96,20 @@ def _collect_species_names(user_ids, since):
 
 
 def query_directory(
-    *, q, country, gender, status, org_type, platform, has_traits, sort, order, live_first, page, per_page
-):
+    *,
+    q: str | None,
+    country: str | None,
+    gender: str | None,
+    status: str | None,
+    org_type: str | None,
+    platform: str | None,
+    has_traits: str | None,
+    sort: str,
+    order: str,
+    live_first: bool,
+    page: int,
+    per_page: int,
+) -> dict[str, Any]:
     """Build, filter, sort and paginate the user directory query.
 
     Returns a dict ready for JSON serialisation.
@@ -142,13 +156,13 @@ def query_directory(
 # ---------------------------------------------------------------------------
 
 
-def _apply_name_filter(query, q):
+def _apply_name_filter(query: Query, q: str | None) -> Query:
     if q:
         query = query.filter(User.display_name.ilike(f"%{q}%"))
     return query
 
 
-def _apply_country_filter(query, country):
+def _apply_country_filter(query: Query, country: str | None) -> Query:
     if not country:
         return query
     raw = [c.strip() for c in country.split(",") if c.strip()]
@@ -174,14 +188,14 @@ def _apply_country_filter(query, country):
     return query.filter(text("(" + " OR ".join(conditions) + ")").bindparams(**bind_params))
 
 
-def _apply_gender_filter(query, gender):
+def _apply_gender_filter(query: Query, gender: str | None) -> Query:
     if not gender:
         return query
     vals = [v.strip() for v in gender.split(",") if v.strip()]
     if not vals:
         return query
 
-    conditions = []
+    conditions: list[Any] = []
     for v in vals:
         if v == "unset":
             conditions.append(
@@ -204,7 +218,7 @@ def _apply_gender_filter(query, gender):
     return query.filter(or_(*conditions))
 
 
-def _apply_status_filter(query, status):
+def _apply_status_filter(query: Query, status: str | None) -> Query:
     if not status:
         return query
     vals = [v.strip() for v in status.split(",") if v.strip()]
@@ -212,7 +226,7 @@ def _apply_status_filter(query, status):
         return query
 
     today_str = _date.today().isoformat()
-    conditions = []
+    conditions: list[Any] = []
     for v in vals:
         if v == "active":
             conditions.append(
@@ -238,13 +252,13 @@ def _apply_status_filter(query, status):
     return query.filter(or_(*conditions))
 
 
-def _apply_org_type_filter(query, org_type):
+def _apply_org_type_filter(query: Query, org_type: str | None) -> Query:
     if org_type in ("corporate", "indie", "club"):
         query = query.filter(User.org_type == org_type)
     return query
 
 
-def _apply_platform_filter(query, platform):
+def _apply_platform_filter(query: Query, platform: str | None) -> Query:
     if not platform:
         return query
     providers = [p.strip() for p in platform.split(",") if p.strip()]
@@ -255,7 +269,7 @@ def _apply_platform_filter(query, platform):
     return query
 
 
-def _apply_traits_filter(query, has_traits):
+def _apply_traits_filter(query: Query, has_traits: str | None) -> Query:
     if has_traits == "true":
         query = query.filter(User.id.in_(db.session.query(VtuberTrait.user_id).distinct()))
     elif has_traits == "false":
@@ -268,7 +282,7 @@ def _apply_traits_filter(query, has_traits):
 # ---------------------------------------------------------------------------
 
 
-def _apply_sorting(query, sort, order, live_first):
+def _apply_sorting(query: Query, sort: str, order: str, live_first: bool) -> Query:
     valid_sorts = ("debut_date", "name", "created_at", "active_first", "organization")
     if sort not in valid_sorts:
         sort = "created_at"
@@ -286,10 +300,10 @@ def _apply_sorting(query, sort, order, live_first):
             (User.last_live_at > seven_days_ago, User.last_live_at),
             else_=literal(None).cast(db.DateTime(timezone=True)),
         )
-        query = query.order_by(live_weight.desc(), recent_live.desc().nullslast(), User.display_name.asc())
+        query = query.order_by(live_weight.desc(), recent_live.desc().nullslast(), User.display_name.asc())  # type: ignore[union-attr]
     elif sort == "organization":
         org_priority = case((User.org_type == "corporate", 0), (User.org_type == "club", 1), else_=2)
-        dir_fn = (lambda c: c.asc()) if order == "asc" else (lambda c: c.desc())
+        dir_fn: Any = (lambda c: c.asc()) if order == "asc" else (lambda c: c.desc())
         order_clauses = []
         if live_weight is not None:
             order_clauses.append(live_weight.desc())
@@ -309,9 +323,9 @@ def _apply_sorting(query, sort, order, live_first):
         if live_weight is not None:
             order_clauses.append(live_weight.desc())
         if order == "asc":
-            order_clauses.append(text("users.profile_data->>'debut_date' ASC NULLS LAST"))
+            order_clauses.append(text("users.profile_data->>'debut_date' ASC NULLS LAST"))  # type: ignore[arg-type]
         else:
-            order_clauses.append(text("users.profile_data->>'debut_date' DESC NULLS LAST"))
+            order_clauses.append(text("users.profile_data->>'debut_date' DESC NULLS LAST"))  # type: ignore[arg-type]
         query = query.order_by(*order_clauses)
     else:  # created_at
         dir_fn = (lambda c: c.asc()) if order == "asc" else (lambda c: c.desc())
@@ -329,10 +343,10 @@ def _apply_sorting(query, sort, order, live_first):
 # ---------------------------------------------------------------------------
 
 
-def _batch_load_platforms(user_ids):
+def _batch_load_platforms(user_ids: list[Any]) -> dict[str, set[str]]:
     if not user_ids:
         return {}
-    platforms_map = {}
+    platforms_map: dict[str, set[str]] = {}
     accounts = OAuthAccount.query.filter(OAuthAccount.user_id.in_(user_ids)).all()
     for a in accounts:
         uid = str(a.user_id)
@@ -340,10 +354,10 @@ def _batch_load_platforms(user_ids):
     return platforms_map
 
 
-def _batch_load_species(user_ids):
+def _batch_load_species(user_ids: list[Any]) -> dict[str, list[str]]:
     if not user_ids:
         return {}
-    species_map = {}
+    species_map: dict[str, list[str]] = {}
     traits = VtuberTrait.query.filter(VtuberTrait.user_id.in_(user_ids)).all()
     for t in traits:
         uid = str(t.user_id)
@@ -357,7 +371,7 @@ def _batch_load_species(user_ids):
 # ---------------------------------------------------------------------------
 
 
-def _serialize_user(u, platforms_map, species_map):
+def _serialize_user(u: User, platforms_map: dict[str, set[str]], species_map: dict[str, list[str]]) -> dict[str, Any]:
     uid = str(u.id)
     pd = u._computed_profile_data()
     return {
@@ -389,10 +403,10 @@ def _serialize_user(u, platforms_map, species_map):
 # ---------------------------------------------------------------------------
 
 
-def compute_facets():
+def compute_facets() -> dict[str, Any]:
     """Compute aggregated facet statistics for the directory sidebar."""
     today_str = _date.today().isoformat()
-    facets = {}
+    facets: dict[str, Any] = {}
 
     # Country counts (unnest JSONB array)
     rows = db.session.execute(
