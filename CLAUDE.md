@@ -24,13 +24,15 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 
 ## 技術棧
 
-- **前端**：React + Vite
-- **後端**：Python Flask
+- **前端**：React + Vite + TypeScript
+- **後端**：Python 3.12 Flask + SQLAlchemy
+- **型別檢查**：mypy strict mode（後端）、tsc（前端）
 - **資料庫**：PostgreSQL（Supabase）
 - **認證**：Supabase Auth（OAuth → JWT）
 - **後端部署**：Google Cloud Run（asia-east1）
 - **前端部署**：Firebase Hosting
 - **CI/CD**：GitHub Actions（develop → staging，main → production）
+- **Linting**：Ruff（後端）、ESLint（前端）
 - **外部 API**：GBIF Species API（生物分類查詢）、Wikidata / TaiCOL（中文名稱）
 
 ## 認證流程
@@ -39,19 +41,19 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 2. **API 驗證**：前端在每次 API 請求的 `Authorization: Bearer <JWT>` 標頭帶上 JWT。Flask 後端使用 Supabase JWKS（ES256 公鑰）驗證簽章，驗證失敗時自動刷新 JWKS 並重試一次（處理 key rotation）。
 3. **權限檢查**：從 JWT 中取得 `user_id`，查詢 `users` 表的 `role` 欄位判斷權限（`admin` 或 `user`）。
 
-## 資料模型（10 張表）
+## 資料模型（14 張表）
 
 ### users
 角色主體。一筆 user = 一個 Vtuber 角色。
-- `id` (uuid, PK), `display_name`, `avatar_url`, `role` (admin|user), `organization` (text, nullable), `bio` (text, nullable), `country_flags` (jsonb, default []), `social_links` (jsonb, default {}), `primary_platform` (youtube|twitch, nullable), `profile_data` (jsonb, default {}), `visibility` (text, default 'visible': visible|hidden|pending_review), `visibility_reason` (text, nullable), `visibility_changed_at` (timestamptz, nullable), `visibility_changed_by` (uuid, nullable), `vtuber_declaration_at` (timestamptz, nullable), `appeal_note` (text, nullable), `created_at`, `updated_at`
+- `id` (uuid, PK), `display_name`, `avatar_url`, `role` (admin|user), `organization` (text, nullable), `org_type` (varchar(20), default 'indie': indie|corporate|club), `bio` (text, nullable), `country_flags` (jsonb, default []), `social_links` (jsonb, default {}), `primary_platform` (youtube|twitch, nullable), `profile_data` (jsonb, default {}), `last_live_at` (timestamptz, nullable), `visibility` (text, default 'visible': visible|hidden|pending_review), `visibility_reason` (text, nullable), `visibility_changed_at` (timestamptz, nullable), `visibility_changed_by` (uuid, nullable), `vtuber_declaration_at` (timestamptz, nullable), `appeal_note` (text, nullable), `live_primary_real_trait_id` (FK → vtuber_traits, nullable), `live_primary_fictional_trait_id` (FK → vtuber_traits, nullable), `created_at`, `updated_at`
 
 ### oauth_accounts
 平台帳號連結，一個 user 可綁定多個平台。
-- `id` (uuid, PK), `user_id` (FK → users), `provider` (youtube|twitch), `provider_account_id` (UNIQUE with provider), `provider_display_name`, `provider_avatar_url`, `channel_url`, `show_on_profile` (boolean, default true), `access_token`, `refresh_token`, `token_expires_at`, `created_at`
+- `id` (uuid, PK), `user_id` (FK → users), `provider` (youtube|twitch), `provider_account_id` (UNIQUE with provider), `provider_display_name`, `provider_avatar_url`, `channel_url`, `show_on_profile` (boolean, default true), `access_token` (EncryptedText), `refresh_token` (EncryptedText), `token_expires_at`, `live_sub_status` (text, nullable), `live_sub_at` (timestamptz, nullable), `created_at`
 
 ### species_cache
 從 GBIF 拉回的分類資料快取。
-- `taxon_id` (int, PK, = GBIF usageKey), `scientific_name`, `common_name_en`, `common_name_zh`, `taxon_rank`, `taxon_path` (Materialized Path, 用 `|` 分隔), `kingdom`, `phylum`, `class`, `order_`, `family`, `genus`, `path_zh` (jsonb, default {}), `cached_at`
+- `taxon_id` (int, PK, = GBIF usageKey), `scientific_name`, `common_name_en`, `common_name_zh`, `alternative_names_zh`, `taxon_rank`, `taxon_path` (Materialized Path, 用 `|` 分隔), `kingdom`, `phylum`, `class`, `order_`, `family`, `genus`, `path_zh` (jsonb, default {}), `cached_at`
 
 ### fictional_species
 奇幻生物獨立分類表，以文化來源為主軸的分類體系。
@@ -73,6 +75,10 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 使用者建議新增的品種。
 - `id` (serial, PK), `user_id` (FK → users), `taxon_id` (FK → species_cache), `name_zh`, `name_en`, `description`, `status`, `admin_note`, `created_at`
 
+### species_name_reports
+使用者回報物種名稱錯誤或缺漏。
+- `id` (serial, PK), `user_id` (FK → users), `taxon_id` (FK → species_cache), `report_type` (missing_zh|wrong_zh), `current_name_zh`, `suggested_name_zh`, `description`, `status`, `admin_note`, `created_at`
+
 ### user_reports
 使用者檢舉。
 - `id` (serial, PK), `reporter_id` (FK → users), `reported_user_id` (FK → users), `reason`, `evidence_url`, `report_type`, `status`, `admin_note`, `created_at`
@@ -80,6 +86,15 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 ### blacklist
 黑名單。
 - `id` (serial, PK), `identifier_type`, `identifier_value`, `user_id` (FK → users), `reason`, `banned_by` (FK → users), `created_at`
+
+### notifications
+站內通知。
+- `id` (serial, PK), `user_id` (FK → users), `type` (text), `reference_id` (int), `title`, `message`, `status`, `is_read` (boolean, default false), `created_at`
+
+### live_streams
+直播狀態記錄（每個 user 每個平台最多一筆 active stream）。
+- `id` (serial, PK), `user_id` (FK → users), `provider` (youtube|twitch), `stream_id`, `stream_title`, `stream_url`, `started_at`, `created_at`
+- UNIQUE constraint: (user_id, provider)
 
 ### vtuber_traits
 角色與物種的多對多關聯。一筆 trait 可關聯現實物種或奇幻生物（至少一個）。
@@ -118,4 +133,6 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 - Google Cloud Run 有冷啟動延遲，Flask 應用應盡量縮短啟動時間（精簡 import、延遲載入非必要模組）。
 - 奇幻生物使用獨立分類系統（`fictional_species` 表），分類由管理者手動預建。
 - `taxon_path` 欄位需要 `varchar_pattern_ops` 索引以支援前綴查詢。
+- **Type hints 規範**：後端全面啟用 mypy strict mode，所有新增函式必須有完整的參數和回傳型別標註。使用 Python 3.12 現代語法（`str | None` 不用 `Optional`，`list[dict]` 不用 `List[Dict]`）。mypy 設定在 `backend/pyproject.toml`，`warn_unused_ignores = false`（因 CI 與本地 stubs 差異）。
+- **字串常數集中管理**：report type、status、visibility 等字串常數定義在 `backend/app/constants.py`，不要在程式碼中使用 magic string。
 - **`.claude/settings.local.json` 權限格式**：Bash 萬用字元規則必須用空格分隔，不可用冒號。正確：`Bash(git *)`，錯誤：`Bash(git:*)`。使用者可能會請求重新檢查格式，屆時掃描所有 `:*)` 並改為 ` *)`。
