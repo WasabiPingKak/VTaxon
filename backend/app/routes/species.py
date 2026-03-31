@@ -311,7 +311,7 @@ def clear_cache() -> Response:
         )
 
     db.session.commit()
-    cleared_count = result.rowcount
+    cleared_count: int = result.rowcount  # type: ignore[attr-defined]
 
     return jsonify(
         {
