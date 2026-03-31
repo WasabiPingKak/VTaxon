@@ -23,32 +23,19 @@ known-first-party = ["app"]
 
 [tool.mypy]
 python_version = "3.12"
-warn_unused_configs = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-check_untyped_defs = true
-disallow_untyped_defs = false
-ignore_missing_imports = true
+strict = true
 show_error_codes = true
 enable_error_code = ["ignore-without-code"]
 
+# Libraries without type stubs
 [[tool.mypy.overrides]]
-module = [
-    "app.utils.*",
-    "app.cache",
-    "app.config",
-    "app.extensions",
-    "app.limiter",
-    "app.swagger",
-    "app.routes.*",
-]
-disallow_untyped_defs = true
-warn_return_any = true
+module = ["resend.*", "flasgger.*", "pythonjsonlogger.*", "opencc.*", "flask_cors.*"]
+ignore_missing_imports = true
 
 # flask-sqlalchemy db.Model is dynamically created — mypy cannot resolve it
 [[tool.mypy.overrides]]
 module = "app.models"
-disable_error_code = ["name-defined"]
+disable_error_code = ["name-defined", "misc", "no-any-return"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=app --cov-report=term-missing -x -q"

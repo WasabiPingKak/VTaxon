@@ -21,7 +21,7 @@ def _get_jwks(force_refresh: bool = False) -> list[dict[str, Any]] | None:
     """Fetch and cache JWKS from Supabase with 1-hour TTL."""
     now = time.monotonic()
     if not force_refresh and _jwks_cache["keys"] is not None and (now - _jwks_cache["fetched_at"]) < _JWKS_TTL:
-        return _jwks_cache["keys"]
+        return _jwks_cache["keys"]  # type: ignore[no-any-return]
 
     supabase_url = current_app.config.get("SUPABASE_URL", "")
     jwks_url = f"{supabase_url}/auth/v1/.well-known/jwks.json"
@@ -31,11 +31,11 @@ def _get_jwks(force_refresh: bool = False) -> list[dict[str, Any]] | None:
         jwks_data = resp.json()
         _jwks_cache["keys"] = jwks_data["keys"]
         _jwks_cache["fetched_at"] = now
-        return _jwks_cache["keys"]
+        return _jwks_cache["keys"]  # type: ignore[no-any-return]
     except (requests.RequestException, ValueError, KeyError) as e:
         logger.error("Failed to fetch JWKS from %s: %s", jwks_url, e)
         # Return stale cache if available
-        return _jwks_cache["keys"]
+        return _jwks_cache["keys"]  # type: ignore[no-any-return]
 
 
 def _get_signing_key(token: str) -> Any:
@@ -84,7 +84,7 @@ def get_current_user() -> str | None:
                 algorithms=["ES256"],
                 audience="authenticated",
             )
-            user_id = payload.get("sub")
+            user_id: str | None = payload.get("sub")
             if user_id:
                 return user_id
         except jwt.InvalidTokenError as e:
@@ -99,9 +99,9 @@ def get_current_user() -> str | None:
                         algorithms=["ES256"],
                         audience="authenticated",
                     )
-                    user_id = payload.get("sub")
-                    if user_id:
-                        return user_id
+                    retry_user_id: str | None = payload.get("sub")
+                    if retry_user_id:
+                        return retry_user_id
                 except jwt.InvalidTokenError:
                     pass
 

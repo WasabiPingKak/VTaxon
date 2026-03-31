@@ -4,20 +4,21 @@ import hashlib
 import hmac
 import logging
 import time
+from typing import Any
 
 import requests
 
 logger = logging.getLogger(__name__)
 
 # Module-level App Access Token cache (Client Credentials flow)
-_token_cache = {"access_token": None, "expires_at": 0}
+_token_cache: dict[str, Any] = {"access_token": None, "expires_at": 0}
 
 
-def get_app_access_token(client_id, client_secret):
+def get_app_access_token(client_id: str, client_secret: str) -> str:
     """Get a Twitch App Access Token via Client Credentials, cached until expiry."""
     now = time.time()
-    if _token_cache["access_token"] and now < _token_cache["expires_at"] - 60:
-        return _token_cache["access_token"]
+    if _token_cache["access_token"] and now < float(_token_cache["expires_at"]) - 60:
+        return str(_token_cache["access_token"])
 
     resp = requests.post(
         "https://id.twitch.tv/oauth2/token",
@@ -34,12 +35,17 @@ def get_app_access_token(client_id, client_secret):
     _token_cache["access_token"] = data["access_token"]
     _token_cache["expires_at"] = now + data.get("expires_in", 3600)
     logger.info("Twitch App Access Token refreshed, expires in %ds", data.get("expires_in", 0))
-    return _token_cache["access_token"]
+    return str(_token_cache["access_token"])
 
 
 def create_eventsub_subscription(
-    client_id, client_secret, broadcaster_user_id, event_type, callback_url, webhook_secret
-):
+    client_id: str,
+    client_secret: str,
+    broadcaster_user_id: str,
+    event_type: str,
+    callback_url: str,
+    webhook_secret: str,
+) -> dict[str, Any]:
     """Create a Twitch EventSub subscription for stream.online / stream.offline."""
     token = get_app_access_token(client_id, client_secret)
     resp = requests.post(
@@ -66,10 +72,11 @@ def create_eventsub_subscription(
         logger.info("Twitch EventSub %s already exists for %s, skipping", event_type, broadcaster_user_id)
         return {"status": "already_exists"}
     resp.raise_for_status()
-    return resp.json()
+    result: dict[str, Any] = resp.json()
+    return result
 
 
-def delete_eventsub_subscription(client_id, client_secret, subscription_id):
+def delete_eventsub_subscription(client_id: str, client_secret: str, subscription_id: str) -> None:
     """Delete a Twitch EventSub subscription."""
     token = get_app_access_token(client_id, client_secret)
     resp = requests.delete(
@@ -83,13 +90,13 @@ def delete_eventsub_subscription(client_id, client_secret, subscription_id):
     resp.raise_for_status()
 
 
-def list_eventsub_subscriptions(client_id, client_secret):
+def list_eventsub_subscriptions(client_id: str, client_secret: str) -> list[dict[str, Any]]:
     """List all EventSub subscriptions for this app."""
     token = get_app_access_token(client_id, client_secret)
-    subs = []
-    cursor = None
+    subs: list[dict[str, Any]] = []
+    cursor: str | None = None
     while True:
-        params = {}
+        params: dict[str, str] = {}
         if cursor:
             params["after"] = cursor
         resp = requests.get(
@@ -110,7 +117,7 @@ def list_eventsub_subscriptions(client_id, client_secret):
     return subs
 
 
-def get_stream_title(client_id, client_secret, broadcaster_id):
+def get_stream_title(client_id: str, client_secret: str, broadcaster_id: str) -> str | None:
     """Fetch current stream title via Helix GET /streams.
 
     Returns title string or None. Rate limit: 800 req/min — only called on
@@ -130,13 +137,14 @@ def get_stream_title(client_id, client_secret, broadcaster_id):
         resp.raise_for_status()
         data = resp.json().get("data", [])
         if data:
-            return data[0].get("title")
+            title: str | None = data[0].get("title")
+            return title
     except requests.RequestException as e:
         logger.warning("Failed to fetch Twitch stream title for %s: %s", broadcaster_id, e)
     return None
 
 
-def verify_webhook_signature(headers, body, secret):
+def verify_webhook_signature(headers: Any, body: str, secret: str) -> bool:
     """Verify Twitch EventSub webhook HMAC-SHA256 signature.
 
     Returns True if valid, False otherwise.

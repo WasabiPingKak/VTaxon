@@ -20,6 +20,17 @@ jobs:
         with:
           src: backend/
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Typecheck backend (mypy)
+        working-directory: backend
+        run: python -m mypy app/ --config-file pyproject.toml
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20

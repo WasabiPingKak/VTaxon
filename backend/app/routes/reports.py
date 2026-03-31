@@ -49,7 +49,7 @@ def create_report() -> tuple[Response, int]:
     data = request.get_json() or {}
     result, status = mod_svc.create_report(
         reporter_id=get_current_user(),
-        reported_user_id=data.get("reported_user_id"),
+        reported_user_id=data.get("reported_user_id", ""),
         report_type=data.get("report_type", "impersonation"),
         reason=(data.get("reason") or "").strip(),
         evidence_url=(data.get("evidence_url") or "").strip() or None,

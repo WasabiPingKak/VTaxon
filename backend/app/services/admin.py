@@ -2,6 +2,7 @@
 
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def get_request_counts():
+def get_request_counts() -> dict[str, Any]:
     """Aggregate status counts for all admin request types."""
     fictional_rows = (
         db.session.query(FictionalSpeciesRequest.status, func.count()).group_by(FictionalSpeciesRequest.status).all()
@@ -42,7 +43,7 @@ def get_request_counts():
 # ---------------------------------------------------------------------------
 
 
-def export_fictional():
+def export_fictional() -> dict[str, Any]:
     """Export received fictional species requests."""
     requests = (
         FictionalSpeciesRequest.query.filter_by(status="received").order_by(FictionalSpeciesRequest.created_at).all()
@@ -76,7 +77,7 @@ def export_fictional():
     }
 
 
-def export_breeds():
+def export_breeds() -> dict[str, Any]:
     """Export received breed requests with species context."""
     requests = BreedRequest.query.filter_by(status="received").order_by(BreedRequest.created_at).all()
 
@@ -132,7 +133,7 @@ def export_breeds():
 # ---------------------------------------------------------------------------
 
 
-def transition_fictional():
+def transition_fictional() -> tuple[dict[str, Any], int]:
     """Batch transition fictional species requests from received to in_progress.
 
     Returns (result_dict, http_status).
@@ -152,7 +153,7 @@ def transition_fictional():
     return {"updated": len(reqs)}, 200
 
 
-def transition_breeds():
+def transition_breeds() -> tuple[dict[str, Any], int]:
     """Batch transition breed requests from received to in_progress.
 
     Returns (result_dict, http_status).
@@ -177,7 +178,7 @@ def transition_breeds():
 # ---------------------------------------------------------------------------
 
 
-def set_user_visibility(user_id, admin_user_id, data):
+def set_user_visibility(user_id: str, admin_user_id: str, data: dict[str, Any]) -> tuple[dict[str, Any], int]:
     """Set user visibility. Returns (result_dict, http_status)."""
     user = db.session.get(User, user_id)
     if not user:

@@ -1,3 +1,5 @@
+from typing import Any
+
 from ..extensions import db
 from ..models import Notification
 
@@ -30,7 +32,14 @@ TITLE_MAP = {
 }
 
 
-def create_notification(user_id, type_, reference_id, status, admin_note=None, subject_name=None):
+def create_notification(
+    user_id: str | None,
+    type_: str,
+    reference_id: Any,
+    status: str,
+    admin_note: str | None = None,
+    subject_name: str | None = None,
+) -> None:
     if not user_id:
         return
     titles = TITLE_MAP.get(type_, {})

@@ -34,7 +34,7 @@ def _get_client() -> tasks_v2.CloudTasksClient:
 def dispatch_task(
     path: str,
     *,
-    params: dict | None = None,
+    params: dict[str, str] | None = None,
     method: str = "POST",
 ) -> str | None:
     """Create a single Cloud Task targeting *path* on the Cloud Run service.
@@ -81,9 +81,9 @@ def dispatch_task(
 def dispatch_tasks_batch(
     path: str,
     *,
-    params_list: list[dict],
+    params_list: list[dict[str, str]],
     method: str = "POST",
-) -> dict:
+) -> dict[str, int]:
     """Dispatch multiple Cloud Tasks, one per params dict.
 
     Returns {'dispatched': int, 'failed': int}.

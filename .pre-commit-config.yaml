@@ -28,6 +28,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^frontend/src/
+      - id: backend-mypy
+        name: mypy (backend type check)
+        entry: bash -c "cd backend && python -m mypy app/ --config-file pyproject.toml"
+        language: system
+        pass_filenames: false
+        files: ^backend/
       - id: backend-tests
         name: Run backend tests
         entry: bash -c "cd backend && python -m pytest tests/ -x -q"

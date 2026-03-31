@@ -8,7 +8,7 @@ from ..auth import admin_required, login_required
 from ..extensions import db
 from ..limiter import limiter
 from ..models import SpeciesCache, SpeciesNameReport
-from ..services.gbif import (
+from ..services.gbif import (  # type: ignore[attr-defined]
     clear_chinese_name_caches,
     get_species,
     get_subspecies,

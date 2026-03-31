@@ -10,6 +10,7 @@ import hmac
 import logging
 import re
 import xml.etree.ElementTree as ET
+from typing import Any
 
 import requests
 
@@ -26,7 +27,7 @@ NS = {
 }
 
 
-def verify_hub_signature(secret, signature_header, body):
+def verify_hub_signature(secret: str, signature_header: str | None, body: str) -> bool:
     """Verify the X-Hub-Signature HMAC-SHA1 from PubSubHubbub.
 
     *signature_header* is e.g. ``sha1=abcdef1234...``.
@@ -45,7 +46,7 @@ def verify_hub_signature(secret, signature_header, body):
     return hmac.compare_digest(expected, parts[1])
 
 
-def extract_channel_id(channel_url):
+def extract_channel_id(channel_url: str | None) -> str | None:
     """Extract YouTube channel ID (UCxxx) from a channel URL.
 
     Supports:
@@ -59,7 +60,7 @@ def extract_channel_id(channel_url):
     return match.group(1) if match else None
 
 
-def subscribe_channel(channel_id, callback_url, secret=None):
+def subscribe_channel(channel_id: str, callback_url: str, secret: str | None = None) -> bool:
     """Subscribe to a YouTube channel's feed via PubSubHubbub.
 
     If *secret* is provided, the hub will sign notifications with HMAC-SHA1.
@@ -87,7 +88,7 @@ def subscribe_channel(channel_id, callback_url, secret=None):
         return False
 
 
-def unsubscribe_channel(channel_id, callback_url, secret=None):
+def unsubscribe_channel(channel_id: str, callback_url: str, secret: str | None = None) -> bool:
     """Unsubscribe from a YouTube channel's feed via PubSubHubbub.
 
     Returns True if the hub accepted the request (HTTP 202/204).
@@ -112,7 +113,7 @@ def unsubscribe_channel(channel_id, callback_url, secret=None):
         return False
 
 
-def parse_feed(feed_xml):
+def parse_feed(feed_xml: str) -> list[dict[str, str]]:
     """Parse a YouTube PubSubHubbub Atom feed notification.
 
     Returns a list of dicts: [{'video_id': ..., 'channel_id': ...}, ...]
@@ -124,18 +125,21 @@ def parse_feed(feed_xml):
             video_el = entry.find("yt:videoId", NS)
             channel_el = entry.find("yt:channelId", NS)
             if video_el is not None and channel_el is not None:
-                entries.append(
-                    {
-                        "video_id": video_el.text.strip(),
-                        "channel_id": channel_el.text.strip(),
-                    }
-                )
+                video_text = video_el.text
+                channel_text = channel_el.text
+                if video_text and channel_text:
+                    entries.append(
+                        {
+                            "video_id": video_text.strip(),
+                            "channel_id": channel_text.strip(),
+                        }
+                    )
     except ET.ParseError as e:
         logger.error("Failed to parse YouTube Atom feed: %s", e)
     return entries
 
 
-def check_video_is_live(video_id, api_key):
+def check_video_is_live(video_id: str, api_key: str) -> dict[str, Any] | None:
     """Check if a YouTube video is currently a live stream.
 
     Returns {'is_live': True, 'title': str, 'started_at': str} if live,
@@ -179,7 +183,7 @@ def check_video_is_live(video_id, api_key):
         return None
 
 
-def check_streams_ended(video_ids, api_key):
+def check_streams_ended(video_ids: list[str], api_key: str) -> set[str]:
     """Batch-check which video IDs have ended streaming.
 
     Queries up to 50 IDs per API call. Returns a set of video IDs that

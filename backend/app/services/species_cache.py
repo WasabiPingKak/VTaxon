@@ -7,6 +7,8 @@ taxonomy path construction, and subspecies retrieval.
 import json
 import logging
 import re
+from collections.abc import Generator
+from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -27,7 +29,7 @@ RANK_ORDER = ["kingdom", "phylum", "class", "order", "family", "genus", "species
 # ---------------------------------------------------------------------------
 
 
-def get_species(taxon_id):
+def get_species(taxon_id: int) -> dict[str, Any] | None:
     """Get a single species by GBIF taxon_id. Check cache first."""
     from .chinese_names import _resolve_chinese_name
 
@@ -62,7 +64,7 @@ def get_species(taxon_id):
     return d
 
 
-def _fill_missing_rank_zh(d, species):
+def _fill_missing_rank_zh(d: dict[str, Any], species: SpeciesCache) -> None:
     """Fill in missing *_zh fields from static table without overwriting existing values."""
     static_zh = get_taxonomy_zh_for_ranks(
         kingdom=species.kingdom,
@@ -77,7 +79,7 @@ def _fill_missing_rank_zh(d, species):
             d[key] = val
 
 
-def cache_from_search_result(gbif_data):
+def cache_from_search_result(gbif_data: dict[str, Any]) -> SpeciesCache | None:
     """Cache a species from a GBIF search/suggest result dict."""
     usage_key = gbif_data.get("key") or gbif_data.get("usageKey")
     if not usage_key:
@@ -95,7 +97,7 @@ def cache_from_search_result(gbif_data):
 # ---------------------------------------------------------------------------
 
 
-def get_subspecies(species_key, limit=50):
+def get_subspecies(species_key: int, limit: int = 50) -> list[dict[str, Any]]:
     """Fetch subspecies of a species via GBIF children API.
 
     Returns a list of enriched subspecies dicts.
@@ -135,7 +137,7 @@ def get_subspecies(species_key, limit=50):
     return subspecies
 
 
-def get_subspecies_stream(species_key, limit=50):
+def get_subspecies_stream(species_key: int, limit: int = 50) -> Generator[str, None, None]:
     """Streaming version of get_subspecies - yields one NDJSON line per result."""
     from .chinese_names import _enrich_chinese_names
     from .gbif import _gbif_result_to_dict
@@ -169,7 +171,7 @@ def get_subspecies_stream(species_key, limit=50):
 # ---------------------------------------------------------------------------
 
 
-def _cache_enriched_species(species_list):
+def _cache_enriched_species(species_list: list[dict[str, Any]]) -> None:
     """Persist enriched species data to species_cache table.
 
     Uses the enriched dict format (not raw GBIF format).
@@ -246,7 +248,7 @@ def _cache_enriched_species(species_list):
         logger.debug("Failed to cache enriched species data", exc_info=True)
 
 
-def _cache_species(data, common_name_zh=None):
+def _cache_species(data: dict[str, Any], common_name_zh: str | None = None) -> SpeciesCache | None:
     """Create or update a SpeciesCache entry from GBIF data."""
     from .gbif import _has_cjk
 
@@ -312,7 +314,7 @@ def _cache_species(data, common_name_zh=None):
 # ---------------------------------------------------------------------------
 
 
-def _build_taxon_path(data):
+def _build_taxon_path(data: dict[str, Any]) -> str | None:
     """Build materialized path from GBIF hierarchy: Kingdom|Phylum|Class|...|Species.
 
     Always includes all rank positions (empty string for missing ranks) up to
@@ -366,7 +368,7 @@ def _build_taxon_path(data):
     return path
 
 
-def _build_path_zh(data):
+def _build_path_zh(data: dict[str, Any]) -> dict[str, str | None]:
     """Build path_zh dict from static table + Wikidata fallback.
 
     Called once when a species is first cached, so Wikidata HTTP calls
@@ -414,7 +416,7 @@ def _build_path_zh(data):
     return result
 
 
-def _realign_taxon_path(species):
+def _realign_taxon_path(species: SpeciesCache) -> tuple[str | None, bool]:
     """Rebuild taxon_path from individual rank fields to fix old compact paths.
 
     Old format skipped null ranks: Animalia|Chordata|Arandaspididae|Sacabambaspis

@@ -6,6 +6,7 @@ API docs: https://api.taicol.tw/swagger/
 """
 
 from functools import lru_cache
+from typing import Any
 
 import requests
 
@@ -14,7 +15,7 @@ from .http_client import external_session
 TAICOL_BASE = "https://api.taicol.tw/v2"
 
 
-def search_by_chinese(query, limit=10):
+def search_by_chinese(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """Search TaiCOL by Chinese name using common_name + taxon_group.
 
     Queries both parameters and merges results (common_name first, then
@@ -24,7 +25,7 @@ def search_by_chinese(query, limit=10):
     seen = set()
     results = []
 
-    def _collect(data):
+    def _collect(data: list[dict[str, Any]]) -> None:
         for entry in data:
             sci = entry.get("simple_name")
             if not sci or sci in seen:
@@ -45,7 +46,7 @@ def search_by_chinese(query, limit=10):
     try:
         resp = external_session.get(
             f"{TAICOL_BASE}/taxon",
-            params={
+            params={  # type: ignore[arg-type]
                 "common_name": query,
                 "limit": limit,
             },
@@ -63,7 +64,7 @@ def search_by_chinese(query, limit=10):
         try:
             resp = external_session.get(
                 f"{TAICOL_BASE}/taxon",
-                params={
+                params={  # type: ignore[arg-type]
                     "taxon_group": query,
                     "limit": limit,
                 },
@@ -81,7 +82,7 @@ def search_by_chinese(query, limit=10):
 
 
 @lru_cache(maxsize=500)
-def get_chinese_name(scientific_name):
+def get_chinese_name(scientific_name: str) -> tuple[str | None, str | None]:
     """Fetch Traditional Chinese name from TaiCOL by scientific name.
 
     Returns (chinese_name, alternative_names) tuple.
@@ -91,7 +92,7 @@ def get_chinese_name(scientific_name):
     try:
         resp = external_session.get(
             f"{TAICOL_BASE}/taxon",
-            params={
+            params={  # type: ignore[arg-type]
                 "scientific_name": scientific_name,
                 "limit": 1,
             },
@@ -110,7 +111,7 @@ def get_chinese_name(scientific_name):
         return None, None
 
 
-def search_by_scientific_name(scientific_name, limit=10):
+def search_by_scientific_name(scientific_name: str, limit: int = 10) -> list[dict[str, Any]]:
     """Search TaiCOL by scientific name, returning full entry data.
 
     Unlike get_chinese_name() which returns only (zh, alt), this returns
@@ -119,7 +120,7 @@ def search_by_scientific_name(scientific_name, limit=10):
     try:
         resp = external_session.get(
             f"{TAICOL_BASE}/taxon",
-            params={
+            params={  # type: ignore[arg-type]
                 "scientific_name": scientific_name,
                 "limit": limit,
             },
@@ -145,12 +146,12 @@ def search_by_scientific_name(scientific_name, limit=10):
         return []
 
 
-def clear_cache():
+def clear_cache() -> None:
     """Clear in-memory LRU caches for TaiCOL lookups."""
     get_chinese_name.cache_clear()
 
 
-def get_higher_taxa_zh(taicol_taxon_id):
+def get_higher_taxa_zh(taicol_taxon_id: str) -> list[dict[str, str | None]]:
     """Fetch full taxonomy hierarchy with Chinese names from TaiCOL.
 
     Returns list of dicts: [{'rank': 'Kingdom', 'name': 'Animalia', 'name_zh': '動物界'}, ...]

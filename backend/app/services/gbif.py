@@ -11,6 +11,8 @@ Chinese name enrichment and species caching are delegated to sibling modules:
 
 import json
 import logging
+from collections.abc import Generator
+from typing import Any
 
 import requests
 from sqlalchemy import func
@@ -51,7 +53,7 @@ _MAX_SYNONYM_RESOLVES = 8
 # ---------------------------------------------------------------------------
 
 
-def suggest_species(query, limit=10):
+def suggest_species(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """Autocomplete species search using GBIF /species/suggest.
 
     Returns Backbone-only results (no duplicates).
@@ -63,7 +65,7 @@ def suggest_species(query, limit=10):
     fetch_limit = min(limit * 3, 60)
     resp = external_session.get(
         f"{GBIF_BASE}/species/suggest",
-        params={
+        params={  # type: ignore[arg-type]
             "q": query,
             "limit": fetch_limit,
         },
@@ -72,8 +74,8 @@ def suggest_species(query, limit=10):
     resp.raise_for_status()
     results = resp.json()  # suggest returns a plain list, not {results: [...]}
 
-    species_list = []
-    seen_keys = set()
+    species_list: list[dict[str, Any]] = []
+    seen_keys: set[int] = set()
     synonym_attempts = 0
     for r in results:
         key = r.get("key")
@@ -130,7 +132,7 @@ def suggest_species(query, limit=10):
     return species_list
 
 
-def match_species(name):
+def match_species(name: str) -> dict[str, Any] | None:
     """Exact species match using GBIF /species/match.
 
     Returns a single authoritative Backbone result or None.
@@ -178,7 +180,7 @@ def match_species(name):
     return result
 
 
-def search_species(query, limit=20):
+def search_species(query: str, limit: int = 20) -> list[dict[str, Any]]:
     """Search for species - routes to the appropriate API based on query language.
 
     Includes local breed results first, then:
@@ -199,7 +201,7 @@ def search_species(query, limit=20):
     return breed_results + species_results
 
 
-def search_species_stream(query, limit=10):
+def search_species_stream(query: str, limit: int = 10) -> Generator[str, None, None]:
     """Streaming version of search_species - yields one NDJSON line per result.
 
     Phase 1: Local breed search (instant, from DB)
@@ -236,7 +238,7 @@ def search_species_stream(query, limit=10):
 # ---------------------------------------------------------------------------
 
 
-def _search_breeds(query, limit=10):
+def _search_breeds(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """Search breeds by name (zh prefix or en case-insensitive prefix).
 
     Returns list of dicts with result_type='breed', breed info, and parent species data.
@@ -292,7 +294,7 @@ def _search_breeds(query, limit=10):
     return results
 
 
-def _search_local_cache_chinese(query, limit=10):
+def _search_local_cache_chinese(query: str, limit: int = 10) -> list[dict[str, Any]]:
     """Search local species_cache by Chinese name (common_name_zh / alternative_names_zh).
 
     This catches species that were previously cached via Latin-name searches
@@ -324,14 +326,14 @@ def _search_local_cache_chinese(query, limit=10):
     return results
 
 
-def _suggest_species_stream(query, limit=10):
+def _suggest_species_stream(query: str, limit: int = 10) -> Generator[str, None, None]:
     """Generator: yield one NDJSON line per enriched GBIF suggest result."""
     from .chinese_names import _enrich_chinese_names, _fallback_taicol_by_name
 
     fetch_limit = min(limit * 3, 60)
     resp = external_session.get(
         f"{GBIF_BASE}/species/suggest",
-        params={
+        params={  # type: ignore[arg-type]
             "q": query,
             "limit": fetch_limit,
         },
@@ -340,8 +342,8 @@ def _suggest_species_stream(query, limit=10):
     resp.raise_for_status()
     raw = resp.json()
 
-    species_list = []
-    seen_keys = set()
+    species_list: list[dict[str, Any]] = []
+    seen_keys: set[int] = set()
     synonym_attempts = 0
     for r in raw:
         key = r.get("key")
@@ -394,7 +396,7 @@ def _suggest_species_stream(query, limit=10):
         yield json.dumps(sp, ensure_ascii=False) + "\n"
 
 
-def _has_cjk(text):
+def _has_cjk(text: str) -> bool:
     """Check if text contains CJK (Chinese/Japanese/Korean) characters."""
     for ch in text:
         cp = ord(ch)
@@ -403,7 +405,9 @@ def _has_cjk(text):
     return False
 
 
-def _resolve_synonym(synonym_key, synonym_canonical_name, seen_keys=None):
+def _resolve_synonym(
+    synonym_key: int, synonym_canonical_name: str | None, seen_keys: set[int] | None = None
+) -> dict[str, Any] | None:
     """Resolve a SYNONYM to its accepted species via GBIF /species/{key}.
 
     If seen_keys is provided, skips the second HTTP call when the accepted
@@ -440,7 +444,7 @@ def _resolve_synonym(synonym_key, synonym_canonical_name, seen_keys=None):
         return None
 
 
-def _gbif_result_to_dict(r, usage_key):
+def _gbif_result_to_dict(r: dict[str, Any], usage_key: int) -> dict[str, Any]:
     """Convert a GBIF API result to a simplified dict."""
     return {
         "taxon_id": usage_key,

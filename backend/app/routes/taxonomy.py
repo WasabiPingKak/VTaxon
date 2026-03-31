@@ -17,7 +17,7 @@ from ..cache import (
 from ..extensions import db
 from ..limiter import limiter
 from ..models import FictionalSpecies, OAuthAccount, SpeciesCache, User, VtuberTrait
-from ..services.gbif import _build_path_zh, _realign_taxon_path
+from ..services.gbif import _build_path_zh, _realign_taxon_path  # type: ignore[attr-defined]
 from ..services.taxonomy_zh import get_parent_species_zh_by_name, get_species_zh_override
 
 logger = logging.getLogger(__name__)
@@ -133,7 +133,7 @@ def _inject_medusozoa(entries: list[dict[str, Any]]) -> None:
             entry["path_zh"] = pzh
 
 
-def _rebuild_path_zh(species: SpeciesCache) -> dict[str, str] | None:
+def _rebuild_path_zh(species: SpeciesCache) -> dict[str, str | None] | None:
     """Rebuild path_zh using full fallback chain (static table + Wikidata).
 
     Uses _build_path_zh which has @lru_cache on Wikidata calls,
@@ -288,7 +288,7 @@ def get_taxonomy_tree() -> Response:
                         else get_parent_species_zh_by_name(parent_binomial)
                     )
                 parent_zh = _parent_override_cache[parent_binomial]
-                if parent_zh and path_zh.get("species") != parent_zh:
+                if parent_zh and path_zh and path_zh.get("species") != parent_zh:
                     path_zh = dict(path_zh) if path_zh else {}
                     path_zh["species"] = parent_zh
                     species.path_zh = path_zh

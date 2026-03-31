@@ -54,7 +54,8 @@ def _verify_link_token(token: str) -> str | None:
         return None
     if payload.get("exp", 0) < time.time():
         return None
-    return payload.get("user_id")
+    user_id: str | None = payload.get("user_id")
+    return user_id
 
 
 @auth_bp.route("/link-token", methods=["POST"])

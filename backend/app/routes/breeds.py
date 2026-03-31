@@ -31,7 +31,7 @@ def list_breed_categories() -> tuple[Response, int]:
               items:
                 type: object
     """
-    from ..services.gbif import resolve_missing_chinese_name
+    from ..services.gbif import resolve_missing_chinese_name  # type: ignore[attr-defined]
 
     rows = db.session.query(Breed.taxon_id, func.count(Breed.id).label("breed_count")).group_by(Breed.taxon_id).all()
     categories = []

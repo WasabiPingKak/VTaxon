@@ -8,6 +8,7 @@ All returned Chinese names are guaranteed to be in Traditional Chinese
 """
 
 from functools import lru_cache
+from typing import Any
 
 import requests
 from opencc import OpenCC
@@ -24,15 +25,16 @@ USER_AGENT = "VTaxon/1.0 (https://github.com/VTaxon)"
 ZH_LANGS = ("zh-tw", "zh-hant", "zh")
 
 
-def _wikidata_get(params):
+def _wikidata_get(params: dict[str, str | int]) -> dict[str, Any]:
     """Make a request to the Wikidata API with proper User-Agent."""
     params.setdefault("format", "json")
     resp = external_session.get(WIKIDATA_API, params=params, headers={"User-Agent": USER_AGENT}, timeout=10)
     resp.raise_for_status()
-    return resp.json()
+    result: dict[str, Any] = resp.json()
+    return result
 
 
-def get_chinese_name_by_gbif_id(gbif_taxon_id):
+def get_chinese_name_by_gbif_id(gbif_taxon_id: int) -> tuple[str | None, str | None]:
     """Fetch zh-tw label from Wikidata using a GBIF taxon ID (P846).
 
     Returns (chinese_name, english_name) tuple, either may be None.
@@ -46,7 +48,9 @@ def get_chinese_name_by_gbif_id(gbif_taxon_id):
     return _get_labels(qid)
 
 
-def get_chinese_names_batch(gbif_taxon_ids):
+def get_chinese_names_batch(
+    gbif_taxon_ids: list[int],
+) -> dict[int, tuple[str | None, str | None]]:
     """Batch fetch zh-tw labels for multiple GBIF taxon IDs.
 
     Uses wbgetentities API (max 50 per request).
@@ -91,7 +95,7 @@ def get_chinese_names_batch(gbif_taxon_ids):
 
 
 @lru_cache(maxsize=500)
-def _find_entity_by_gbif_id(gbif_taxon_id):
+def _find_entity_by_gbif_id(gbif_taxon_id: int) -> str | None:
     """Find Wikidata entity QID by GBIF taxon ID (P846)."""
     try:
         data = _wikidata_get(
@@ -104,13 +108,14 @@ def _find_entity_by_gbif_id(gbif_taxon_id):
         )
         results = data.get("query", {}).get("search", [])
         if results:
-            return results[0]["title"]  # e.g. "Q42627"
+            qid: str = results[0]["title"]  # e.g. "Q42627"
+            return qid
     except (requests.RequestException, ValueError, KeyError):
         pass
     return None
 
 
-def _get_labels(qid):
+def _get_labels(qid: str) -> tuple[str | None, str | None]:
     """Fetch zh-tw and en labels for a single Wikidata entity."""
     try:
         data = _wikidata_get(
@@ -131,7 +136,7 @@ def _get_labels(qid):
         return None, None
 
 
-def get_aliases_by_gbif_id(gbif_taxon_id):
+def get_aliases_by_gbif_id(gbif_taxon_id: int) -> str | None:
     """Fetch zh-tw aliases from Wikidata using a GBIF taxon ID (P846).
 
     Returns a comma-separated string of aliases, or None.
@@ -165,12 +170,12 @@ def get_aliases_by_gbif_id(gbif_taxon_id):
         return None
 
 
-def clear_cache():
+def clear_cache() -> None:
     """Clear in-memory LRU caches for Wikidata lookups."""
     _find_entity_by_gbif_id.cache_clear()
 
 
-def _pick_zh_label(labels):
+def _pick_zh_label(labels: dict[str, dict[str, str]]) -> str | None:
     """Pick the best Chinese label from zh-tw → zh-hant → zh fallback chain.
 
     All values are passed through OpenCC s2twp to ensure Traditional Chinese
@@ -181,5 +186,6 @@ def _pick_zh_label(labels):
         label = labels.get(lang, {})
         value = label.get("value")
         if value:
-            return _s2twp.convert(value)
+            converted: str = _s2twp.convert(value)
+            return converted
     return None
