@@ -6,6 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..auth import admin_required, login_required
 from ..cache import invalidate_tree_cache
+from ..constants import RequestStatus
 from ..extensions import db
 from ..models import Breed, BreedRequest, SpeciesCache
 
@@ -315,8 +316,8 @@ def list_breed_requests():
       200:
         description: 請求清單
     """
-    status = request.args.get("status", "pending")
-    if status not in ("pending", "received", "in_progress", "completed", "approved", "rejected"):
+    status = request.args.get("status", RequestStatus.PENDING)
+    if status not in RequestStatus.ALL:
         return jsonify({"error": "Invalid status filter"}), 400
 
     reqs = BreedRequest.query.filter_by(status=status).order_by(BreedRequest.created_at.desc()).all()
@@ -362,7 +363,7 @@ def update_breed_request(req_id):
 
     data = request.get_json() or {}
     new_status = data.get("status")
-    if new_status not in ("received", "in_progress", "completed", "rejected"):
+    if new_status not in RequestStatus.UPDATABLE:
         return jsonify({"error": "status must be received, in_progress, completed, or rejected"}), 400
 
     req.status = new_status

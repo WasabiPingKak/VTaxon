@@ -7,7 +7,9 @@ Business logic validation (DB lookups, ownership, conflicts) stays in routes.
 from functools import wraps
 
 from flask import jsonify, request
-from marshmallow import Schema, ValidationError, fields, validate, validates_schema
+from marshmallow import Schema, ValidationError, fields, post_load, validate, validates_schema
+
+from app.constants import ReportStatus, ReportType, RequestStatus, Visibility
 
 # ---------------------------------------------------------------------------
 # Helper: validation decorator
@@ -26,7 +28,9 @@ def validate_with(schema_cls):
         def wrapper(*args, **kwargs):
             raw = request.get_json() or {}
             try:
-                data = schema_cls().load(raw)
+                schema = schema_cls()
+                schema.context = {"raw": raw}
+                data = schema.load(raw)
             except ValidationError as err:
                 return jsonify({"error": "Validation failed", "details": err.messages}), 400
             return f(data, *args, **kwargs)
@@ -55,16 +59,16 @@ class TrimString(fields.String):
 # Reports
 # ---------------------------------------------------------------------------
 
-REPORT_TYPES = ("impersonation", "not_vtuber")
-REPORT_STATUSES = ("pending", "investigating", "confirmed", "dismissed")
-REPORT_UPDATE_STATUSES = ("investigating", "confirmed", "dismissed")
+REPORT_TYPES = ReportType.ALL
+REPORT_STATUSES = ReportStatus.ALL
+REPORT_UPDATE_STATUSES = ReportStatus.UPDATABLE
 
 
 class CreateReportSchema(Schema):
     reported_user_id = fields.String(required=True, error_messages={"required": "缺少被舉報使用者 ID"})
     report_type = fields.String(
         validate=validate.OneOf(REPORT_TYPES, error="無效的檢舉類型"),
-        load_default="impersonation",
+        load_default=ReportType.IMPERSONATION,
     )
     reason = TrimString(
         required=True,
@@ -208,6 +212,25 @@ class UpdateProfileSchema(Schema):
     class Meta:
         unknown = "EXCLUDE"
 
+    @post_load
+    def normalize(self, data, **kwargs):
+        raw = self.context.get("raw", {})
+        # Only keep fields the client actually sent
+        data = {k: v for k, v in data.items() if k in raw}
+        # Uppercase country flags
+        if "country_flags" in data and data["country_flags"] is not None:
+            data["country_flags"] = [f.upper() for f in data["country_flags"]]
+        # indie org_type clears organization
+        if data.get("org_type") == "indie":
+            data["organization"] = None
+        # Strip social_links values
+        if "social_links" in data and data["social_links"] is not None:
+            data["social_links"] = {k: v.strip() for k, v in data["social_links"].items() if v}
+        # Normalize bio
+        if "bio" in data and data["bio"] is not None:
+            data["bio"] = data["bio"].strip() or None
+        return data
+
 
 class AppealSchema(Schema):
     appeal_note = TrimString(
@@ -252,8 +275,8 @@ class CreateBreedRequestSchema(Schema):
     )
 
 
-REQUEST_STATUSES_ALL = ("pending", "received", "in_progress", "completed", "approved", "rejected")
-REQUEST_UPDATE_STATUSES = ("received", "in_progress", "completed", "rejected")
+REQUEST_STATUSES_ALL = RequestStatus.ALL
+REQUEST_UPDATE_STATUSES = RequestStatus.UPDATABLE
 
 
 class UpdateRequestStatusSchema(Schema):
@@ -304,6 +327,6 @@ class MarkReadSchema(Schema):
 class SetVisibilitySchema(Schema):
     visibility = fields.String(
         required=True,
-        validate=validate.OneOf(("visible", "hidden"), error="visibility must be visible or hidden"),
+        validate=validate.OneOf(Visibility.ADMIN_SETTABLE, error="visibility must be visible or hidden"),
     )
     reason = TrimString(load_default=None)

@@ -6,6 +6,7 @@ from datetime import date as _date
 
 from sqlalchemy import case, func, literal, or_, text
 
+from ..constants import Visibility
 from ..extensions import db
 from ..models import Breed, FictionalSpecies, LiveStream, OAuthAccount, SpeciesCache, User, VtuberTrait
 
@@ -16,7 +17,7 @@ def query_recent_users(since, limit):
     rows = (
         db.session.query(User, latest_trait)
         .join(VtuberTrait, User.id == VtuberTrait.user_id)
-        .filter(User.visibility == "visible")
+        .filter(User.visibility == Visibility.VISIBLE)
         .group_by(User.id)
         .having(latest_trait > since)
         .order_by(latest_trait.desc())
@@ -99,7 +100,7 @@ def query_directory(
 
     Returns a dict ready for JSON serialisation.
     """
-    query = User.query.filter(User.visibility == "visible")
+    query = User.query.filter(User.visibility == Visibility.VISIBLE)
 
     # Filters
     query = _apply_name_filter(query, q)

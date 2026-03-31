@@ -3,6 +3,7 @@
 from flask import Blueprint, g, jsonify, request
 
 from ..auth import admin_required, get_current_user
+from ..constants import ReportStatus, ReportType
 from ..limiter import limiter
 from ..models import Blacklist, UserReport
 from ..services import moderation as mod_svc
@@ -50,7 +51,7 @@ def create_report():
     result, status = mod_svc.create_report(
         reporter_id=get_current_user(),
         reported_user_id=data.get("reported_user_id"),
-        report_type=data.get("report_type", "impersonation"),
+        report_type=data.get("report_type", ReportType.IMPERSONATION),
         reason=(data.get("reason") or "").strip(),
         evidence_url=(data.get("evidence_url") or "").strip() or None,
     )
@@ -76,8 +77,8 @@ def list_reports():
       200:
         description: 檢舉清單
     """
-    status = request.args.get("status", "pending")
-    if status not in ("pending", "investigating", "confirmed", "dismissed"):
+    status = request.args.get("status", ReportStatus.PENDING)
+    if status not in ReportStatus.ALL:
         return jsonify({"error": "Invalid status"}), 400
 
     reports = UserReport.query.filter_by(status=status).order_by(UserReport.created_at.desc()).all()

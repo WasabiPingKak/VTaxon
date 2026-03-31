@@ -10,6 +10,8 @@ import threading
 
 import resend
 
+from ..constants import ReportType
+
 logger = logging.getLogger(__name__)
 
 ADMIN_PANEL_URL = "https://vtaxon.com/admin"
@@ -109,8 +111,8 @@ def notify_new_breed_request(req):
 def notify_new_report(report):
     """Notify admins about a new user report."""
     type_labels = {
-        "impersonation": "冒充",
-        "not_vtuber": "非 VTuber",
+        ReportType.IMPERSONATION: "冒充",
+        ReportType.NOT_VTUBER: "非 VTuber",
     }
     type_label = type_labels.get(report.report_type, report.report_type)
 

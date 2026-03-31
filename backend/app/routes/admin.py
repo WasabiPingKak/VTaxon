@@ -3,6 +3,7 @@
 from flask import Blueprint, g, jsonify, request
 
 from ..auth import admin_required
+from ..constants import Visibility
 from ..models import User
 from ..services import admin as admin_svc
 
@@ -171,7 +172,7 @@ def pending_reviews():
       200:
         description: 待審核使用者清單
     """
-    users = User.query.filter_by(visibility="pending_review").order_by(User.updated_at.desc()).all()
+    users = User.query.filter_by(visibility=Visibility.PENDING_REVIEW).order_by(User.updated_at.desc()).all()
     return jsonify(
         {
             "users": [

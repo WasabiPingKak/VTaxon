@@ -6,6 +6,7 @@ from flask import Blueprint, g, jsonify
 
 from ..auth import login_required
 from ..cache import invalidate_tree_cache
+from ..constants import Visibility
 from ..extensions import db
 from ..models import OAuthAccount, User, VtuberTrait
 from ..schemas import AppealSchema, UpdateProfileSchema, validate_with
@@ -88,19 +89,7 @@ def update_me(data):
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    # --- Data transformations (schema handles type/format validation) ---
-    if "country_flags" in data:
-        data["country_flags"] = [f.upper() for f in data["country_flags"]]
-
-    if "social_links" in data:
-        data["social_links"] = {k: v.strip() for k, v in data["social_links"].items() if v}
-
-    if "bio" in data and data["bio"] is not None:
-        data["bio"] = data["bio"] or None  # empty string → None (already stripped by TrimString)
-
-    # --- Business logic validation (DB lookups, ownership checks) ---
-    if "org_type" in data and data["org_type"] == "indie":
-        data["organization"] = None
+    # --- Business logic requiring DB lookups ---
 
     # VTuber declaration: write-once timestamp
     if "vtuber_declaration_at" in data:
@@ -114,7 +103,7 @@ def update_me(data):
         if not has_account:
             return jsonify({"error": f"No {pp} account linked"}), 400
 
-    # Validate live_primary_*_trait_id
+    # Validate live_primary_*_trait_id ownership & type
     for field, fk_col in [
         ("live_primary_real_trait_id", "taxon_id"),
         ("live_primary_fictional_trait_id", "fictional_species_id"),
@@ -128,8 +117,8 @@ def update_me(data):
                 if getattr(trait, fk_col) is None:
                     return jsonify({"error": f"Trait type mismatch for {field}"}), 400
 
-    for key in data:
-        setattr(user, key, data[key])
+    for key, value in data.items():
+        setattr(user, key, value)
 
     # Auto-update avatar_url when primary_platform changes
     if "primary_platform" in data:
@@ -210,10 +199,10 @@ def submit_appeal(data):
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    if user.visibility != "hidden":
+    if user.visibility != Visibility.HIDDEN:
         return jsonify({"error": "目前帳號狀態不允許申訴"}), 400
 
-    user.visibility = "pending_review"
+    user.visibility = Visibility.PENDING_REVIEW
     user.appeal_note = data["appeal_note"]
     user.updated_at = datetime.now(UTC)
 

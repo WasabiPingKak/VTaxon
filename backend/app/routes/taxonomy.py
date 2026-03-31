@@ -13,6 +13,7 @@ from ..cache import (
     set_fictional_tree_cache,
     set_tree_cache,
 )
+from ..constants import Visibility
 from ..extensions import db
 from ..limiter import limiter
 from ..models import FictionalSpecies, OAuthAccount, SpeciesCache, User, VtuberTrait
@@ -216,7 +217,7 @@ def get_taxonomy_tree():
         .join(SpeciesCache, VtuberTrait.taxon_id == SpeciesCache.taxon_id)
         .join(User, VtuberTrait.user_id == User.id)
         .filter(VtuberTrait.taxon_id.isnot(None))
-        .filter(User.visibility == "visible")
+        .filter(User.visibility == Visibility.VISIBLE)
         .order_by(User.created_at.desc())
         .all()
     )
@@ -427,7 +428,7 @@ def get_fictional_tree():
         .join(FictionalSpecies, VtuberTrait.fictional_species_id == FictionalSpecies.id)
         .join(User, VtuberTrait.user_id == User.id)
         .filter(VtuberTrait.fictional_species_id.isnot(None))
-        .filter(User.visibility == "visible")
+        .filter(User.visibility == Visibility.VISIBLE)
         .order_by(User.created_at.desc())
         .all()
     )
