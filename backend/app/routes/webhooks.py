@@ -3,6 +3,7 @@
 import logging
 import os
 from datetime import UTC, datetime
+from typing import Any
 
 from flask import Blueprint, request
 from sqlalchemy.exc import IntegrityError
@@ -16,14 +17,22 @@ logger = logging.getLogger(__name__)
 webhooks_bp = Blueprint("webhooks", __name__)
 
 
-def _invalidate_live_cache():
+def _invalidate_live_cache() -> None:
     """Invalidate the live status cache after DB changes."""
     from .livestream import invalidate_live_cache
 
     invalidate_live_cache()
 
 
-def _upsert_live_stream(*, user_id, provider, stream_id, stream_url, stream_title, started_at):
+def _upsert_live_stream(
+    *,
+    user_id: str,
+    provider: str,
+    stream_id: str | None,
+    stream_url: str | None,
+    stream_title: str | None,
+    started_at: datetime,
+) -> None:
     """Insert or update a live_streams record, handling concurrent duplicates.
 
     Uses optimistic INSERT with IntegrityError fallback to UPDATE,
@@ -73,7 +82,7 @@ def _upsert_live_stream(*, user_id, provider, stream_id, stream_url, stream_titl
 
 @webhooks_bp.route("/webhooks/twitch", methods=["POST"])
 @limiter.exempt
-def twitch_webhook():
+def twitch_webhook() -> tuple[str, int] | tuple[str, int, dict[str, str]]:
     """接收 Twitch EventSub webhook 回呼。
     ---
     tags:
@@ -137,7 +146,7 @@ def twitch_webhook():
     return "", 204
 
 
-def _handle_stream_online(event):
+def _handle_stream_online(event: dict[str, Any]) -> None:
     """Insert live_streams record when a Twitch stream goes online."""
     broadcaster_id = event.get("broadcaster_user_id", "")
     if not broadcaster_id:
@@ -172,7 +181,7 @@ def _handle_stream_online(event):
     )
 
 
-def _handle_stream_offline(event):
+def _handle_stream_offline(event: dict[str, Any]) -> None:
     """Delete live_streams record when a Twitch stream goes offline."""
     broadcaster_id = event.get("broadcaster_user_id", "")
     if not broadcaster_id:
@@ -197,7 +206,7 @@ def _handle_stream_offline(event):
 
 @webhooks_bp.route("/webhooks/youtube", methods=["GET"])
 @limiter.exempt
-def youtube_webhook_verify():
+def youtube_webhook_verify() -> tuple[str, int, dict[str, str]] | tuple[str, int]:
     """YouTube PubSubHubbub 訂閱驗證。
     ---
     tags:
@@ -220,7 +229,7 @@ def youtube_webhook_verify():
 
 @webhooks_bp.route("/webhooks/youtube", methods=["POST"])
 @limiter.exempt
-def youtube_webhook_notify():
+def youtube_webhook_notify() -> tuple[str, int] | tuple[str, int, dict[str, str]]:
     """接收 YouTube PubSubHubbub Atom feed 通知。
     ---
     tags:
@@ -282,7 +291,7 @@ def youtube_webhook_notify():
     return "", 204
 
 
-def _handle_youtube_live(user_id, video_id, title, channel_url, started_at):
+def _handle_youtube_live(user_id: str, video_id: str, title: str, channel_url: str | None, started_at: str) -> None:
     """Insert/update live_streams record for a YouTube live stream."""
     stream_url = f"https://www.youtube.com/watch?v={video_id}"
 

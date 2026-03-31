@@ -1,4 +1,4 @@
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 
 from ..auth import admin_required, login_required
 from ..extensions import db
@@ -8,7 +8,7 @@ fictional_bp = Blueprint("fictional", __name__)
 
 
 @fictional_bp.route("", methods=["GET"])
-def list_fictional_species():
+def list_fictional_species() -> tuple[Response, int]:
     """列出虛構物種。
     ---
     tags:
@@ -41,12 +41,12 @@ def list_fictional_species():
         FictionalSpecies.name,
     ).all()
 
-    return jsonify({"species": [s.to_dict() for s in species]})
+    return jsonify({"species": [s.to_dict() for s in species]}), 200
 
 
 @fictional_bp.route("/requests", methods=["GET"])
 @admin_required
-def list_requests():
+def list_requests() -> tuple[Response, int]:
     """列出虛構物種請求（管理員）。
     ---
     tags:
@@ -71,12 +71,12 @@ def list_requests():
         FictionalSpeciesRequest.query.filter_by(status=status).order_by(FictionalSpeciesRequest.created_at.desc()).all()
     )
 
-    return jsonify({"requests": [r.to_dict() for r in reqs]})
+    return jsonify({"requests": [r.to_dict() for r in reqs]}), 200
 
 
 @fictional_bp.route("/requests/<int:req_id>", methods=["PATCH"])
 @admin_required
-def update_request(req_id):
+def update_request(req_id: int) -> tuple[Response, int]:
     """更新虛構物種請求狀態（管理員）。
     ---
     tags:
@@ -126,12 +126,12 @@ def update_request(req_id):
 
     db.session.commit()
 
-    return jsonify(req.to_dict())
+    return jsonify(req.to_dict()), 200
 
 
 @fictional_bp.route("/requests", methods=["POST"])
 @login_required
-def create_request():
+def create_request() -> tuple[Response, int]:
     """提交虛構物種新增請求。
     ---
     tags:

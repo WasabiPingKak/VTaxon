@@ -40,6 +40,7 @@ module = [
     "app.extensions",
     "app.limiter",
     "app.swagger",
+    "app.routes.*",
 ]
 disallow_untyped_defs = true
 warn_return_any = true

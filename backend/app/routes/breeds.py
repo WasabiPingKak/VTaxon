@@ -1,6 +1,6 @@
 import logging
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -15,7 +15,7 @@ breeds_bp = Blueprint("breeds", __name__)
 
 
 @breeds_bp.route("/categories", methods=["GET"])
-def list_breed_categories():
+def list_breed_categories() -> tuple[Response, int]:
     """列出有品種的物種及品種數量。
     ---
     tags:
@@ -50,11 +50,11 @@ def list_breed_categories():
 
     # Sort by breed_count descending
     categories.sort(key=lambda c: c["breed_count"], reverse=True)
-    return jsonify({"categories": categories})
+    return jsonify({"categories": categories}), 200
 
 
 @breeds_bp.route("", methods=["GET"])
-def list_breeds():
+def list_breeds() -> tuple[Response, int]:
     """列出指定物種的品種。
     ---
     tags:
@@ -118,11 +118,11 @@ def list_breeds():
     sp = db.session.get(SpeciesCache, actual_taxon_id)
     species_info = sp.to_dict() if sp else None
 
-    return jsonify({"breeds": [b.to_dict() for b in breeds], "species": species_info})
+    return jsonify({"breeds": [b.to_dict() for b in breeds], "species": species_info}), 200
 
 
 @breeds_bp.route("/search", methods=["GET"])
-def search_breeds():
+def search_breeds() -> tuple[Response, int]:
     """搜尋品種（中文子字串或英文不分大小寫）。
     ---
     tags:
@@ -167,12 +167,12 @@ def search_breeds():
             d["species_scientific_name"] = b.species.scientific_name
         results.append(d)
 
-    return jsonify({"breeds": results})
+    return jsonify({"breeds": results}), 200
 
 
 @breeds_bp.route("", methods=["POST"])
 @admin_required
-def create_breed():
+def create_breed() -> tuple[Response, int]:
     """新增品種（管理員）。
     ---
     tags:
@@ -235,7 +235,7 @@ def create_breed():
 
 @breeds_bp.route("/requests", methods=["POST"])
 @login_required
-def create_breed_request():
+def create_breed_request() -> tuple[Response, int]:
     """提交品種新增請求。
     ---
     tags:
@@ -298,7 +298,7 @@ def create_breed_request():
 
 @breeds_bp.route("/requests", methods=["GET"])
 @admin_required
-def list_breed_requests():
+def list_breed_requests() -> tuple[Response, int]:
     """列出品種請求（管理員）。
     ---
     tags:
@@ -321,12 +321,12 @@ def list_breed_requests():
 
     reqs = BreedRequest.query.filter_by(status=status).order_by(BreedRequest.created_at.desc()).all()
 
-    return jsonify({"requests": [r.to_dict() for r in reqs]})
+    return jsonify({"requests": [r.to_dict() for r in reqs]}), 200
 
 
 @breeds_bp.route("/requests/<int:req_id>", methods=["PATCH"])
 @admin_required
-def update_breed_request(req_id):
+def update_breed_request(req_id: int) -> tuple[Response, int]:
     """更新品種請求狀態（管理員）。
     ---
     tags:
@@ -376,4 +376,4 @@ def update_breed_request(req_id):
 
     db.session.commit()
 
-    return jsonify(req.to_dict())
+    return jsonify(req.to_dict()), 200

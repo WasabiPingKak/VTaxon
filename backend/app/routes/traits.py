@@ -1,6 +1,6 @@
 """VTuber trait CRUD routes."""
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 
 from ..auth import login_required
 from ..models import VtuberTrait
@@ -11,7 +11,7 @@ traits_bp = Blueprint("traits", __name__)
 
 @traits_bp.route("", methods=["POST"])
 @login_required
-def create_trait_route():
+def create_trait_route() -> tuple[Response, int]:
     """建立角色物種特徵。
     ---
     tags:
@@ -53,7 +53,7 @@ def create_trait_route():
 
 
 @traits_bp.route("", methods=["GET"])
-def list_traits():
+def list_traits() -> tuple[Response, int] | Response:
     """列出指定使用者的物種特徵。
     ---
     tags:
@@ -86,7 +86,7 @@ def list_traits():
 
 @traits_bp.route("/<trait_id>", methods=["PATCH"])
 @login_required
-def update_trait_route(trait_id):
+def update_trait_route(trait_id: str) -> tuple[Response, int]:
     """更新物種特徵（品種、備註）。
     ---
     tags:
@@ -124,7 +124,7 @@ def update_trait_route(trait_id):
 
 @traits_bp.route("/<trait_id>", methods=["DELETE"])
 @login_required
-def delete_trait_route(trait_id):
+def delete_trait_route(trait_id: str) -> tuple[Response, int]:
     """刪除物種特徵。
     ---
     tags:

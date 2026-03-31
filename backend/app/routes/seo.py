@@ -8,7 +8,7 @@ seo_bp = Blueprint("seo", __name__)
 
 SITE_URL = "https://vtaxon.com"
 
-STATIC_PAGES = [
+STATIC_PAGES: list[dict[str, str]] = [
     {"loc": "/", "priority": "1.0", "changefreq": "daily"},
     {"loc": "/directory", "priority": "0.9", "changefreq": "daily"},
     {"loc": "/search", "priority": "0.7", "changefreq": "weekly"},
@@ -21,7 +21,7 @@ STATIC_LASTMOD = "2026-03-05"
 
 
 @seo_bp.route("/sitemap.xml")
-def sitemap():
+def sitemap() -> Response:
     """產生 XML sitemap。
     ---
     tags:

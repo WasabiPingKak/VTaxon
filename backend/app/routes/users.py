@@ -1,8 +1,9 @@
 """User profile routes (get, update, appeal)."""
 
 from datetime import UTC, datetime
+from typing import Any
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 
 from ..auth import login_required
 from ..cache import invalidate_tree_cache
@@ -15,7 +16,7 @@ users_bp = Blueprint("users", __name__)
 
 @users_bp.route("/me", methods=["GET"])
 @login_required
-def get_me():
+def get_me() -> tuple[Response, int] | Response:
     """取得目前登入使用者的個人資料。
     ---
     tags:
@@ -36,7 +37,7 @@ def get_me():
 
 @users_bp.route("/me", methods=["PATCH"])
 @login_required
-def update_me():
+def update_me() -> tuple[Response, int] | Response:
     """更新目前登入使用者的個人資料。
     ---
     tags:
@@ -279,7 +280,7 @@ def update_me():
 
 
 @users_bp.route("/<user_id>", methods=["GET"])
-def get_user(user_id):
+def get_user(user_id: str) -> tuple[Response, int] | Response:
     """取得指定使用者的公開資料。
     ---
     tags:
@@ -307,7 +308,7 @@ def get_user(user_id):
 @users_bp.route("/me/appeal", methods=["POST"])
 @login_required
 @validate_with(AppealSchema)
-def submit_appeal(data):
+def submit_appeal(data: dict[str, Any]) -> tuple[Response, int] | Response:
     """提交申訴以請求能見度審查。
     ---
     tags:

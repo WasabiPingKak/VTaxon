@@ -2,7 +2,7 @@
 
 import os
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 
 from ..auth import admin_required
 from ..limiter import limiter
@@ -11,7 +11,7 @@ from ..services import subscriptions as subs_svc
 subscriptions_bp = Blueprint("subscriptions", __name__)
 
 
-def _verify_cron_secret():
+def _verify_cron_secret() -> bool:
     """Verify X-Cron-Secret header matches CRON_SECRET env var."""
     secret = os.environ.get("CRON_SECRET", "")
     if not secret:
@@ -24,7 +24,7 @@ def _verify_cron_secret():
 
 @subscriptions_bp.route("/livestream/youtube-check-offline", methods=["POST"])
 @limiter.exempt
-def youtube_check_offline():
+def youtube_check_offline() -> tuple[Response, int] | Response:
     """Cron: 檢查 YouTube 直播是否已結束。
     ---
     tags:
@@ -52,7 +52,7 @@ def youtube_check_offline():
 
 @subscriptions_bp.route("/livestream/youtube-renew-subs", methods=["POST"])
 @limiter.exempt
-def youtube_renew_subs():
+def youtube_renew_subs() -> tuple[Response, int] | Response:
     """Cron: 批量續訂 YouTube WebSub 訂閱。
     ---
     tags:
@@ -79,7 +79,7 @@ def youtube_renew_subs():
 
 @subscriptions_bp.route("/livestream/youtube-subscribe-one", methods=["POST"])
 @limiter.exempt
-def youtube_subscribe_one():
+def youtube_subscribe_one() -> tuple[Response, int]:
     """Cloud Task: 訂閱單一 YouTube 頻道。
     ---
     tags:
@@ -122,7 +122,7 @@ def youtube_subscribe_one():
 
 @subscriptions_bp.route("/livestream/twitch-subs", methods=["GET"])
 @admin_required
-def list_twitch_subs():
+def list_twitch_subs() -> tuple[Response, int]:
     """列出所有 Twitch EventSub 訂閱。管理員。
     ---
     tags:
@@ -141,7 +141,7 @@ def list_twitch_subs():
 
 @subscriptions_bp.route("/livestream/rebuild-twitch-subs", methods=["POST"])
 @admin_required
-def rebuild_twitch_subs():
+def rebuild_twitch_subs() -> tuple[Response, int]:
     """批量重建 Twitch EventSub 訂閱。管理員。
     ---
     tags:
@@ -180,7 +180,7 @@ def rebuild_twitch_subs():
 
 @subscriptions_bp.route("/livestream/youtube-subs", methods=["GET"])
 @admin_required
-def list_youtube_subs():
+def list_youtube_subs() -> Response:
     """列出所有 YouTube WebSub 訂閱狀態。管理員。
     ---
     tags:
@@ -196,7 +196,7 @@ def list_youtube_subs():
 
 @subscriptions_bp.route("/livestream/rebuild-youtube-subs", methods=["POST"])
 @admin_required
-def rebuild_youtube_subs():
+def rebuild_youtube_subs() -> tuple[Response, int]:
     """批量重建 YouTube WebSub 訂閱。管理員。
     ---
     tags:

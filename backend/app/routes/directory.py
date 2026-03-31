@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 
 from ..services.directory import query_directory, query_recent_users
 
@@ -10,7 +10,7 @@ directory_bp = Blueprint("directory", __name__)
 
 
 @directory_bp.route("/recent", methods=["GET"])
-def recent_users():
+def recent_users() -> tuple[Response, int]:
     """取得最近加入且有物種特徵的使用者。
     ---
     tags:
@@ -51,7 +51,7 @@ def recent_users():
     """
     since_str = request.args.get("since", "").strip()
     if not since_str:
-        return jsonify([])
+        return jsonify([]), 200
 
     try:
         since = datetime.fromisoformat(since_str.replace("Z", "+00:00"))
@@ -61,11 +61,11 @@ def recent_users():
     limit = request.args.get("limit", 5, type=int)
     limit = min(max(limit, 1), 10)
 
-    return jsonify(query_recent_users(since, limit))
+    return jsonify(query_recent_users(since, limit)), 200
 
 
 @directory_bp.route("/directory", methods=["GET"])
-def directory():
+def directory() -> tuple[Response, int]:
     """分頁使用者名錄（支援多種篩選與排序）。
     ---
     tags:
@@ -161,4 +161,4 @@ def directory():
             page=max(page, 1),
             per_page=min(max(per_page, 1), 100),
         )
-    )
+    ), 200
