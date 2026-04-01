@@ -1,0 +1,59 @@
+name: Backup Database
+
+on:
+  schedule:
+    # 每週一、四 UTC 16:00（台灣時間 00:00）
+    - cron: '0 16 * * 1,4'
+  workflow_dispatch: # 手動觸發
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Dump production database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%d_%H%M%S)
+          FILENAME="vtaxon_prod_${TIMESTAMP}.dump"
+
+          # 解析連線字串
+          PROTO="${DATABASE_URL%%://*}"
+          URL_BODY="${DATABASE_URL#*://}"
+          USERINFO="${URL_BODY%%@*}"
+          HOSTINFO="${URL_BODY#*@}"
+          HOSTINFO="${HOSTINFO%%/*}"
+          DBNAME="${URL_BODY##*/}"
+          PGUSER="${USERINFO%%:*}"
+          PGPASSWORD="${USERINFO#*:}"
+          PGHOST="${HOSTINFO%%:*}"
+          PGPORT="${HOSTINFO##*:}"
+          PGPORT="${PGPORT:-5432}"
+
+          export PGPASSWORD
+
+          pg_dump \
+            --host="$PGHOST" \
+            --port="$PGPORT" \
+            --username="$PGUSER" \
+            --dbname="$DBNAME" \
+            --schema=public \
+            --no-owner \
+            --no-privileges \
+            --format=custom \
+            --file="$FILENAME"
+
+          echo "BACKUP_FILE=$FILENAME" >> "$GITHUB_ENV"
+          echo "Backup size: $(du -h "$FILENAME" | cut -f1)"
+
+      - name: Upload backup as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 90
