@@ -506,13 +506,14 @@ export default function useTreeLayout(
  * its parent and the normal child depth.
  */
 function applyIntermediateLevel(root: LayoutNode): void {
-  // First pass: pull split group nodes closer to their parent (30% of NODE_DY)
+  // First pass: pull split group nodes very close to their parent (10% of NODE_DY)
+  // so the fork point is barely visible — lines look like they branch from the parent
   for (const parent of root.descendants()) {
     if (!parent.children) continue;
 
     for (const c of parent.children) {
       if (!c.data._isSplitGroup) continue;
-      const targetY = parent.y + NODE_DY * 0.3;
+      const targetY = parent.y + NODE_DY * 0.1;
       const dy = targetY - c.y;
       if (Math.abs(dy) > 0.5) {
         shiftSubtreeXY(c, 0, dy);
@@ -1006,9 +1007,17 @@ function mapToHierarchy(
       const numGroups = Math.ceil(vtuberNodes.length / SPLIT_GROUP_MAX);
       const groups: LayoutNodeData[][] = Array.from({ length: numGroups }, () => []);
 
-      for (const vn of vtuberNodes) {
-        const groupIdx = hashUserId(vn._userId!) % numGroups;
-        groups[groupIdx].push(vn);
+      // Hash-sort then round-robin: guarantees each group differs by at most 1
+      const indexed = vtuberNodes.map((vn, origIdx) => ({ vn, origIdx, h: hashUserId(vn._userId!) }));
+      indexed.sort((a, b) => a.h - b.h);
+      for (let i = 0; i < indexed.length; i++) {
+        groups[i % numGroups].push(indexed[i].vn);
+      }
+
+      // Restore original sort order (live-first, etc.) within each group
+      for (const g of groups) {
+        const orderMap = new Map(vtuberNodes.map((vn, i) => [vn._userId!, i]));
+        g.sort((a, b) => (orderMap.get(a._userId!) ?? 0) - (orderMap.get(b._userId!) ?? 0));
       }
 
       for (let i = 0; i < numGroups; i++) {
