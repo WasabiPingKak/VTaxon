@@ -506,15 +506,15 @@ export default function useTreeLayout(
  * its parent and the normal child depth.
  */
 function applyIntermediateLevel(root: LayoutNode): void {
-  // First pass: pull split group nodes very close to their parent (10% of NODE_DY)
-  // so the fork point is barely visible — lines look like they branch from the parent
+  // First pass: collapse split group nodes onto their parent (same Y position).
+  // The split group is invisible — edges from parent→split have zero length,
+  // and edges from split→children get full NODE_DY distance for natural bezier curves.
   for (const parent of root.descendants()) {
     if (!parent.children) continue;
 
     for (const c of parent.children) {
       if (!c.data._isSplitGroup) continue;
-      const targetY = parent.y + NODE_DY * 0.1;
-      const dy = targetY - c.y;
+      const dy = parent.y - c.y;
       if (Math.abs(dy) > 0.5) {
         shiftSubtreeXY(c, 0, dy);
       }
