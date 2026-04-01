@@ -12,6 +12,7 @@ from app.services.youtube_pubsub import (
     extract_channel_id,
     extract_handle,
     fetch_my_channel_id,
+    normalize_youtube_channel_url,
     parse_feed,
     resolve_handle_to_channel_id,
     subscribe_channel,
@@ -118,6 +119,70 @@ class TestExtractHandle:
 
     def test_empty_string(self):
         assert extract_handle("") is None
+
+    def test_percent_encoded_chinese_handle(self):
+        url = "https://www.youtube.com/@%E5%A4%A9%E7%92%87"
+        assert extract_handle(url) == "天璇"
+
+    def test_percent_encoded_chinese_with_ascii(self):
+        url = "https://www.youtube.com/@Merak-Channel-%E5%A4%A9%E7%92%87"
+        assert extract_handle(url) == "Merak-Channel-天璇"
+
+    def test_raw_unicode_handle(self):
+        url = "https://www.youtube.com/@黑燁"
+        assert extract_handle(url) == "黑燁"
+
+    def test_percent_encoded_japanese_handle(self):
+        # %E9%BB%92 = 黒 (U+9ED2), %E7%87%81 = 燁 (U+71C1)
+        url = "https://www.youtube.com/@%E9%BB%92%E7%87%81"
+        assert extract_handle(url) == "\u9ed2\u71c1"
+
+
+# ---------------------------------------------------------------------------
+# normalize_youtube_channel_url
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizeYoutubeChannelUrl:
+    def test_already_canonical(self):
+        url = "https://www.youtube.com/channel/UCuAXFkgsw1L7xaCfnd5JJOw"
+        assert normalize_youtube_channel_url(url) == url
+
+    @patch("app.services.youtube_pubsub.resolve_handle_to_channel_id")
+    @patch.dict("os.environ", {"YOUTUBE_API_KEY": "test-key"})
+    def test_handle_resolved(self, mock_resolve):
+        mock_resolve.return_value = "UCtest123"
+        url = "https://www.youtube.com/@SomeUser"
+        result = normalize_youtube_channel_url(url)
+        assert result == "https://www.youtube.com/channel/UCtest123"
+        mock_resolve.assert_called_once_with("SomeUser", "test-key")
+
+    @patch("app.services.youtube_pubsub.resolve_handle_to_channel_id")
+    @patch.dict("os.environ", {"YOUTUBE_API_KEY": "test-key"})
+    def test_chinese_handle_resolved(self, mock_resolve):
+        mock_resolve.return_value = "UCabc456"
+        url = "https://www.youtube.com/@%E5%A4%A9%E7%92%87"
+        result = normalize_youtube_channel_url(url)
+        assert result == "https://www.youtube.com/channel/UCabc456"
+        mock_resolve.assert_called_once_with("天璇", "test-key")
+
+    @patch("app.services.youtube_pubsub.resolve_handle_to_channel_id")
+    @patch.dict("os.environ", {"YOUTUBE_API_KEY": "test-key"})
+    def test_handle_not_found(self, mock_resolve):
+        mock_resolve.return_value = None
+        url = "https://www.youtube.com/@NoSuchUser"
+        assert normalize_youtube_channel_url(url) is None
+
+    @patch.dict("os.environ", {"YOUTUBE_API_KEY": ""})
+    def test_no_api_key(self):
+        url = "https://www.youtube.com/@SomeUser"
+        assert normalize_youtube_channel_url(url) is None
+
+    def test_none_input(self):
+        assert normalize_youtube_channel_url(None) is None
+
+    def test_non_youtube_url(self):
+        assert normalize_youtube_channel_url("https://twitch.tv/someone") is None
 
 
 # ---------------------------------------------------------------------------
