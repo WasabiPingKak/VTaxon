@@ -41,7 +41,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 2. **API 驗證**：前端在每次 API 請求的 `Authorization: Bearer <JWT>` 標頭帶上 JWT。Flask 後端使用 Supabase JWKS（ES256 公鑰）驗證簽章，驗證失敗時自動刷新 JWKS 並重試一次（處理 key rotation）。
 3. **權限檢查**：從 JWT 中取得 `user_id`，查詢 `users` 表的 `role` 欄位判斷權限（`admin` 或 `user`）。
 
-## 資料模型（14 張表）
+## 資料模型（15 張表）
 
 ### users
 角色主體。一筆 user = 一個 Vtuber 角色。
@@ -102,6 +102,10 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 - CHECK constraint: `taxon_id IS NOT NULL OR fictional_species_id IS NOT NULL`
 - Partial unique index: (user_id, taxon_id) WHERE taxon_id IS NOT NULL
 - Partial unique index: (user_id, fictional_species_id) WHERE fictional_species_id IS NOT NULL
+
+### admin_alert_events
+系統告警事件，由 cron 定時撈取寄出摘要信。
+- `id` (serial, PK), `alert_type` (text), `severity` (text), `title` (text), `context` (jsonb, default {}), `created_at` (timestamptz), `notified_at` (timestamptz, nullable)
 
 ## 外部 API 參考
 
