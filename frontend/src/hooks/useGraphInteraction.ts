@@ -104,7 +104,9 @@ export default function useGraphInteraction(nodes: LayoutNode[] | null, maxCount
       const ndy = worldY - node.y;
 
       let hit = false;
-      if (d._vtuber && d._visualTier === 'dot') {
+      if (d._isSplitGroup) {
+        continue; // invisible branch points are not interactive
+      } else if (d._vtuber && d._visualTier === 'dot') {
         hit = ndx * ndx + ndy * ndy <= 100; // r=10
       } else if (d._vtuber) {
         hit = ndx * ndx + ndy * ndy <= 576; // r=24

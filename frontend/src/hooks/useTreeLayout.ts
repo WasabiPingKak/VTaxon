@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { hierarchy, tree } from 'd3-hierarchy';
 import type { HierarchyPointNode, HierarchyPointLink } from 'd3-hierarchy';
-import { buildTree, buildFictionalTree, getVisualTier, subtreeHasNormalUser } from '../lib/treeUtils';
+import { buildTree, buildFictionalTree, getVisualTier, subtreeHasNormalUser, SPLIT_GROUP_MAX, hashUserId } from '../lib/treeUtils';
 import type { TaxonomyTreeNode, TreeEntry, VisualTier } from '../types/tree';
 import type { LayoutNodeData, LayoutNode } from '../types/graph';
 
@@ -131,6 +131,14 @@ function computeWrappedLines(ctx: CanvasRenderingContext2D, text: string, maxW: 
  */
 function computeLabelLayout(data: LayoutNodeData): void {
   const { _rank, _vtuber, _name, _nameZh, _displayName, _visualTier } = data;
+
+  // Split group nodes — invisible branch points, minimal footprint
+  if (data._isSplitGroup) {
+    data._labelLines = [];
+    data._labelHalfW = 0;
+    return;
+  }
+
   const ctx = getMeasureCtx();
 
   // Dot-tier vtuber — smaller footprint
@@ -498,18 +506,35 @@ export default function useTreeLayout(
  * its parent and the normal child depth.
  */
 function applyIntermediateLevel(root: LayoutNode): void {
-  // Process parent-by-parent so sibling vtubers share the same intermediate y.
+  // First pass: pull split group nodes closer to their parent (30% of NODE_DY)
+  for (const parent of root.descendants()) {
+    if (!parent.children) continue;
+
+    for (const c of parent.children) {
+      if (!c.data._isSplitGroup) continue;
+      const targetY = parent.y + NODE_DY * 0.3;
+      const dy = targetY - c.y;
+      if (Math.abs(dy) > 0.5) {
+        shiftSubtreeXY(c, 0, dy);
+      }
+    }
+  }
+
+  // Second pass: handle vtuber/split-group nodes with taxonomy siblings
   for (const parent of root.descendants()) {
     if (!parent.children) continue;
 
     const vtubers: LayoutNode[] = [];
+    const splitGroups: LayoutNode[] = [];
     let hasTaxonomySiblings = false;
 
     for (const c of parent.children) {
       if (c.data._vtuber) vtubers.push(c);
+      else if (c.data._isSplitGroup) splitGroups.push(c);
       else if (c.data._rank !== 'BREED') hasTaxonomySiblings = true;
     }
 
+    // Split groups already positioned, handle vtubers with taxonomy siblings
     if (vtubers.length === 0 || !hasTaxonomySiblings) continue;
 
     // When parent has a budget badge ("+N 位"), push intermediate level
@@ -539,7 +564,7 @@ function applyIntermediateLevel(root: LayoutNode): void {
     if (vtuberBottom + MIN_GAP > childY - CHILD_TOP_H) {
       const pushDown = vtuberBottom + MIN_GAP - (childY - CHILD_TOP_H);
       for (const c of parent.children) {
-        if (!c.data._vtuber) {
+        if (!c.data._vtuber && !c.data._isSplitGroup) {
           shiftSubtreeXY(c, 0, pushDown);
         }
       }
@@ -944,9 +969,9 @@ function mapToHierarchy(
       else normalVtubers.push(v);
     }
 
-    // Normal tier: full avatar + name
-    for (const v of normalVtubers) {
-      children.push({
+    // Build VTuber layout nodes by tier
+    function makeVtuberNode(v: TreeEntry, tier?: string): LayoutNodeData {
+      return {
         name: v.display_name,
         nameZh: '',
         rank: 'VTUBER',
@@ -956,61 +981,55 @@ function mapToHierarchy(
         _displayName: v.display_name,
         _rank: 'VTUBER',
         _vtuber: true,
+        _visualTier: tier,
         _entry: v,
         _userId: v.user_id,
         _avatarUrl: v.avatar_url,
         _isCurrentUser: v.user_id === currentUserId,
         _pathKey: `${node.pathKey}|__vtuber__${v.user_id}`,
         children: undefined,
-      });
+      };
     }
 
-    // Dot tier: small dot + name (no avatar)
-    for (const v of dotVtubers) {
-      children.push({
-        name: v.display_name,
-        nameZh: '',
-        rank: 'VTUBER',
-        pathKey: `${node.pathKey}|__vtuber__${v.user_id}`,
-        count: 0,
-        _name: v.display_name,
-        _displayName: v.display_name,
-        _rank: 'VTUBER',
-        _vtuber: true,
-        _visualTier: 'dot',
-        _entry: v,
-        _userId: v.user_id,
-        _avatarUrl: v.avatar_url,
-        _isCurrentUser: v.user_id === currentUserId,
-        _pathKey: `${node.pathKey}|__vtuber__${v.user_id}`,
-        children: undefined,
-      });
-    }
+    const vtuberNodes: LayoutNodeData[] = [];
+    for (const v of normalVtubers) vtuberNodes.push(makeVtuberNode(v));
+    for (const v of dotVtubers) vtuberNodes.push(makeVtuberNode(v, 'dot'));
 
     // Hidden tier: only visible when parent node's budget group is expanded
     hiddenVtuberCount = hiddenVtubers.length;
-
     if (hiddenVtubers.length > 0 && isBudgetExpanded) {
-      for (const v of hiddenVtubers) {
+      for (const v of hiddenVtubers) vtuberNodes.push(makeVtuberNode(v, 'dot'));
+    }
+
+    // Split into groups when exceeding threshold
+    if (vtuberNodes.length > SPLIT_GROUP_MAX) {
+      const numGroups = Math.ceil(vtuberNodes.length / SPLIT_GROUP_MAX);
+      const groups: LayoutNodeData[][] = Array.from({ length: numGroups }, () => []);
+
+      for (const vn of vtuberNodes) {
+        const groupIdx = hashUserId(vn._userId!) % numGroups;
+        groups[groupIdx].push(vn);
+      }
+
+      for (let i = 0; i < numGroups; i++) {
+        if (groups[i].length === 0) continue;
         children.push({
-          name: v.display_name,
+          name: '',
           nameZh: '',
-          rank: 'VTUBER',
-          pathKey: `${node.pathKey}|__vtuber__${v.user_id}`,
-          count: 0,
-          _name: v.display_name,
-          _displayName: v.display_name,
-          _rank: 'VTUBER',
-          _vtuber: true,
-          _visualTier: 'dot',
-          _entry: v,
-          _userId: v.user_id,
-          _avatarUrl: v.avatar_url,
-          _isCurrentUser: v.user_id === currentUserId,
-          _pathKey: `${node.pathKey}|__vtuber__${v.user_id}`,
-          children: undefined,
+          rank: 'SPLIT_GROUP',
+          pathKey: `${node.pathKey}|__split__${i}`,
+          count: groups[i].length,
+          _name: '',
+          _nameZh: '',
+          _rank: 'SPLIT_GROUP',
+          _pathKey: `${node.pathKey}|__split__${i}`,
+          _isSplitGroup: true,
+          _count: groups[i].length,
+          children: groups[i] as unknown as LayoutNode[],
         });
       }
+    } else {
+      children.push(...vtuberNodes);
     }
 
     let taxonomyChildren = [...node.children.values()];

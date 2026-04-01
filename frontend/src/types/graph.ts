@@ -104,6 +104,7 @@ export interface LayoutNodeData {
   _budgetBadgeBounds?: { x: number; y: number; w: number; h: number };
   _gridBarY?: number;
   _breedGridRow?: number;
+  _isSplitGroup?: boolean;
   _extLeft?: number;
   _extRight?: number;
   // D3 hierarchy fields (optional since they're added by d3)
