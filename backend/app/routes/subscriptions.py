@@ -228,3 +228,28 @@ def rebuild_youtube_subs() -> tuple[Response, int]:
         clean=request.args.get("clean", "", type=str) == "1",
     )
     return jsonify(result), status
+
+
+@subscriptions_bp.route("/livestream/backfill-youtube-channels", methods=["POST"])
+@admin_required
+def backfill_youtube_channels() -> tuple[Response, int]:
+    """回填缺失的 YouTube channel_url。管理員。
+
+    解析 @handle → /channel/UCxxx，或用 OAuth token 反查 channel ID。
+    ---
+    tags:
+      - Subscriptions
+    security:
+      - BearerAuth: []
+    responses:
+      200:
+        description: 回填結果
+      500:
+        description: YOUTUBE_API_KEY 未設定
+    """
+    api_key = os.environ.get("YOUTUBE_API_KEY", "")
+    if not api_key:
+        return jsonify({"error": "YOUTUBE_API_KEY not configured"}), 500
+
+    result = subs_svc.backfill_youtube_channels(api_key)
+    return jsonify(result), 200
