@@ -8,9 +8,11 @@ via the YouTube Data API v3.
 import hashlib
 import hmac
 import logging
+import os
 import re
 import xml.etree.ElementTree as ET
 from typing import Any
+from urllib.parse import unquote
 
 import requests
 
@@ -63,13 +65,48 @@ def extract_channel_id(channel_url: str | None) -> str | None:
 def extract_handle(channel_url: str | None) -> str | None:
     """Extract YouTube handle from a channel URL.
 
-    Supports ``https://www.youtube.com/@handle``, with optional trailing path/query.
+    Supports ``https://www.youtube.com/@handle``, with optional trailing
+    path/query.  Handles both raw Unicode (``@天璇``) and percent-encoded
+    (``@%E5%A4%A9%E7%92%87``) forms.
+
     Returns the handle **without** the ``@`` prefix, or None.
     """
     if not channel_url:
         return None
-    match = re.search(r"youtube\.com/@([\w.-]+)", channel_url)
-    return match.group(1) if match else None
+    # URL-decode first so percent-encoded Unicode becomes raw characters
+    decoded = unquote(channel_url)
+    # Match @ followed by any non-slash, non-query, non-fragment characters
+    match = re.search(r"youtube\.com/@([^/?#]+)", decoded)
+    if not match:
+        return None
+    return match.group(1).rstrip("-")
+
+
+def normalize_youtube_channel_url(channel_url: str | None) -> str | None:
+    """Normalize a YouTube channel URL to ``/channel/UCxxx`` format.
+
+    If the URL already contains a channel ID, returns it as-is.
+    If it contains an ``@handle``, resolves the handle via the YouTube
+    Data API v3 and returns the canonical ``/channel/`` URL.
+    Returns None if the URL cannot be resolved (API key missing, handle
+    not found, etc.) — callers should keep the original URL in that case.
+    """
+    if not channel_url:
+        return None
+    # Already in canonical format
+    if extract_channel_id(channel_url):
+        return channel_url
+    # Try to resolve @handle
+    handle = extract_handle(channel_url)
+    if not handle:
+        return None
+    api_key = os.environ.get("YOUTUBE_API_KEY", "")
+    if not api_key:
+        return None
+    resolved = resolve_handle_to_channel_id(handle, api_key)
+    if resolved:
+        return f"https://www.youtube.com/channel/{resolved}"
+    return None
 
 
 def resolve_handle_to_channel_id(handle: str, api_key: str) -> str | None:
