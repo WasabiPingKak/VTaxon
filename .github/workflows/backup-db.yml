@@ -22,26 +22,8 @@ jobs:
           TIMESTAMP=$(date -u +%Y%m%d_%H%M%S)
           FILENAME="vtaxon_prod_${TIMESTAMP}.dump"
 
-          # 解析連線字串
-          PROTO="${DATABASE_URL%%://*}"
-          URL_BODY="${DATABASE_URL#*://}"
-          USERINFO="${URL_BODY%%@*}"
-          HOSTINFO="${URL_BODY#*@}"
-          HOSTINFO="${HOSTINFO%%/*}"
-          DBNAME="${URL_BODY##*/}"
-          PGUSER="${USERINFO%%:*}"
-          PGPASSWORD="${USERINFO#*:}"
-          PGHOST="${HOSTINFO%%:*}"
-          PGPORT="${HOSTINFO##*:}"
-          PGPORT="${PGPORT:-5432}"
-
-          export PGPASSWORD
-
           pg_dump \
-            --host="$PGHOST" \
-            --port="$PGPORT" \
-            --username="$PGUSER" \
-            --dbname="$DBNAME" \
+            --dbname="$DATABASE_URL" \
             --schema=public \
             --no-owner \
             --no-privileges \
