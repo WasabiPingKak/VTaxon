@@ -40,3 +40,6 @@ Snipaste_*.png
 
 # DB backups
 backups/
+
+# MSYS2/Git Bash crash dumps
+*.stackdump
