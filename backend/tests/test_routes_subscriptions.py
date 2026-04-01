@@ -214,13 +214,13 @@ def _yt_user_null(db_session, token="some-token"):
 class TestBackfillYouTubeChannels:
     @patch("app.services.youtube_pubsub.subscribe_channel", return_value=True)
     @patch("app.services.youtube_pubsub.resolve_handle_to_channel_id", return_value="UCresolved123")
-    def test_resolves_handle(self, mock_resolve, mock_sub, client, db_session, mock_auth, admin_user):
+    def test_resolves_handle(self, mock_resolve, mock_sub, client, db_session):
         _yt_user_handle(db_session, "testchannel")
-        with (
-            mock_auth(admin_user.id),
-            patch.dict("os.environ", {"YOUTUBE_API_KEY": "key", "WEBHOOK_BASE_URL": "https://x", "CRON_SECRET": "s"}),
+        with patch.dict(
+            "os.environ",
+            {"YOUTUBE_API_KEY": "key", "WEBHOOK_BASE_URL": "https://x", "CRON_SECRET": "test-cron-secret"},
         ):
-            resp = client.post("/api/livestream/backfill-youtube-channels")
+            resp = client.post("/api/livestream/backfill-youtube-channels", headers=CRON_HEADERS)
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["resolved_handle"] == 1
@@ -229,31 +229,28 @@ class TestBackfillYouTubeChannels:
     @patch("app.services.youtube_pubsub.subscribe_channel", return_value=True)
     @patch("app.services.youtube_pubsub.fetch_my_channel_id", return_value="UCmyChannel")
     @patch("app.services.youtube_pubsub.resolve_handle_to_channel_id", return_value=None)
-    def test_resolves_null_via_token(
-        self, mock_resolve, mock_fetch, mock_sub, client, db_session, mock_auth, admin_user
-    ):
+    def test_resolves_null_via_token(self, mock_resolve, mock_fetch, mock_sub, client, db_session):
         _yt_user_null(db_session, "valid-token")
-        with (
-            mock_auth(admin_user.id),
-            patch.dict("os.environ", {"YOUTUBE_API_KEY": "key", "WEBHOOK_BASE_URL": "https://x", "CRON_SECRET": "s"}),
+        with patch.dict(
+            "os.environ",
+            {"YOUTUBE_API_KEY": "key", "WEBHOOK_BASE_URL": "https://x", "CRON_SECRET": "test-cron-secret"},
         ):
-            resp = client.post("/api/livestream/backfill-youtube-channels")
+            resp = client.post("/api/livestream/backfill-youtube-channels", headers=CRON_HEADERS)
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["resolved_token"] == 1
 
-    def test_non_admin_rejected(self, client, mock_auth, sample_user):
-        with mock_auth(sample_user.id):
-            resp = client.post("/api/livestream/backfill-youtube-channels")
+    def test_no_cron_secret_rejected(self, client):
+        resp = client.post("/api/livestream/backfill-youtube-channels")
         assert resp.status_code == 403
 
-    def test_skips_already_valid(self, client, db_session, mock_auth, admin_user):
+    def test_skips_already_valid(self, client, db_session):
         _yt_user(db_session, "UC_valid123")
-        with (
-            mock_auth(admin_user.id),
-            patch.dict("os.environ", {"YOUTUBE_API_KEY": "key", "WEBHOOK_BASE_URL": "https://x"}),
+        with patch.dict(
+            "os.environ",
+            {"YOUTUBE_API_KEY": "key", "WEBHOOK_BASE_URL": "https://x", "CRON_SECRET": "test-cron-secret"},
         ):
-            resp = client.post("/api/livestream/backfill-youtube-channels")
+            resp = client.post("/api/livestream/backfill-youtube-channels", headers=CRON_HEADERS)
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["resolved_handle"] == 0

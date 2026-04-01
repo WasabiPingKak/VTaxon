@@ -231,22 +231,31 @@ def rebuild_youtube_subs() -> tuple[Response, int]:
 
 
 @subscriptions_bp.route("/livestream/backfill-youtube-channels", methods=["POST"])
-@admin_required
+@limiter.exempt
 def backfill_youtube_channels() -> tuple[Response, int]:
-    """回填缺失的 YouTube channel_url。管理員。
+    """回填缺失的 YouTube channel_url。管理員或 Cron。
 
     解析 @handle → /channel/UCxxx，或用 OAuth token 反查 channel ID。
     ---
     tags:
       - Subscriptions
+    parameters:
+      - name: X-Cron-Secret
+        in: header
+        type: string
     security:
       - BearerAuth: []
     responses:
       200:
         description: 回填結果
+      403:
+        description: 未授權
       500:
         description: YOUTUBE_API_KEY 未設定
     """
+    if not _verify_cron_secret():
+        return jsonify({"error": "Unauthorized"}), 403
+
     api_key = os.environ.get("YOUTUBE_API_KEY", "")
     if not api_key:
         return jsonify({"error": "YOUTUBE_API_KEY not configured"}), 500
