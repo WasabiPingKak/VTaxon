@@ -280,15 +280,22 @@ export function drawGraph(
 function drawEdge(ctx: CanvasRenderingContext2D, edge: LayoutEdge, scale: number, state: DrawGraphState): void {
   const s = edge.source;
   const t = edge.target;
-  const rc = RANK_COLORS[s.data._rank ?? ''] || RANK_COLORS.ROOT;
+
+  // Skip edges TO split group nodes — their children draw from the grandparent instead
+  if (t.data._isSplitGroup) return;
+
+  // For edges FROM a split group, draw from the split group's parent (grandparent)
+  // so the bezier curves naturally from the taxonomy node to the vtuber
+  const effectiveSource = s.data._isSplitGroup && s.parent ? s.parent : s;
+  const rc = RANK_COLORS[effectiveSource.data._rank ?? ''] || RANK_COLORS.ROOT;
 
   const isHighlighted = state.closeEdgePaths?.has(t.data._pathKey!);
   const flashA = isHighlighted ? edgeFlashAlpha(state) : 0;
 
   ctx.beginPath();
-  const midY = (s.y + t.y) / 2;
-  ctx.moveTo(s.x, s.y);
-  ctx.bezierCurveTo(s.x, midY, t.x, midY, t.x, t.y);
+  const midY = (effectiveSource.y + t.y) / 2;
+  ctx.moveTo(effectiveSource.x, effectiveSource.y);
+  ctx.bezierCurveTo(effectiveSource.x, midY, t.x, midY, t.x, t.y);
 
   if (flashA > 0) {
     ctx.strokeStyle = hexToRgba('#22c55e', 0.3 + 0.45 * flashA);
@@ -328,7 +335,9 @@ function drawGridConnectors(
   }
 
   for (const [, group] of groups) {
-    const parent = group.parent;
+    // If parent is a split group, draw the stem from its grandparent instead
+    const parent = group.parent.data._isSplitGroup && group.parent.parent
+      ? group.parent.parent : group.parent;
     const children = group.children;
     if (children.length === 0) continue;
 
