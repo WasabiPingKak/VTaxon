@@ -227,8 +227,30 @@ def check_video_is_live(video_id: str, api_key: str) -> dict[str, Any] | None:
             "title": snippet.get("title", ""),
             "started_at": started_at,
         }
+    except requests.HTTPError as e:
+        status_code = e.response.status_code if e.response is not None else None
+        logger.error("YouTube API check_video_is_live HTTP %s for %s: %s", status_code, video_id, e)
+        from ..constants import AlertSeverity, AlertType
+        from .alerts import log_alert
+
+        log_alert(
+            alert_type=AlertType.YT_API_QUOTA,
+            severity=AlertSeverity.CRITICAL if status_code == 403 else AlertSeverity.WARNING,
+            title=f"YouTube API error (check_video_is_live): HTTP {status_code}",
+            context={"video_id": video_id, "status_code": status_code, "error": str(e)[:200]},
+        )
+        return None
     except requests.RequestException as e:
         logger.error("YouTube API check_video_is_live error for %s: %s", video_id, e)
+        from ..constants import AlertSeverity, AlertType
+        from .alerts import log_alert
+
+        log_alert(
+            alert_type=AlertType.YT_API_QUOTA,
+            severity=AlertSeverity.WARNING,
+            title="YouTube API connection error (check_video_is_live)",
+            context={"video_id": video_id, "error": str(e)[:200]},
+        )
         return None
 
 
@@ -277,8 +299,28 @@ def check_streams_ended(video_ids: list[str], api_key: str) -> set[str]:
                 if status.get("privacyStatus") in ("private", "unlisted"):
                     ended.add(vid)
 
+        except requests.HTTPError as e:
+            status_code = e.response.status_code if e.response is not None else None
+            logger.error("YouTube API check_streams_ended HTTP %s: %s", status_code, e)
+            from ..constants import AlertSeverity, AlertType
+            from .alerts import log_alert
+
+            log_alert(
+                alert_type=AlertType.YT_API_QUOTA,
+                severity=AlertSeverity.CRITICAL if status_code == 403 else AlertSeverity.WARNING,
+                title=f"YouTube API error (check_streams_ended): HTTP {status_code}",
+                context={"batch_size": len(batch), "status_code": status_code, "error": str(e)[:200]},
+            )
         except requests.RequestException as e:
             logger.error("YouTube API check_streams_ended error: %s", e)
-            # Don't mark as ended on API error — will retry next cycle
+            from ..constants import AlertSeverity, AlertType
+            from .alerts import log_alert
+
+            log_alert(
+                alert_type=AlertType.YT_API_QUOTA,
+                severity=AlertSeverity.WARNING,
+                title="YouTube API connection error (check_streams_ended)",
+                context={"batch_size": len(batch), "error": str(e)[:200]},
+            )
 
     return ended

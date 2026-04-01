@@ -49,6 +49,34 @@ class TestCronAuth:
 
 
 # ---------------------------------------------------------------------------
+# POST /api/cron/alert-digest
+# ---------------------------------------------------------------------------
+
+
+class TestAlertDigest:
+    def test_missing_cron_secret_rejected(self, client):
+        resp = client.post("/api/cron/alert-digest")
+        assert resp.status_code == 403
+
+    def test_no_events(self, client):
+        with patch.dict("os.environ", {"CRON_SECRET": "test-cron-secret"}):
+            resp = client.post("/api/cron/alert-digest", headers=CRON_HEADERS)
+        assert resp.status_code == 200
+        assert resp.get_json()["status"] == "no_events"
+
+    @patch("app.services.email.send_admin_notification")
+    def test_sends_digest(self, mock_send, client, db_session):
+        from app.services.alerts import log_alert
+
+        log_alert(alert_type="test_type", severity="warning", title="test")
+        with patch.dict("os.environ", {"CRON_SECRET": "test-cron-secret"}):
+            resp = client.post("/api/cron/alert-digest", headers=CRON_HEADERS)
+        assert resp.status_code == 200
+        assert resp.get_json()["status"] == "sent"
+        mock_send.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
 # POST /api/livestream/youtube-check-offline
 # ---------------------------------------------------------------------------
 
