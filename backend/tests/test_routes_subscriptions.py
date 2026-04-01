@@ -1,7 +1,9 @@
 """Route integration tests for /api/livestream — cron endpoints + admin subscription management."""
 
+import sys
+import types
 import uuid
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from app.models import LiveStream, OAuthAccount, User
 
@@ -92,6 +94,76 @@ class TestListTwitchSubs:
         with mock_auth(sample_user.id):
             resp = client.get("/api/livestream/twitch-subs")
         assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Admin: GET /api/livestream/youtube-subs
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# POST /api/livestream/youtube-renew-subs
+# ---------------------------------------------------------------------------
+
+
+def _mock_cloud_tasks_module(dispatch_return):
+    """Inject a fake cloud_tasks_client module to avoid google-cloud import issues."""
+    mock_mod = types.ModuleType("app.utils.cloud_tasks_client")
+    mock_dispatch = MagicMock(return_value=dispatch_return)
+    mock_mod.dispatch_tasks_batch = mock_dispatch  # type: ignore[attr-defined]
+    return mock_mod, mock_dispatch
+
+
+class TestYouTubeRenewSubs:
+    def test_cloud_tasks_success(self, client, db_session, app):
+        mock_mod, mock_dispatch = _mock_cloud_tasks_module({"dispatched": 2, "failed": 0})
+        with (
+            patch.dict("os.environ", {"CRON_SECRET": "test-cron-secret", "CLOUD_RUN_SERVICE_URL": "https://x.run.app"}),
+            patch.dict(sys.modules, {"app.utils.cloud_tasks_client": mock_mod}),
+        ):
+            _yt_user(db_session, "UC_aaa111")
+            _yt_user(db_session, "UC_bbb222")
+            resp = client.post("/api/livestream/youtube-renew-subs", headers=CRON_HEADERS)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["mode"] == "cloud_tasks"
+        assert data["dispatched"] == 2
+
+    def test_cloud_tasks_all_fail_falls_back_to_sync(self, client, db_session, app):
+        mock_mod, mock_dispatch = _mock_cloud_tasks_module({"dispatched": 0, "failed": 2})
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "CRON_SECRET": "test-cron-secret",
+                    "CLOUD_RUN_SERVICE_URL": "https://x.run.app",
+                    "WEBHOOK_BASE_URL": "https://x.run.app",
+                },
+            ),
+            patch.dict(sys.modules, {"app.utils.cloud_tasks_client": mock_mod}),
+            patch("app.services.youtube_pubsub.subscribe_channel", return_value=True) as mock_sub,
+        ):
+            _yt_user(db_session, "UC_aaa111")
+            _yt_user(db_session, "UC_bbb222")
+            resp = client.post("/api/livestream/youtube-renew-subs", headers=CRON_HEADERS)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["mode"] == "sync"
+        assert data["renewed"] == 2
+        assert mock_sub.call_count == 2
+
+    @patch("app.services.youtube_pubsub.subscribe_channel", return_value=True)
+    def test_no_cloud_run_url_uses_sync(self, mock_sub, client, db_session, app):
+        with patch.dict(
+            "os.environ",
+            {"CRON_SECRET": "test-cron-secret", "CLOUD_RUN_SERVICE_URL": "", "WEBHOOK_BASE_URL": "https://x.run.app"},
+        ):
+            _yt_user(db_session, "UC_ccc333")
+            resp = client.post("/api/livestream/youtube-renew-subs", headers=CRON_HEADERS)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["mode"] == "sync"
+        assert data["renewed"] == 1
 
 
 # ---------------------------------------------------------------------------

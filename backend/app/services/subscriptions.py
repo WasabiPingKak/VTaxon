@@ -83,15 +83,20 @@ def youtube_renew_subs() -> dict[str, Any] | None:
             result["failed"],
             skipped,
         )
-        return {
-            "mode": "cloud_tasks",
-            "total": len(accounts),
-            "dispatched": result["dispatched"],
-            "failed": result["failed"],
-            "skipped": skipped,
-        }
+        if result["dispatched"] > 0:
+            return {
+                "mode": "cloud_tasks",
+                "total": len(accounts),
+                "dispatched": result["dispatched"],
+                "failed": result["failed"],
+                "skipped": skipped,
+            }
+        logger.warning(
+            "Cloud Tasks dispatch completely failed (dispatched=0, failed=%d), falling back to sync mode",
+            result["failed"],
+        )
 
-    # Fallback: synchronous subscribe
+    # Fallback: synchronous subscribe (also used when Cloud Tasks dispatch all fail)
     from .youtube_pubsub import subscribe_channel
 
     webhook_base_url = os.environ.get("WEBHOOK_BASE_URL", "")
