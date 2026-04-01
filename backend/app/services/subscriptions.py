@@ -49,6 +49,18 @@ def youtube_check_offline(api_key: str) -> dict[str, Any]:
         _invalidate_live_cache()
 
     logger.info("YouTube check-offline: checked=%d, ended=%d", len(video_ids), len(ended_ids))
+
+    if len(video_ids) > 0 and len(ended_ids) == len(video_ids):
+        from ..constants import AlertSeverity, AlertType
+        from .alerts import log_alert
+
+        log_alert(
+            alert_type=AlertType.CHECK_OFFLINE_ANOMALY,
+            severity=AlertSeverity.WARNING,
+            title=f"check-offline 異常：全部 {len(video_ids)} 個直播同時結束",
+            context={"checked": len(video_ids), "ended": len(ended_ids)},
+        )
+
     return {"checked": len(video_ids), "ended": len(ended_ids)}
 
 
@@ -95,6 +107,21 @@ def youtube_renew_subs() -> dict[str, Any] | None:
             "Cloud Tasks dispatch completely failed (dispatched=0, failed=%d), falling back to sync mode",
             result["failed"],
         )
+        from ..constants import AlertSeverity, AlertType
+        from .alerts import log_alert
+
+        log_alert(
+            alert_type=AlertType.WEBSUB_RENEW_FAIL,
+            severity=AlertSeverity.CRITICAL,
+            title=f"WebSub renew: Cloud Tasks 全失敗 ({result['failed']} failed)",
+            context={
+                "dispatched": 0,
+                "failed": result["failed"],
+                "total": len(accounts),
+                "skipped": skipped,
+                "mode": "cloud_tasks",
+            },
+        )
 
     # Fallback: synchronous subscribe (also used when Cloud Tasks dispatch all fail)
     from .youtube_pubsub import subscribe_channel
@@ -129,6 +156,16 @@ def youtube_renew_subs() -> dict[str, Any] | None:
         skipped,
         errors,
     )
+    if errors > 0:
+        from ..constants import AlertSeverity, AlertType
+        from .alerts import log_alert
+
+        log_alert(
+            alert_type=AlertType.WEBSUB_RENEW_FAIL,
+            severity=AlertSeverity.CRITICAL if renewed == 0 else AlertSeverity.WARNING,
+            title=f"WebSub renew (sync): {errors} error(s) / {len(params_list)} total",
+            context={"renewed": renewed, "errors": errors, "total": len(accounts), "skipped": skipped, "mode": "sync"},
+        )
     return {"mode": "sync", "total": len(accounts), "renewed": renewed, "skipped": skipped, "errors": errors}
 
 

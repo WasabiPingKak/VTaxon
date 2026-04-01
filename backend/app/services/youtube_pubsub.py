@@ -8,9 +8,11 @@ via the YouTube Data API v3.
 import hashlib
 import hmac
 import logging
+import os
 import re
 import xml.etree.ElementTree as ET
 from typing import Any
+from urllib.parse import unquote
 
 import requests
 
@@ -63,13 +65,48 @@ def extract_channel_id(channel_url: str | None) -> str | None:
 def extract_handle(channel_url: str | None) -> str | None:
     """Extract YouTube handle from a channel URL.
 
-    Supports ``https://www.youtube.com/@handle``, with optional trailing path/query.
+    Supports ``https://www.youtube.com/@handle``, with optional trailing
+    path/query.  Handles both raw Unicode (``@天璇``) and percent-encoded
+    (``@%E5%A4%A9%E7%92%87``) forms.
+
     Returns the handle **without** the ``@`` prefix, or None.
     """
     if not channel_url:
         return None
-    match = re.search(r"youtube\.com/@([\w.-]+)", channel_url)
-    return match.group(1) if match else None
+    # URL-decode first so percent-encoded Unicode becomes raw characters
+    decoded = unquote(channel_url)
+    # Match @ followed by any non-slash, non-query, non-fragment characters
+    match = re.search(r"youtube\.com/@([^/?#]+)", decoded)
+    if not match:
+        return None
+    return match.group(1).rstrip("-")
+
+
+def normalize_youtube_channel_url(channel_url: str | None) -> str | None:
+    """Normalize a YouTube channel URL to ``/channel/UCxxx`` format.
+
+    If the URL already contains a channel ID, returns it as-is.
+    If it contains an ``@handle``, resolves the handle via the YouTube
+    Data API v3 and returns the canonical ``/channel/`` URL.
+    Returns None if the URL cannot be resolved (API key missing, handle
+    not found, etc.) — callers should keep the original URL in that case.
+    """
+    if not channel_url:
+        return None
+    # Already in canonical format
+    if extract_channel_id(channel_url):
+        return channel_url
+    # Try to resolve @handle
+    handle = extract_handle(channel_url)
+    if not handle:
+        return None
+    api_key = os.environ.get("YOUTUBE_API_KEY", "")
+    if not api_key:
+        return None
+    resolved = resolve_handle_to_channel_id(handle, api_key)
+    if resolved:
+        return f"https://www.youtube.com/channel/{resolved}"
+    return None
 
 
 def resolve_handle_to_channel_id(handle: str, api_key: str) -> str | None:
@@ -227,8 +264,30 @@ def check_video_is_live(video_id: str, api_key: str) -> dict[str, Any] | None:
             "title": snippet.get("title", ""),
             "started_at": started_at,
         }
+    except requests.HTTPError as e:
+        status_code = e.response.status_code if e.response is not None else None
+        logger.error("YouTube API check_video_is_live HTTP %s for %s: %s", status_code, video_id, e)
+        from ..constants import AlertSeverity, AlertType
+        from .alerts import log_alert
+
+        log_alert(
+            alert_type=AlertType.YT_API_QUOTA,
+            severity=AlertSeverity.CRITICAL if status_code == 403 else AlertSeverity.WARNING,
+            title=f"YouTube API error (check_video_is_live): HTTP {status_code}",
+            context={"video_id": video_id, "status_code": status_code, "error": str(e)[:200]},
+        )
+        return None
     except requests.RequestException as e:
         logger.error("YouTube API check_video_is_live error for %s: %s", video_id, e)
+        from ..constants import AlertSeverity, AlertType
+        from .alerts import log_alert
+
+        log_alert(
+            alert_type=AlertType.YT_API_QUOTA,
+            severity=AlertSeverity.WARNING,
+            title="YouTube API connection error (check_video_is_live)",
+            context={"video_id": video_id, "error": str(e)[:200]},
+        )
         return None
 
 
@@ -277,8 +336,28 @@ def check_streams_ended(video_ids: list[str], api_key: str) -> set[str]:
                 if status.get("privacyStatus") in ("private", "unlisted"):
                     ended.add(vid)
 
+        except requests.HTTPError as e:
+            status_code = e.response.status_code if e.response is not None else None
+            logger.error("YouTube API check_streams_ended HTTP %s: %s", status_code, e)
+            from ..constants import AlertSeverity, AlertType
+            from .alerts import log_alert
+
+            log_alert(
+                alert_type=AlertType.YT_API_QUOTA,
+                severity=AlertSeverity.CRITICAL if status_code == 403 else AlertSeverity.WARNING,
+                title=f"YouTube API error (check_streams_ended): HTTP {status_code}",
+                context={"batch_size": len(batch), "status_code": status_code, "error": str(e)[:200]},
+            )
         except requests.RequestException as e:
             logger.error("YouTube API check_streams_ended error: %s", e)
-            # Don't mark as ended on API error — will retry next cycle
+            from ..constants import AlertSeverity, AlertType
+            from .alerts import log_alert
+
+            log_alert(
+                alert_type=AlertType.YT_API_QUOTA,
+                severity=AlertSeverity.WARNING,
+                title="YouTube API connection error (check_streams_ended)",
+                context={"batch_size": len(batch), "error": str(e)[:200]},
+            )
 
     return ended

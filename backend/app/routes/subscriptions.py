@@ -77,6 +77,32 @@ def youtube_renew_subs() -> tuple[Response, int] | Response:
     return jsonify(result)
 
 
+@subscriptions_bp.route("/cron/alert-digest", methods=["POST"])
+@limiter.exempt
+def alert_digest() -> tuple[Response, int] | Response:
+    """Cron: 寄送管理員告警摘要信。
+    ---
+    tags:
+      - Subscriptions
+    parameters:
+      - name: X-Cron-Secret
+        in: header
+        type: string
+        required: true
+    responses:
+      200:
+        description: Digest 結果
+      403:
+        description: 未授權
+    """
+    if not _verify_cron_secret():
+        return jsonify({"error": "Unauthorized"}), 403
+
+    from ..services.alerts import send_alert_digest
+
+    return jsonify(send_alert_digest())
+
+
 @subscriptions_bp.route("/livestream/youtube-subscribe-one", methods=["POST"])
 @limiter.exempt
 def youtube_subscribe_one() -> tuple[Response, int]:

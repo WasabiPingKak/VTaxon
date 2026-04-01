@@ -5,6 +5,7 @@ import { AuthProvider } from './lib/AuthContext';
 import { ToastProvider } from './lib/ToastContext';
 import Navbar from './components/Navbar';
 import WelcomeToast from './components/WelcomeToast';
+import YouTubeChannelBanner from './components/YouTubeChannelBanner';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -52,6 +53,7 @@ function AppContent() {
   return (
     <>
       <Navbar />
+      <YouTubeChannelBanner />
       <Suspense fallback={<LoadingFallback />}>
         {isHome ? (
           <Routes>

@@ -135,16 +135,9 @@ def sync_oauth_accounts() -> tuple[Response, int] | Response:
 
         # Normalize @handle URLs to /channel/UCxxx for YouTube WebSub
         if db_provider == "youtube" and channel_url:
-            from ..services.youtube_pubsub import extract_channel_id, extract_handle, resolve_handle_to_channel_id
+            from ..services.youtube_pubsub import normalize_youtube_channel_url
 
-            if not extract_channel_id(channel_url):
-                handle = extract_handle(channel_url)
-                if handle:
-                    yt_api_key = os.environ.get("YOUTUBE_API_KEY", "")
-                    if yt_api_key:
-                        resolved = resolve_handle_to_channel_id(handle, yt_api_key)
-                        if resolved:
-                            channel_url = f"https://www.youtube.com/channel/{resolved}"
+            channel_url = normalize_youtube_channel_url(channel_url) or channel_url
 
         account = OAuthAccount.query.filter_by(provider=db_provider, provider_account_id=provider_id).first()
 
@@ -384,7 +377,14 @@ def update_oauth_account(account_id: str) -> tuple[Response, int] | Response:
         account.show_on_profile = bool(data["show_on_profile"])
     old_channel_url = account.channel_url
     if "channel_url" in data:
-        account.channel_url = data["channel_url"] or None
+        raw_url = data["channel_url"] or None
+        # Normalize @handle URLs to /channel/UCxxx for YouTube WebSub
+        if account.provider == "youtube" and raw_url:
+            from ..services.youtube_pubsub import normalize_youtube_channel_url
+
+            account.channel_url = normalize_youtube_channel_url(raw_url) or raw_url
+        else:
+            account.channel_url = raw_url
 
     db.session.commit()
 
