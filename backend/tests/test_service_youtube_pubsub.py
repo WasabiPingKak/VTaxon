@@ -10,7 +10,10 @@ from app.services.youtube_pubsub import (
     check_streams_ended,
     check_video_is_live,
     extract_channel_id,
+    extract_handle,
+    fetch_my_channel_id,
     parse_feed,
+    resolve_handle_to_channel_id,
     subscribe_channel,
     unsubscribe_channel,
     verify_hub_signature,
@@ -90,6 +93,80 @@ class TestExtractChannelId:
 
     def test_unrelated_url(self):
         assert extract_channel_id("https://twitch.tv/someone") is None
+
+
+# ---------------------------------------------------------------------------
+# extract_handle
+# ---------------------------------------------------------------------------
+
+
+class TestExtractHandle:
+    def test_standard_handle(self):
+        assert extract_handle("https://www.youtube.com/@SomeUser") == "SomeUser"
+
+    def test_handle_with_trailing_path(self):
+        assert extract_handle("https://www.youtube.com/@tsurumemizuha/streams") == "tsurumemizuha"
+
+    def test_handle_with_query(self):
+        assert extract_handle("https://youtube.com/@cx330vtuber?si=O_UJMjva") == "cx330vtuber"
+
+    def test_channel_url_not_handle(self):
+        assert extract_handle("https://www.youtube.com/channel/UCxxx") is None
+
+    def test_none_input(self):
+        assert extract_handle(None) is None
+
+    def test_empty_string(self):
+        assert extract_handle("") is None
+
+
+# ---------------------------------------------------------------------------
+# resolve_handle_to_channel_id
+# ---------------------------------------------------------------------------
+
+
+class TestResolveHandle:
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_success(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=200)
+        mock_get.return_value.json.return_value = {"items": [{"id": "UCtest123"}]}
+        assert resolve_handle_to_channel_id("SomeUser", "api-key") == "UCtest123"
+
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_not_found(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=200)
+        mock_get.return_value.json.return_value = {"items": []}
+        assert resolve_handle_to_channel_id("NoSuchUser", "api-key") is None
+
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_api_error(self, mock_get):
+        mock_get.side_effect = requests.RequestException("timeout")
+        assert resolve_handle_to_channel_id("SomeUser", "api-key") is None
+
+
+# ---------------------------------------------------------------------------
+# fetch_my_channel_id
+# ---------------------------------------------------------------------------
+
+
+class TestFetchMyChannelId:
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_success(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=200)
+        mock_get.return_value.json.return_value = {"items": [{"id": "UCmyChannel"}]}
+        assert fetch_my_channel_id("valid-token") == "UCmyChannel"
+
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_no_channel(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=200)
+        mock_get.return_value.json.return_value = {"items": []}
+        assert fetch_my_channel_id("valid-token") is None
+
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_expired_token(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=401)
+        mock_get.return_value.raise_for_status.side_effect = requests.HTTPError("401")
+        assert fetch_my_channel_id("expired-token") is None
 
 
 # ---------------------------------------------------------------------------

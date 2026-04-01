@@ -133,6 +133,19 @@ def sync_oauth_accounts() -> tuple[Response, int] | Response:
         elif db_provider == "youtube" and provider_for_url == "youtube":
             channel_url = channel_url_input
 
+        # Normalize @handle URLs to /channel/UCxxx for YouTube WebSub
+        if db_provider == "youtube" and channel_url:
+            from ..services.youtube_pubsub import extract_channel_id, extract_handle, resolve_handle_to_channel_id
+
+            if not extract_channel_id(channel_url):
+                handle = extract_handle(channel_url)
+                if handle:
+                    yt_api_key = os.environ.get("YOUTUBE_API_KEY", "")
+                    if yt_api_key:
+                        resolved = resolve_handle_to_channel_id(handle, yt_api_key)
+                        if resolved:
+                            channel_url = f"https://www.youtube.com/channel/{resolved}"
+
         account = OAuthAccount.query.filter_by(provider=db_provider, provider_account_id=provider_id).first()
 
         if account:
