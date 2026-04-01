@@ -367,3 +367,17 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "notifications_select_own" ON notifications
     FOR SELECT USING (auth.uid() = user_id);
+
+-- 14. admin_alert_events — 系統告警事件（digest 用）
+CREATE TABLE admin_alert_events (
+    id SERIAL PRIMARY KEY,
+    alert_type TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    title TEXT NOT NULL,
+    context JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    notified_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_alert_events_unnotified ON admin_alert_events(created_at) WHERE notified_at IS NULL;
+CREATE INDEX idx_alert_events_type_notified ON admin_alert_events(alert_type, notified_at DESC) WHERE notified_at IS NOT NULL;

@@ -584,3 +584,31 @@ class VtuberTrait(db.Model):
         if self.fictional:
             result["fictional"] = self.fictional.to_dict()
         return result
+
+
+# ---------------------------------------------------------------------------
+# Admin Alert Events
+# ---------------------------------------------------------------------------
+
+
+class AdminAlertEvent(db.Model):  # type: ignore[name-defined]
+    __tablename__ = "admin_alert_events"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    alert_type = db.Column(db.Text, nullable=False)
+    severity = db.Column(db.Text, nullable=False)
+    title = db.Column(db.Text, nullable=False)
+    context = db.Column(db.JSON, default=dict)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    notified_at = db.Column(db.DateTime(timezone=True))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "alert_type": self.alert_type,
+            "severity": self.severity,
+            "title": self.title,
+            "context": self.context or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "notified_at": self.notified_at.isoformat() if self.notified_at else None,
+        }

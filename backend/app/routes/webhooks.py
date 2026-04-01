@@ -127,6 +127,16 @@ def twitch_webhook() -> tuple[str, int] | tuple[str, int, dict[str, str]]:
     if msg_type == "revocation":
         sub = payload.get("subscription", {})
         logger.warning("Twitch EventSub revocation: type=%s, status=%s", sub.get("type"), sub.get("status"))
+
+        from ..constants import AlertSeverity, AlertType
+        from ..services.alerts import log_alert
+
+        log_alert(
+            alert_type=AlertType.TWITCH_REVOCATION,
+            severity=AlertSeverity.WARNING,
+            title=f"Twitch EventSub revocation: {sub.get('type')} ({sub.get('status')})",
+            context={"sub_type": sub.get("type"), "sub_status": sub.get("status"), "sub_id": sub.get("id")},
+        )
         return "", 204
 
     # Notification
@@ -254,6 +264,16 @@ def youtube_webhook_notify() -> tuple[str, int] | tuple[str, int, dict[str, str]
         sig = request.headers.get("X-Hub-Signature", "")
         if not verify_hub_signature(hub_secret, sig, feed_xml):
             logger.warning("YouTube WebSub signature verification failed")
+
+            from ..constants import AlertSeverity, AlertType
+            from ..services.alerts import log_alert
+
+            log_alert(
+                alert_type=AlertType.YT_SIG_FAIL,
+                severity=AlertSeverity.WARNING,
+                title="YouTube WebSub signature verification failed",
+                context={"has_signature": bool(sig), "remote_addr": request.remote_addr},
+            )
             return "", 403
 
     api_key = os.environ.get("YOUTUBE_API_KEY", "")
