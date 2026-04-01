@@ -565,6 +565,9 @@ function drawBreedGridConnectors(
 function drawNode(ctx: CanvasRenderingContext2D, node: LayoutNode, scale: number, state: DrawGraphState): void {
   const d = node.data;
 
+  // Split group nodes are invisible branch points — only edges pass through
+  if (d._isSplitGroup) return;
+
   if (d._vtuber && d._visualTier === 'dot') {
     drawDotVtuberNode(ctx, node, scale, state);
   } else if (d._vtuber) {

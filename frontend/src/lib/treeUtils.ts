@@ -181,6 +181,19 @@ const AUTO_EXPAND_THRESHOLD = 5;
 export const BUDGET_TIER_DOT = 5;
 export const BUDGET_TIER_HIDDEN = 6;
 
+// ── Split group threshold ──
+export const SPLIT_GROUP_MAX = 25;
+
+/** Deterministic hash for user_id → group assignment. */
+export function hashUserId(userId: string): number {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = ((hash << 5) - hash) + userId.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
 export function getVisualTier(entry: TreeEntry): VisualTier {
   if (entry.is_live_primary) return 'normal';
   const tc = entry.trait_count || 0;
