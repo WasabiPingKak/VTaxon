@@ -340,6 +340,98 @@ def rebuild_youtube_subs(*, offset: int, limit: int, clean: bool) -> tuple[dict[
     }, 200
 
 
+def backfill_youtube_channels(api_key: str) -> dict[str, Any]:
+    """Resolve missing/invalid channel_url for YouTube accounts.
+
+    - @handle URLs → resolve to /channel/UCxxx via YouTube API
+    - NULL URLs with access_token → fetch channel via OAuth token
+    After resolution, subscribe to WebSub.
+    """
+    from .youtube_pubsub import (
+        extract_channel_id,
+        extract_handle,
+        fetch_my_channel_id,
+        resolve_handle_to_channel_id,
+        subscribe_channel,
+    )
+
+    webhook_base_url = os.environ.get("WEBHOOK_BASE_URL", "")
+    callback_url = f"{webhook_base_url}/api/webhooks/youtube" if webhook_base_url else ""
+    hub_secret = os.environ.get("CRON_SECRET", "") or None
+
+    accounts = OAuthAccount.query.filter_by(provider="youtube").all()
+
+    resolved_handle = 0
+    resolved_token = 0
+    subscribe_ok = 0
+    subscribe_fail = 0
+    still_missing = 0
+    details: list[dict[str, str | None]] = []
+
+    for account in accounts:
+        if extract_channel_id(account.channel_url):
+            continue  # already valid
+
+        channel_id: str | None = None
+        method = ""
+
+        # Try 1: resolve @handle
+        handle = extract_handle(account.channel_url)
+        if handle:
+            channel_id = resolve_handle_to_channel_id(handle, api_key)
+            method = "handle"
+
+        # Try 2: use OAuth access_token
+        if not channel_id and account.access_token:
+            channel_id = fetch_my_channel_id(account.access_token)
+            method = "token"
+
+        if not channel_id:
+            still_missing += 1
+            details.append({"name": account.provider_display_name, "url": account.channel_url, "status": "unresolved"})
+            continue
+
+        # Update channel_url
+        account.channel_url = f"https://www.youtube.com/channel/{channel_id}"
+        if method == "handle":
+            resolved_handle += 1
+        else:
+            resolved_token += 1
+
+        # Subscribe to WebSub
+        if callback_url:
+            ok = subscribe_channel(channel_id, callback_url, secret=hub_secret)
+            account.live_sub_status = "subscribed" if ok else "failed"
+            account.live_sub_at = datetime.now(UTC)
+            if ok:
+                subscribe_ok += 1
+            else:
+                subscribe_fail += 1
+
+        details.append(
+            {"name": account.provider_display_name, "url": account.channel_url, "status": f"resolved:{method}"}
+        )
+
+    db.session.commit()
+
+    logger.info(
+        "YouTube backfill: handle=%d, token=%d, subscribed=%d, failed=%d, missing=%d",
+        resolved_handle,
+        resolved_token,
+        subscribe_ok,
+        subscribe_fail,
+        still_missing,
+    )
+    return {
+        "resolved_handle": resolved_handle,
+        "resolved_token": resolved_token,
+        "subscribe_ok": subscribe_ok,
+        "subscribe_fail": subscribe_fail,
+        "still_missing": still_missing,
+        "details": details,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Public helpers (called from oauth.py)
 # ---------------------------------------------------------------------------

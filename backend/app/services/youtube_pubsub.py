@@ -60,6 +60,55 @@ def extract_channel_id(channel_url: str | None) -> str | None:
     return match.group(1) if match else None
 
 
+def extract_handle(channel_url: str | None) -> str | None:
+    """Extract YouTube handle from a channel URL.
+
+    Supports ``https://www.youtube.com/@handle``, with optional trailing path/query.
+    Returns the handle **without** the ``@`` prefix, or None.
+    """
+    if not channel_url:
+        return None
+    match = re.search(r"youtube\.com/@([\w.-]+)", channel_url)
+    return match.group(1) if match else None
+
+
+def resolve_handle_to_channel_id(handle: str, api_key: str) -> str | None:
+    """Resolve a YouTube @handle to a channel ID (UCxxx) via the Data API v3."""
+    try:
+        resp = requests.get(
+            f"{YOUTUBE_API_BASE}/channels",
+            params={"forHandle": f"@{handle}", "part": "id", "key": api_key},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        items: list[dict[str, Any]] = resp.json().get("items", [])
+        if items:
+            return str(items[0]["id"])
+        return None
+    except requests.RequestException as e:
+        logger.error("YouTube API resolve_handle error for @%s: %s", handle, e)
+        return None
+
+
+def fetch_my_channel_id(access_token: str) -> str | None:
+    """Fetch the authenticated user's YouTube channel ID using their OAuth token."""
+    try:
+        resp = requests.get(
+            f"{YOUTUBE_API_BASE}/channels",
+            params={"mine": "true", "part": "id"},
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        items: list[dict[str, Any]] = resp.json().get("items", [])
+        if items:
+            return str(items[0]["id"])
+        return None
+    except requests.RequestException as e:
+        logger.error("YouTube API fetch_my_channel_id error: %s", e)
+        return None
+
+
 def subscribe_channel(channel_id: str, callback_url: str, secret: str | None = None) -> bool:
     """Subscribe to a YouTube channel's feed via PubSubHubbub.
 

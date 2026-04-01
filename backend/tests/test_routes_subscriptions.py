@@ -171,6 +171,101 @@ class TestYouTubeRenewSubs:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# POST /api/livestream/backfill-youtube-channels
+# ---------------------------------------------------------------------------
+
+
+def _yt_user_handle(db_session, handle="testuser"):
+    """Create a YouTube user with @handle URL."""
+    uid = f"user-{uuid.uuid4().hex[:8]}"
+    u = User(id=uid, display_name="HandleUser", role="user")
+    db_session.add(u)
+    db_session.flush()
+    acct = OAuthAccount(
+        user_id=uid,
+        provider="youtube",
+        provider_account_id=f"yt-{uuid.uuid4().hex[:6]}",
+        channel_url=f"https://www.youtube.com/@{handle}",
+    )
+    db_session.add(acct)
+    db_session.flush()
+    return u, acct
+
+
+def _yt_user_null(db_session, token="some-token"):
+    """Create a YouTube user with NULL channel_url but with access_token."""
+    uid = f"user-{uuid.uuid4().hex[:8]}"
+    u = User(id=uid, display_name="NullUser", role="user")
+    db_session.add(u)
+    db_session.flush()
+    acct = OAuthAccount(
+        user_id=uid,
+        provider="youtube",
+        provider_account_id=f"yt-{uuid.uuid4().hex[:6]}",
+        channel_url=None,
+        access_token=token,
+    )
+    db_session.add(acct)
+    db_session.flush()
+    return u, acct
+
+
+class TestBackfillYouTubeChannels:
+    @patch("app.services.youtube_pubsub.subscribe_channel", return_value=True)
+    @patch("app.services.youtube_pubsub.resolve_handle_to_channel_id", return_value="UCresolved123")
+    def test_resolves_handle(self, mock_resolve, mock_sub, client, db_session, mock_auth, admin_user):
+        _yt_user_handle(db_session, "testchannel")
+        with (
+            mock_auth(admin_user.id),
+            patch.dict("os.environ", {"YOUTUBE_API_KEY": "key", "WEBHOOK_BASE_URL": "https://x", "CRON_SECRET": "s"}),
+        ):
+            resp = client.post("/api/livestream/backfill-youtube-channels")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["resolved_handle"] == 1
+        assert data["subscribe_ok"] == 1
+
+    @patch("app.services.youtube_pubsub.subscribe_channel", return_value=True)
+    @patch("app.services.youtube_pubsub.fetch_my_channel_id", return_value="UCmyChannel")
+    @patch("app.services.youtube_pubsub.resolve_handle_to_channel_id", return_value=None)
+    def test_resolves_null_via_token(
+        self, mock_resolve, mock_fetch, mock_sub, client, db_session, mock_auth, admin_user
+    ):
+        _yt_user_null(db_session, "valid-token")
+        with (
+            mock_auth(admin_user.id),
+            patch.dict("os.environ", {"YOUTUBE_API_KEY": "key", "WEBHOOK_BASE_URL": "https://x", "CRON_SECRET": "s"}),
+        ):
+            resp = client.post("/api/livestream/backfill-youtube-channels")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["resolved_token"] == 1
+
+    def test_non_admin_rejected(self, client, mock_auth, sample_user):
+        with mock_auth(sample_user.id):
+            resp = client.post("/api/livestream/backfill-youtube-channels")
+        assert resp.status_code == 403
+
+    def test_skips_already_valid(self, client, db_session, mock_auth, admin_user):
+        _yt_user(db_session, "UC_valid123")
+        with (
+            mock_auth(admin_user.id),
+            patch.dict("os.environ", {"YOUTUBE_API_KEY": "key", "WEBHOOK_BASE_URL": "https://x"}),
+        ):
+            resp = client.post("/api/livestream/backfill-youtube-channels")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["resolved_handle"] == 0
+        assert data["resolved_token"] == 0
+        assert data["still_missing"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Admin: GET /api/livestream/youtube-subs
+# ---------------------------------------------------------------------------
+
+
 class TestListYouTubeSubs:
     def test_admin_can_list(self, client, db_session, mock_auth, admin_user):
         _yt_user(db_session)
