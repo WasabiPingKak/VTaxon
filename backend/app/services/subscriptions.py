@@ -50,15 +50,24 @@ def youtube_check_offline(api_key: str) -> dict[str, Any]:
 
     logger.info("YouTube check-offline: checked=%d, ended=%d", len(video_ids), len(ended_ids))
 
-    if len(video_ids) > 0 and len(ended_ids) == len(video_ids):
+    if len(video_ids) >= 5 and len(ended_ids) == len(video_ids):
         from ..constants import AlertSeverity, AlertType
         from .alerts import log_alert
 
+        ended_streams = [
+            {"title": s.stream_title or s.stream_id, "url": s.stream_url or ""}
+            for s in streams
+            if s.stream_id in ended_ids
+        ]
         log_alert(
             alert_type=AlertType.CHECK_OFFLINE_ANOMALY,
             severity=AlertSeverity.WARNING,
             title=f"check-offline 異常：全部 {len(video_ids)} 個直播同時結束",
-            context={"checked": len(video_ids), "ended": len(ended_ids)},
+            context={
+                "checked": len(video_ids),
+                "ended": len(ended_ids),
+                "streams": ended_streams,
+            },
         )
 
     return {"checked": len(video_ids), "ended": len(ended_ids)}

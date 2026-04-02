@@ -128,6 +128,23 @@ def send_alert_digest() -> dict[str, Any]:
     }
 
 
+def _format_context(ctx: dict[str, Any]) -> str:
+    """Format context dict to human-readable HTML."""
+    parts = []
+    for k, v in ctx.items():
+        if k == "streams" and isinstance(v, list):
+            items = "".join(
+                f'<li><a href="{s.get("url", "")}">{s.get("title", "?")}</a></li>'
+                if s.get("url")
+                else f"<li>{s.get('title', '?')}</li>"
+                for s in v
+            )
+            parts.append(f"<br><strong>Streams:</strong><ul style='margin:4px 0;'>{items}</ul>")
+        else:
+            parts.append(f"{k}={v}")
+    return ", ".join(parts)
+
+
 def _build_digest_html(events: list[AdminAlertEvent]) -> str:
     """Build HTML email body for the alert digest."""
     severity_order = {AlertSeverity.CRITICAL: 0, AlertSeverity.WARNING: 1, AlertSeverity.INFO: 2}
@@ -148,7 +165,7 @@ def _build_digest_html(events: list[AdminAlertEvent]) -> str:
         color = severity_colors.get(severity, "#6c757d")
         count = len(group_events)
         latest = group_events[-1]
-        context_str = ", ".join(f"{k}={v}" for k, v in (latest.context or {}).items())
+        context_str = _format_context(latest.context or {})
 
         rows_html += f"""
         <tr>
@@ -156,7 +173,7 @@ def _build_digest_html(events: list[AdminAlertEvent]) -> str:
           <td>{alert_type}</td>
           <td>{count}</td>
           <td>{latest.title}</td>
-          <td><code>{context_str}</code></td>
+          <td style="font-size:13px;">{context_str}</td>
           <td>{latest.created_at.strftime("%Y-%m-%d %H:%M UTC") if latest.created_at else "-"}</td>
         </tr>"""
 
