@@ -13,7 +13,7 @@ VTaxon 是一個面向 Vtuber 社群的公開服務，將 Vtuber 角色的形象
 | Layer | Technology |
 |---|---|
 | Frontend | React + TypeScript, Vite, D3 + Canvas 2D (分類樹視覺化) |
-| Backend | Flask + Python 3.12, SQLAlchemy, marshmallow (validation) |
+| Backend | Flask + Python 3.12, SQLAlchemy, Pydantic v2 (validation) |
 | Database | PostgreSQL (Supabase), staging/prod schema 隔離 |
 | Auth | Supabase Auth (OAuth → JWT, ES256 JWKS) |
 | Security | Google Cloud KMS (OAuth token 加密), Flask-Limiter, webhook HMAC 簽名驗證 |
