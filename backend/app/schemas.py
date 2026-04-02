@@ -1,4 +1,4 @@
-"""Marshmallow schemas for request validation.
+"""Pydantic schemas for request validation.
 
 Each schema defines the expected input shape for a route endpoint.
 Business logic validation (DB lookups, ownership, conflicts) stays in routes.
@@ -6,10 +6,18 @@ Business logic validation (DB lookups, ownership, conflicts) stays in routes.
 
 from collections.abc import Callable
 from functools import wraps
-from typing import Any
+from typing import Annotated, Any
 
 from flask import Response, jsonify, request
-from marshmallow import Schema, ValidationError, fields, post_load, validate, validates_schema
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from app.constants import ReportStatus, ReportType, RequestStatus, Visibility
 
@@ -18,10 +26,10 @@ from app.constants import ReportStatus, ReportType, RequestStatus, Visibility
 # ---------------------------------------------------------------------------
 
 
-def validate_with(schema_cls: type[Schema]) -> Callable[..., Any]:
-    """Decorator that validates request JSON against a marshmallow schema.
+def validate_with(schema_cls: type[BaseModel]) -> Callable[..., Any]:
+    """Decorator that validates request JSON against a Pydantic schema.
 
-    On success, injects validated data as first argument.
+    On success, injects validated data as first argument (dict).
     On failure, returns 400 with structured error messages.
     """
 
@@ -30,11 +38,17 @@ def validate_with(schema_cls: type[Schema]) -> Callable[..., Any]:
         def wrapper(*args: Any, **kwargs: Any) -> tuple[Response, int] | Any:
             raw = request.get_json() or {}
             try:
-                schema = schema_cls()
-                schema.context = {"raw": raw}  # type: ignore[attr-defined]
-                data = schema.load(raw)
+                model = schema_cls.model_validate(raw)
             except ValidationError as err:
-                return jsonify({"error": "Validation failed", "details": err.messages}), 400
+                details: dict[str, list[str]] = {}
+                for e in err.errors():
+                    key = ".".join(str(x) for x in e["loc"]) or "_schema"
+                    details.setdefault(key, []).append(e["msg"])
+                return jsonify({"error": "Validation failed", "details": details}), 400
+            if hasattr(model, "to_patch_dict"):
+                data = model.to_patch_dict()  # type: ignore[union-attr]
+            else:
+                data = model.model_dump()
             return f(data, *args, **kwargs)
 
         return wrapper
@@ -43,18 +57,18 @@ def validate_with(schema_cls: type[Schema]) -> Callable[..., Any]:
 
 
 # ---------------------------------------------------------------------------
-# Shared field types
+# Shared types
 # ---------------------------------------------------------------------------
 
-TrimmedString = fields.String
+
+def _strip_str(v: Any) -> Any:
+    """Strip whitespace from string values."""
+    if isinstance(v, str):
+        return v.strip()
+    return v
 
 
-class TrimString(fields.String):
-    """String field that strips whitespace on deserialization."""
-
-    def _deserialize(self, value: Any, attr: str | None, data: Any, **kwargs: Any) -> str:
-        val = super()._deserialize(value, attr, data, **kwargs)
-        return val.strip() if val else val
+TrimStr = Annotated[str, BeforeValidator(_strip_str)]
 
 
 # ---------------------------------------------------------------------------
@@ -66,38 +80,41 @@ REPORT_STATUSES = ReportStatus.ALL
 REPORT_UPDATE_STATUSES = ReportStatus.UPDATABLE
 
 
-class CreateReportSchema(Schema):
-    reported_user_id = fields.String(required=True, error_messages={"required": "缺少被舉報使用者 ID"})
-    report_type = fields.String(
-        validate=validate.OneOf(REPORT_TYPES, error="無效的檢舉類型"),
-        load_default=ReportType.IMPERSONATION,
-    )
-    reason = TrimString(
-        required=True,
-        validate=validate.Length(min=1, max=2000, error="理由不得超過 2000 字"),
-        error_messages={"required": "請填寫舉報理由"},
-    )
-    evidence_url = TrimString(load_default=None)
+class CreateReportSchema(BaseModel):
+    reported_user_id: str
+    report_type: str = ReportType.IMPERSONATION
+    reason: TrimStr = Field(min_length=1, max_length=2000)
+    evidence_url: TrimStr | None = None
+
+    @field_validator("report_type")
+    @classmethod
+    def check_report_type(cls, v: str) -> str:
+        if v not in REPORT_TYPES:
+            raise ValueError("無效的檢舉類型")
+        return v
 
 
-class UpdateReportSchema(Schema):
-    status = fields.String(validate=validate.OneOf(REPORT_UPDATE_STATUSES))
-    admin_note = fields.String(load_default=None, allow_none=True)
+class UpdateReportSchema(BaseModel):
+    status: str | None = None
+    admin_note: str | None = None
+
+    @field_validator("status")
+    @classmethod
+    def check_status(cls, v: str | None) -> str | None:
+        if v is not None and v not in REPORT_UPDATE_STATUSES:
+            raise ValueError(f"status must be one of {REPORT_UPDATE_STATUSES}")
+        return v
 
 
-class HideUserSchema(Schema):
-    reason = TrimString(load_default=None)
-    admin_note = fields.String(load_default=None, allow_none=True)
+class HideUserSchema(BaseModel):
+    reason: TrimStr | None = None
+    admin_note: str | None = None
 
 
-class BanUserSchema(Schema):
-    identifiers = fields.List(
-        fields.Dict(keys=fields.String(), values=fields.String()),
-        required=True,
-        validate=validate.Length(min=1, error="請選擇至少一個要封鎖的帳號"),
-    )
-    reason = fields.String(load_default=None)
-    admin_note = fields.String(load_default=None, allow_none=True)
+class BanUserSchema(BaseModel):
+    identifiers: list[dict[str, str]] = Field(min_length=1)
+    reason: str | None = None
+    admin_note: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -105,23 +122,24 @@ class BanUserSchema(Schema):
 # ---------------------------------------------------------------------------
 
 
-class CreateTraitSchema(Schema):
-    taxon_id = fields.Integer(load_default=None)
-    fictional_species_id = fields.Integer(load_default=None)
-    breed_id = fields.Integer(load_default=None)
-    breed_name = fields.String(load_default=None)
-    trait_note = fields.String(load_default=None)
+class CreateTraitSchema(BaseModel):
+    taxon_id: int | None = None
+    fictional_species_id: int | None = None
+    breed_id: int | None = None
+    breed_name: str | None = None
+    trait_note: str | None = None
 
-    @validates_schema
-    def require_species(self, data: dict[str, Any], **kwargs: Any) -> None:
-        if not data.get("taxon_id") and not data.get("fictional_species_id"):
-            raise ValidationError("taxon_id or fictional_species_id required")
+    @model_validator(mode="after")
+    def require_species(self) -> "CreateTraitSchema":
+        if not self.taxon_id and not self.fictional_species_id:
+            raise ValueError("taxon_id or fictional_species_id required")
+        return self
 
 
-class UpdateTraitSchema(Schema):
-    breed_id = fields.Integer(load_default=None, allow_none=True)
-    breed_name = fields.String(load_default=None, allow_none=True)
-    trait_note = fields.String(load_default=None, allow_none=True)
+class UpdateTraitSchema(BaseModel):
+    breed_id: int | None = None
+    breed_name: str | None = None
+    trait_note: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -133,113 +151,114 @@ ALLOWED_SNS_KEYS = frozenset(
 )
 
 
-class CreatorSchema(Schema):
-    """Schema for illustrator/rigger/modeler entries."""
-
-    name = fields.String(required=True)
-    url = fields.String(load_default=None, allow_none=True)
+class CreatorSchema(BaseModel):
+    name: str
+    url: str | None = None
 
 
-class ProfileDataSchema(Schema):
-    """Nested schema for profile_data JSON field.
+class ProfileDataSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
-    No ``load_default`` — only keys actually sent by the client appear in the
-    result dict, preserving PATCH semantics for the parent schema.
-    """
+    debut_date: str | None = None
+    birthday_month: int | None = Field(None, ge=1, le=12)
+    birthday_day: int | None = Field(None, ge=1, le=31)
+    blood_type: str | None = None
+    mbti: str | None = None
+    gender: str | None = None
+    representative_emoji: str | None = None
+    fan_name: str | None = None
+    activity_status: str | None = None
+    illustrators: list[CreatorSchema] | None = None
+    riggers: list[CreatorSchema] | None = None
+    modelers_3d: list[CreatorSchema] | None = None
+    hashtags: list[str] | None = None
+    debut_video_url: str | None = None
 
-    debut_date = fields.String(allow_none=True)
-    birthday_month = fields.Integer(
-        allow_none=True,
-        validate=validate.Range(min=1, max=12, error="birthday_month must be 1-12"),
-    )
-    birthday_day = fields.Integer(
-        allow_none=True,
-        validate=validate.Range(min=1, max=31, error="birthday_day must be 1-31"),
-    )
-    blood_type = fields.String(
-        allow_none=True,
-        validate=validate.OneOf(("A", "B", "O", "AB"), error="Invalid blood_type"),
-    )
-    mbti = fields.String(allow_none=True)
-    gender = fields.String(allow_none=True)
-    representative_emoji = fields.String(allow_none=True)
-    fan_name = fields.String(allow_none=True)
-    activity_status = fields.String(
-        allow_none=True,
-        validate=validate.OneOf(("active", "hiatus", "preparing"), error="Invalid activity_status"),
-    )
-    illustrators = fields.List(fields.Nested(CreatorSchema), allow_none=True)
-    riggers = fields.List(fields.Nested(CreatorSchema), allow_none=True)
-    modelers_3d = fields.List(fields.Nested(CreatorSchema), allow_none=True)
-    hashtags = fields.List(fields.String(), allow_none=True)
-    debut_video_url = fields.String(allow_none=True)
+    @field_validator("blood_type")
+    @classmethod
+    def check_blood_type(cls, v: str | None) -> str | None:
+        if v is not None and v not in ("A", "B", "O", "AB"):
+            raise ValueError("Invalid blood_type")
+        return v
 
-    class Meta:
-        # Reject unknown keys
-        unknown = "RAISE"
+    @field_validator("activity_status")
+    @classmethod
+    def check_activity_status(cls, v: str | None) -> str | None:
+        if v is not None and v not in ("active", "hiatus", "preparing"):
+            raise ValueError("Invalid activity_status")
+        return v
 
 
-class UpdateProfileSchema(Schema):
+class UpdateProfileSchema(BaseModel):
     """Profile update schema for PATCH /me.
 
-    No ``load_default`` on any field — marshmallow will only include keys that
-    the client actually sent, so ``'key' in data`` correctly detects which
-    fields were submitted (PATCH semantics).
+    Uses ``model_fields_set`` to preserve PATCH semantics — only fields
+    actually sent by the client appear in ``to_patch_dict()`` output.
     """
 
-    display_name = fields.String()
-    organization = fields.String(allow_none=True)
-    bio = TrimString(
-        allow_none=True,
-        validate=validate.Length(max=500, error="bio must be 500 characters or less"),
-    )
-    country_flags = fields.List(
-        fields.String(validate=validate.Length(equal=2, error="Each flag must be a 2-character country code")),
-    )
-    social_links = fields.Dict(
-        keys=fields.String(validate=validate.OneOf(ALLOWED_SNS_KEYS)),
-        values=fields.String(validate=validate.Length(max=500)),
-    )
-    primary_platform = fields.String(
-        validate=validate.OneOf(("youtube", "twitch"), error="primary_platform must be youtube or twitch"),
-    )
-    profile_data = fields.Nested(ProfileDataSchema)
-    org_type = fields.String(
-        validate=validate.OneOf(("indie", "corporate", "club"), error="org_type must be indie, corporate, or club"),
-    )
-    live_primary_real_trait_id = fields.String(allow_none=True)
-    live_primary_fictional_trait_id = fields.String(allow_none=True)
-    vtuber_declaration_at = fields.Boolean()
+    model_config = ConfigDict(extra="ignore")
 
-    class Meta:
-        unknown = "EXCLUDE"
+    display_name: str | None = None
+    organization: str | None = None
+    bio: TrimStr | None = Field(None, max_length=500)
+    country_flags: list[Annotated[str, Field(min_length=2, max_length=2)]] | None = None
+    social_links: dict[str, str] | None = None
+    primary_platform: str | None = None
+    profile_data: ProfileDataSchema | None = None
+    org_type: str | None = None
+    live_primary_real_trait_id: str | None = None
+    live_primary_fictional_trait_id: str | None = None
+    vtuber_declaration_at: bool | None = None
 
-    @post_load
-    def normalize(self, data: dict[str, Any], **kwargs: Any) -> dict[str, Any]:
-        raw = self.context.get("raw", {})  # type: ignore[attr-defined]
-        # Only keep fields the client actually sent
-        data = {k: v for k, v in data.items() if k in raw}
+    @field_validator("primary_platform")
+    @classmethod
+    def check_primary_platform(cls, v: str | None) -> str | None:
+        if v is not None and v not in ("youtube", "twitch"):
+            raise ValueError("primary_platform must be youtube or twitch")
+        return v
+
+    @field_validator("org_type")
+    @classmethod
+    def check_org_type(cls, v: str | None) -> str | None:
+        if v is not None and v not in ("indie", "corporate", "club"):
+            raise ValueError("org_type must be indie, corporate, or club")
+        return v
+
+    @field_validator("social_links")
+    @classmethod
+    def check_social_links(cls, v: dict[str, str] | None) -> dict[str, str] | None:
+        if v is not None:
+            invalid = set(v.keys()) - ALLOWED_SNS_KEYS
+            if invalid:
+                raise ValueError(f"Invalid social link keys: {invalid}")
+            for val in v.values():
+                if len(val) > 500:
+                    raise ValueError("Social link value exceeds 500 characters")
+        return v
+
+    def to_patch_dict(self) -> dict[str, Any]:
+        """Convert to dict preserving PATCH semantics (only sent fields)."""
+        data = self.model_dump(include=self.model_fields_set)
+        # Nested model: also filter to only sent sub-fields
+        if "profile_data" in data and self.profile_data is not None:
+            data["profile_data"] = self.profile_data.model_dump(include=self.profile_data.model_fields_set)
         # Uppercase country flags
         if "country_flags" in data and data["country_flags"] is not None:
             data["country_flags"] = [f.upper() for f in data["country_flags"]]
         # indie org_type clears organization
         if data.get("org_type") == "indie":
             data["organization"] = None
-        # Strip social_links values
+        # Strip social_links values and remove empty
         if "social_links" in data and data["social_links"] is not None:
             data["social_links"] = {k: v.strip() for k, v in data["social_links"].items() if v}
-        # Normalize bio
+        # Normalize bio: empty/whitespace → None
         if "bio" in data and data["bio"] is not None:
-            data["bio"] = data["bio"].strip() or None
+            data["bio"] = data["bio"] or None
         return data
 
 
-class AppealSchema(Schema):
-    appeal_note = TrimString(
-        required=True,
-        validate=validate.Length(min=1, max=2000, error="申訴說明不得超過 2000 字"),
-        error_messages={"required": "請填寫申訴說明"},
-    )
+class AppealSchema(BaseModel):
+    appeal_note: TrimStr = Field(min_length=1, max_length=2000)
 
 
 # ---------------------------------------------------------------------------
@@ -247,46 +266,34 @@ class AppealSchema(Schema):
 # ---------------------------------------------------------------------------
 
 
-class CreateBreedSchema(Schema):
-    taxon_id = fields.Integer(required=True, error_messages={"required": "taxon_id required"})
-    name_en = TrimString(
-        required=True,
-        validate=validate.Length(min=1),
-        error_messages={"required": "name_en required"},
-    )
-    name_zh = TrimString(load_default=None)
-    breed_group = TrimString(load_default=None)
+class CreateBreedSchema(BaseModel):
+    taxon_id: int
+    name_en: TrimStr = Field(min_length=1)
+    name_zh: TrimStr | None = None
+    breed_group: TrimStr | None = None
 
 
-class CreateBreedRequestSchema(Schema):
-    taxon_id = fields.Integer(load_default=None)
-    name_zh = TrimString(
-        required=True,
-        validate=validate.Length(min=1),
-        error_messages={"required": "請填寫品種中文名稱"},
-    )
-    name_en = TrimString(
-        required=True,
-        validate=validate.Length(min=1),
-        error_messages={"required": "請填寫品種英文名稱"},
-    )
-    description = TrimString(
-        required=True,
-        validate=validate.Length(min=1),
-        error_messages={"required": "請填寫補充說明並附上參考來源連結"},
-    )
+class CreateBreedRequestSchema(BaseModel):
+    taxon_id: int | None = None
+    name_zh: TrimStr = Field(min_length=1)
+    name_en: TrimStr = Field(min_length=1)
+    description: TrimStr = Field(min_length=1)
 
 
 REQUEST_STATUSES_ALL = RequestStatus.ALL
 REQUEST_UPDATE_STATUSES = RequestStatus.UPDATABLE
 
 
-class UpdateRequestStatusSchema(Schema):
-    status = fields.String(
-        required=True,
-        validate=validate.OneOf(REQUEST_UPDATE_STATUSES),
-    )
-    admin_note = fields.String(load_default=None, allow_none=True)
+class UpdateRequestStatusSchema(BaseModel):
+    status: str
+    admin_note: str | None = None
+
+    @field_validator("status")
+    @classmethod
+    def check_status(cls, v: str) -> str:
+        if v not in REQUEST_UPDATE_STATUSES:
+            raise ValueError(f"status must be one of {REQUEST_UPDATE_STATUSES}")
+        return v
 
 
 # ---------------------------------------------------------------------------
@@ -294,16 +301,12 @@ class UpdateRequestStatusSchema(Schema):
 # ---------------------------------------------------------------------------
 
 
-class CreateFictionalRequestSchema(Schema):
-    name_zh = TrimString(
-        required=True,
-        validate=validate.Length(min=1, max=30),
-        error_messages={"required": "name_zh is required"},
-    )
-    name_en = TrimString(load_default=None, validate=validate.Length(max=60))
-    suggested_origin = TrimString(load_default=None, validate=validate.Length(min=2, max=60))
-    suggested_sub_origin = TrimString(load_default=None)
-    description = TrimString(load_default=None, validate=validate.Length(min=10, max=500))
+class CreateFictionalRequestSchema(BaseModel):
+    name_zh: TrimStr = Field(min_length=1, max_length=30)
+    name_en: TrimStr | None = Field(None, max_length=60)
+    suggested_origin: TrimStr | None = Field(None, min_length=2, max_length=60)
+    suggested_sub_origin: TrimStr | None = None
+    description: TrimStr | None = Field(None, min_length=10, max_length=500)
 
 
 # ---------------------------------------------------------------------------
@@ -311,14 +314,15 @@ class CreateFictionalRequestSchema(Schema):
 # ---------------------------------------------------------------------------
 
 
-class MarkReadSchema(Schema):
-    all = fields.Boolean(load_default=False)
-    ids = fields.List(fields.Integer(), load_default=None)
+class MarkReadSchema(BaseModel):
+    all: bool = False
+    ids: list[int] | None = None
 
-    @validates_schema
-    def require_all_or_ids(self, data: dict[str, Any], **kwargs: Any) -> None:
-        if not data.get("all") and not data.get("ids"):
-            raise ValidationError("Provide all:true or ids:[...]")
+    @model_validator(mode="after")
+    def require_all_or_ids(self) -> "MarkReadSchema":
+        if not self.all and not self.ids:
+            raise ValueError("Provide all:true or ids:[...]")
+        return self
 
 
 # ---------------------------------------------------------------------------
@@ -326,9 +330,13 @@ class MarkReadSchema(Schema):
 # ---------------------------------------------------------------------------
 
 
-class SetVisibilitySchema(Schema):
-    visibility = fields.String(
-        required=True,
-        validate=validate.OneOf(Visibility.ADMIN_SETTABLE, error="visibility must be visible or hidden"),
-    )
-    reason = TrimString(load_default=None)
+class SetVisibilitySchema(BaseModel):
+    visibility: str
+    reason: TrimStr | None = None
+
+    @field_validator("visibility")
+    @classmethod
+    def check_visibility(cls, v: str) -> str:
+        if v not in Visibility.ADMIN_SETTABLE:
+            raise ValueError("visibility must be visible or hidden")
+        return v
