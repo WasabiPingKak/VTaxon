@@ -204,6 +204,50 @@ class TestGetTaxonomyTree:
 # ---------------------------------------------------------------------------
 
 
+class TestComputePathRanks:
+    """Test _compute_path_ranks edge cases directly via tree entries."""
+
+    def test_subphylum_path(self, client, db_session):
+        """SUBPHYLUM rank with 3-segment path should produce correct ranks."""
+        user = _user(db_session)
+        sp = _species(db_session, 7000, path="Animalia|Cnidaria|Medusozoa", rank="SUBPHYLUM")
+        _trait(db_session, user, species=sp)
+        db_session.flush()
+
+        resp = client.get("/api/taxonomy/tree")
+        entry = resp.get_json()["entries"][0]
+        assert entry["path_ranks"] == ["KINGDOM", "PHYLUM", "SUBPHYLUM"]
+
+    def test_subspecies_path(self, client, db_session):
+        """SUBSPECIES with 8-segment path should have SUBSPECIES as last rank."""
+        user = _user(db_session)
+        sp = _species(
+            db_session,
+            7001,
+            path="A|B|C|D|E|F|G|H",
+            rank="SUBSPECIES",
+            name="Canis lupus familiaris",
+        )
+        _trait(db_session, user, species=sp)
+        db_session.flush()
+
+        resp = client.get("/api/taxonomy/tree")
+        entry = resp.get_json()["entries"][0]
+        assert entry["path_ranks"][-1] == "SUBSPECIES"
+        assert len(entry["path_ranks"]) == 8
+
+    def test_subclass_path(self, client, db_session):
+        """SUBCLASS with 4-segment path."""
+        user = _user(db_session)
+        sp = _species(db_session, 7002, path="A|B|C|D", rank="SUBCLASS")
+        _trait(db_session, user, species=sp)
+        db_session.flush()
+
+        resp = client.get("/api/taxonomy/tree")
+        entry = resp.get_json()["entries"][0]
+        assert entry["path_ranks"][-1] == "SUBCLASS"
+
+
 class TestGetFictionalTree:
     def test_empty_fictional_tree(self, client):
         resp = client.get("/api/taxonomy/fictional-tree")
@@ -224,6 +268,51 @@ class TestGetFictionalTree:
         assert entry["fictional_species_id"] == fs.id
         assert entry["fictional_name"] == "Dragon"
         assert entry["origin"] == "Western"
+
+    def test_fictional_tree_includes_platforms(self, client, db_session):
+        user = _user(db_session)
+        fs = _fictional(db_session, name="Phoenix", origin="Eastern", path="Eastern|Phoenix")
+        _trait(db_session, user, fictional=fs)
+        acct = OAuthAccount(user_id=user.id, provider="twitch", provider_account_id="tw-fict-1")
+        db_session.add(acct)
+        db_session.flush()
+
+        resp = client.get("/api/taxonomy/fictional-tree")
+        entry = resp.get_json()["entries"][0]
+        assert "twitch" in entry["platforms"]
+        assert entry["trait_count"] >= 1
+
+    def test_fictional_tree_4segment_path_has_type(self, client, db_session):
+        """4-segment path should extract fictional_type from index 2."""
+        user = _user(db_session)
+        fs = _fictional(db_session, name="Kitsune", origin="Eastern", path="Eastern|Japanese|Fox|Kitsune")
+        _trait(db_session, user, fictional=fs)
+        db_session.flush()
+
+        resp = client.get("/api/taxonomy/fictional-tree")
+        entry = resp.get_json()["entries"][0]
+        assert entry["fictional_type"] == "Fox"
+
+    def test_fictional_tree_hidden_excluded(self, client, db_session):
+        user = _user(db_session, name="HiddenFict")
+        user.visibility = "hidden"
+        fs = _fictional(db_session)
+        _trait(db_session, user, fictional=fs)
+        db_session.flush()
+
+        resp = client.get("/api/taxonomy/fictional-tree")
+        assert resp.get_json()["entries"] == []
+
+    def test_fictional_tree_is_live_primary_auto(self, client, db_session):
+        """Auto-assign is_live_primary for fictional tree."""
+        user = _user(db_session)
+        fs = _fictional(db_session)
+        _trait(db_session, user, fictional=fs)
+        db_session.flush()
+
+        resp = client.get("/api/taxonomy/fictional-tree")
+        entry = resp.get_json()["entries"][0]
+        assert entry["is_live_primary"] is True
 
 
 # ---------------------------------------------------------------------------
