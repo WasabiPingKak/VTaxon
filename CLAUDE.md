@@ -6,7 +6,7 @@
 
 ```
 VTaxon/
-├── .github/workflows/          # CI/CD（deploy-staging.yml, deploy-prod.yml）
+├── .github/workflows/          # CI/CD（CI / Deploy Staging, Deploy Production）
 ├── backend/
 │   ├── app/
 │   │   ├── __init__.py         # App factory + blueprint 註冊
