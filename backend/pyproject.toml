@@ -39,11 +39,24 @@ module = "app.models"
 disable_error_code = ["name-defined", "misc", "no-any-return"]
 
 [tool.pytest.ini_options]
-addopts = "--cov=app --cov-report=term-missing -x -q"
+addopts = "-x -q"
 testpaths = ["tests"]
 filterwarnings = [
   "error",
   # SQLite in-memory + SQLAlchemy pool: GC may finalize pooled connections
   # during pytest teardown. Not an issue in production (PostgreSQL).
   "ignore::pytest.PytestUnraisableExceptionWarning",
+]
+
+[tool.coverage.run]
+omit = ["tests/*", "tools/*"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.",
 ]

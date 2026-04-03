@@ -1,5 +1,8 @@
 # VTaxon
 
+[![CI](https://github.com/WasabiPingKak/VTaxon/actions/workflows/deploy-staging.yml/badge.svg?branch=develop)](https://github.com/WasabiPingKak/VTaxon/actions/workflows/deploy-staging.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/WasabiPingKak/a1472baf67f4ff32a86fb429a4d668d8/raw/vtaxon-coverage.json)](https://github.com/WasabiPingKak/VTaxon/actions/workflows/deploy-staging.yml)
+
 將 Vtuber 角色形象特徵對應至生物分類學體系，以分類樹呈現角色間的關聯。
 
 **[vtaxon.com](https://vtaxon.com)**
