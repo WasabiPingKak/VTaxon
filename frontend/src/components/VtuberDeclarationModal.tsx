@@ -13,7 +13,7 @@ export default function VtuberDeclarationModal() {
     if (!agreed || submitting) return;
     setSubmitting(true);
     try {
-      const updated = await api.updateMe({ vtuber_declaration_at: new Date().toISOString() } as Parameters<typeof api.updateMe>[0]);
+      const updated = await api.updateMe({ vtuber_declaration_at: true } as unknown as Parameters<typeof api.updateMe>[0]);
       setUser(updated);
     } catch (err) {
       console.error('Declaration failed:', err);
