@@ -13,7 +13,7 @@ from ..cache import invalidate_tree_cache
 from ..extensions import db
 from ..limiter import limiter
 from ..models import Blacklist, LiveStream, OAuthAccount, User
-from ..response_schemas import OAuthAccountResponse
+from ..response_schemas import OAuthAccountResponse, UserResponse
 
 logger = logging.getLogger(__name__)
 
@@ -475,7 +475,7 @@ def delete_oauth_account(account_id: str) -> tuple[Response, int] | Response:
             user.primary_platform = None
 
     db.session.commit()
-    return jsonify({"ok": True, "user": user.to_dict() if user else None})
+    return jsonify({"ok": True, "user": UserResponse.from_model(user).model_dump(mode="json") if user else None})
 
 
 @oauth_bp.route("/me/resubscribe", methods=["POST"])
