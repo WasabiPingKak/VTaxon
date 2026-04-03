@@ -5,6 +5,7 @@ from typing import Any
 from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
 from ..extensions import db
 from ..models import Breed, FictionalSpecies, SpeciesCache, User, VtuberTrait
+from ..response_schemas import TraitResponse
 from .gbif import get_species  # type: ignore[attr-defined]
 
 ALLOWED_RANKS = {
@@ -117,7 +118,7 @@ def create_trait(user_id: str, data: dict[str, Any]) -> tuple[dict[str, Any], in
     if fictional_species_id:
         invalidate_fictional_tree_cache()
 
-    trait_dict = trait.to_dict()
+    trait_dict = TraitResponse.from_model(trait).model_dump(mode="json")
     if replaced_info:
         trait_dict["replaced"] = replaced_info
 
@@ -281,7 +282,7 @@ def update_trait(trait_id: str, user_id: str, data: dict[str, Any]) -> tuple[dic
     invalidate_tree_cache()
     if trait.fictional_species_id:
         invalidate_fictional_tree_cache()
-    return trait.to_dict(), 200
+    return TraitResponse.from_model(trait).model_dump(mode="json"), 200
 
 
 # ---------------------------------------------------------------------------

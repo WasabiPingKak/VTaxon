@@ -14,6 +14,7 @@ from ..cache import invalidate_tree_cache
 from ..extensions import db
 from ..limiter import limiter
 from ..models import AuthIdAlias, Blacklist, User
+from ..response_schemas import UserResponse
 
 auth_bp = Blueprint("auth", __name__)
 limiter.limit("10/minute")(auth_bp)
@@ -153,7 +154,7 @@ def auth_callback() -> tuple[Response, int]:
                     db.session.commit()
                 except IntegrityError:
                     db.session.rollback()
-            return jsonify(target.to_dict()), 200
+            return jsonify(UserResponse.from_model(target).model_dump(mode="json")), 200
 
     if user is None:
         # Check blacklist before creating a new user — prevents banned users
@@ -214,4 +215,4 @@ def auth_callback() -> tuple[Response, int]:
 
     if user is None:
         return jsonify({"error": "user_not_found"}), 404
-    return jsonify(user.to_dict()), 200
+    return jsonify(UserResponse.from_model(user).model_dump(mode="json")), 200

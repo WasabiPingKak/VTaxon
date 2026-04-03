@@ -19,6 +19,7 @@ from sqlalchemy import func
 
 from ..extensions import db
 from ..models import Breed, SpeciesCache
+from ..response_schemas import BreedResponse, SpeciesCacheResponse
 
 # ---------------------------------------------------------------------------
 # Re-exports: keep ``from ..services.gbif import X`` working for all callers.
@@ -260,7 +261,7 @@ def _search_breeds(query: str, limit: int = 10) -> list[dict[str, Any]]:
     for breed in breeds:
         # Get parent species from species_cache
         species = db.session.get(SpeciesCache, breed.taxon_id)
-        species_dict = species.to_dict() if species else {}
+        species_dict = SpeciesCacheResponse.from_model(species).model_dump(mode="json") if species else {}
 
         # Fill missing rank_zh from static table
         if species:
@@ -268,7 +269,7 @@ def _search_breeds(query: str, limit: int = 10) -> list[dict[str, Any]]:
 
         result = {
             "result_type": "breed",
-            "breed": breed.to_dict(),
+            "breed": BreedResponse.model_validate(breed).model_dump(mode="json"),
             "taxon_id": breed.taxon_id,
             "scientific_name": species_dict.get("scientific_name", ""),
             "canonical_name": species_dict.get("scientific_name", ""),
@@ -320,7 +321,7 @@ def _search_local_cache_chinese(query: str, limit: int = 10) -> list[dict[str, A
 
     results = []
     for row in rows:
-        d = row.to_dict()
+        d = SpeciesCacheResponse.from_model(row).model_dump(mode="json")
         _fill_missing_rank_zh(d, row)
         results.append(d)
     return results

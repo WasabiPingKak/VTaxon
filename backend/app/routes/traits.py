@@ -4,6 +4,7 @@ from flask import Blueprint, Response, g, jsonify, request
 
 from ..auth import login_required
 from ..models import VtuberTrait
+from ..response_schemas import TraitResponse
 from ..services.traits import create_trait, delete_trait, update_trait
 
 traits_bp = Blueprint("traits", __name__)
@@ -81,7 +82,7 @@ def list_traits() -> tuple[Response, int] | Response:
         return jsonify({"error": "user_id query parameter required"}), 400
 
     traits = VtuberTrait.query.filter_by(user_id=user_id).all()
-    return jsonify({"traits": [t.to_dict() for t in traits]})
+    return jsonify({"traits": [TraitResponse.from_model(t).model_dump(mode="json") for t in traits]})
 
 
 @traits_bp.route("/<trait_id>", methods=["PATCH"])

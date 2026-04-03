@@ -19,6 +19,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models import SpeciesCache
+from ..response_schemas import SpeciesCacheResponse
 from .http_client import external_session
 from .taicol import clear_cache as taicol_clear_cache
 from .taicol import get_chinese_name as taicol_get_chinese_name
@@ -467,7 +468,7 @@ def _build_from_taicol(tr: dict[str, Any]) -> dict[str, Any] | None:
     # Check if already cached (by negative ID)
     cached = db.session.get(SpeciesCache, taxon_id)
     if cached:
-        d = cached.to_dict()
+        d = SpeciesCacheResponse.from_model(cached).model_dump(mode="json")
         _fill_missing_rank_zh(d, cached)
         return d
 

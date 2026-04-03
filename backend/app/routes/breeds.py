@@ -9,7 +9,7 @@ from ..cache import invalidate_tree_cache
 from ..constants import RequestStatus
 from ..extensions import db
 from ..models import Breed, BreedRequest, SpeciesCache
-from ..response_schemas import BreedResponse
+from ..response_schemas import BreedResponse, SpeciesCacheResponse
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def list_breed_categories() -> tuple[Response, int]:
             # Back-fill missing Chinese names
             if not sp.common_name_zh:
                 resolve_missing_chinese_name(sp)
-            entry.update(sp.to_dict())
+            entry.update(SpeciesCacheResponse.from_model(sp).model_dump(mode="json"))
         categories.append(entry)
 
     # Sort by breed_count descending
@@ -118,7 +118,7 @@ def list_breeds() -> tuple[Response, int]:
 
     # Include parent species info so frontend can construct full onSelect payload
     sp = db.session.get(SpeciesCache, actual_taxon_id)
-    species_info = sp.to_dict() if sp else None
+    species_info = SpeciesCacheResponse.from_model(sp).model_dump(mode="json") if sp else None
 
     return jsonify(
         {"breeds": [BreedResponse.model_validate(b).model_dump(mode="json") for b in breeds], "species": species_info}

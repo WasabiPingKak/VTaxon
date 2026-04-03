@@ -14,6 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models import SpeciesCache
+from ..response_schemas import SpeciesCacheResponse
 from .http_client import external_session
 from .taxonomy_zh import get_species_zh_override, get_taxonomy_zh, get_taxonomy_zh_for_ranks
 
@@ -42,7 +43,7 @@ def get_species(taxon_id: int) -> dict[str, Any] | None:
                 db.session.commit()
             except SQLAlchemyError:
                 db.session.rollback()
-        d = cached.to_dict()
+        d = SpeciesCacheResponse.from_model(cached).model_dump(mode="json")
         # Fill in any missing *_zh from static table (backward compat for old rows)
         _fill_missing_rank_zh(d, cached)
         return d
@@ -59,7 +60,7 @@ def get_species(taxon_id: int) -> dict[str, Any] | None:
     cached = _cache_species(data, common_name_zh=zh_name)
     if not cached:
         return None
-    d = cached.to_dict()
+    d = SpeciesCacheResponse.from_model(cached).model_dump(mode="json")
     _fill_missing_rank_zh(d, cached)
     return d
 

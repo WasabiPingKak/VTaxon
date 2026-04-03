@@ -5,6 +5,7 @@ from flask import Blueprint, Response, g, jsonify, request
 from ..auth import admin_required
 from ..constants import Visibility
 from ..models import User
+from ..response_schemas import UserResponse
 from ..services import admin as admin_svc
 
 admin_bp = Blueprint("admin", __name__)
@@ -175,12 +176,6 @@ def pending_reviews() -> tuple[Response, int]:
     users = User.query.filter_by(visibility=Visibility.PENDING_REVIEW).order_by(User.updated_at.desc()).all()
     return jsonify(
         {
-            "users": [
-                {
-                    **u.to_dict(),
-                    "appeal_note": u.appeal_note,
-                }
-                for u in users
-            ],
+            "users": [UserResponse.from_model(u).model_dump(mode="json") for u in users],
         }
     ), 200
