@@ -114,6 +114,14 @@ class TestUpdateMe:
         assert resp.status_code == 400
         assert "already" in resp.get_json()["error"].lower()
 
+    def test_update_vtuber_declaration_iso_string_rejected(self, client, mock_auth, sample_user):
+        """Sending ISO string instead of bool for vtuber_declaration_at should fail validation."""
+        with mock_auth(sample_user.id):
+            resp = client.patch("/api/users/me", json={"vtuber_declaration_at": "2026-04-04T10:30:00.000Z"})
+        assert resp.status_code == 400
+        data = resp.get_json()
+        assert "vtuber_declaration_at" in data.get("details", {})
+
     def test_update_primary_platform_no_account(self, client, db_session, mock_auth, sample_user):
         """Setting primary_platform without linked account should fail."""
         with mock_auth(sample_user.id):
