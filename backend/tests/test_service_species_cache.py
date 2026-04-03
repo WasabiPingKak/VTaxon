@@ -8,6 +8,7 @@ from app.services.species_cache import (
     _realign_taxon_path,
     cache_from_search_result,
     get_species,
+    get_subspecies,
 )
 
 # ---------------------------------------------------------------------------
@@ -243,3 +244,140 @@ class TestCacheFromSearchResult:
 
     def test_returns_none_without_key(self, db_session):
         assert cache_from_search_result({}) is None
+
+
+# ---------------------------------------------------------------------------
+# get_species — enrichment & realign paths
+# ---------------------------------------------------------------------------
+
+
+class TestGetSpeciesEnrichment:
+    def test_cached_species_fills_rank_zh(self, db_session):
+        """Cached species should have rank_zh filled from static table."""
+        sp = SpeciesCache(
+            taxon_id=60001,
+            scientific_name="Felis catus",
+            taxon_rank="SPECIES",
+            taxon_path="Animalia|Chordata|Mammalia|Carnivora|Felidae|Felis|Felis catus",
+            kingdom="Animalia",
+            phylum="Chordata",
+            class_="Mammalia",
+            order_="Carnivora",
+            family="Felidae",
+            genus="Felis",
+        )
+        db_session.add(sp)
+        db_session.flush()
+
+        result = get_species(60001)
+        assert result is not None
+        # Static table should fill kingdom_zh at minimum
+        assert "kingdom_zh" in result
+
+    @patch("app.services.species_cache.external_session")
+    @patch("app.services.chinese_names._resolve_chinese_name", return_value="赤狐")
+    def test_gbif_fetch_with_chinese_name(self, mock_zh, mock_session, db_session):
+        """GBIF fetch should resolve Chinese name and cache it."""
+        mock_resp = mock_session.get.return_value
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "key": 60002,
+            "scientificName": "Vulpes vulpes",
+            "rank": "SPECIES",
+            "kingdom": "Animalia",
+            "phylum": "Chordata",
+            "class": "Mammalia",
+            "order": "Carnivora",
+            "family": "Canidae",
+            "genus": "Vulpes",
+            "species": "Vulpes vulpes",
+        }
+
+        result = get_species(60002)
+        assert result is not None
+        # Chinese name should be persisted
+        cached = db_session.get(SpeciesCache, 60002)
+        assert cached is not None
+        assert cached.common_name_zh == "赤狐"
+
+
+# ---------------------------------------------------------------------------
+# get_subspecies — mock GBIF children API
+# ---------------------------------------------------------------------------
+
+
+class TestGetSubspecies:
+    @patch("app.services.species_cache.external_session")
+    @patch("app.services.chinese_names._enrich_chinese_names")
+    def test_returns_accepted_subspecies(self, mock_enrich, mock_session, db_session):
+        mock_resp = mock_session.get.return_value
+        mock_resp.raise_for_status = lambda: None
+        mock_resp.json.return_value = {
+            "results": [
+                {
+                    "key": 5219243,
+                    "scientificName": "Canis lupus familiaris",
+                    "rank": "SUBSPECIES",
+                    "taxonomicStatus": "ACCEPTED",
+                    "kingdom": "Animalia",
+                },
+                {
+                    "key": 5219244,
+                    "scientificName": "Canis lupus lupus",
+                    "rank": "SUBSPECIES",
+                    "taxonomicStatus": "ACCEPTED",
+                    "kingdom": "Animalia",
+                },
+            ]
+        }
+
+        results = get_subspecies(5219240)
+        assert len(results) == 2
+        assert results[0]["taxon_id"] == 5219243
+
+    @patch("app.services.species_cache.external_session")
+    @patch("app.services.chinese_names._enrich_chinese_names")
+    def test_skips_non_subspecies_ranks(self, mock_enrich, mock_session, db_session):
+        mock_resp = mock_session.get.return_value
+        mock_resp.raise_for_status = lambda: None
+        mock_resp.json.return_value = {
+            "results": [
+                {"key": 1, "scientificName": "Genus sp.", "rank": "SPECIES", "taxonomicStatus": "ACCEPTED"},
+                {"key": 2, "scientificName": "Subsp.", "rank": "SUBSPECIES", "taxonomicStatus": "ACCEPTED"},
+            ]
+        }
+
+        results = get_subspecies(999)
+        assert len(results) == 1
+        assert results[0]["taxon_id"] == 2
+
+    @patch("app.services.species_cache.external_session")
+    @patch("app.services.chinese_names._enrich_chinese_names")
+    def test_skips_non_accepted_status(self, mock_enrich, mock_session, db_session):
+        mock_resp = mock_session.get.return_value
+        mock_resp.raise_for_status = lambda: None
+        mock_resp.json.return_value = {
+            "results": [
+                {"key": 10, "rank": "SUBSPECIES", "taxonomicStatus": "SYNONYM", "scientificName": "Old"},
+                {"key": 11, "rank": "SUBSPECIES", "taxonomicStatus": "ACCEPTED", "scientificName": "Good"},
+            ]
+        }
+
+        results = get_subspecies(888)
+        assert len(results) == 1
+        assert results[0]["taxon_id"] == 11
+
+    @patch("app.services.species_cache.external_session")
+    @patch("app.services.chinese_names._enrich_chinese_names")
+    def test_deduplicates_by_key(self, mock_enrich, mock_session, db_session):
+        mock_resp = mock_session.get.return_value
+        mock_resp.raise_for_status = lambda: None
+        mock_resp.json.return_value = {
+            "results": [
+                {"key": 20, "rank": "SUBSPECIES", "taxonomicStatus": "ACCEPTED", "scientificName": "A"},
+                {"key": 20, "rank": "SUBSPECIES", "taxonomicStatus": "ACCEPTED", "scientificName": "A"},
+            ]
+        }
+
+        results = get_subspecies(777)
+        assert len(results) == 1
