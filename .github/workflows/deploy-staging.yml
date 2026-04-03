@@ -1,4 +1,4 @@
-name: Deploy Staging
+name: CI
 
 on:
   pull_request:
