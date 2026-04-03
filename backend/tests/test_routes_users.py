@@ -1,6 +1,8 @@
 """Route integration tests for /api/users — profile CRUD, appeal flow."""
 
-from app.models import OAuthAccount, User
+from datetime import UTC, datetime
+
+from app.models import FictionalSpecies, OAuthAccount, SpeciesCache, User, VtuberTrait
 
 # ---------------------------------------------------------------------------
 # GET /api/users/me — Current user profile
@@ -93,6 +95,88 @@ class TestUpdateMe:
     def test_update_unauthenticated(self, client):
         resp = client.patch("/api/users/me", json={"display_name": "Hacked"})
         assert resp.status_code == 401
+
+    def test_update_vtuber_declaration(self, client, db_session, mock_auth, sample_user):
+        """First VTuber declaration should succeed."""
+        with mock_auth(sample_user.id):
+            resp = client.patch("/api/users/me", json={"vtuber_declaration_at": True})
+        assert resp.status_code == 200
+        db_session.refresh(sample_user)
+        assert sample_user.vtuber_declaration_at is not None
+
+    def test_update_vtuber_declaration_twice_rejected(self, client, db_session, mock_auth, sample_user):
+        """Second VTuber declaration should be rejected (write-once)."""
+        sample_user.vtuber_declaration_at = datetime.now(UTC)
+        db_session.flush()
+
+        with mock_auth(sample_user.id):
+            resp = client.patch("/api/users/me", json={"vtuber_declaration_at": True})
+        assert resp.status_code == 400
+        assert "already" in resp.get_json()["error"].lower()
+
+    def test_update_primary_platform_no_account(self, client, db_session, mock_auth, sample_user):
+        """Setting primary_platform without linked account should fail."""
+        with mock_auth(sample_user.id):
+            resp = client.patch("/api/users/me", json={"primary_platform": "twitch"})
+        assert resp.status_code == 400
+
+    def test_update_primary_platform_with_account(self, client, db_session, mock_auth, sample_user):
+        """Setting primary_platform with linked account should succeed and sync avatar."""
+        oauth = OAuthAccount(
+            user_id=sample_user.id,
+            provider="youtube",
+            provider_account_id="YT-AVATAR-001",
+            provider_display_name="AvatarCh",
+            provider_avatar_url="https://example.com/new-avatar.png",
+        )
+        db_session.add(oauth)
+        db_session.flush()
+
+        with mock_auth(sample_user.id):
+            resp = client.patch("/api/users/me", json={"primary_platform": "youtube"})
+        assert resp.status_code == 200
+        db_session.refresh(sample_user)
+        assert sample_user.avatar_url == "https://example.com/new-avatar.png"
+
+    def test_update_live_primary_real_trait_ownership(self, client, db_session, mock_auth, sample_user):
+        """Setting live_primary_real_trait_id to own real trait should succeed."""
+        sp = SpeciesCache(taxon_id=7777, scientific_name="Vulpes", taxon_rank="GENUS", taxon_path="1|7777")
+        db_session.add(sp)
+        trait = VtuberTrait(user_id=sample_user.id, taxon_id=7777)
+        db_session.add(trait)
+        db_session.flush()
+
+        with mock_auth(sample_user.id):
+            resp = client.patch("/api/users/me", json={"live_primary_real_trait_id": trait.id})
+        assert resp.status_code == 200
+
+    def test_update_live_primary_trait_wrong_owner(self, client, db_session, mock_auth, sample_user):
+        """Setting live_primary_real_trait_id to another user's trait should fail."""
+        other = User(id="other-user-trait", display_name="Other", role="user")
+        db_session.add(other)
+        sp = SpeciesCache(taxon_id=7778, scientific_name="Felis", taxon_rank="GENUS", taxon_path="1|7778")
+        db_session.add(sp)
+        trait = VtuberTrait(user_id=other.id, taxon_id=7778)
+        db_session.add(trait)
+        db_session.flush()
+
+        with mock_auth(sample_user.id):
+            resp = client.patch("/api/users/me", json={"live_primary_real_trait_id": trait.id})
+        assert resp.status_code == 400
+
+    def test_update_live_primary_trait_type_mismatch(self, client, db_session, mock_auth, sample_user):
+        """Setting live_primary_real_trait_id to a fictional-only trait should fail."""
+        fs = FictionalSpecies(name="Dragon", name_zh="龍", origin="Western", category_path="Western|Dragon")
+        db_session.add(fs)
+        db_session.flush()
+        trait = VtuberTrait(user_id=sample_user.id, fictional_species_id=fs.id)
+        db_session.add(trait)
+        db_session.flush()
+
+        with mock_auth(sample_user.id):
+            resp = client.patch("/api/users/me", json={"live_primary_real_trait_id": trait.id})
+        assert resp.status_code == 400
+        assert "mismatch" in resp.get_json()["error"].lower()
 
 
 # ---------------------------------------------------------------------------

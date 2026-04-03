@@ -3,7 +3,10 @@
 import uuid
 from unittest.mock import patch
 
-from app.models import User
+import requests
+import responses as responses_mock
+
+from app.models import FictionalSpecies, SpeciesCache, User, VtuberTrait
 
 MOCK_SPA_HTML = """<!DOCTYPE html>
 <html>
@@ -63,3 +66,134 @@ class TestSSR:
         html = resp.data.decode()
         assert "JSONLDUser" in html
         assert "ProfilePage" in html
+
+    @patch("app.routes.ssr._fetch_spa_html", return_value=MOCK_SPA_HTML)
+    def test_user_with_bio_truncates_description(self, mock_fetch, client, db_session):
+        """User with long bio should have it truncated in meta description."""
+        uid = f"user-{uuid.uuid4().hex[:8]}"
+        long_bio = "A" * 200
+        u = User(id=uid, display_name="BioUser", role="user", bio=long_bio)
+        db_session.add(u)
+        db_session.flush()
+
+        resp = client.get(f"/vtuber/{uid}")
+        html = resp.data.decode()
+        # Bio should be truncated to 120 chars + ellipsis
+        assert "BioUser" in html
+        assert "…" in html
+
+    @patch("app.routes.ssr._fetch_spa_html", return_value=MOCK_SPA_HTML)
+    def test_user_with_species_traits_in_description(self, mock_fetch, client, db_session):
+        """User without bio but with traits should show species names."""
+        uid = f"user-{uuid.uuid4().hex[:8]}"
+        u = User(id=uid, display_name="TraitUser", role="user")
+        db_session.add(u)
+        sp = SpeciesCache(
+            taxon_id=3001,
+            scientific_name="Vulpes vulpes",
+            common_name_zh="紅狐",
+            taxon_rank="SPECIES",
+            taxon_path="1|3001",
+        )
+        db_session.add(sp)
+        db_session.flush()
+        trait = VtuberTrait(user_id=uid, taxon_id=3001)
+        db_session.add(trait)
+        db_session.flush()
+
+        resp = client.get(f"/vtuber/{uid}")
+        html = resp.data.decode()
+        assert "紅狐" in html
+        assert "物種" in html
+
+    @patch("app.routes.ssr._fetch_spa_html", return_value=MOCK_SPA_HTML)
+    def test_user_with_fictional_trait_in_description(self, mock_fetch, client, db_session):
+        """User with fictional trait should show fictional species name."""
+        uid = f"user-{uuid.uuid4().hex[:8]}"
+        u = User(id=uid, display_name="FictUser", role="user")
+        db_session.add(u)
+        fs = FictionalSpecies(name="Dragon", name_zh="龍", origin="Western", category_path="Western|Dragon")
+        db_session.add(fs)
+        db_session.flush()
+        trait = VtuberTrait(user_id=uid, fictional_species_id=fs.id)
+        db_session.add(trait)
+        db_session.flush()
+
+        resp = client.get(f"/vtuber/{uid}")
+        html = resp.data.decode()
+        assert "龍" in html
+
+
+class TestFetchSpaHtml:
+    """Test the actual _fetch_spa_html function (HTTP fetch + caching)."""
+
+    @responses_mock.activate
+    def test_fetches_and_caches_html(self, app):
+        """First call should fetch from frontend URL."""
+        import app.routes.ssr as ssr_mod
+
+        # Reset cache
+        ssr_mod._spa_html_cache = None
+        ssr_mod._spa_html_cache_time = 0
+
+        with app.app_context():
+            with patch.dict("os.environ", {"ALLOWED_ORIGINS": "https://vtaxon-staging.web.app"}):
+                responses_mock.add(
+                    responses_mock.GET,
+                    "https://vtaxon-staging.web.app/index.html",
+                    body="<html>cached</html>",
+                    status=200,
+                )
+                result = ssr_mod._fetch_spa_html()
+                assert result == "<html>cached</html>"
+                assert ssr_mod._spa_html_cache == "<html>cached</html>"
+
+    @responses_mock.activate
+    def test_returns_stale_cache_on_failure(self, app):
+        """If fetch fails but we have stale cache, return it."""
+        import app.routes.ssr as ssr_mod
+
+        ssr_mod._spa_html_cache = "<html>stale</html>"
+        ssr_mod._spa_html_cache_time = 0  # expired
+
+        with app.app_context():
+            with patch.dict("os.environ", {"ALLOWED_ORIGINS": "https://vtaxon-staging.web.app"}):
+                responses_mock.add(
+                    responses_mock.GET,
+                    "https://vtaxon-staging.web.app/index.html",
+                    body=requests.ConnectionError("fail"),
+                )
+                result = ssr_mod._fetch_spa_html()
+                assert result == "<html>stale</html>"
+
+    @responses_mock.activate
+    def test_returns_none_on_failure_no_cache(self, app):
+        """If fetch fails and no cache, return None."""
+        import app.routes.ssr as ssr_mod
+
+        ssr_mod._spa_html_cache = None
+        ssr_mod._spa_html_cache_time = 0
+
+        with app.app_context():
+            with patch.dict("os.environ", {"ALLOWED_ORIGINS": "https://vtaxon-staging.web.app"}):
+                responses_mock.add(
+                    responses_mock.GET,
+                    "https://vtaxon-staging.web.app/index.html",
+                    body=requests.ConnectionError("fail"),
+                )
+                result = ssr_mod._fetch_spa_html()
+                assert result is None
+
+    def test_get_frontend_url_from_env(self, app):
+        """Should extract first origin from ALLOWED_ORIGINS."""
+        from app.routes.ssr import _get_frontend_url
+
+        with patch.dict("os.environ", {"ALLOWED_ORIGINS": "https://a.com,https://b.com"}):
+            assert _get_frontend_url() == "https://a.com"
+
+    def test_get_frontend_url_default(self, app):
+        """Should fall back to localhost when env is empty."""
+        from app.routes.ssr import _get_frontend_url
+
+        with patch.dict("os.environ", {"ALLOWED_ORIGINS": ""}):
+            assert _get_frontend_url() == "http://localhost:5173"
