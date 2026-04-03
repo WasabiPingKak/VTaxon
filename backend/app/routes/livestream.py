@@ -9,6 +9,7 @@ from flask import Blueprint, Response, jsonify
 from ..extensions import db
 from ..limiter import limiter
 from ..models import LiveStream, User
+from ..response_schemas import LiveStreamResponse
 
 livestream_bp = Blueprint("livestream", __name__)
 
@@ -62,7 +63,7 @@ def live_status() -> tuple[Response, int]:
                 primaries[str(u.id)] = p
 
     result = {
-        "live": [s.to_dict() for s in streams],
+        "live": [LiveStreamResponse.model_validate(s).model_dump(mode="json") for s in streams],
         "primaries": primaries,
     }
 
