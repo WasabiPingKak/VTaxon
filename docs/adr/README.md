@@ -15,6 +15,7 @@
 | [007](007-tree-visualization-canvas.md) | 分類樹視覺化 — Canvas + D3 | Accepted |
 | [008](008-deployment-and-cicd.md) | 部署架構與 CI/CD | Accepted |
 | [009](009-frontend-state-and-api.md) | 前端狀態管理與 API 模式 | Accepted |
+| [010](010-gbif-key-reassignment.md) | GBIF usageKey 重新分配與重複記錄處理 | Proposed |
 
 ## 格式
 
