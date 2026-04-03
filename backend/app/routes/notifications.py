@@ -5,6 +5,7 @@ from flask import Blueprint, Response, g, jsonify, request
 from ..auth import login_required
 from ..extensions import db
 from ..models import BreedRequest, FictionalSpeciesRequest, Notification, UserReport
+from ..response_schemas import NotificationResponse
 
 notifications_bp = Blueprint("notifications", __name__)
 
@@ -38,7 +39,7 @@ def list_notifications() -> Response:
     limit = request.args.get("limit", 50, type=int)
     limit = min(limit, 200)
     notifs = query.order_by(Notification.created_at.desc()).limit(limit).all()
-    return jsonify({"notifications": [n.to_dict() for n in notifs]})
+    return jsonify({"notifications": [NotificationResponse.model_validate(n).model_dump(mode="json") for n in notifs]})
 
 
 @notifications_bp.route("/grouped", methods=["GET"])
@@ -75,7 +76,7 @@ def grouped_notifications() -> Response:
         key = (n.type, n.reference_id)
         if key not in groups:
             groups[key] = []
-        groups[key].append(n.to_dict())
+        groups[key].append(NotificationResponse.model_validate(n).model_dump(mode="json"))
 
     # Batch-load original requests for summaries
     fictional_ids = [k[1] for k in groups if k[0] == "fictional_request"]

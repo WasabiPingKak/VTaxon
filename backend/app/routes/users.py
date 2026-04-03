@@ -10,6 +10,7 @@ from ..cache import invalidate_tree_cache
 from ..constants import Visibility
 from ..extensions import db
 from ..models import OAuthAccount, User, VtuberTrait
+from ..response_schemas import OAuthAccountPublicResponse
 from ..schemas import AppealSchema, UpdateProfileSchema, validate_with
 
 users_bp = Blueprint("users", __name__)
@@ -156,7 +157,9 @@ def get_user(user_id: str) -> tuple[Response, int] | Response:
         return jsonify({"error": "User not found"}), 404
     data = user.to_dict()
     public_accounts = OAuthAccount.query.filter_by(user_id=user_id, show_on_profile=True).all()
-    data["oauth_accounts"] = [a.to_dict(public=True) for a in public_accounts]
+    data["oauth_accounts"] = [
+        OAuthAccountPublicResponse.model_validate(a).model_dump(mode="json") for a in public_accounts
+    ]
     return jsonify(data)
 
 

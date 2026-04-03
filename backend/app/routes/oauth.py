@@ -13,6 +13,7 @@ from ..cache import invalidate_tree_cache
 from ..extensions import db
 from ..limiter import limiter
 from ..models import Blacklist, LiveStream, OAuthAccount, User
+from ..response_schemas import OAuthAccountResponse
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ def get_my_oauth_accounts() -> Response:
             type: object
     """
     accounts = OAuthAccount.query.filter_by(user_id=g.current_user_id).all()
-    return jsonify([a.to_dict() for a in accounts])
+    return jsonify([OAuthAccountResponse.model_validate(a).model_dump(mode="json") for a in accounts])
 
 
 @oauth_bp.route("/me/oauth-accounts/sync", methods=["POST"])
@@ -225,7 +226,7 @@ def sync_oauth_accounts() -> tuple[Response, int] | Response:
                 db.session.commit()
                 invalidate_tree_cache()
 
-    return jsonify([a.to_dict() for a in synced])
+    return jsonify([OAuthAccountResponse.model_validate(a).model_dump(mode="json") for a in synced])
 
 
 @oauth_bp.route("/me/oauth-accounts/<account_id>/refresh", methods=["POST"])
@@ -332,7 +333,7 @@ def refresh_oauth_account(account_id: str) -> tuple[Response, int] | Response:
             except requests.RequestException:
                 logger.exception("Failed to subscribe %s after refresh", account.provider)
 
-        return jsonify(account.to_dict())
+        return jsonify(OAuthAccountResponse.model_validate(account).model_dump(mode="json"))
 
     except requests.RequestException as e:
         logger.error("OAuth account sync failed: %s", e)
@@ -402,7 +403,7 @@ def update_oauth_account(account_id: str) -> tuple[Response, int] | Response:
         except requests.RequestException:
             logger.exception("Failed to re-subscribe %s for %s", account.provider, account.channel_url)
 
-    return jsonify(account.to_dict())
+    return jsonify(OAuthAccountResponse.model_validate(account).model_dump(mode="json"))
 
 
 @oauth_bp.route("/me/oauth-accounts/<account_id>", methods=["DELETE"])
@@ -528,4 +529,4 @@ def resubscribe_live() -> tuple[Response, int] | Response:
     else:
         return jsonify({"error": "Unsupported provider"}), 400
 
-    return jsonify(account.to_dict())
+    return jsonify(OAuthAccountResponse.model_validate(account).model_dump(mode="json"))

@@ -4,6 +4,7 @@ from ..auth import admin_required, login_required
 from ..constants import RequestStatus
 from ..extensions import db
 from ..models import FictionalSpecies, FictionalSpeciesRequest
+from ..response_schemas import FictionalSpeciesResponse
 
 fictional_bp = Blueprint("fictional", __name__)
 
@@ -42,7 +43,9 @@ def list_fictional_species() -> tuple[Response, int]:
         FictionalSpecies.name,
     ).all()
 
-    return jsonify({"species": [s.to_dict() for s in species]}), 200
+    return jsonify(
+        {"species": [FictionalSpeciesResponse.model_validate(s).model_dump(mode="json") for s in species]}
+    ), 200
 
 
 @fictional_bp.route("/requests", methods=["GET"])

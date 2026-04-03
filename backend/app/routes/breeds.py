@@ -9,6 +9,7 @@ from ..cache import invalidate_tree_cache
 from ..constants import RequestStatus
 from ..extensions import db
 from ..models import Breed, BreedRequest, SpeciesCache
+from ..response_schemas import BreedResponse
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +120,9 @@ def list_breeds() -> tuple[Response, int]:
     sp = db.session.get(SpeciesCache, actual_taxon_id)
     species_info = sp.to_dict() if sp else None
 
-    return jsonify({"breeds": [b.to_dict() for b in breeds], "species": species_info}), 200
+    return jsonify(
+        {"breeds": [BreedResponse.model_validate(b).model_dump(mode="json") for b in breeds], "species": species_info}
+    ), 200
 
 
 @breeds_bp.route("/search", methods=["GET"])
@@ -162,7 +165,7 @@ def search_breeds() -> tuple[Response, int]:
     # Enrich each breed with parent species info
     results = []
     for b in breeds:
-        d = b.to_dict()
+        d = BreedResponse.model_validate(b).model_dump(mode="json")
         if b.species:
             d["species_name_zh"] = b.species._effective_common_name_zh()
             d["species_scientific_name"] = b.species.scientific_name
@@ -228,7 +231,7 @@ def create_breed() -> tuple[Response, int]:
         logger.exception("Failed to create breed for taxon_id=%s", data.get("taxon_id"))
         return jsonify({"error": "Breed already exists for this species"}), 409
 
-    return jsonify(breed.to_dict()), 201
+    return jsonify(BreedResponse.model_validate(breed).model_dump(mode="json")), 201
 
 
 # ── Breed Requests ──────────────────────────────────
