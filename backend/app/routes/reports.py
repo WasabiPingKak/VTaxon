@@ -6,6 +6,7 @@ from ..auth import admin_required, get_current_user
 from ..constants import ReportStatus, ReportType
 from ..limiter import limiter
 from ..models import Blacklist, UserReport
+from ..response_schemas import BlacklistResponse, UserReportResponse
 from ..services import moderation as mod_svc
 
 reports_bp = Blueprint("reports", __name__)
@@ -82,7 +83,7 @@ def list_reports() -> tuple[Response, int] | Response:
         return jsonify({"error": "Invalid status"}), 400
 
     reports = UserReport.query.filter_by(status=status).order_by(UserReport.created_at.desc()).all()
-    return jsonify({"reports": [r.to_dict() for r in reports]})
+    return jsonify({"reports": [UserReportResponse.from_model(r).model_dump(mode="json") for r in reports]})
 
 
 @reports_bp.route("/<int:report_id>", methods=["PATCH"])
@@ -240,7 +241,7 @@ def list_blacklist() -> Response:
         description: 黑名單清單
     """
     entries = Blacklist.query.order_by(Blacklist.created_at.desc()).all()
-    return jsonify({"blacklist": [e.to_dict() for e in entries]})
+    return jsonify({"blacklist": [BlacklistResponse.from_model(e).model_dump(mode="json") for e in entries]})
 
 
 @reports_bp.route("/blacklist/<int:entry_id>", methods=["DELETE"])
