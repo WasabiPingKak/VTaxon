@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 from urllib.parse import quote
 
-from app.models import OAuthAccount, SpeciesCache, User, VtuberTrait
+from app.models import Breed, FictionalSpecies, OAuthAccount, SpeciesCache, User, VtuberTrait
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -211,3 +211,102 @@ class TestDirectory:
 
         resp = client.get("/api/users/directory?q=Invisible")
         assert resp.get_json()["total"] == 0
+
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    def test_has_traits_false_filter(self, mock_facets, client, db_session):
+        """has_traits=false should return users without any trait."""
+        u_with = _user(db_session, name="HasTrait")
+        _user(db_session, name="NoTrait")
+        sp = _species(db_session, 600)
+        _trait(db_session, u_with, sp)
+
+        resp = client.get("/api/users/directory?has_traits=false")
+        names = [i["display_name"] for i in resp.get_json()["items"]]
+        assert "NoTrait" in names
+        assert "HasTrait" not in names
+
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    def test_org_type_filter(self, mock_facets, client, db_session):
+        _user(db_session, name="CorpUser", org_type="corporate")
+        _user(db_session, name="IndieUser", org_type="indie")
+
+        resp = client.get("/api/users/directory?org_type=corporate")
+        names = [i["display_name"] for i in resp.get_json()["items"]]
+        assert "CorpUser" in names
+        assert "IndieUser" not in names
+
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    def test_platform_filter(self, mock_facets, client, db_session):
+        u_yt = _user(db_session, name="YTUser")
+        u_tw = _user(db_session, name="TWUser")
+        db_session.add(OAuthAccount(user_id=u_yt.id, provider="youtube", provider_account_id="yt-f1"))
+        db_session.add(OAuthAccount(user_id=u_tw.id, provider="twitch", provider_account_id="tw-f1"))
+        db_session.flush()
+
+        resp = client.get("/api/users/directory?platform=youtube")
+        names = [i["display_name"] for i in resp.get_json()["items"]]
+        assert "YTUser" in names
+        assert "TWUser" not in names
+
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    def test_sort_by_created_at_asc(self, mock_facets, client, db_session):
+        _user(db_session, name="Older")
+        _user(db_session, name="Newer")
+
+        resp = client.get("/api/users/directory?sort=created_at&order=asc")
+        items = resp.get_json()["items"]
+        assert items[0]["display_name"] == "Older"
+
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    def test_sort_by_debut_date(self, mock_facets, client, db_session):
+        _user(db_session, name="DebUser", profile_data={"debut_date": "2025-01-01"})
+
+        resp = client.get("/api/users/directory?sort=debut_date&order=desc")
+        assert resp.status_code == 200
+        assert len(resp.get_json()["items"]) >= 1
+
+    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    def test_sort_invalid_falls_back_to_created_at(self, mock_facets, client, db_session):
+        _user(db_session, name="FallbackSort")
+
+        resp = client.get("/api/users/directory?sort=invalid_sort")
+        assert resp.status_code == 200
+
+
+class TestRecentSpeciesNames:
+    """Test _collect_species_names covers breed and fictional name paths."""
+
+    def test_recent_with_breed(self, client, db_session):
+        user = _user(db_session, name="BreedVtuber")
+        _species(db_session, 700, name="Canis familiaris")
+        breed = Breed(taxon_id=700, name_en="Shiba Inu", name_zh="柴犬")
+        db_session.add(breed)
+        db_session.flush()
+
+        now = datetime.now(UTC)
+        t = VtuberTrait(user_id=user.id, taxon_id=700, breed_id=breed.id, created_at=now)
+        db_session.add(t)
+        db_session.flush()
+
+        since = _since_url(now - timedelta(minutes=5))
+        resp = client.get(f"/api/users/recent?since={since}")
+        data = resp.get_json()
+        assert len(data) == 1
+        assert "柴犬" in data[0]["species_summary"]
+
+    def test_recent_with_fictional(self, client, db_session):
+        user = _user(db_session, name="FictVtuber")
+        fs = FictionalSpecies(name="Dragon", name_zh="龍", origin="Western", category_path="Western|Dragon")
+        db_session.add(fs)
+        db_session.flush()
+
+        now = datetime.now(UTC)
+        t = VtuberTrait(user_id=user.id, fictional_species_id=fs.id, created_at=now)
+        db_session.add(t)
+        db_session.flush()
+
+        since = _since_url(now - timedelta(minutes=5))
+        resp = client.get(f"/api/users/recent?since={since}")
+        data = resp.get_json()
+        assert len(data) == 1
+        assert "龍" in data[0]["species_summary"]

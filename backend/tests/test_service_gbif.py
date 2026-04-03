@@ -12,6 +12,8 @@ from app.services.gbif import (
     _search_breeds,
     _search_local_cache_chinese,
     match_species,
+    search_species,
+    suggest_species,
 )
 
 # ---------------------------------------------------------------------------
@@ -249,3 +251,184 @@ class TestSearchLocalCacheChinese:
 
     def test_empty_query(self, db_session):
         assert _search_local_cache_chinese("") == []
+
+
+# ---------------------------------------------------------------------------
+# suggest_species — mock HTTP + enrichment
+# ---------------------------------------------------------------------------
+
+
+class TestSuggestSpecies:
+    @patch("app.services.gbif.external_session")
+    @patch("app.services.chinese_names._enrich_chinese_names")
+    def test_returns_accepted_species(self, mock_enrich, mock_session):
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = [
+            {
+                "key": 9685,
+                "scientificName": "Felis catus",
+                "canonicalName": "Felis catus",
+                "rank": "SPECIES",
+                "status": "ACCEPTED",
+                "kingdom": "Animalia",
+            }
+        ]
+        mock_resp.raise_for_status = lambda: None
+        mock_session.get.return_value = mock_resp
+
+        results = suggest_species("felis")
+        assert len(results) == 1
+        assert results[0]["taxon_id"] == 9685
+
+    @patch("app.services.gbif.external_session")
+    @patch("app.services.chinese_names._enrich_chinese_names")
+    def test_resolves_synonym(self, mock_enrich, mock_session):
+        """SYNONYM entries should be resolved via _resolve_synonym."""
+        suggest_resp = MagicMock()
+        suggest_resp.json.return_value = [
+            {
+                "key": 100,
+                "scientificName": "Old name",
+                "canonicalName": "Old name",
+                "rank": "SPECIES",
+                "status": "SYNONYM",
+            }
+        ]
+        suggest_resp.raise_for_status = lambda: None
+
+        synonym_resp = MagicMock()
+        synonym_resp.status_code = 200
+        synonym_resp.json.return_value = {"acceptedKey": 200, "canonicalName": "Old name"}
+
+        accepted_resp = MagicMock()
+        accepted_resp.status_code = 200
+        accepted_resp.json.return_value = {
+            "key": 200,
+            "scientificName": "Accepted sp.",
+            "rank": "SPECIES",
+            "kingdom": "Animalia",
+        }
+
+        mock_session.get.side_effect = [suggest_resp, synonym_resp, accepted_resp]
+
+        results = suggest_species("old")
+        assert len(results) == 1
+        assert results[0]["taxon_id"] == 200
+
+    @patch("app.services.gbif.external_session")
+    @patch("app.services.chinese_names._enrich_chinese_names")
+    def test_skips_non_accepted_non_synonym(self, mock_enrich, mock_session):
+        """Status other than ACCEPTED/SYNONYM should be skipped."""
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = [
+            {
+                "key": 300,
+                "rank": "SPECIES",
+                "status": "DOUBTFUL",
+                "scientificName": "Doubtful sp.",
+            }
+        ]
+        mock_resp.raise_for_status = lambda: None
+        mock_session.get.return_value = mock_resp
+
+        # Should fallback to match_species, mock that too
+        with patch("app.services.gbif.match_species", return_value=None):
+            with patch("app.services.chinese_names._fallback_taicol_by_name", return_value=[]):
+                results = suggest_species("doubtful")
+        assert results == []
+
+    @patch("app.services.gbif.external_session")
+    @patch("app.services.chinese_names._enrich_chinese_names")
+    def test_fallback_to_match_on_empty(self, mock_enrich, mock_session):
+        """When suggest returns nothing, should try match_species."""
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = []
+        mock_resp.raise_for_status = lambda: None
+        mock_session.get.return_value = mock_resp
+
+        matched = {"taxon_id": 500, "scientific_name": "Matched sp.", "match_type": "FUZZY", "confidence": 80}
+        with patch("app.services.gbif.match_species", return_value=matched):
+            results = suggest_species("rare")
+        assert len(results) == 1
+        assert results[0]["taxon_id"] == 500
+
+    @patch("app.services.gbif.external_session")
+    @patch("app.services.chinese_names._enrich_chinese_names")
+    def test_deduplicates_by_key(self, mock_enrich, mock_session):
+        """Duplicate keys should be removed."""
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = [
+            {"key": 9685, "rank": "SPECIES", "status": "ACCEPTED", "scientificName": "Felis catus"},
+            {"key": 9685, "rank": "SPECIES", "status": "ACCEPTED", "scientificName": "Felis catus"},
+        ]
+        mock_resp.raise_for_status = lambda: None
+        mock_session.get.return_value = mock_resp
+
+        results = suggest_species("felis")
+        assert len(results) == 1
+
+
+# ---------------------------------------------------------------------------
+# search_species — routing logic
+# ---------------------------------------------------------------------------
+
+
+class TestSearchSpecies:
+    @patch("app.services.gbif.suggest_species", return_value=[{"taxon_id": 1}])
+    @patch("app.services.gbif._search_breeds", return_value=[])
+    def test_latin_query_routes_to_suggest(self, mock_breeds, mock_suggest):
+        results = search_species("Felis")
+        mock_suggest.assert_called_once()
+        assert len(results) == 1
+
+    @patch("app.services.chinese_names._search_via_taicol", return_value=[])
+    @patch("app.services.gbif._search_local_cache_chinese", return_value=[{"taxon_id": 1, "common_name_zh": "貓"}])
+    @patch("app.services.gbif._search_breeds", return_value=[])
+    def test_cjk_query_routes_to_local_and_taicol(self, mock_breeds, mock_local, mock_taicol):
+        results = search_species("貓")
+        mock_local.assert_called_once()
+        mock_taicol.assert_called_once()
+        assert len(results) == 1
+
+
+# ---------------------------------------------------------------------------
+# match_species — synonym resolution
+# ---------------------------------------------------------------------------
+
+
+class TestMatchSpeciesSynonym:
+    @patch("app.services.gbif.external_session")
+    @patch("app.services.chinese_names._enrich_chinese_names")
+    def test_resolves_synonym_via_match(self, mock_enrich, mock_session):
+        """match_species should resolve SYNONYM to accepted species."""
+        match_resp = MagicMock()
+        match_resp.json.return_value = {
+            "matchType": "EXACT",
+            "confidence": 98,
+            "usageKey": 100,
+            "scientificName": "Old name",
+            "canonicalName": "Old name",
+            "status": "SYNONYM",
+            "acceptedUsageKey": 200,
+        }
+        match_resp.raise_for_status = lambda: None
+
+        synonym_resp = MagicMock()
+        synonym_resp.status_code = 200
+        synonym_resp.json.return_value = {"acceptedKey": 200, "canonicalName": "Old name"}
+
+        accepted_resp = MagicMock()
+        accepted_resp.status_code = 200
+        accepted_resp.json.return_value = {
+            "key": 200,
+            "scientificName": "Accepted sp.",
+            "rank": "SPECIES",
+            "kingdom": "Animalia",
+        }
+
+        mock_session.get.side_effect = [match_resp, synonym_resp, accepted_resp]
+
+        result = match_species("old name")
+        assert result is not None
+        assert result["taxon_id"] == 200
+        assert result["match_type"] == "EXACT"
