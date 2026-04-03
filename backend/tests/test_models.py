@@ -1,10 +1,11 @@
-"""Unit tests for model methods — computed fields, to_dict, display names."""
+"""Unit tests for model methods — computed fields, display names, response schemas."""
 
 import uuid
 from datetime import date, timedelta
 from unittest.mock import patch
 
 from app.models import Breed, FictionalSpecies, SpeciesCache, User, VtuberTrait
+from app.response_schemas import SpeciesCacheResponse, TraitResponse
 
 # ---------------------------------------------------------------------------
 # User._computed_profile_data
@@ -131,18 +132,18 @@ class TestSpeciesCacheToDict:
         )
         db_session.add(sp)
         db_session.commit()
-        d = sp.to_dict()
+        d = SpeciesCacheResponse.from_model(sp).model_dump(mode="json")
         assert d["taxon_id"] == 100
         assert d["scientific_name"] == "Canis lupus"
         assert d["kingdom_zh"] == "動物界"
-        assert "display_name_override" not in d
+        assert d.get("display_name_override") is None
 
     @patch("app.services.taxonomy_zh.get_species_name_override", return_value="覆寫名稱")
     def test_with_name_override(self, mock_override, app, db_session):
         sp = SpeciesCache(taxon_id=101, scientific_name="X", taxon_rank="SPECIES")
         db_session.add(sp)
         db_session.commit()
-        d = sp.to_dict()
+        d = SpeciesCacheResponse.from_model(sp).model_dump(mode="json")
         assert d["display_name_override"] == "覆寫名稱"
 
 
@@ -200,7 +201,7 @@ class TestComputedDisplayName:
 
 
 # ---------------------------------------------------------------------------
-# VtuberTrait.to_dict — breed display logic
+# TraitResponse — breed display logic
 # ---------------------------------------------------------------------------
 
 
@@ -218,9 +219,9 @@ class TestTraitBreedDisplay:
         trait = VtuberTrait(user_id=uid, taxon_id=300, breed_id=breed.id, breed_name="old-text")
         db_session.add(trait)
         db_session.commit()
-        d = trait.to_dict()
+        d = TraitResponse.from_model(trait).model_dump(mode="json")
         assert d["breed_name"] == "柴犬"
-        assert "breed" in d
+        assert d["breed"] is not None
 
     @patch("app.services.taxonomy_zh.get_species_name_override", return_value=None)
     def test_legacy_breed_name_fallback(self, mock_override, app, db_session):
@@ -232,6 +233,6 @@ class TestTraitBreedDisplay:
         trait = VtuberTrait(user_id=uid, taxon_id=301, breed_name="三花貓")
         db_session.add(trait)
         db_session.commit()
-        d = trait.to_dict()
+        d = TraitResponse.from_model(trait).model_dump(mode="json")
         assert d["breed_name"] == "三花貓"
-        assert "breed" not in d
+        assert d["breed"] is None

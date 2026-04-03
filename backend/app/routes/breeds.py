@@ -9,7 +9,7 @@ from ..cache import invalidate_tree_cache
 from ..constants import RequestStatus
 from ..extensions import db
 from ..models import Breed, BreedRequest, SpeciesCache
-from ..response_schemas import BreedResponse, SpeciesCacheResponse
+from ..response_schemas import BreedRequestResponse, BreedResponse, SpeciesCacheResponse
 
 logger = logging.getLogger(__name__)
 
@@ -297,7 +297,7 @@ def create_breed_request() -> tuple[Response, int]:
 
     notify_new_breed_request(req)
 
-    return jsonify(req.to_dict()), 201
+    return jsonify(BreedRequestResponse.from_model(req).model_dump(mode="json")), 201
 
 
 @breeds_bp.route("/requests", methods=["GET"])
@@ -325,7 +325,7 @@ def list_breed_requests() -> tuple[Response, int]:
 
     reqs = BreedRequest.query.filter_by(status=status).order_by(BreedRequest.created_at.desc()).all()
 
-    return jsonify({"requests": [r.to_dict() for r in reqs]}), 200
+    return jsonify({"requests": [BreedRequestResponse.from_model(r).model_dump(mode="json") for r in reqs]}), 200
 
 
 @breeds_bp.route("/requests/<int:req_id>", methods=["PATCH"])
@@ -380,4 +380,4 @@ def update_breed_request(req_id: int) -> tuple[Response, int]:
 
     db.session.commit()
 
-    return jsonify(req.to_dict()), 200
+    return jsonify(BreedRequestResponse.from_model(req).model_dump(mode="json")), 200

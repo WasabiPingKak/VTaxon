@@ -189,29 +189,16 @@ class TestOAuthAccountResponse:
         assert "created_at" not in result
         assert "live_sub_status" not in result
 
-    def test_matches_old_to_dict(self, app, db_session) -> None:
-        """Verify new schema output matches old to_dict() for non-public mode."""
+    def test_full_has_all_fields(self, app, db_session) -> None:
+        """Verify full response includes both public and private fields."""
         uid = f"u-{uuid.uuid4().hex[:8]}"
         account = self._make_account(db_session, uid)
 
-        old = account.to_dict()
-        new = OAuthAccountResponse.model_validate(account).model_dump(mode="json")
-        # Compare shared keys
-        for key in old:
-            assert key in new, f"Key {key!r} missing in new schema"
-            # Normalize datetime strings for comparison
-            if isinstance(old[key], str) and "T" in old[key] and isinstance(new[key], str):
-                assert old[key][:19] == new[key][:19], f"Mismatch on {key}"
-            else:
-                assert old[key] == new[key], f"Mismatch on {key}: {old[key]!r} != {new[key]!r}"
-
-    def test_matches_old_to_dict_public(self, app, db_session) -> None:
-        """Verify new public schema output matches old to_dict(public=True)."""
-        uid = f"u-{uuid.uuid4().hex[:8]}"
-        account = self._make_account(db_session, uid)
-
-        old = account.to_dict(public=True)
-        new = OAuthAccountPublicResponse.model_validate(account).model_dump(mode="json")
-        for key in old:
-            assert key in new, f"Key {key!r} missing in new public schema"
-            assert old[key] == new[key], f"Mismatch on {key}: {old[key]!r} != {new[key]!r}"
+        result = OAuthAccountResponse.model_validate(account).model_dump(mode="json")
+        # Public fields
+        assert "provider_display_name" in result
+        assert "channel_url" in result
+        # Private fields
+        assert "provider_account_id" in result
+        assert "show_on_profile" in result
+        assert "created_at" in result

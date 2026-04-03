@@ -4,7 +4,7 @@ from ..auth import admin_required, login_required
 from ..constants import RequestStatus
 from ..extensions import db
 from ..models import FictionalSpecies, FictionalSpeciesRequest
-from ..response_schemas import FictionalSpeciesResponse
+from ..response_schemas import FictionalSpeciesRequestResponse, FictionalSpeciesResponse
 
 fictional_bp = Blueprint("fictional", __name__)
 
@@ -75,7 +75,9 @@ def list_requests() -> tuple[Response, int]:
         FictionalSpeciesRequest.query.filter_by(status=status).order_by(FictionalSpeciesRequest.created_at.desc()).all()
     )
 
-    return jsonify({"requests": [r.to_dict() for r in reqs]}), 200
+    return jsonify(
+        {"requests": [FictionalSpeciesRequestResponse.from_model(r).model_dump(mode="json") for r in reqs]}
+    ), 200
 
 
 @fictional_bp.route("/requests/<int:req_id>", methods=["PATCH"])
@@ -130,7 +132,7 @@ def update_request(req_id: int) -> tuple[Response, int]:
 
     db.session.commit()
 
-    return jsonify(req.to_dict()), 200
+    return jsonify(FictionalSpeciesRequestResponse.from_model(req).model_dump(mode="json")), 200
 
 
 @fictional_bp.route("/requests", methods=["POST"])
@@ -208,4 +210,4 @@ def create_request() -> tuple[Response, int]:
 
     notify_new_fictional_request(req)
 
-    return jsonify(req.to_dict()), 201
+    return jsonify(FictionalSpeciesRequestResponse.from_model(req).model_dump(mode="json")), 201

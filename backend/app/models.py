@@ -66,30 +66,6 @@ class User(db.Model):
                 pass
         return pd
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "display_name": self.display_name,
-            "avatar_url": self.avatar_url,
-            "role": self.role,
-            "organization": self.organization,
-            "org_type": self.org_type or "indie",
-            "bio": self.bio,
-            "country_flags": self.country_flags or [],
-            "social_links": self.social_links or {},
-            "primary_platform": self.primary_platform,
-            "profile_data": self._computed_profile_data(),
-            "live_primary_real_trait_id": self.live_primary_real_trait_id,
-            "live_primary_fictional_trait_id": self.live_primary_fictional_trait_id,
-            "visibility": self.visibility or Visibility.VISIBLE,
-            "visibility_reason": self.visibility_reason,
-            "visibility_changed_at": (self.visibility_changed_at.isoformat() if self.visibility_changed_at else None),
-            "vtuber_declaration_at": (self.vtuber_declaration_at.isoformat() if self.vtuber_declaration_at else None),
-            "appeal_note": self.appeal_note,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat(),
-        }
-
 
 class AuthIdAlias(db.Model):
     __tablename__ = "auth_id_aliases"
@@ -121,26 +97,6 @@ class OAuthAccount(db.Model):
         db.UniqueConstraint("provider", "provider_account_id", name="uq_provider_account"),
         db.CheckConstraint("provider IN ('youtube', 'twitch')", name="ck_oauth_provider"),
     )
-
-    def to_dict(self, public: bool = False) -> dict[str, Any]:
-        result = {
-            "id": self.id,
-            "provider": self.provider,
-            "provider_display_name": self.provider_display_name,
-            "provider_avatar_url": self.provider_avatar_url,
-            "channel_url": self.channel_url,
-        }
-        if not public:
-            result.update(
-                {
-                    "provider_account_id": self.provider_account_id,
-                    "show_on_profile": self.show_on_profile,
-                    "live_sub_status": self.live_sub_status,
-                    "live_sub_at": self.live_sub_at.isoformat() if self.live_sub_at else None,
-                    "created_at": self.created_at.isoformat(),
-                }
-            )
-        return result
 
 
 class SpeciesCache(db.Model):
@@ -186,36 +142,6 @@ class SpeciesCache(db.Model):
             return zh[:-1]
         return zh
 
-    def to_dict(self) -> dict[str, Any]:
-        from .services.taxonomy_zh import get_species_name_override
-
-        path_zh = self.path_zh or {}
-        result = {
-            "taxon_id": self.taxon_id,
-            "scientific_name": self.scientific_name,
-            "common_name_en": self.common_name_en,
-            "common_name_zh": self._effective_common_name_zh(),
-            "alternative_names_zh": self.alternative_names_zh,
-            "taxon_rank": self.taxon_rank,
-            "taxon_path": self.taxon_path,
-            "kingdom": self.kingdom,
-            "phylum": self.phylum,
-            "class": self.class_,
-            "order": self.order_,
-            "family": self.family,
-            "genus": self.genus,
-            "kingdom_zh": path_zh.get("kingdom"),
-            "phylum_zh": path_zh.get("phylum"),
-            "class_zh": path_zh.get("class"),
-            "order_zh": path_zh.get("order"),
-            "family_zh": path_zh.get("family"),
-            "genus_zh": path_zh.get("genus"),
-        }
-        name_override = get_species_name_override(self.taxon_id)
-        if name_override:
-            result["display_name_override"] = name_override
-        return result
-
 
 class FictionalSpecies(db.Model):
     __tablename__ = "fictional_species"
@@ -228,17 +154,6 @@ class FictionalSpecies(db.Model):
     category_path = db.Column(db.Text)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "name": self.name,
-            "name_zh": self.name_zh,
-            "origin": self.origin,
-            "sub_origin": self.sub_origin,
-            "category_path": self.category_path,
-            "description": self.description,
-        }
 
 
 class FictionalSpeciesRequest(db.Model):
@@ -257,27 +172,6 @@ class FictionalSpeciesRequest(db.Model):
 
     user = db.relationship("User", backref="fictional_requests", lazy="joined")
 
-    def to_dict(self) -> dict[str, Any]:
-        result = {
-            "id": self.id,
-            "user_id": self.user_id,
-            "name_zh": self.name_zh,
-            "name_en": self.name_en,
-            "suggested_origin": self.suggested_origin,
-            "suggested_sub_origin": self.suggested_sub_origin,
-            "description": self.description,
-            "status": self.status,
-            "admin_note": self.admin_note,
-            "created_at": self.created_at.isoformat(),
-        }
-        if self.user:
-            result["user"] = {
-                "id": self.user.id,
-                "display_name": self.user.display_name,
-                "avatar_url": self.user.avatar_url,
-            }
-        return result
-
 
 class Breed(db.Model):
     __tablename__ = "breeds"
@@ -295,15 +189,6 @@ class Breed(db.Model):
 
     __table_args__ = (db.UniqueConstraint("taxon_id", "name_en", name="uq_breed_taxon_name"),)
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "taxon_id": self.taxon_id,
-            "name_en": self.name_en,
-            "name_zh": self.name_zh,
-            "breed_group": self.breed_group,
-        }
-
 
 class BreedRequest(db.Model):
     __tablename__ = "breed_requests"
@@ -320,28 +205,6 @@ class BreedRequest(db.Model):
 
     user = db.relationship("User", backref="breed_requests", lazy="joined")
     species = db.relationship("SpeciesCache", lazy="joined")
-
-    def to_dict(self) -> dict[str, Any]:
-        result = {
-            "id": self.id,
-            "user_id": self.user_id,
-            "taxon_id": self.taxon_id,
-            "name_zh": self.name_zh,
-            "name_en": self.name_en,
-            "description": self.description,
-            "status": self.status,
-            "admin_note": self.admin_note,
-            "created_at": self.created_at.isoformat(),
-        }
-        if self.user:
-            result["user"] = {
-                "id": self.user.id,
-                "display_name": self.user.display_name,
-                "avatar_url": self.user.avatar_url,
-            }
-        if self.species:
-            result["species_name"] = self.species.common_name_zh or self.species.scientific_name
-        return result
 
 
 class SpeciesNameReport(db.Model):
@@ -361,30 +224,6 @@ class SpeciesNameReport(db.Model):
     user = db.relationship("User", backref="species_name_reports", lazy="joined")
     species = db.relationship("SpeciesCache", lazy="joined")
 
-    def to_dict(self) -> dict[str, Any]:
-        result = {
-            "id": self.id,
-            "user_id": self.user_id,
-            "taxon_id": self.taxon_id,
-            "report_type": self.report_type,
-            "current_name_zh": self.current_name_zh,
-            "suggested_name_zh": self.suggested_name_zh,
-            "description": self.description,
-            "status": self.status,
-            "admin_note": self.admin_note,
-            "created_at": self.created_at.isoformat(),
-        }
-        if self.user:
-            result["user"] = {
-                "id": self.user.id,
-                "display_name": self.user.display_name,
-                "avatar_url": self.user.avatar_url,
-            }
-        if self.species:
-            result["species_name"] = self.species.common_name_zh or self.species.scientific_name
-            result["scientific_name"] = self.species.scientific_name
-        return result
-
 
 class UserReport(db.Model):
     __tablename__ = "user_reports"
@@ -401,32 +240,6 @@ class UserReport(db.Model):
 
     reporter = db.relationship("User", foreign_keys=[reporter_id], backref="submitted_reports", lazy="joined")
     reported_user = db.relationship("User", foreign_keys=[reported_user_id], backref="received_reports", lazy="joined")
-
-    def to_dict(self) -> dict[str, Any]:
-        result = {
-            "id": self.id,
-            "reporter_id": self.reporter_id,
-            "reported_user_id": self.reported_user_id,
-            "report_type": self.report_type,
-            "reason": self.reason,
-            "evidence_url": self.evidence_url,
-            "status": self.status,
-            "admin_note": self.admin_note,
-            "created_at": self.created_at.isoformat(),
-        }
-        if self.reporter:
-            result["reporter"] = {
-                "id": self.reporter.id,
-                "display_name": self.reporter.display_name,
-                "avatar_url": self.reporter.avatar_url,
-            }
-        if self.reported_user:
-            result["reported_user"] = {
-                "id": self.reported_user.id,
-                "display_name": self.reported_user.display_name,
-                "avatar_url": self.reported_user.avatar_url,
-            }
-        return result
 
 
 class Blacklist(db.Model):
@@ -445,29 +258,6 @@ class Blacklist(db.Model):
 
     __table_args__ = (db.UniqueConstraint("identifier_type", "identifier_value", name="uq_blacklist_identifier"),)
 
-    def to_dict(self) -> dict[str, Any]:
-        result = {
-            "id": self.id,
-            "identifier_type": self.identifier_type,
-            "identifier_value": self.identifier_value,
-            "user_id": self.user_id,
-            "reason": self.reason,
-            "banned_by": self.banned_by,
-            "created_at": self.created_at.isoformat(),
-        }
-        if self.original_user:
-            result["original_user"] = {
-                "id": self.original_user.id,
-                "display_name": self.original_user.display_name,
-                "avatar_url": self.original_user.avatar_url,
-            }
-        if self.banned_by_user:
-            result["banned_by_user"] = {
-                "id": self.banned_by_user.id,
-                "display_name": self.banned_by_user.display_name,
-            }
-        return result
-
 
 class Notification(db.Model):
     __tablename__ = "notifications"
@@ -481,18 +271,6 @@ class Notification(db.Model):
     status = db.Column(db.Text)
     is_read = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "type": self.type,
-            "reference_id": self.reference_id,
-            "title": self.title,
-            "message": self.message,
-            "status": self.status,
-            "is_read": self.is_read,
-            "created_at": self.created_at.isoformat(),
-        }
 
 
 class LiveStream(db.Model):
@@ -511,16 +289,6 @@ class LiveStream(db.Model):
         db.UniqueConstraint("user_id", "provider", name="uq_live_stream_user_provider"),
         db.CheckConstraint("provider IN ('youtube', 'twitch')", name="ck_live_stream_provider"),
     )
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "user_id": self.user_id,
-            "provider": self.provider,
-            "stream_id": self.stream_id,
-            "stream_title": self.stream_title,
-            "stream_url": self.stream_url,
-            "started_at": self.started_at.isoformat() if self.started_at else None,
-        }
 
 
 class VtuberTrait(db.Model):
@@ -557,34 +325,6 @@ class VtuberTrait(db.Model):
             return self.fictional.name_zh or self.fictional.name
         return None
 
-    def to_dict(self) -> dict[str, Any]:
-        # Prefer breed object name over legacy free-text breed_name
-        breed_display = None
-        if self.breed:
-            breed_display = self.breed.name_zh or self.breed.name_en
-        elif self.breed_name:
-            breed_display = self.breed_name
-
-        result = {
-            "id": self.id,
-            "user_id": self.user_id,
-            "taxon_id": self.taxon_id,
-            "fictional_species_id": self.fictional_species_id,
-            "display_name": self.computed_display_name(),
-            "breed_name": breed_display,
-            "breed_id": self.breed_id,
-            "trait_note": self.trait_note,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat(),
-        }
-        if self.breed:
-            result["breed"] = self.breed.to_dict()
-        if self.species:
-            result["species"] = self.species.to_dict()
-        if self.fictional:
-            result["fictional"] = self.fictional.to_dict()
-        return result
-
 
 # ---------------------------------------------------------------------------
 # Admin Alert Events
@@ -601,14 +341,3 @@ class AdminAlertEvent(db.Model):  # type: ignore[name-defined]
     context = db.Column(db.JSON, default=dict)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
     notified_at = db.Column(db.DateTime(timezone=True))
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "alert_type": self.alert_type,
-            "severity": self.severity,
-            "title": self.title,
-            "context": self.context or {},
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "notified_at": self.notified_at.isoformat() if self.notified_at else None,
-        }

@@ -303,6 +303,194 @@ class TraitResponse(ResponseBase):
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# FictionalSpeciesRequest
+# ---------------------------------------------------------------------------
+
+
+class FictionalSpeciesRequestResponse(ResponseBase):
+    id: int
+    user_id: str | None = None
+    name_zh: str
+    name_en: str | None = None
+    suggested_origin: str | None = None
+    suggested_sub_origin: str | None = None
+    description: str | None = None
+    status: str
+    admin_note: str | None = None
+    created_at: datetime
+    user: UserSummary | None = None
+
+    @classmethod
+    def from_model(cls, req: Any) -> FictionalSpeciesRequestResponse:
+        return cls(
+            id=req.id,
+            user_id=req.user_id,
+            name_zh=req.name_zh,
+            name_en=req.name_en,
+            suggested_origin=req.suggested_origin,
+            suggested_sub_origin=req.suggested_sub_origin,
+            description=req.description,
+            status=req.status,
+            admin_note=req.admin_note,
+            created_at=req.created_at,
+            user=UserSummary.model_validate(req.user) if req.user else None,
+        )
+
+
+# ---------------------------------------------------------------------------
+# BreedRequest
+# ---------------------------------------------------------------------------
+
+
+class BreedRequestResponse(ResponseBase):
+    id: int
+    user_id: str | None = None
+    taxon_id: int | None = None
+    name_zh: str | None = None
+    name_en: str | None = None
+    description: str | None = None
+    status: str
+    admin_note: str | None = None
+    created_at: datetime
+    user: UserSummary | None = None
+    species_name: str | None = None
+
+    @classmethod
+    def from_model(cls, req: Any) -> BreedRequestResponse:
+        species_name = None
+        if req.species:
+            species_name = req.species.common_name_zh or req.species.scientific_name
+        return cls(
+            id=req.id,
+            user_id=req.user_id,
+            taxon_id=req.taxon_id,
+            name_zh=req.name_zh,
+            name_en=req.name_en,
+            description=req.description,
+            status=req.status,
+            admin_note=req.admin_note,
+            created_at=req.created_at,
+            user=UserSummary.model_validate(req.user) if req.user else None,
+            species_name=species_name,
+        )
+
+
+# ---------------------------------------------------------------------------
+# SpeciesNameReport
+# ---------------------------------------------------------------------------
+
+
+class SpeciesNameReportResponse(ResponseBase):
+    id: int
+    user_id: str | None = None
+    taxon_id: int | None = None
+    report_type: str
+    current_name_zh: str | None = None
+    suggested_name_zh: str
+    description: str | None = None
+    status: str
+    admin_note: str | None = None
+    created_at: datetime
+    user: UserSummary | None = None
+    species_name: str | None = None
+    scientific_name: str | None = None
+
+    @classmethod
+    def from_model(cls, report: Any) -> SpeciesNameReportResponse:
+        species_name = None
+        scientific_name = None
+        if report.species:
+            species_name = report.species.common_name_zh or report.species.scientific_name
+            scientific_name = report.species.scientific_name
+        return cls(
+            id=report.id,
+            user_id=report.user_id,
+            taxon_id=report.taxon_id,
+            report_type=report.report_type,
+            current_name_zh=report.current_name_zh,
+            suggested_name_zh=report.suggested_name_zh,
+            description=report.description,
+            status=report.status,
+            admin_note=report.admin_note,
+            created_at=report.created_at,
+            user=UserSummary.model_validate(report.user) if report.user else None,
+            species_name=species_name,
+            scientific_name=scientific_name,
+        )
+
+
+# ---------------------------------------------------------------------------
+# UserReport
+# ---------------------------------------------------------------------------
+
+
+class UserReportResponse(ResponseBase):
+    id: int
+    reporter_id: str | None = None
+    reported_user_id: str | None = None
+    report_type: str
+    reason: str
+    evidence_url: str | None = None
+    status: str
+    admin_note: str | None = None
+    created_at: datetime
+    reporter: UserSummary | None = None
+    reported_user: UserSummary | None = None
+
+    @classmethod
+    def from_model(cls, report: Any) -> UserReportResponse:
+        return cls(
+            id=report.id,
+            reporter_id=report.reporter_id,
+            reported_user_id=report.reported_user_id,
+            report_type=report.report_type,
+            reason=report.reason,
+            evidence_url=report.evidence_url,
+            status=report.status,
+            admin_note=report.admin_note,
+            created_at=report.created_at,
+            reporter=UserSummary.model_validate(report.reporter) if report.reporter else None,
+            reported_user=UserSummary.model_validate(report.reported_user) if report.reported_user else None,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Blacklist
+# ---------------------------------------------------------------------------
+
+
+class BlacklistResponse(ResponseBase):
+    id: int
+    identifier_type: str
+    identifier_value: str
+    user_id: str | None = None
+    reason: str | None = None
+    banned_by: str | None = None
+    created_at: datetime
+    original_user: UserSummary | None = None
+    banned_by_user: BannedByUserSummary | None = None
+
+    @classmethod
+    def from_model(cls, entry: Any) -> BlacklistResponse:
+        return cls(
+            id=entry.id,
+            identifier_type=entry.identifier_type,
+            identifier_value=entry.identifier_value,
+            user_id=entry.user_id,
+            reason=entry.reason,
+            banned_by=entry.banned_by,
+            created_at=entry.created_at,
+            original_user=UserSummary.model_validate(entry.original_user) if entry.original_user else None,
+            banned_by_user=(BannedByUserSummary.model_validate(entry.banned_by_user) if entry.banned_by_user else None),
+        )
+
+
+# ---------------------------------------------------------------------------
+# OAuthAccount (public / full)
+# ---------------------------------------------------------------------------
+
+
 class OAuthAccountPublicResponse(ResponseBase):
     """Public OAuth account info — visible to other users."""
 

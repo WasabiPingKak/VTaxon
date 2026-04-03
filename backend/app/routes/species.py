@@ -9,6 +9,7 @@ from ..constants import RequestStatus
 from ..extensions import db
 from ..limiter import limiter
 from ..models import SpeciesCache, SpeciesNameReport
+from ..response_schemas import SpeciesNameReportResponse
 from ..services.gbif import (  # type: ignore[attr-defined]
     clear_chinese_name_caches,
     get_species,
@@ -394,7 +395,7 @@ def create_name_report() -> tuple[Response, int] | Response:
     )
     db.session.add(report)
     db.session.commit()
-    return jsonify(report.to_dict()), 201
+    return jsonify(SpeciesNameReportResponse.from_model(report).model_dump(mode="json")), 201
 
 
 @species_bp.route("/name-reports", methods=["GET"])
@@ -417,7 +418,7 @@ def list_name_reports() -> Response:
     """
     status = request.args.get("status", RequestStatus.PENDING)
     reports = SpeciesNameReport.query.filter_by(status=status).order_by(SpeciesNameReport.created_at.desc()).all()
-    return jsonify({"reports": [r.to_dict() for r in reports]})
+    return jsonify({"reports": [SpeciesNameReportResponse.from_model(r).model_dump(mode="json") for r in reports]})
 
 
 @species_bp.route("/name-reports/<int:report_id>", methods=["PATCH"])
@@ -474,4 +475,4 @@ def update_name_report(report_id: int) -> tuple[Response, int] | Response:
         )
 
     db.session.commit()
-    return jsonify(report.to_dict())
+    return jsonify(SpeciesNameReportResponse.from_model(report).model_dump(mode="json"))

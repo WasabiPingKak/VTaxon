@@ -10,6 +10,7 @@ from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
 from ..constants import ReportStatus, ReportType, Visibility
 from ..extensions import db
 from ..models import AuthIdAlias, Blacklist, OAuthAccount, User, UserReport
+from ..response_schemas import UserReportResponse
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ def create_report(
 
     notify_new_report(report)
 
-    return report.to_dict(), 201
+    return UserReportResponse.from_model(report).model_dump(mode="json"), 201
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +82,7 @@ def update_report(report_id: int, data: dict[str, Any]) -> tuple[dict[str, Any],
         create_notification(report.reporter_id, "report", report.id, new_status, report.admin_note)
 
     db.session.commit()
-    return report.to_dict(), 200
+    return UserReportResponse.from_model(report).model_dump(mode="json"), 200
 
 
 # ---------------------------------------------------------------------------
