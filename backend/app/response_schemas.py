@@ -7,9 +7,15 @@ Request validation schemas are in schemas.py.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+
+# Coerce UUID → str for DB columns stored as String(36).
+# PostgreSQL may return Python UUID objects via SQLAlchemy, but Pydantic V2
+# strict string validation rejects them.  This validator normalises them.
+StrUUID = Annotated[str, BeforeValidator(lambda v: str(v) if isinstance(v, UUID) else v)]
 
 # ---------------------------------------------------------------------------
 # Base
@@ -30,7 +36,7 @@ class ResponseBase(BaseModel):
 class UserSummary(ResponseBase):
     """Minimal user info embedded in other responses."""
 
-    id: str
+    id: StrUUID
     display_name: str
     avatar_url: str | None = None
 
@@ -38,7 +44,7 @@ class UserSummary(ResponseBase):
 class BannedByUserSummary(ResponseBase):
     """Minimal user info for banned_by_user (no avatar)."""
 
-    id: str
+    id: StrUUID
     display_name: str
 
 
@@ -92,7 +98,7 @@ class NotificationResponse(ResponseBase):
 
 
 class LiveStreamResponse(ResponseBase):
-    user_id: str
+    user_id: StrUUID
     provider: str
     stream_id: str | None = None
     stream_title: str | None = None
@@ -200,7 +206,7 @@ class UserResponse(ResponseBase):
     ``_computed_profile_data()`` (preparing→active auto-transition).
     """
 
-    id: str
+    id: StrUUID
     display_name: str
     avatar_url: str | None = None
     role: str = "user"
@@ -211,8 +217,8 @@ class UserResponse(ResponseBase):
     social_links: dict[str, str] = {}
     primary_platform: str | None = None
     profile_data: dict[str, Any] = {}
-    live_primary_real_trait_id: str | None = None
-    live_primary_fictional_trait_id: str | None = None
+    live_primary_real_trait_id: StrUUID | None = None
+    live_primary_fictional_trait_id: StrUUID | None = None
     visibility: str = "visible"
     visibility_reason: str | None = None
     visibility_changed_at: datetime | None = None
@@ -259,8 +265,8 @@ class TraitResponse(ResponseBase):
     breed_name logic, and nested SpeciesCacheResponse.from_model().
     """
 
-    id: str
-    user_id: str
+    id: StrUUID
+    user_id: StrUUID
     taxon_id: int | None = None
     fictional_species_id: int | None = None
     display_name: str | None = None
@@ -310,7 +316,7 @@ class TraitResponse(ResponseBase):
 
 class FictionalSpeciesRequestResponse(ResponseBase):
     id: int
-    user_id: str | None = None
+    user_id: StrUUID | None = None
     name_zh: str
     name_en: str | None = None
     suggested_origin: str | None = None
@@ -345,7 +351,7 @@ class FictionalSpeciesRequestResponse(ResponseBase):
 
 class BreedRequestResponse(ResponseBase):
     id: int
-    user_id: str | None = None
+    user_id: StrUUID | None = None
     taxon_id: int | None = None
     name_zh: str | None = None
     name_en: str | None = None
@@ -383,7 +389,7 @@ class BreedRequestResponse(ResponseBase):
 
 class SpeciesNameReportResponse(ResponseBase):
     id: int
-    user_id: str | None = None
+    user_id: StrUUID | None = None
     taxon_id: int | None = None
     report_type: str
     current_name_zh: str | None = None
@@ -427,8 +433,8 @@ class SpeciesNameReportResponse(ResponseBase):
 
 class UserReportResponse(ResponseBase):
     id: int
-    reporter_id: str | None = None
-    reported_user_id: str | None = None
+    reporter_id: StrUUID | None = None
+    reported_user_id: StrUUID | None = None
     report_type: str
     reason: str
     evidence_url: str | None = None
@@ -464,9 +470,9 @@ class BlacklistResponse(ResponseBase):
     id: int
     identifier_type: str
     identifier_value: str
-    user_id: str | None = None
+    user_id: StrUUID | None = None
     reason: str | None = None
-    banned_by: str | None = None
+    banned_by: StrUUID | None = None
     created_at: datetime
     original_user: UserSummary | None = None
     banned_by_user: BannedByUserSummary | None = None
@@ -494,7 +500,7 @@ class BlacklistResponse(ResponseBase):
 class OAuthAccountPublicResponse(ResponseBase):
     """Public OAuth account info — visible to other users."""
 
-    id: str
+    id: StrUUID
     provider: str
     provider_display_name: str | None = None
     provider_avatar_url: str | None = None
