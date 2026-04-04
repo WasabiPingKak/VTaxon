@@ -113,6 +113,9 @@ cd backend && ruff format --check .
 # 後端型別檢查
 cd backend && mypy app
 
+# 前端測試
+cd frontend && npx vitest run
+
 # 前端 lint
 cd frontend && npm run lint
 
