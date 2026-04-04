@@ -1,8 +1,6 @@
 name: CI / Deploy Staging
 
 on:
-  pull_request:
-    branches: [develop, main]
   push:
     branches: [develop]
 
@@ -65,17 +63,6 @@ jobs:
         working-directory: backend
         run: pytest --tb=short -q --cov --cov-report=term-missing:skip-covered --cov-report=xml:coverage.xml
 
-      - name: Coverage comment on PR
-        if: github.event_name == 'pull_request'
-        uses: MishaKav/pytest-coverage-comment@main
-        with:
-          pytest-xml-coverage-path: backend/coverage.xml
-          title: Backend Coverage Report
-          badge-title: coverage
-          hide-badge: false
-          hide-report: false
-          junitxml-path: ""
-
       - name: Extract coverage percentage
         id: cov
         working-directory: backend
@@ -89,7 +76,6 @@ jobs:
           echo "percentage=$COVERAGE" >> "$GITHUB_OUTPUT"
 
       - name: Update coverage badge
-        if: github.ref == 'refs/heads/develop'
         uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
@@ -114,7 +100,6 @@ jobs:
         run: npm run test
 
   deploy-backend:
-    if: github.event_name == 'push'
     needs: [lint, test]
     runs-on: ubuntu-latest
     steps:
@@ -163,7 +148,6 @@ jobs:
           CRON_SECRET=CRON_SECRET:latest"
 
   deploy-frontend:
-    if: github.event_name == 'push'
     needs: [lint]
     runs-on: ubuntu-latest
     steps:
