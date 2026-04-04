@@ -181,6 +181,10 @@ const TaxonomyGraph = forwardRef<TaxonomyGraphHandle, TaxonomyGraphProps>(functi
   // Handle ?locate=userId from toast / directory page
   const [searchParams, setSearchParams] = useSearchParams();
   const locateId = searchParams.get('locate');
+  const locateTp = searchParams.get('tp');
+  const locateFp = searchParams.get('fp');
+  const locateBid = searchParams.get('bid');
+  const locateFid = searchParams.get('fid');
 
   useEffect(() => {
     if (!locateId) return;
@@ -188,8 +192,24 @@ const TaxonomyGraph = forwardRef<TaxonomyGraphHandle, TaxonomyGraphProps>(functi
 
     setSearchParams({}, { replace: true });
 
-    const entry = entries.find(e => e.user_id === locateId)
-      || (fictionalEntries || []).find(e => e.user_id === locateId);
+    // Try to find the specific entry when path params are provided
+    let entry: TreeEntry | undefined;
+    if (locateFp) {
+      entry = (fictionalEntries || []).find(e =>
+        e.user_id === locateId && e.fictional_path === locateFp
+        && (locateFid == null || String(e.fictional_species_id) === locateFid)
+      );
+    } else if (locateTp) {
+      entry = entries.find(e =>
+        e.user_id === locateId && e.taxon_path === locateTp
+        && (locateBid == null || String(e.breed_id ?? '') === locateBid)
+      );
+    }
+    // Fallback: first entry for this user
+    if (!entry) {
+      entry = entries.find(e => e.user_id === locateId)
+        || (fictionalEntries || []).find(e => e.user_id === locateId);
+    }
     if (!entry) return;
 
     setFocusedUserId(locateId);

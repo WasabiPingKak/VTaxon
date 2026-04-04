@@ -15,6 +15,10 @@ interface RecentUser {
   avatar_url: string | null;
   species_summary?: string;
   created_at: string;
+  entry_taxon_path?: string;
+  entry_fictional_path?: string;
+  entry_breed_id?: number;
+  entry_fictional_species_id?: number;
 }
 
 function useIsMobile(): boolean {
@@ -45,7 +49,12 @@ function ToastCard({ user, onClose, compact }: ToastCardProps) {
   };
 
   const handleClick = () => {
-    navigate(`/?locate=${user.id}`);
+    const params = new URLSearchParams({ locate: user.id });
+    if (user.entry_taxon_path) params.set('tp', user.entry_taxon_path);
+    if (user.entry_fictional_path) params.set('fp', user.entry_fictional_path);
+    if (user.entry_breed_id != null) params.set('bid', String(user.entry_breed_id));
+    if (user.entry_fictional_species_id != null) params.set('fid', String(user.entry_fictional_species_id));
+    navigate(`/?${params.toString()}`);
   };
 
   const avatarSize = compact ? 26 : 32;
