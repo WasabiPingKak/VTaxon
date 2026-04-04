@@ -11,6 +11,7 @@ from sqlalchemy import case, func, literal, or_, text
 from ..constants import Visibility
 from ..extensions import db
 from ..models import Breed, FictionalSpecies, LiveStream, OAuthAccount, SpeciesCache, User, VtuberTrait
+from ..utils.taxonomy import strip_genus_suffix
 
 
 def query_recent_users(since: datetime, limit: int) -> list[dict[str, Any]]:
@@ -68,13 +69,7 @@ def _collect_species_names(user_ids: list[Any], since: datetime) -> dict[str, li
 
     names: dict[str, list[str]] = {}
     for uid, sp_zh, sp_sci, sp_rank, br_zh, br_en, fi_zh, fi_en in trait_rows:
-        if (
-            sp_zh
-            and sp_zh.endswith("屬")
-            and len(sp_zh) >= 2
-            and (sp_rank or "").upper() in ("SPECIES", "SUBSPECIES", "VARIETY")
-        ):
-            sp_zh = sp_zh[:-1]
+        sp_zh = strip_genus_suffix(sp_zh, sp_rank)
 
         if br_zh or br_en:
             name = br_zh or br_en
