@@ -6,6 +6,7 @@ from ..cache import invalidate_fictional_tree_cache, invalidate_tree_cache
 from ..extensions import db
 from ..models import Breed, FictionalSpecies, SpeciesCache, User, VtuberTrait
 from ..response_schemas import TraitResponse
+from ..utils.taxonomy import canonical_name
 from .gbif import get_species  # type: ignore[attr-defined]
 
 ALLOWED_RANKS = {
@@ -37,18 +38,6 @@ BLOCKED_HIGH_RANKS = {"KINGDOM", "PHYLUM", "SUPERCLASS"}
 # ---------------------------------------------------------------------------
 
 
-def _canonical_name(scientific_name: str) -> str:
-    """Extract canonical name (genus + lowercase epithets), stripping author."""
-    parts = scientific_name.split()
-    canon = [parts[0]]
-    for p in parts[1:]:
-        if p[0].islower():
-            canon.append(p)
-        else:
-            break
-    return " ".join(canon)
-
-
 def _breed_matches_taxon(breed: Breed, taxon_id: int) -> bool:
     """Check if a breed belongs to this taxon, tolerating GBIF key changes."""
     if breed.taxon_id == taxon_id:
@@ -56,7 +45,7 @@ def _breed_matches_taxon(breed: Breed, taxon_id: int) -> bool:
     sp = db.session.get(SpeciesCache, taxon_id)
     breed_sp = db.session.get(SpeciesCache, breed.taxon_id)
     if sp and breed_sp:
-        return _canonical_name(sp.scientific_name) == _canonical_name(breed_sp.scientific_name)
+        return canonical_name(sp.scientific_name) == canonical_name(breed_sp.scientific_name)
     return False
 
 

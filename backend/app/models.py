@@ -132,15 +132,9 @@ class SpeciesCache(db.Model):
 
     def _effective_common_name_zh(self) -> str | None:
         """Return common_name_zh with genus suffix '屬' stripped for species-level taxa."""
-        zh = self.common_name_zh
-        if (
-            zh
-            and zh.endswith("屬")
-            and len(zh) >= 2
-            and (self.taxon_rank or "").upper() in ("SPECIES", "SUBSPECIES", "VARIETY")
-        ):
-            return zh[:-1]
-        return zh
+        from .utils.taxonomy import strip_genus_suffix
+
+        return strip_genus_suffix(self.common_name_zh, self.taxon_rank)
 
 
 class FictionalSpecies(db.Model):

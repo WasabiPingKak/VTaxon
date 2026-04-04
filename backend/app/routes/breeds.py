@@ -10,6 +10,7 @@ from ..constants import RequestStatus
 from ..extensions import db
 from ..models import Breed, BreedRequest, SpeciesCache
 from ..response_schemas import BreedRequestResponse, BreedResponse, SpeciesCacheResponse
+from ..utils.taxonomy import canonical_name
 
 logger = logging.getLogger(__name__)
 
@@ -94,16 +95,7 @@ def list_breeds() -> tuple[Response, int]:
     if not breeds:
         sp = db.session.get(SpeciesCache, taxon_id)
         if sp:
-            # Extract canonical name: genus (upper) + lowercase epithets,
-            # stop at author (next uppercase word after genus).
-            parts = sp.scientific_name.split()
-            canon_parts = [parts[0]]  # genus
-            for p in parts[1:]:
-                if p[0].islower():
-                    canon_parts.append(p)
-                else:
-                    break
-            canon = " ".join(canon_parts)
+            canon = canonical_name(sp.scientific_name)
             alt_ids = (
                 db.session.query(SpeciesCache.taxon_id)
                 .filter(SpeciesCache.taxon_id != taxon_id)
