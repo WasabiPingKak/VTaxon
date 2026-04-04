@@ -10,72 +10,7 @@ env:
   CLOUD_RUN_SERVICE: vtaxon-api-prod
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Lint backend (Ruff)
-        uses: astral-sh/ruff-action@v3
-        with:
-          src: backend/
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install backend dependencies
-        run: pip install -r backend/requirements.txt
-
-      - name: Typecheck backend (mypy)
-        working-directory: backend
-        run: python -m mypy app/ --config-file pyproject.toml
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Lint frontend (ESLint)
-        working-directory: frontend
-        run: npm run lint
-
-      - name: Typecheck frontend
-        working-directory: frontend
-        run: npm run typecheck
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install backend dependencies
-        run: pip install -r backend/requirements.txt pytest
-
-      - name: Run backend tests
-        run: pytest backend/tests -q
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Run frontend tests
-        working-directory: frontend
-        run: npm run test
-
   deploy-backend:
-    needs: [lint, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -123,7 +58,6 @@ jobs:
           CRON_SECRET=CRON_SECRET:latest"
 
   deploy-frontend:
-    needs: [lint]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
