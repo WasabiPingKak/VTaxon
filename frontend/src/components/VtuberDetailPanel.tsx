@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import 'flag-icons/css/flag-icons.min.css';
 import RankBadge from './RankBadge';
 import OrgBadge from './OrgBadge';
-import { YouTubeIcon, TwitchIcon, SNS_ICON_MAP, SNS_LABELS } from './SnsIcons';
+import LinksRow from './LinksRow';
+import { YouTubeIcon, TwitchIcon } from './SnsIcons';
 import ProfileInfoCard from './ProfileInfoCard';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
@@ -15,94 +15,6 @@ import type { TreeEntry, OAuthAccount, User } from '../types';
 
 const ANIM_DURATION_IN = 300;
 const ANIM_DURATION_OUT = 250;
-
-interface LinksRowProps {
-  oauthAccounts: OAuthAccount[];
-  socialLinks: Record<string, string>;
-  countryFlags: string[];
-  loading?: boolean;
-}
-
-/** Links row: OAuth icons + SNS icons + flag icons + optional loading spinner */
-function LinksRow({ oauthAccounts, socialLinks, countryFlags, loading }: LinksRowProps) {
-  const flags = (countryFlags || []);
-  const hasOAuth = oauthAccounts.length > 0;
-  const snsEntries = Object.entries(socialLinks || {}).filter(([, url]) => url);
-  const hasSns = snsEntries.length > 0;
-  const hasLinks = hasOAuth || hasSns;
-
-  if (!hasLinks && flags.length === 0 && !loading) return null;
-
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      gap: '8px', flexWrap: 'wrap',
-    }}>
-      {oauthAccounts.map(a => {
-        const Icon = a.provider === 'youtube' ? YouTubeIcon
-          : a.provider === 'twitch' ? TwitchIcon : null;
-        if (!Icon) return null;
-        return a.channel_url ? (
-          <a key={a.id} href={a.channel_url} target="_blank" rel="noopener noreferrer"
-            title={`${a.provider_display_name || a.provider} 頻道`}
-            style={{ display: 'inline-flex', lineHeight: 0 }}>
-            <Icon size={18} />
-          </a>
-        ) : (
-          <span key={a.id} title={a.provider_display_name || a.provider}
-            style={{ display: 'inline-flex', lineHeight: 0, opacity: 0.5 }}>
-            <Icon size={18} />
-          </span>
-        );
-      })}
-
-      {hasOAuth && hasSns && (
-        <span style={{ color: 'rgba(255,255,255,0.15)', margin: '0 2px' }}>|</span>
-      )}
-
-      {snsEntries
-        .sort(([a], [b]) => Number(a === 'email') - Number(b === 'email'))
-        .map(([key, url]) => {
-        const Icon = SNS_ICON_MAP[key];
-        if (!Icon) return null;
-        const isEmail = key === 'email';
-        const href = isEmail && !url.startsWith('mailto:') ? `mailto:${url}` : url;
-        return (
-          <a key={key} href={href} target={isEmail ? undefined : '_blank'} rel={isEmail ? undefined : 'noopener noreferrer'}
-            title={SNS_LABELS[key] || key}
-            style={{ display: 'inline-flex', lineHeight: 0 }}>
-            <Icon size={18} />
-          </a>
-        );
-      })}
-
-      {flags.length > 0 && (
-        <>
-          {hasLinks && (
-            <span style={{ color: 'rgba(255,255,255,0.15)', margin: '0 2px' }}>|</span>
-          )}
-          {flags.map((code, i) => (
-            <span
-              key={i}
-              className={`fi fi-${code.toLowerCase()}`}
-              title={code.toUpperCase()}
-              style={{ width: 20, display: 'inline-block', borderRadius: 2 }}
-            />
-          ))}
-        </>
-      )}
-
-      {loading && (
-        <span style={{
-          display: 'inline-block', width: 14, height: 14,
-          border: '2px solid rgba(255,255,255,0.1)', borderTopColor: '#38bdf8',
-          borderRadius: '50%',
-          animation: 'vtaxonSpin 0.8s linear infinite',
-        }} />
-      )}
-    </div>
-  );
-}
 
 interface TaxonomyPathProps {
   taxonPath: string;
