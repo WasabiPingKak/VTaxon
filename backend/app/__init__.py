@@ -149,6 +149,27 @@ def create_app(config_name: str | None = None) -> Flask:
             response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
         return response
 
+    # Log all 4xx client error responses for monitoring
+    @app.after_request
+    def log_client_errors(response: Response) -> Response:
+        if 400 <= response.status_code < 500:
+            error_msg = ""
+            try:
+                body = response.get_json()
+                if body:
+                    error_msg = body.get("error", "")
+            except Exception:
+                pass
+            log = logger.warning if response.status_code in (401, 403) else logger.info
+            log(
+                "%s %s → %d: %s",
+                request.method,
+                request.path,
+                response.status_code,
+                error_msg,
+            )
+        return response
+
     # ------------------------------------------------------------------
     # Global error handlers
     # ------------------------------------------------------------------

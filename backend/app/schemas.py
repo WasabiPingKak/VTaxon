@@ -4,6 +4,7 @@ Each schema defines the expected input shape for a route endpoint.
 Business logic validation (DB lookups, ownership, conflicts) stays in routes.
 """
 
+import logging
 from collections.abc import Callable
 from functools import wraps
 from typing import Annotated, Any
@@ -20,6 +21,8 @@ from pydantic import (
 )
 
 from app.constants import ReportStatus, ReportType, RequestStatus, Visibility
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Helper: validation decorator
@@ -44,6 +47,7 @@ def validate_with(schema_cls: type[BaseModel]) -> Callable[..., Any]:
                 for e in err.errors():
                     key = ".".join(str(x) for x in e["loc"]) or "_schema"
                     details.setdefault(key, []).append(e["msg"])
+                logger.warning("Validation failed: %s %s — %s", request.method, request.path, details)
                 return jsonify({"error": "Validation failed", "details": details}), 400
             if hasattr(model, "to_patch_dict"):
                 data = model.to_patch_dict()  # type: ignore[union-attr]
