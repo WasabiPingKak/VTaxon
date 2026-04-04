@@ -10,14 +10,8 @@ import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import { displayScientificName } from '../lib/speciesName';
 import useLiveStatus from '../hooks/useLiveStatus';
+import { RANK_ORDER, RANK_TO_UPPER, SUB_SPECIES_RANKS } from '../lib/taxonomyConstants';
 import type { TreeEntry, OAuthAccount, User } from '../types';
-
-const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'] as const;
-const RANK_TO_UPPER: Record<string, string> = {
-  kingdom: 'KINGDOM', phylum: 'PHYLUM', class: 'CLASS', order: 'ORDER',
-  family: 'FAMILY', genus: 'GENUS',
-};
-const SUB_SPECIES_RANKS = new Set(['SUBSPECIES', 'VARIETY', 'FORM']);
 
 const ANIM_DURATION_IN = 300;
 const ANIM_DURATION_OUT = 250;

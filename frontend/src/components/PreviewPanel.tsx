@@ -4,14 +4,8 @@ import OrgBadge from './OrgBadge';
 import LinksRow from './LinksRow';
 import ProfileInfoCard from './ProfileInfoCard';
 import { displayScientificName } from '../lib/speciesName';
+import { RANK_ORDER, RANK_TO_UPPER, SUB_SPECIES_RANKS } from '../lib/taxonomyConstants';
 import type { OAuthAccount } from '../types';
-
-const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'] as const;
-const RANK_TO_UPPER: Record<string, string> = {
-  kingdom: 'KINGDOM', phylum: 'PHYLUM', class: 'CLASS', order: 'ORDER',
-  family: 'FAMILY', genus: 'GENUS',
-};
-const SUB_SPECIES_RANKS = new Set(['SUBSPECIES', 'VARIETY', 'FORM']);
 
 const previewLabelStyle: React.CSSProperties = {
   display: 'inline-block', width: '50px',
