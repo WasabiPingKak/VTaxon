@@ -145,13 +145,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
         throw err;
+      } finally {
+        // Clear pending link regardless of success/failure to prevent
+        // stale token from blocking all future login attempts
+        if (pendingLink) {
+          sessionStorage.removeItem('vtaxon_pending_link');
+        }
       }
       if (!mountedRef.current) return;
-
-      // Clear pending link regardless of outcome
-      if (pendingLink) {
-        sessionStorage.removeItem('vtaxon_pending_link');
-      }
 
       // Sync OAuth identities to backend
       // Only create new accounts on fresh OAuth redirect (loginProvider set),
