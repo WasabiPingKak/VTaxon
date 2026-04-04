@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import requests
 
+from app.services.circuit_breaker import CircuitState, youtube_cb
 from app.services.youtube_pubsub import (
     check_streams_ended,
     check_video_is_live,
@@ -524,4 +525,67 @@ class TestCheckStreamsEnded:
         result = check_streams_ended([], "api_key")
 
         assert result == set()
+        mock_get.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Circuit Breaker — YouTube 403 quota exhaustion triggers immediate open
+# ---------------------------------------------------------------------------
+
+
+class TestYouTubeCircuitBreaker:
+    """Verify that YouTube HTTP 403 (quota exceeded) immediately opens the circuit breaker."""
+
+    def setup_method(self):
+        youtube_cb.reset()
+
+    def teardown_method(self):
+        youtube_cb.reset()
+
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_resolve_handle_403_opens_circuit(self, mock_get):
+        mock_resp = MagicMock(status_code=403)
+        mock_get.return_value = mock_resp
+
+        result = resolve_handle_to_channel_id("test", "api_key")
+
+        assert result is None
+        assert youtube_cb.state == CircuitState.OPEN
+
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_check_video_is_live_403_opens_circuit(self, mock_get):
+        mock_resp = MagicMock(status_code=403)
+        http_err = requests.HTTPError("403 Forbidden", response=mock_resp)
+        mock_get.return_value.raise_for_status.side_effect = http_err
+        mock_get.return_value.status_code = 403
+
+        result = check_video_is_live("vid1", "api_key")
+
+        assert result is None
+        assert youtube_cb.state == CircuitState.OPEN
+
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_check_streams_ended_403_opens_circuit(self, mock_get):
+        mock_resp = MagicMock(status_code=403)
+        http_err = requests.HTTPError("403 Forbidden", response=mock_resp)
+        mock_get.return_value.raise_for_status.side_effect = http_err
+        mock_get.return_value.status_code = 403
+
+        check_streams_ended(["vid1"], "api_key")
+
+        assert youtube_cb.state == CircuitState.OPEN
+
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_circuit_open_skips_http_call(self, mock_get):
+        """When circuit is already open, calls should return None without making HTTP requests."""
+        # Trip the circuit first
+        mock_resp = MagicMock(status_code=403)
+        mock_get.return_value = mock_resp
+        resolve_handle_to_channel_id("test", "api_key")
+        assert youtube_cb.state == CircuitState.OPEN
+        mock_get.reset_mock()
+
+        # Now the circuit is open — subsequent calls should NOT hit the API
+        result = resolve_handle_to_channel_id("test2", "api_key")
+        assert result is None
         mock_get.assert_not_called()

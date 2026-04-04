@@ -10,6 +10,7 @@ from ..extensions import db
 from ..limiter import limiter
 from ..models import SpeciesCache, SpeciesNameReport
 from ..response_schemas import SpeciesNameReportResponse
+from ..services.circuit_breaker import CircuitOpenError
 from ..services.gbif import (  # type: ignore[attr-defined]
     clear_chinese_name_caches,
     get_species,
@@ -67,6 +68,8 @@ def search() -> tuple[Response, int] | Response:
 
     try:
         results = search_species(q, limit=limit)
+    except CircuitOpenError:
+        return jsonify({"error": "物種搜尋服務暫時過載，請稍後再試"}), 503
     except _requests.RequestException:
         logger.exception("GBIF search failed")
         return jsonify({"error": "物種搜尋暫時無法使用，請稍後再試"}), 502
@@ -109,6 +112,10 @@ def search_stream() -> tuple[Response, int] | Response:
         try:
             for line in search_species_stream(q, limit=limit):
                 yield line
+        except CircuitOpenError:
+            import json
+
+            yield json.dumps({"error": "物種搜尋服務暫時過載，請稍後再試"}, ensure_ascii=False) + "\n"
         except _requests.RequestException:
             import json
 
@@ -153,6 +160,8 @@ def match() -> tuple[Response, int] | Response:
 
     try:
         result = match_species(name)
+    except CircuitOpenError:
+        return jsonify({"error": "物種比對服務暫時過載，請稍後再試"}), 503
     except _requests.RequestException:
         logger.exception("GBIF match failed")
         return jsonify({"error": "物種比對暫時無法使用，請稍後再試"}), 502
@@ -212,6 +221,8 @@ def get_children(taxon_id: int) -> tuple[Response, int] | Response:
     """
     try:
         subspecies = get_subspecies(taxon_id)
+    except CircuitOpenError:
+        return jsonify({"error": "子分類查詢服務暫時過載，請稍後再試"}), 503
     except _requests.RequestException:
         logger.exception("Failed to fetch children for taxon %s", taxon_id)
         return jsonify({"error": "子分類查詢暫時無法使用，請稍後再試"}), 502
@@ -240,6 +251,10 @@ def get_children_stream(taxon_id: int) -> Response:
         try:
             for line in get_subspecies_stream(taxon_id):
                 yield line
+        except CircuitOpenError:
+            import json
+
+            yield json.dumps({"error": "子分類查詢服務暫時過載，請稍後再試"}, ensure_ascii=False) + "\n"
         except _requests.RequestException:
             import json
 

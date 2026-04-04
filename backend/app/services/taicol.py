@@ -10,9 +10,25 @@ from typing import Any
 
 import requests
 
+from .circuit_breaker import CircuitOpenError, taicol_cb
 from .http_client import external_session
 
 TAICOL_BASE = "https://api.taicol.tw/v2"
+
+
+def _taicol_get(url: str, **kwargs: Any) -> requests.Response:
+    """TaiCOL HTTP GET with circuit breaker protection."""
+    taicol_cb.guard()
+    try:
+        resp = external_session.get(url, **kwargs)
+        if resp.status_code >= 500:
+            taicol_cb.record_failure(None)
+        else:
+            taicol_cb.record_success()
+        return resp
+    except requests.RequestException as exc:
+        taicol_cb.record_failure(exc)
+        raise
 
 
 def search_by_chinese(query: str, limit: int = 10) -> list[dict[str, Any]]:
@@ -44,7 +60,7 @@ def search_by_chinese(query: str, limit: int = 10) -> list[dict[str, Any]]:
 
     # Primary: search by common_name (exact Chinese name match)
     try:
-        resp = external_session.get(
+        resp = _taicol_get(
             f"{TAICOL_BASE}/taxon",
             params={  # type: ignore[arg-type]
                 "common_name": query,
@@ -54,7 +70,7 @@ def search_by_chinese(query: str, limit: int = 10) -> list[dict[str, Any]]:
         )
         if resp.status_code == 200:
             _collect(resp.json().get("data", []))
-    except (requests.RequestException, ValueError):
+    except (CircuitOpenError, requests.RequestException, ValueError):
         pass
 
     # Supplement: search by taxon_group (broader, includes partial matches)
@@ -90,7 +106,7 @@ def get_chinese_name(scientific_name: str) -> tuple[str | None, str | None]:
     alternative_names is a string of comma-separated alternatives, or None.
     """
     try:
-        resp = external_session.get(
+        resp = _taicol_get(
             f"{TAICOL_BASE}/taxon",
             params={  # type: ignore[arg-type]
                 "scientific_name": scientific_name,
@@ -107,7 +123,7 @@ def get_chinese_name(scientific_name: str) -> tuple[str | None, str | None]:
 
         entry = data[0]
         return entry.get("common_name_c"), entry.get("alternative_name_c")
-    except (requests.RequestException, ValueError):
+    except (CircuitOpenError, requests.RequestException, ValueError):
         return None, None
 
 
@@ -118,7 +134,7 @@ def search_by_scientific_name(scientific_name: str, limit: int = 10) -> list[dic
     a list of dicts with all fields needed by _build_from_taicol().
     """
     try:
-        resp = external_session.get(
+        resp = _taicol_get(
             f"{TAICOL_BASE}/taxon",
             params={  # type: ignore[arg-type]
                 "scientific_name": scientific_name,
@@ -142,7 +158,7 @@ def search_by_scientific_name(scientific_name: str, limit: int = 10) -> list[dic
                 }
             )
         return results
-    except (requests.RequestException, ValueError):
+    except (CircuitOpenError, requests.RequestException, ValueError):
         return []
 
 
@@ -157,7 +173,7 @@ def get_higher_taxa_zh(taicol_taxon_id: str) -> list[dict[str, str | None]]:
     Returns list of dicts: [{'rank': 'Kingdom', 'name': 'Animalia', 'name_zh': '動物界'}, ...]
     """
     try:
-        resp = external_session.get(
+        resp = _taicol_get(
             f"{TAICOL_BASE}/higherTaxa",
             params={
                 "taxon_id": taicol_taxon_id,
@@ -176,5 +192,5 @@ def get_higher_taxa_zh(taicol_taxon_id: str) -> list[dict[str, str | None]]:
             }
             for item in data
         ]
-    except (requests.RequestException, ValueError):
+    except (CircuitOpenError, requests.RequestException, ValueError):
         return []

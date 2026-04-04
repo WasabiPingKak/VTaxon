@@ -15,6 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..extensions import db
 from ..models import SpeciesCache
 from ..response_schemas import SpeciesCacheResponse
+from .circuit_breaker import gbif_cb
 from .http_client import external_session
 from .taxonomy_zh import get_species_zh_override, get_taxonomy_zh, get_taxonomy_zh_for_ranks
 
@@ -48,10 +49,12 @@ def get_species(taxon_id: int) -> dict[str, Any] | None:
         _fill_missing_rank_zh(d, cached)
         return d
 
+    gbif_cb.guard()
     resp = external_session.get(f"{GBIF_BASE}/species/{taxon_id}", timeout=10)
     if resp.status_code == 404:
         return None
     resp.raise_for_status()
+    gbif_cb.record_success()
     data = resp.json()
 
     # Fetch Chinese name before caching
@@ -106,8 +109,10 @@ def get_subspecies(species_key: int, limit: int = 50) -> list[dict[str, Any]]:
     from .chinese_names import _enrich_chinese_names
     from .gbif import _gbif_result_to_dict
 
+    gbif_cb.guard()
     resp = external_session.get(f"{GBIF_BASE}/species/{species_key}/children", params={"limit": limit}, timeout=10)
     resp.raise_for_status()
+    gbif_cb.record_success()
     results = resp.json().get("results", [])
 
     subspecies = []
@@ -143,8 +148,10 @@ def get_subspecies_stream(species_key: int, limit: int = 50) -> Generator[str, N
     from .chinese_names import _enrich_chinese_names
     from .gbif import _gbif_result_to_dict
 
+    gbif_cb.guard()
     resp = external_session.get(f"{GBIF_BASE}/species/{species_key}/children", params={"limit": limit}, timeout=10)
     resp.raise_for_status()
+    gbif_cb.record_success()
     results = resp.json().get("results", [])
 
     subspecies = []

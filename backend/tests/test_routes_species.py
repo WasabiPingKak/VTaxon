@@ -1,8 +1,10 @@
 """Route integration tests for /api/species — search, match, children, name reports."""
 
+import json
 from unittest.mock import patch
 
 from app.models import SpeciesCache, SpeciesNameReport
+from app.services.circuit_breaker import CircuitOpenError
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -52,6 +54,13 @@ class TestSearch:
         assert resp.status_code == 200
         mock_search.assert_called_once_with("test", limit=50)
 
+    @patch("app.routes.species.search_species", side_effect=CircuitOpenError("gbif", 30.0))
+    def test_search_circuit_open_returns_503(self, mock_search, client):
+        resp = client.get("/api/species/search?q=felis")
+        assert resp.status_code == 503
+        data = resp.get_json()
+        assert "過載" in data["error"]
+
 
 # ---------------------------------------------------------------------------
 # GET /api/species/search/stream
@@ -71,6 +80,14 @@ class TestSearchStream:
     def test_stream_missing_q_returns_400(self, client):
         resp = client.get("/api/species/search/stream")
         assert resp.status_code == 400
+
+    @patch("app.routes.species.search_species_stream", side_effect=CircuitOpenError("gbif", 30.0))
+    def test_stream_circuit_open_returns_error_line(self, mock_stream, client):
+        resp = client.get("/api/species/search/stream?q=cat")
+        assert resp.status_code == 200  # streaming always starts 200
+        lines = resp.data.decode().strip().split("\n")
+        error_obj = json.loads(lines[-1])
+        assert "過載" in error_obj["error"]
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +113,12 @@ class TestMatch:
     def test_match_missing_name_returns_400(self, client):
         resp = client.get("/api/species/match")
         assert resp.status_code == 400
+
+    @patch("app.routes.species.match_species", side_effect=CircuitOpenError("gbif", 30.0))
+    def test_match_circuit_open_returns_503(self, mock_match, client):
+        resp = client.get("/api/species/match?name=Felis")
+        assert resp.status_code == 503
+        assert "過載" in resp.get_json()["error"]
 
 
 # ---------------------------------------------------------------------------
@@ -134,6 +157,20 @@ class TestGetChildren:
         resp = client.get("/api/species/100/children/stream")
         assert resp.status_code == 200
         assert resp.content_type == "application/x-ndjson"
+
+    @patch("app.routes.species.get_subspecies", side_effect=CircuitOpenError("gbif", 30.0))
+    def test_children_circuit_open_returns_503(self, mock_sub, client):
+        resp = client.get("/api/species/100/children")
+        assert resp.status_code == 503
+        assert "過載" in resp.get_json()["error"]
+
+    @patch("app.routes.species.get_subspecies_stream", side_effect=CircuitOpenError("gbif", 30.0))
+    def test_children_stream_circuit_open_returns_error_line(self, mock_stream, client):
+        resp = client.get("/api/species/100/children/stream")
+        assert resp.status_code == 200
+        lines = resp.data.decode().strip().split("\n")
+        error_obj = json.loads(lines[-1])
+        assert "過載" in error_obj["error"]
 
 
 # ---------------------------------------------------------------------------

@@ -13,6 +13,7 @@ from typing import Any
 import requests
 from opencc import OpenCC
 
+from .circuit_breaker import CircuitOpenError, wikidata_cb
 from .http_client import external_session
 
 # Simplified → Traditional (Taiwan phrases) converter
@@ -27,11 +28,17 @@ ZH_LANGS = ("zh-tw", "zh-hant", "zh")
 
 def _wikidata_get(params: dict[str, str | int]) -> dict[str, Any]:
     """Make a request to the Wikidata API with proper User-Agent."""
+    wikidata_cb.guard()
     params.setdefault("format", "json")
-    resp = external_session.get(WIKIDATA_API, params=params, headers={"User-Agent": USER_AGENT}, timeout=10)
-    resp.raise_for_status()
-    result: dict[str, Any] = resp.json()
-    return result
+    try:
+        resp = external_session.get(WIKIDATA_API, params=params, headers={"User-Agent": USER_AGENT}, timeout=10)
+        resp.raise_for_status()
+        wikidata_cb.record_success()
+        result: dict[str, Any] = resp.json()
+        return result
+    except requests.RequestException as exc:
+        wikidata_cb.record_failure(exc)
+        raise
 
 
 def get_chinese_name_by_gbif_id(gbif_taxon_id: int) -> tuple[str | None, str | None]:
@@ -110,7 +117,7 @@ def _find_entity_by_gbif_id(gbif_taxon_id: int) -> str | None:
         if results:
             qid: str = results[0]["title"]  # e.g. "Q42627"
             return qid
-    except (requests.RequestException, ValueError, KeyError):
+    except (CircuitOpenError, requests.RequestException, ValueError, KeyError):
         pass
     return None
 
@@ -132,7 +139,7 @@ def _get_labels(qid: str) -> tuple[str | None, str | None]:
         zh_name = _pick_zh_label(labels)
         en_name = labels.get("en", {}).get("value")
         return zh_name, en_name
-    except (requests.RequestException, ValueError, KeyError):
+    except (CircuitOpenError, requests.RequestException, ValueError, KeyError):
         return None, None
 
 
@@ -166,7 +173,7 @@ def get_aliases_by_gbif_id(gbif_taxon_id: int) -> str | None:
                         seen.add(converted)
                         result.append(converted)
         return ", ".join(result) if result else None
-    except (requests.RequestException, ValueError, KeyError):
+    except (CircuitOpenError, requests.RequestException, ValueError, KeyError):
         return None
 
 
