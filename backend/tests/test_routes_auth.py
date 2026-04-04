@@ -225,6 +225,17 @@ class TestAuthCallback:
         assert resp.status_code == 400
         assert resp.get_json()["error"] == "invalid_or_expired_link_token"
 
+    def test_cross_email_link_malformed_token(self, client, mock_auth):
+        """Malformed link_token (e.g. stale sessionStorage remnant) should return 400."""
+        uid = f"new-auth-{uuid.uuid4().hex[:8]}"
+        with mock_auth(uid):
+            resp = client.post(
+                "/api/auth/callback",
+                json={"link_token": "garbage-not-a-real-token"},
+            )
+        assert resp.status_code == 400
+        assert resp.get_json()["error"] == "invalid_or_expired_link_token"
+
     def test_race_condition_duplicate_user(self, client, db_session, mock_auth):
         """Concurrent auth_callback for the same user_id — second call should not crash."""
         uid = f"race-{uuid.uuid4().hex[:8]}"
