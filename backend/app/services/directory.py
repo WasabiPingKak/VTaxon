@@ -30,6 +30,7 @@ def query_recent_users(since: datetime, limit: int) -> list[dict[str, Any]]:
 
     user_ids = [u.id for u, _ in rows]
     species_names = _collect_species_names(user_ids, since)
+    entry_locs = _collect_latest_trait_entries(user_ids, since)
 
     return [
         {
@@ -38,6 +39,7 @@ def query_recent_users(since: datetime, limit: int) -> list[dict[str, Any]]:
             "avatar_url": u.avatar_url,
             "created_at": trait_at.isoformat(),
             "species_summary": "、".join(species_names.get(str(u.id), [])[:3]) or None,
+            **entry_locs.get(str(u.id), {}),
         }
         for u, trait_at in rows
     ]
@@ -83,6 +85,57 @@ def _collect_species_names(user_ids: list[Any], since: datetime) -> dict[str, li
             names.setdefault(str(uid), []).append(name)
 
     return names
+
+
+def _collect_latest_trait_entries(user_ids: list[Any], since: datetime) -> dict[str, dict[str, Any]]:
+    """Return tree-entry location info for each user's latest trait after *since*."""
+    if not user_ids:
+        return {}
+
+    max_sq = (
+        db.session.query(
+            VtuberTrait.user_id,
+            func.max(VtuberTrait.created_at).label("max_at"),
+        )
+        .filter(VtuberTrait.user_id.in_(user_ids), VtuberTrait.created_at > since)
+        .group_by(VtuberTrait.user_id)
+        .subquery()
+    )
+
+    trait_rows = (
+        db.session.query(
+            VtuberTrait.user_id,
+            SpeciesCache.taxon_path,
+            FictionalSpecies.category_path,
+            VtuberTrait.breed_id,
+            VtuberTrait.fictional_species_id,
+        )
+        .join(
+            max_sq,
+            db.and_(
+                VtuberTrait.user_id == max_sq.c.user_id,
+                VtuberTrait.created_at == max_sq.c.max_at,
+            ),
+        )
+        .outerjoin(SpeciesCache, VtuberTrait.taxon_id == SpeciesCache.taxon_id)
+        .outerjoin(FictionalSpecies, VtuberTrait.fictional_species_id == FictionalSpecies.id)
+        .all()
+    )
+
+    result: dict[str, dict[str, Any]] = {}
+    for uid, taxon_path, fict_path, breed_id, fict_id in trait_rows:
+        loc: dict[str, Any] = {}
+        if taxon_path:
+            loc["entry_taxon_path"] = taxon_path
+        if fict_path:
+            loc["entry_fictional_path"] = fict_path
+        if breed_id is not None:
+            loc["entry_breed_id"] = breed_id
+        if fict_id is not None:
+            loc["entry_fictional_species_id"] = fict_id
+        if loc:
+            result[str(uid)] = loc
+    return result
 
 
 # ---------------------------------------------------------------------------
