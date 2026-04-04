@@ -6,17 +6,18 @@ interface LinksRowProps {
   oauthAccounts: OAuthAccount[];
   socialLinks?: Record<string, string> | null;
   countryFlags?: string[] | null;
+  loading?: boolean;
 }
 
-/** Links row: OAuth icons + SNS icons + flag icons */
-export default function LinksRow({ oauthAccounts, socialLinks, countryFlags }: LinksRowProps): React.ReactElement | null {
+/** Links row: OAuth icons + SNS icons + flag icons + optional loading spinner */
+export default function LinksRow({ oauthAccounts, socialLinks, countryFlags, loading }: LinksRowProps): React.ReactElement | null {
   const flags = (countryFlags || []);
   const hasOAuth = oauthAccounts.length > 0;
   const snsEntries = Object.entries(socialLinks || {}).filter(([, url]) => url);
   const hasSns = snsEntries.length > 0;
   const hasLinks = hasOAuth || hasSns;
 
-  if (!hasLinks && flags.length === 0) return null;
+  if (!hasLinks && flags.length === 0 && !loading) return null;
 
   return (
     <div style={{
@@ -75,6 +76,15 @@ export default function LinksRow({ oauthAccounts, socialLinks, countryFlags }: L
             />
           ))}
         </>
+      )}
+
+      {loading && (
+        <span style={{
+          display: 'inline-block', width: 14, height: 14,
+          border: '2px solid rgba(255,255,255,0.1)', borderTopColor: '#38bdf8',
+          borderRadius: '50%',
+          animation: 'vtaxonSpin 0.8s linear infinite',
+        }} />
       )}
     </div>
   );
