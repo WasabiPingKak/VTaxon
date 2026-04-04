@@ -172,10 +172,12 @@ export default function WelcomeToast({ onNewUsers, visible = true }: WelcomeToas
       const latest = users[0].created_at;
       localStorage.setItem(LS_KEY, latest);
 
-      // Deduplicate: skip users already seen/queued
-      const newUsers = users.filter(u => !seenIdsRef.current.has(u.id));
+      // Deduplicate: skip users already seen/queued (keyed by id + created_at
+      // so the same user triggers a new toast when they add another species)
+      const seenKey = (u: RecentUser) => `${u.id}:${u.created_at}`;
+      const newUsers = users.filter(u => !seenIdsRef.current.has(seenKey(u)));
       if (newUsers.length === 0) return;
-      for (const u of newUsers) seenIdsRef.current.add(u.id);
+      for (const u of newUsers) seenIdsRef.current.add(seenKey(u));
 
       // Evict oldest entries if seenIds grows too large
       if (seenIdsRef.current.size > MAX_SEEN_IDS) {
