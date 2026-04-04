@@ -4,6 +4,7 @@
  */
 
 import type { TaxonomyTreeNode, TreeEntry, VisualTier } from '../types/tree';
+import { RANK_ORDER } from './taxonomyConstants';
 
 /** Strip taxonomic author citations from scientific names.
  *  "Vulpes zerda (Zimmermann, 1780)" → "Vulpes zerda" */
@@ -12,7 +13,7 @@ export function stripAuthor(name: string | null | undefined): string {
   return name.replace(/\s+\(?[A-Z][\w.\s,''-]*,\s*\d{4}\)?$/, '').trim();
 }
 
-const RANK_KEYS = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'];
+const RANK_KEYS = RANK_ORDER;
 const RANK_NAMES: Record<number, string> = {
   0: 'KINGDOM', 1: 'PHYLUM', 2: 'CLASS', 3: 'ORDER',
   4: 'FAMILY', 5: 'GENUS', 6: 'SPECIES', 7: 'SUBSPECIES',

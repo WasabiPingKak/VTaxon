@@ -7,13 +7,8 @@ import { displayScientificName } from '../../lib/speciesName';
 import SpeciesSearch from '../SpeciesSearch';
 import RankBadge from '../RankBadge';
 import AiPromptBlock from '../AiPromptBlock';
+import { RANK_ORDER, RANK_TO_UPPER } from '../../lib/taxonomyConstants';
 import type { SpeciesCache } from '../../types/models';
-
-const RANK_ORDER = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus'] as const;
-const RANK_TO_UPPER: Record<string, string> = {
-  kingdom: 'KINGDOM', phylum: 'PHYLUM', class: 'CLASS', order: 'ORDER',
-  family: 'FAMILY', genus: 'GENUS',
-};
 
 interface SpeciesWithZh extends SpeciesCache {
   kingdom_zh?: string;
