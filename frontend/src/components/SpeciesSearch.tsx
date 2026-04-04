@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { useToast } from '../lib/ToastContext';
 import { api } from '../lib/api';
 import { formatAltNamesFull, altNamesTooltip } from '../lib/altNames';
 import { displayScientificName } from '../lib/speciesName';
@@ -441,6 +442,7 @@ export interface SpeciesSearchProps {
 }
 
 export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchPerformed }: SpeciesSearchProps) {
+  const { addToast } = useToast();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SpeciesResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -529,7 +531,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
       }, { signal: ac.signal });
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
-      alert((err as Error).message);
+      addToast((err as Error).message, { type: 'error', duration: 8000 });
     } finally {
       if (ac.signal.aborted) return; // eslint-disable-line no-unsafe-finally
       setSearching(false);
@@ -792,7 +794,7 @@ export default function SpeciesSearch({ onSelect, onCancel, autoFocus, onSearchP
                     } as Parameters<typeof api.createNameReport>[0]);
                     setNotFoundSubmitted(true);
                   } catch (err) {
-                    alert((err as Error).message);
+                    addToast((err as Error).message, { type: 'error', duration: 8000 });
                   } finally {
                     setNotFoundSubmitting(false);
                   }

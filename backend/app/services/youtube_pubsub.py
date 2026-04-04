@@ -16,6 +16,8 @@ from urllib.parse import unquote
 
 import requests
 
+from .circuit_breaker import CircuitOpenError, YouTubeQuotaExhaustedError, youtube_cb
+
 logger = logging.getLogger(__name__)
 
 HUB_URL = "https://pubsubhubbub.appspot.com/subscribe"
@@ -112,17 +114,25 @@ def normalize_youtube_channel_url(channel_url: str | None) -> str | None:
 def resolve_handle_to_channel_id(handle: str, api_key: str) -> str | None:
     """Resolve a YouTube @handle to a channel ID (UCxxx) via the Data API v3."""
     try:
+        youtube_cb.guard()
         resp = requests.get(
             f"{YOUTUBE_API_BASE}/channels",
             params={"forHandle": f"@{handle}", "part": "id", "key": api_key},
             timeout=10,
         )
+        if resp.status_code == 403:
+            youtube_cb.record_failure(YouTubeQuotaExhaustedError())
+            return None
         resp.raise_for_status()
+        youtube_cb.record_success()
         items: list[dict[str, Any]] = resp.json().get("items", [])
         if items:
             return str(items[0]["id"])
         return None
+    except CircuitOpenError:
+        return None
     except requests.RequestException as e:
+        youtube_cb.record_failure(e)
         logger.error("YouTube API resolve_handle error for @%s: %s", handle, e)
         return None
 
@@ -130,18 +140,26 @@ def resolve_handle_to_channel_id(handle: str, api_key: str) -> str | None:
 def fetch_my_channel_id(access_token: str) -> str | None:
     """Fetch the authenticated user's YouTube channel ID using their OAuth token."""
     try:
+        youtube_cb.guard()
         resp = requests.get(
             f"{YOUTUBE_API_BASE}/channels",
             params={"mine": "true", "part": "id"},
             headers={"Authorization": f"Bearer {access_token}"},
             timeout=10,
         )
+        if resp.status_code == 403:
+            youtube_cb.record_failure(YouTubeQuotaExhaustedError())
+            return None
         resp.raise_for_status()
+        youtube_cb.record_success()
         items: list[dict[str, Any]] = resp.json().get("items", [])
         if items:
             return str(items[0]["id"])
         return None
+    except CircuitOpenError:
+        return None
     except requests.RequestException as e:
+        youtube_cb.record_failure(e)
         logger.error("YouTube API fetch_my_channel_id error: %s", e)
         return None
 
@@ -232,6 +250,7 @@ def check_video_is_live(video_id: str, api_key: str) -> dict[str, Any] | None:
     or None if not live / not a stream / error.
     """
     try:
+        youtube_cb.guard()
         resp = requests.get(
             f"{YOUTUBE_API_BASE}/videos",
             params={
@@ -242,6 +261,7 @@ def check_video_is_live(video_id: str, api_key: str) -> dict[str, Any] | None:
             timeout=10,
         )
         resp.raise_for_status()
+        youtube_cb.record_success()
         items = resp.json().get("items", [])
         if not items:
             return None
@@ -264,8 +284,14 @@ def check_video_is_live(video_id: str, api_key: str) -> dict[str, Any] | None:
             "title": snippet.get("title", ""),
             "started_at": started_at,
         }
+    except CircuitOpenError:
+        return None
     except requests.HTTPError as e:
         status_code = e.response.status_code if e.response is not None else None
+        if status_code == 403:
+            youtube_cb.record_failure(YouTubeQuotaExhaustedError())
+        else:
+            youtube_cb.record_failure(e)
         logger.error("YouTube API check_video_is_live HTTP %s for %s: %s", status_code, video_id, e)
         from ..constants import AlertSeverity, AlertType
         from .alerts import log_alert
@@ -278,6 +304,7 @@ def check_video_is_live(video_id: str, api_key: str) -> dict[str, Any] | None:
         )
         return None
     except requests.RequestException as e:
+        youtube_cb.record_failure(e)
         logger.error("YouTube API check_video_is_live error for %s: %s", video_id, e)
         from ..constants import AlertSeverity, AlertType
         from .alerts import log_alert
@@ -297,11 +324,12 @@ def check_streams_ended(video_ids: list[str], api_key: str) -> set[str]:
     Queries up to 50 IDs per API call. Returns a set of video IDs that
     are no longer live (ended, deleted, or made private/unlisted).
     """
-    ended = set()
+    ended: set[str] = set()
     # Process in batches of 50 (YouTube API limit)
     for i in range(0, len(video_ids), 50):
         batch = video_ids[i : i + 50]
         try:
+            youtube_cb.guard()
             resp = requests.get(
                 f"{YOUTUBE_API_BASE}/videos",
                 params={
@@ -312,6 +340,7 @@ def check_streams_ended(video_ids: list[str], api_key: str) -> set[str]:
                 timeout=10,
             )
             resp.raise_for_status()
+            youtube_cb.record_success()
             items = resp.json().get("items", [])
 
             # Build lookup of returned items
@@ -336,8 +365,14 @@ def check_streams_ended(video_ids: list[str], api_key: str) -> set[str]:
                 if status.get("privacyStatus") in ("private", "unlisted"):
                     ended.add(vid)
 
+        except CircuitOpenError:
+            break  # Skip remaining batches if circuit is open
         except requests.HTTPError as e:
             status_code = e.response.status_code if e.response is not None else None
+            if status_code == 403:
+                youtube_cb.record_failure(YouTubeQuotaExhaustedError())
+            else:
+                youtube_cb.record_failure(e)
             logger.error("YouTube API check_streams_ended HTTP %s: %s", status_code, e)
             from ..constants import AlertSeverity, AlertType
             from .alerts import log_alert
@@ -349,6 +384,7 @@ def check_streams_ended(video_ids: list[str], api_key: str) -> set[str]:
                 context={"batch_size": len(batch), "status_code": status_code, "error": str(e)[:200]},
             )
         except requests.RequestException as e:
+            youtube_cb.record_failure(e)
             logger.error("YouTube API check_streams_ended error: %s", e)
             from ..constants import AlertSeverity, AlertType
             from .alerts import log_alert

@@ -30,6 +30,7 @@ from .chinese_names import (  # noqa: F401
     clear_chinese_name_caches,
     resolve_missing_chinese_name,
 )
+from .circuit_breaker import CircuitOpenError, gbif_cb
 from .http_client import external_session
 from .species_cache import (  # noqa: F401
     _build_path_zh,
@@ -49,6 +50,19 @@ RANK_ORDER = ["kingdom", "phylum", "class", "order", "family", "genus", "species
 _MAX_SYNONYM_RESOLVES = 8
 
 
+def _gbif_get(url: str, **kwargs: Any) -> requests.Response:
+    """GBIF HTTP GET with circuit breaker protection."""
+    gbif_cb.guard()
+    try:
+        resp = external_session.get(url, **kwargs)
+        resp.raise_for_status()
+        gbif_cb.record_success()
+        return resp
+    except requests.RequestException as exc:
+        gbif_cb.record_failure(exc)
+        raise
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -64,7 +78,7 @@ def suggest_species(query: str, limit: int = 10) -> list[dict[str, Any]]:
 
     # Request more results to capture subspecies alongside species
     fetch_limit = min(limit * 3, 60)
-    resp = external_session.get(
+    resp = _gbif_get(
         f"{GBIF_BASE}/species/suggest",
         params={  # type: ignore[arg-type]
             "q": query,
@@ -72,7 +86,6 @@ def suggest_species(query: str, limit: int = 10) -> list[dict[str, Any]]:
         },
         timeout=10,
     )
-    resp.raise_for_status()
     results = resp.json()  # suggest returns a plain list, not {results: [...]}
 
     species_list: list[dict[str, Any]] = []
@@ -140,7 +153,7 @@ def match_species(name: str) -> dict[str, Any] | None:
     """
     from .chinese_names import _enrich_chinese_names
 
-    resp = external_session.get(
+    resp = _gbif_get(
         f"{GBIF_BASE}/species/match",
         params={
             "name": name,
@@ -148,7 +161,6 @@ def match_species(name: str) -> dict[str, Any] | None:
         },
         timeout=10,
     )
-    resp.raise_for_status()
     data = resp.json()
 
     if data.get("matchType") == "NONE":
@@ -332,7 +344,7 @@ def _suggest_species_stream(query: str, limit: int = 10) -> Generator[str, None,
     from .chinese_names import _enrich_chinese_names, _fallback_taicol_by_name
 
     fetch_limit = min(limit * 3, 60)
-    resp = external_session.get(
+    resp = _gbif_get(
         f"{GBIF_BASE}/species/suggest",
         params={  # type: ignore[arg-type]
             "q": query,
@@ -340,7 +352,6 @@ def _suggest_species_stream(query: str, limit: int = 10) -> Generator[str, None,
         },
         timeout=10,
     )
-    resp.raise_for_status()
     raw = resp.json()
 
     species_list: list[dict[str, Any]] = []
@@ -419,9 +430,11 @@ def _resolve_synonym(
     Returns an accepted species dict with synonym_name attached, or None.
     """
     try:
+        gbif_cb.guard()
         resp = external_session.get(f"{GBIF_BASE}/species/{synonym_key}", timeout=10)
         if resp.status_code != 200:
             return None
+        gbif_cb.record_success()
         data = resp.json()
         accepted_key = data.get("acceptedKey")
         if not accepted_key:
@@ -432,15 +445,20 @@ def _resolve_synonym(
             return None
 
         # Fetch the accepted species
+        gbif_cb.guard()
         resp2 = external_session.get(f"{GBIF_BASE}/species/{accepted_key}", timeout=10)
         if resp2.status_code != 200:
             return None
+        gbif_cb.record_success()
         accepted = resp2.json()
 
         result = _gbif_result_to_dict(accepted, accepted_key)
         result["synonym_name"] = synonym_canonical_name or data.get("canonicalName")
         return result
-    except requests.RequestException:
+    except CircuitOpenError:
+        return None
+    except requests.RequestException as exc:
+        gbif_cb.record_failure(exc)
         logger.debug("Failed to resolve synonym key=%s", synonym_key)
         return None
 
