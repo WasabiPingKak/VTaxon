@@ -4,12 +4,11 @@ from unittest.mock import patch
 
 from app.models import SpeciesCache
 from app.services.species_cache import (
-    _build_taxon_path,
-    _realign_taxon_path,
     cache_from_search_result,
     get_species,
     get_subspecies,
 )
+from app.services.taxonomy_path import _build_path_zh, _build_taxon_path, _realign_taxon_path
 
 # ---------------------------------------------------------------------------
 # _build_taxon_path — pure logic, no DB or HTTP
@@ -381,3 +380,98 @@ class TestGetSubspecies:
 
         results = get_subspecies(777)
         assert len(results) == 1
+
+
+# ---------------------------------------------------------------------------
+# _build_path_zh — Chinese taxonomy path construction
+# ---------------------------------------------------------------------------
+
+_TP = "app.services.taxonomy_path"
+
+
+class TestBuildPathZh:
+    @patch(f"{_TP}.get_taxonomy_zh", return_value=None)
+    @patch("app.services.chinese_names._resolve_rank_zh", return_value=None)
+    def test_empty_data_returns_empty_dict(self, mock_rank, mock_zh):
+        assert _build_path_zh({}) == {}
+
+    @patch("app.services.chinese_names._resolve_rank_zh", return_value=None)
+    @patch(
+        f"{_TP}.get_taxonomy_zh", side_effect=lambda name: {"Animalia": "動物界", "Chordata": "脊索動物門"}.get(name)
+    )
+    def test_static_table_fills_zh(self, mock_zh, mock_rank):
+        data = {"kingdom": "Animalia", "phylum": "Chordata"}
+        result = _build_path_zh(data)
+        assert result["kingdom"] == "動物界"
+        assert result["phylum"] == "脊索動物門"
+
+    @patch("app.services.chinese_names._resolve_rank_zh", return_value="犬科")
+    @patch(f"{_TP}.get_taxonomy_zh", return_value=None)
+    def test_wikidata_fallback_for_missing_static(self, mock_zh, mock_rank):
+        """When static table returns None, _resolve_rank_zh (Wikidata) should be tried."""
+        data = {"family": "Canidae"}
+        result = _build_path_zh(data)
+        assert result["family"] == "犬科"
+
+    @patch("app.services.chinese_names._resolve_rank_zh", return_value=None)
+    @patch(f"{_TP}.get_taxonomy_zh", side_effect=lambda name: {"Animalia": "動物界", "Medusozoa": "水母亞門"}.get(name))
+    def test_subphylum_adds_subphylum_key(self, mock_zh, mock_rank):
+        data = {
+            "kingdom": "Animalia",
+            "phylum": "Cnidaria",
+            "taxon_rank": "SUBPHYLUM",
+            "canonical_name": "Medusozoa",
+        }
+        result = _build_path_zh(data)
+        assert result.get("subphylum") == "水母亞門"
+        assert result.get("kingdom") == "動物界"
+
+    @patch("app.services.chinese_names._resolve_rank_zh", return_value=None)
+    @patch(f"{_TP}.get_taxonomy_zh", side_effect=lambda name: {"Teleostei": "真骨下綱"}.get(name))
+    def test_subclass_adds_subclass_key(self, mock_zh, mock_rank):
+        data = {
+            "taxon_rank": "SUBCLASS",
+            "canonical_name": "Teleostei",
+        }
+        result = _build_path_zh(data)
+        assert result.get("subclass") == "真骨下綱"
+
+    @patch("app.services.chinese_names._resolve_chinese_name", return_value="家貓")
+    @patch("app.services.chinese_names._resolve_rank_zh", return_value=None)
+    @patch(f"{_TP}.get_taxonomy_zh", return_value=None)
+    def test_subspecies_resolves_parent_species_zh(self, mock_zh, mock_rank, mock_resolve):
+        data = {
+            "taxon_rank": "SUBSPECIES",
+            "speciesKey": 9685,
+            "species": "Felis catus",
+        }
+        result = _build_path_zh(data)
+        assert result.get("species") == "家貓"
+        mock_resolve.assert_called_once_with(9685, "Felis catus")
+
+    @patch("app.services.chinese_names._resolve_chinese_name", return_value=None)
+    @patch("app.services.chinese_names._resolve_rank_zh", return_value=None)
+    @patch(f"{_TP}.get_taxonomy_zh", return_value=None)
+    def test_subspecies_no_species_key_skips(self, mock_zh, mock_rank, mock_resolve):
+        """Without speciesKey, should not attempt to resolve parent species zh."""
+        data = {"taxon_rank": "SUBSPECIES", "species": "Felis catus"}
+        result = _build_path_zh(data)
+        assert "species" not in result
+        mock_resolve.assert_not_called()
+
+    @patch("app.services.chinese_names._resolve_rank_zh", return_value=None)
+    @patch(f"{_TP}.get_taxonomy_zh", return_value=None)
+    def test_skips_none_fields(self, mock_zh, mock_rank):
+        """Fields with None values should not appear in result."""
+        data = {"kingdom": None, "family": "Canidae"}
+        result = _build_path_zh(data)
+        assert "kingdom" not in result
+
+    @patch("app.services.chinese_names._resolve_rank_zh", return_value=None)
+    @patch(f"{_TP}.get_taxonomy_zh", return_value=None)
+    def test_reads_field_with_underscore_suffix(self, mock_zh, mock_rank):
+        """Should also check 'class_' when 'class' is missing (SQLAlchemy naming)."""
+        data = {"class_": "Mammalia"}
+        result = _build_path_zh(data)
+        # get_taxonomy_zh returns None, _resolve_rank_zh returns None → field set to None
+        assert result.get("class") is None

@@ -452,7 +452,8 @@ def _build_from_taicol(tr: dict[str, Any]) -> dict[str, Any] | None:
     Uses TaiCOL higherTaxa API to fill in the full taxonomy hierarchy.
     Writes result to species_cache so trait creation can find it later.
     """
-    from .species_cache import _build_path_zh, _fill_missing_rank_zh
+    from .species_cache import _fill_missing_rank_zh
+    from .taxonomy_path import _build_path_zh
 
     scientific_name = tr.get("scientific_name")
     if not scientific_name:
