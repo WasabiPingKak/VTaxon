@@ -9,6 +9,7 @@ import VtuberDetailPanel from '../components/VtuberDetailPanel';
 import SEOHead, { SITE_URL } from '../components/SEOHead';
 import useIsMobile from '../hooks/useIsMobile';
 import useLiveStatus from '../hooks/useLiveStatus';
+import { useAuth } from '../lib/AuthContext';
 
 interface DirectoryFiltersState {
   q?: string;
@@ -48,6 +49,8 @@ export default function DirectoryPage(): React.JSX.Element {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { liveUserIds } = useLiveStatus();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [filters, setFilters] = useState<DirectoryFiltersState>(DEFAULT_FILTERS);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<any>(null);
@@ -170,6 +173,7 @@ export default function DirectoryPage(): React.JSX.Element {
         onViewModeChange={setViewMode}
         facets={data?.facets}
         liveCount={liveUserIds.size}
+        isAdmin={isAdmin}
       />
 
       {/* Content */}
