@@ -12,6 +12,8 @@ import {
   computeMaxTraceBack,
   computeTraceBackLevels,
   computeDepthLabels,
+  computeNodeBounds,
+  resolveLocateEntry,
 } from '../graphLogic';
 import { realEntry, fictionalEntry } from './fixtures';
 
@@ -409,5 +411,81 @@ describe('computeActiveFocusedEntries', () => {
 
   it('returns empty array when entries is empty', () => {
     expect(computeActiveFocusedEntries([], 0)).toEqual([]);
+  });
+});
+
+// ── computeNodeBounds ──
+
+describe('computeNodeBounds', () => {
+  const nodes = [
+    { x: 10, y: 20, data: { _pathKey: 'A' } },
+    { x: 50, y: 5, data: { _pathKey: '__F__|X' } },
+    { x: 30, y: 40, data: { _pathKey: 'B|C' } },
+  ];
+
+  it('returns bounds of all nodes when no filter', () => {
+    expect(computeNodeBounds(nodes)).toEqual({ minX: 10, minY: 5, maxX: 50, maxY: 40 });
+  });
+
+  it('returns null for empty array', () => {
+    expect(computeNodeBounds([])).toBeNull();
+  });
+
+  it('filters nodes correctly', () => {
+    const result = computeNodeBounds(nodes, n => !(n.data._pathKey || '').startsWith('__F__'));
+    expect(result).toEqual({ minX: 10, minY: 20, maxX: 30, maxY: 40 });
+  });
+
+  it('returns null when filter matches nothing', () => {
+    expect(computeNodeBounds(nodes, () => false)).toBeNull();
+  });
+
+  it('handles single node', () => {
+    expect(computeNodeBounds([nodes[0]])).toEqual({ minX: 10, minY: 20, maxX: 10, maxY: 20 });
+  });
+});
+
+// ── resolveLocateEntry ──
+
+describe('resolveLocateEntry', () => {
+  const r1 = realEntry('u1', 'A|B', { breed_id: 1 });
+  const r2 = realEntry('u1', 'C|D', { breed_id: 2 });
+  const r3 = realEntry('u2', 'E|F');
+  const f1 = fictionalEntry('u1', 'X|Y', { fictional_species_id: 10 });
+  const f2 = fictionalEntry('u3', 'M|N', { fictional_species_id: 20 });
+
+  it('finds by fictional_path + fid', () => {
+    const result = resolveLocateEntry([r1], [f1, f2], 'u1', null, 'X|Y', null, '10');
+    expect(result).toBe(f1);
+  });
+
+  it('finds by taxon_path + bid', () => {
+    const result = resolveLocateEntry([r1, r2], [f1], 'u1', 'C|D', null, '2', null);
+    expect(result).toBe(r2);
+  });
+
+  it('falls back to first entry for userId', () => {
+    const result = resolveLocateEntry([r1, r3], [f2], 'u2', null, null, null, null);
+    expect(result).toBe(r3);
+  });
+
+  it('falls back to fictional when no real match', () => {
+    const result = resolveLocateEntry([r1], [f2], 'u3', null, null, null, null);
+    expect(result).toBe(f2);
+  });
+
+  it('returns undefined when no match', () => {
+    const result = resolveLocateEntry([r1], [f1], 'u999', null, null, null, null);
+    expect(result).toBeUndefined();
+  });
+
+  it('handles null entries gracefully', () => {
+    const result = resolveLocateEntry(null, null, 'u1', null, null, null, null);
+    expect(result).toBeUndefined();
+  });
+
+  it('matches taxon_path without bid filter', () => {
+    const result = resolveLocateEntry([r1, r2], null, 'u1', 'A|B', null, null, null);
+    expect(result).toBe(r1);
   });
 });

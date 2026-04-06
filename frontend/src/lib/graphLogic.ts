@@ -219,3 +219,58 @@ export function computeDepthLabels(
   }
   return { 8: '同亞種', 7: '同種', 6: '同屬', 5: '同科', 4: '同目', 3: '同綱', 2: '同門', 1: '同界' };
 }
+
+// ── Bounds computation ──
+
+export interface Bounds {
+  minX: number; minY: number; maxX: number; maxY: number;
+}
+
+/** Compute bounding box from a filtered list of positioned nodes. Returns null if no nodes match. */
+export function computeNodeBounds(
+  nodes: ReadonlyArray<{ x: number; y: number; data: { _pathKey?: string } }>,
+  filter?: (n: { x: number; y: number; data: { _pathKey?: string } }) => boolean,
+): Bounds | null {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let count = 0;
+  for (const n of nodes) {
+    if (filter && !filter(n)) continue;
+    if (n.x < minX) minX = n.x;
+    if (n.y < minY) minY = n.y;
+    if (n.x > maxX) maxX = n.x;
+    if (n.y > maxY) maxY = n.y;
+    count++;
+  }
+  return count > 0 ? { minX, minY, maxX, maxY } : null;
+}
+
+// ── URL Locate ──
+
+/** Resolve the target entry from URL locate params. */
+export function resolveLocateEntry(
+  entries: TreeEntry[] | null,
+  fictionalEntries: TreeEntry[] | null,
+  locateId: string,
+  locateTp: string | null,
+  locateFp: string | null,
+  locateBid: string | null,
+  locateFid: string | null,
+): TreeEntry | undefined {
+  let entry: TreeEntry | undefined;
+  if (locateFp) {
+    entry = (fictionalEntries || []).find(e =>
+      e.user_id === locateId && e.fictional_path === locateFp
+      && (locateFid == null || String(e.fictional_species_id) === locateFid)
+    );
+  } else if (locateTp) {
+    entry = (entries || []).find(e =>
+      e.user_id === locateId && e.taxon_path === locateTp
+      && (locateBid == null || String(e.breed_id ?? '') === locateBid)
+    );
+  }
+  if (!entry) {
+    entry = (entries || []).find(e => e.user_id === locateId)
+      || (fictionalEntries || []).find(e => e.user_id === locateId);
+  }
+  return entry;
+}
