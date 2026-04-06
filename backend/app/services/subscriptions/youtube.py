@@ -1,20 +1,18 @@
-"""Business logic for livestream subscription management — Twitch EventSub & YouTube WebSub."""
+"""YouTube WebSub subscription management — cron, admin, and per-user helpers."""
 
 import logging
 import os
 from datetime import UTC, datetime
 from typing import Any
 
-import requests as _requests
-
-from ..extensions import db
-from ..models import LiveStream, OAuthAccount, User
+from ...extensions import db
+from ...models import LiveStream, OAuthAccount, User
 
 logger = logging.getLogger(__name__)
 
 
 def _invalidate_live_cache() -> None:
-    from ..routes.livestream import invalidate_live_cache
+    from ...routes.livestream import invalidate_live_cache
 
     invalidate_live_cache()
 
@@ -26,7 +24,7 @@ def _invalidate_live_cache() -> None:
 
 def youtube_check_offline(api_key: str) -> dict[str, Any]:
     """Check YouTube streams that have ended. Returns result dict."""
-    from .youtube_pubsub import check_streams_ended
+    from ..youtube_pubsub import check_streams_ended
 
     streams = LiveStream.query.filter_by(provider="youtube").all()
     if not streams:
@@ -51,8 +49,8 @@ def youtube_check_offline(api_key: str) -> dict[str, Any]:
     logger.info("YouTube check-offline: checked=%d, ended=%d", len(video_ids), len(ended_ids))
 
     if len(video_ids) >= 5 and len(ended_ids) == len(video_ids):
-        from ..constants import AlertSeverity, AlertType
-        from .alerts import log_alert
+        from ...constants import AlertSeverity, AlertType
+        from ..alerts import log_alert
 
         ended_streams = [
             {"title": s.stream_title or s.stream_id, "url": s.stream_url or ""}
@@ -75,7 +73,7 @@ def youtube_check_offline(api_key: str) -> dict[str, Any]:
 
 def youtube_renew_subs() -> dict[str, Any] | None:
     """Batch renew YouTube WebSub subscriptions. Returns result dict."""
-    from .youtube_pubsub import extract_channel_id
+    from ..youtube_pubsub import extract_channel_id
 
     accounts = OAuthAccount.query.filter_by(provider="youtube").all()
 
@@ -94,7 +92,7 @@ def youtube_renew_subs() -> dict[str, Any] | None:
     # Try Cloud Tasks dispatch
     cloud_run_url = os.environ.get("CLOUD_RUN_SERVICE_URL", "")
     if cloud_run_url:
-        from ..utils.cloud_tasks_client import dispatch_tasks_batch
+        from ...utils.cloud_tasks_client import dispatch_tasks_batch
 
         result = dispatch_tasks_batch("/api/livestream/youtube-subscribe-one", params_list=params_list)
         logger.info(
@@ -116,8 +114,8 @@ def youtube_renew_subs() -> dict[str, Any] | None:
             "Cloud Tasks dispatch completely failed (dispatched=0, failed=%d), falling back to sync mode",
             result["failed"],
         )
-        from ..constants import AlertSeverity, AlertType
-        from .alerts import log_alert
+        from ...constants import AlertSeverity, AlertType
+        from ..alerts import log_alert
 
         log_alert(
             alert_type=AlertType.WEBSUB_RENEW_FAIL,
@@ -133,7 +131,7 @@ def youtube_renew_subs() -> dict[str, Any] | None:
         )
 
     # Fallback: synchronous subscribe (also used when Cloud Tasks dispatch all fail)
-    from .youtube_pubsub import subscribe_channel
+    from ..youtube_pubsub import subscribe_channel
 
     webhook_base_url = os.environ.get("WEBHOOK_BASE_URL", "")
     if not webhook_base_url:
@@ -166,8 +164,8 @@ def youtube_renew_subs() -> dict[str, Any] | None:
         errors,
     )
     if errors > 0:
-        from ..constants import AlertSeverity, AlertType
-        from .alerts import log_alert
+        from ...constants import AlertSeverity, AlertType
+        from ..alerts import log_alert
 
         log_alert(
             alert_type=AlertType.WEBSUB_RENEW_FAIL,
@@ -180,7 +178,7 @@ def youtube_renew_subs() -> dict[str, Any] | None:
 
 def youtube_subscribe_one(channel_id: str) -> tuple[dict[str, Any], int]:
     """Subscribe a single YouTube channel. Returns (result_dict, http_status)."""
-    from .youtube_pubsub import subscribe_channel
+    from ..youtube_pubsub import subscribe_channel
 
     webhook_base_url = os.environ.get("WEBHOOK_BASE_URL", "")
     if not webhook_base_url:
@@ -208,106 +206,13 @@ def youtube_subscribe_one(channel_id: str) -> tuple[dict[str, Any], int]:
 
 
 # ---------------------------------------------------------------------------
-# Twitch admin logic
-# ---------------------------------------------------------------------------
-
-
-def list_twitch_subs() -> tuple[dict[str, Any], int]:
-    """List all Twitch EventSub subscriptions. Returns (result_dict, http_status)."""
-    from .twitch import list_eventsub_subscriptions
-
-    client_id = os.environ.get("TWITCH_CLIENT_ID", "")
-    client_secret = os.environ.get("TWITCH_CLIENT_SECRET", "")
-    if not client_id or not client_secret:
-        return {"error": "Twitch credentials not configured"}, 500
-
-    try:
-        subs = list_eventsub_subscriptions(client_id, client_secret)
-        return {"subscriptions": subs, "total": len(subs)}, 200
-    except _requests.RequestException:
-        logger.exception("Failed to list Twitch EventSub subscriptions")
-        return {"error": "Twitch API 暫時無法使用，請稍後再試"}, 502
-
-
-def rebuild_twitch_subs(*, offset: int, limit: int, clean: bool) -> tuple[dict[str, Any], int]:
-    """Batch rebuild Twitch EventSub subscriptions. Returns (result_dict, http_status)."""
-    from .twitch import create_eventsub_subscription, delete_eventsub_subscription, list_eventsub_subscriptions
-
-    client_id = os.environ.get("TWITCH_CLIENT_ID", "")
-    client_secret = os.environ.get("TWITCH_CLIENT_SECRET", "")
-    webhook_secret = os.environ.get("TWITCH_WEBHOOK_SECRET", "")
-    webhook_base_url = os.environ.get("WEBHOOK_BASE_URL", "")
-
-    if not all([client_id, client_secret, webhook_secret, webhook_base_url]):
-        return {"error": "Missing Twitch/webhook configuration"}, 500
-
-    callback_url = f"{webhook_base_url}/api/webhooks/twitch"
-
-    deleted = 0
-    if clean:
-        try:
-            existing = list_eventsub_subscriptions(client_id, client_secret)
-            for sub in existing:
-                try:
-                    delete_eventsub_subscription(client_id, client_secret, sub["id"])
-                    deleted += 1
-                except _requests.RequestException:
-                    logger.exception("Failed to delete subscription %s", sub["id"])
-        except _requests.RequestException:
-            logger.exception("Failed to list existing subscriptions")
-
-    total_accounts = OAuthAccount.query.filter_by(provider="twitch").count()
-    twitch_accounts = (
-        OAuthAccount.query.filter_by(provider="twitch")
-        .order_by(OAuthAccount.created_at)
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
-
-    created = 0
-    errors = 0
-    error_details = []
-    for account in twitch_accounts:
-        broadcaster_id = account.provider_account_id
-        account_success = 0
-        for event_type in ("stream.online", "stream.offline"):
-            try:
-                create_eventsub_subscription(
-                    client_id, client_secret, broadcaster_id, event_type, callback_url, webhook_secret
-                )
-                created += 1
-                account_success += 1
-            except _requests.RequestException:
-                logger.exception("Failed to create %s sub for %s", event_type, broadcaster_id)
-                errors += 1
-                error_details.append(f"{broadcaster_id}:{event_type}:request_failed")
-        account.live_sub_status = "subscribed" if account_success == 2 else "failed"
-        account.live_sub_at = datetime.now(UTC)
-
-    db.session.commit()
-
-    next_offset = offset + limit
-    return {
-        "created": created,
-        "errors": errors,
-        "deleted": deleted,
-        "batch": f"{offset}-{offset + len(twitch_accounts)}",
-        "total_accounts": total_accounts,
-        "has_more": next_offset < total_accounts,
-        "next_offset": next_offset if next_offset < total_accounts else None,
-        "error_details": error_details[:10],
-    }, 200
-
-
-# ---------------------------------------------------------------------------
 # YouTube admin logic
 # ---------------------------------------------------------------------------
 
 
 def list_youtube_subs() -> dict[str, Any]:
     """List all YouTube WebSub subscription statuses."""
-    from .youtube_pubsub import extract_channel_id
+    from ..youtube_pubsub import extract_channel_id
 
     accounts = OAuthAccount.query.filter_by(provider="youtube").all()
     result = []
@@ -328,7 +233,7 @@ def list_youtube_subs() -> dict[str, Any]:
 
 def rebuild_youtube_subs(*, offset: int, limit: int, clean: bool) -> tuple[dict[str, Any], int]:
     """Batch rebuild YouTube WebSub subscriptions. Returns (result_dict, http_status)."""
-    from .youtube_pubsub import extract_channel_id, subscribe_channel, unsubscribe_channel
+    from ..youtube_pubsub import extract_channel_id, subscribe_channel, unsubscribe_channel
 
     webhook_base_url = os.environ.get("WEBHOOK_BASE_URL", "")
     if not webhook_base_url:
@@ -393,7 +298,7 @@ def backfill_youtube_channels(api_key: str) -> dict[str, Any]:
     - NULL URLs with access_token → fetch channel via OAuth token
     After resolution, subscribe to WebSub.
     """
-    from .youtube_pubsub import (
+    from ..youtube_pubsub import (
         extract_channel_id,
         extract_handle,
         fetch_my_channel_id,
@@ -479,73 +384,13 @@ def backfill_youtube_channels(api_key: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Public helpers (called from oauth.py)
+# Per-user helpers (called from oauth.py)
 # ---------------------------------------------------------------------------
-
-
-def subscribe_twitch_user(provider_account_id: str, oauth_account: OAuthAccount | None = None) -> None:
-    """Subscribe to stream.online + stream.offline for a Twitch broadcaster."""
-    from .twitch import create_eventsub_subscription
-
-    client_id = os.environ.get("TWITCH_CLIENT_ID", "")
-    client_secret = os.environ.get("TWITCH_CLIENT_SECRET", "")
-    webhook_secret = os.environ.get("TWITCH_WEBHOOK_SECRET", "")
-    webhook_base_url = os.environ.get("WEBHOOK_BASE_URL", "")
-
-    if not all([client_id, client_secret, webhook_secret, webhook_base_url]):
-        logger.warning("Twitch EventSub not configured, skipping subscription for %s", provider_account_id)
-        if oauth_account:
-            oauth_account.live_sub_status = "failed"
-            oauth_account.live_sub_at = datetime.now(UTC)
-            db.session.commit()
-        return
-
-    callback_url = f"{webhook_base_url}/api/webhooks/twitch"
-    success_count = 0
-
-    for event_type in ("stream.online", "stream.offline"):
-        try:
-            create_eventsub_subscription(
-                client_id, client_secret, provider_account_id, event_type, callback_url, webhook_secret
-            )
-            logger.info("Created Twitch EventSub %s for %s", event_type, provider_account_id)
-            success_count += 1
-        except _requests.RequestException:
-            logger.exception("Failed to create Twitch EventSub %s for %s", event_type, provider_account_id)
-
-    if oauth_account:
-        oauth_account.live_sub_status = "subscribed" if success_count == 2 else "failed"
-        oauth_account.live_sub_at = datetime.now(UTC)
-        db.session.commit()
-
-
-def unsubscribe_twitch_user(provider_account_id: str) -> None:
-    """Remove all EventSub subscriptions for a Twitch broadcaster."""
-    from .twitch import delete_eventsub_subscription, list_eventsub_subscriptions
-
-    client_id = os.environ.get("TWITCH_CLIENT_ID", "")
-    client_secret = os.environ.get("TWITCH_CLIENT_SECRET", "")
-
-    if not client_id or not client_secret:
-        return
-
-    try:
-        subs = list_eventsub_subscriptions(client_id, client_secret)
-        for sub in subs:
-            condition = sub.get("condition", {})
-            if condition.get("broadcaster_user_id") == provider_account_id:
-                try:
-                    delete_eventsub_subscription(client_id, client_secret, sub["id"])
-                    logger.info("Deleted Twitch EventSub %s for %s", sub["id"], provider_account_id)
-                except _requests.RequestException:
-                    logger.exception("Failed to delete sub %s", sub["id"])
-    except _requests.RequestException:
-        logger.exception("Failed to clean up Twitch EventSub for %s", provider_account_id)
 
 
 def subscribe_youtube_user(channel_url: str, oauth_account: OAuthAccount | None = None) -> None:
     """Subscribe to YouTube WebSub for a channel."""
-    from .youtube_pubsub import extract_channel_id, subscribe_channel
+    from ..youtube_pubsub import extract_channel_id, subscribe_channel
 
     webhook_base_url = os.environ.get("WEBHOOK_BASE_URL", "")
     if not webhook_base_url:
@@ -577,7 +422,7 @@ def subscribe_youtube_user(channel_url: str, oauth_account: OAuthAccount | None 
 
 def unsubscribe_youtube_user(channel_url: str) -> None:
     """Unsubscribe from YouTube WebSub for a channel."""
-    from .youtube_pubsub import extract_channel_id, unsubscribe_channel
+    from ..youtube_pubsub import extract_channel_id, unsubscribe_channel
 
     webhook_base_url = os.environ.get("WEBHOOK_BASE_URL", "")
     if not webhook_base_url:
