@@ -52,6 +52,7 @@ interface DirectoryFiltersProps {
   onViewModeChange: (mode: ViewMode) => void;
   facets: Facets | null;
   liveCount?: number;
+  isAdmin?: boolean;
 }
 
 export default function DirectoryFilters({
@@ -61,6 +62,7 @@ export default function DirectoryFilters({
   onViewModeChange,
   facets,
   liveCount,
+  isAdmin,
 }: DirectoryFiltersProps) {
   const isMobile = useIsMobile();
   const [searchInput, setSearchInput] = useState(filters.q || '');
@@ -267,7 +269,7 @@ export default function DirectoryFilters({
         {/* Separator between dropdowns and toggles */}
         <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', margin: '0 2px', flexShrink: 0 }} />
 
-        <ToggleControls filters={filters} updateFilter={updateFilter} traitFacets={traitFacets} liveCount={liveCount} />
+        <ToggleControls filters={filters} updateFilter={updateFilter} traitFacets={traitFacets} liveCount={liveCount} isAdmin={isAdmin} />
 
         {/* Desktop: separator + sort + view toggle inline */}
         {!isMobile && <>
@@ -340,9 +342,10 @@ interface ToggleControlsProps {
   updateFilter: (key: string, val: string | number) => void;
   traitFacets: Record<string, number>;
   liveCount?: number;
+  isAdmin?: boolean;
 }
 
-function ToggleControls({ filters, updateFilter, traitFacets, liveCount }: ToggleControlsProps) {
+function ToggleControls({ filters, updateFilter, traitFacets, liveCount, isAdmin }: ToggleControlsProps) {
   const toggles = [
     {
       key: 'live_first',
@@ -351,13 +354,13 @@ function ToggleControls({ filters, updateFilter, traitFacets, liveCount }: Toggl
       count: liveCount || null,
       onClick: () => updateFilter('live_first', filters.live_first === 'true' ? '' : 'true'),
     },
-    {
+    ...(isAdmin ? [{
       key: 'show_untagged',
-      active: filters.has_traits !== 'true',
-      label: '顯示未標註',
+      active: filters.has_traits === 'false',
+      label: '只顯示未標註',
       count: traitFacets?.['false'] ?? null,
-      onClick: () => updateFilter('has_traits', filters.has_traits !== 'true' ? 'true' : ''),
-    },
+      onClick: () => updateFilter('has_traits', filters.has_traits === 'false' ? 'true' : 'false'),
+    }] : []),
   ];
 
   return (
