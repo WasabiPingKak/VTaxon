@@ -75,44 +75,47 @@ class TestCleanAltNames:
 # _resolve_chinese_name — fallback chain
 # ---------------------------------------------------------------------------
 
+# Patches target resolution.py where the names are looked up at runtime.
+_RES = "app.services.chinese_names.resolution"
+
 
 class TestResolveChinese:
-    @patch("app.services.chinese_names.get_species_zh_override", return_value="覆寫名")
+    @patch(f"{_RES}.get_species_zh_override", return_value="覆寫名")
     def test_override_takes_priority(self, mock_override):
         result = _resolve_chinese_name(12345, "Felis catus")
         assert result == "覆寫名"
 
-    @patch("app.services.chinese_names.get_species_zh_override", return_value=None)
-    @patch("app.services.chinese_names.taicol_get_chinese_name", return_value=("台灣名", None))
+    @patch(f"{_RES}.get_species_zh_override", return_value=None)
+    @patch(f"{_RES}.taicol_get_chinese_name", return_value=("台灣名", None))
     def test_taicol_fallback(self, mock_taicol, mock_override):
         result = _resolve_chinese_name(12345, "Felis catus")
         assert result == "台灣名"
 
-    @patch("app.services.chinese_names.get_species_zh_override", return_value=None)
-    @patch("app.services.chinese_names.taicol_get_chinese_name", return_value=(None, None))
-    @patch("app.services.chinese_names.get_chinese_name_by_gbif_id", return_value=("維基名", None))
+    @patch(f"{_RES}.get_species_zh_override", return_value=None)
+    @patch(f"{_RES}.taicol_get_chinese_name", return_value=(None, None))
+    @patch(f"{_RES}.get_chinese_name_by_gbif_id", return_value=("維基名", None))
     def test_wikidata_fallback(self, mock_wiki, mock_taicol, mock_override):
         result = _resolve_chinese_name(12345, "Felis catus")
         assert result == "維基名"
 
-    @patch("app.services.chinese_names.get_species_zh_override", return_value=None)
-    @patch("app.services.chinese_names.taicol_get_chinese_name", return_value=(None, None))
-    @patch("app.services.chinese_names.get_chinese_name_by_gbif_id", return_value=(None, None))
+    @patch(f"{_RES}.get_species_zh_override", return_value=None)
+    @patch(f"{_RES}.taicol_get_chinese_name", return_value=(None, None))
+    @patch(f"{_RES}.get_chinese_name_by_gbif_id", return_value=(None, None))
     def test_returns_none_when_all_fail(self, mock_wiki, mock_taicol, mock_override):
         result = _resolve_chinese_name(12345, "Unknown species")
         assert result is None
 
-    @patch("app.services.chinese_names.get_species_zh_override", return_value=None)
-    @patch("app.services.chinese_names.taicol_get_chinese_name", side_effect=requests.RequestException("TaiCOL down"))
-    @patch("app.services.chinese_names.get_chinese_name_by_gbif_id", return_value=("維基名", None))
+    @patch(f"{_RES}.get_species_zh_override", return_value=None)
+    @patch(f"{_RES}.taicol_get_chinese_name", side_effect=requests.RequestException("TaiCOL down"))
+    @patch(f"{_RES}.get_chinese_name_by_gbif_id", return_value=("維基名", None))
     def test_taicol_failure_falls_through_to_wikidata(self, mock_wiki, mock_taicol, mock_override):
         result = _resolve_chinese_name(12345, "Felis catus")
         assert result == "維基名"
 
-    @patch("app.services.chinese_names.get_species_zh_override", return_value=None)
+    @patch(f"{_RES}.get_species_zh_override", return_value=None)
     def test_no_scientific_name_skips_taicol(self, mock_override):
         """When scientific_name is None, TaiCOL should be skipped."""
-        with patch("app.services.chinese_names.get_chinese_name_by_gbif_id", return_value=("維基名", None)):
+        with patch(f"{_RES}.get_chinese_name_by_gbif_id", return_value=("維基名", None)):
             result = _resolve_chinese_name(12345, None)
         assert result == "維基名"
 
@@ -123,13 +126,13 @@ class TestResolveChinese:
 
 
 class TestResolveAlternativeNames:
-    @patch("app.services.chinese_names.taicol_get_chinese_name", return_value=(None, "別名A, 別名B"))
+    @patch(f"{_RES}.taicol_get_chinese_name", return_value=(None, "別名A, 別名B"))
     def test_taicol_alternatives(self, mock_taicol):
         result = _resolve_alternative_names(12345, "Felis catus")
         assert result == "別名A, 別名B"
 
-    @patch("app.services.chinese_names.taicol_get_chinese_name", return_value=(None, None))
-    @patch("app.services.chinese_names.get_aliases_by_gbif_id", return_value="維基別名")
+    @patch(f"{_RES}.taicol_get_chinese_name", return_value=(None, None))
+    @patch(f"{_RES}.get_aliases_by_gbif_id", return_value="維基別名")
     def test_wikidata_aliases_fallback(self, mock_wiki, mock_taicol):
         result = _resolve_alternative_names(12345, "Felis catus")
         assert result == "維基別名"
@@ -139,13 +142,13 @@ class TestResolveAlternativeNames:
         result = _resolve_alternative_names(12345, "Canidae", taxon_rank="FAMILY")
         assert result is None
 
-    @patch("app.services.chinese_names.taicol_get_chinese_name", return_value=(None, "別名"))
+    @patch(f"{_RES}.taicol_get_chinese_name", return_value=(None, "別名"))
     def test_species_rank_resolves(self, mock_taicol):
         result = _resolve_alternative_names(12345, "Felis catus", taxon_rank="SPECIES")
         assert result == "別名"
 
-    @patch("app.services.chinese_names.taicol_get_chinese_name", return_value=(None, None))
-    @patch("app.services.chinese_names.get_aliases_by_gbif_id", return_value=None)
+    @patch(f"{_RES}.taicol_get_chinese_name", return_value=(None, None))
+    @patch(f"{_RES}.get_aliases_by_gbif_id", return_value=None)
     def test_returns_none_when_all_fail(self, mock_wiki, mock_taicol):
         result = _resolve_alternative_names(12345, "Unknown")
         assert result is None
@@ -157,14 +160,14 @@ class TestResolveAlternativeNames:
 
 
 class TestResolveRankZh:
-    @patch("app.services.chinese_names.get_taxonomy_zh", return_value="犬科")
+    @patch(f"{_RES}.get_taxonomy_zh", return_value="犬科")
     def test_static_table_hit(self, mock_static):
         result = _resolve_rank_zh("Canidae", rank="FAMILY")
         assert result == "犬科"
 
-    @patch("app.services.chinese_names.get_taxonomy_zh", return_value=None)
-    @patch("app.services.chinese_names.external_session")
-    @patch("app.services.chinese_names.get_chinese_name_by_gbif_id", return_value=("犬科", None))
+    @patch(f"{_RES}.get_taxonomy_zh", return_value=None)
+    @patch(f"{_RES}.external_session")
+    @patch(f"{_RES}.get_chinese_name_by_gbif_id", return_value=("犬科", None))
     def test_gbif_match_then_wikidata(self, mock_wiki, mock_session, mock_static):
         mock_resp = mock_session.get.return_value
         mock_resp.raise_for_status = lambda: None
@@ -173,8 +176,8 @@ class TestResolveRankZh:
         result = _resolve_rank_zh("Canidae", rank="FAMILY")
         assert result == "犬科"
 
-    @patch("app.services.chinese_names.get_taxonomy_zh", return_value=None)
-    @patch("app.services.chinese_names.external_session")
+    @patch(f"{_RES}.get_taxonomy_zh", return_value=None)
+    @patch(f"{_RES}.external_session")
     def test_gbif_no_match_returns_none(self, mock_session, mock_static):
         mock_resp = mock_session.get.return_value
         mock_resp.raise_for_status = lambda: None
@@ -189,8 +192,8 @@ class TestResolveRankZh:
     def test_empty_input_returns_none(self):
         assert _resolve_rank_zh("") is None
 
-    @patch("app.services.chinese_names.get_taxonomy_zh", return_value=None)
-    @patch("app.services.chinese_names.external_session")
+    @patch(f"{_RES}.get_taxonomy_zh", return_value=None)
+    @patch(f"{_RES}.external_session")
     def test_request_exception_returns_none(self, mock_session, mock_static):
         """API failure should be caught and return None."""
         mock_session.get.side_effect = requests.RequestException("timeout")
@@ -213,9 +216,12 @@ class TestClearCaches:
 # resolve_missing_chinese_name — persist to DB
 # ---------------------------------------------------------------------------
 
+# resolve_missing_chinese_name lives in resolution.py and calls
+# _resolve_chinese_name internally, so we patch at the resolution module.
+
 
 class TestResolveMissingChineseName:
-    @patch("app.services.chinese_names._resolve_chinese_name", return_value="家貓")
+    @patch(f"{_RES}._resolve_chinese_name", return_value="家貓")
     def test_backfills_chinese_name(self, mock_resolve, db_session):
         sp = SpeciesCache(taxon_id=50001, scientific_name="Felis catus", taxon_rank="SPECIES", taxon_path="test")
         db_session.add(sp)
@@ -225,7 +231,7 @@ class TestResolveMissingChineseName:
         db_session.refresh(sp)
         assert sp.common_name_zh == "家貓"
 
-    @patch("app.services.chinese_names._resolve_chinese_name", return_value=None)
+    @patch(f"{_RES}._resolve_chinese_name", return_value=None)
     def test_does_nothing_when_not_resolved(self, mock_resolve, db_session):
         sp = SpeciesCache(taxon_id=50002, scientific_name="Unknown", taxon_rank="SPECIES", taxon_path="test")
         db_session.add(sp)
@@ -240,12 +246,16 @@ class TestResolveMissingChineseName:
 # _enrich_chinese_names — batch enrichment
 # ---------------------------------------------------------------------------
 
+# _enrich_chinese_names lives in enrichment.py, which imports from resolution
+# at module level. Patches target where the name is bound in enrichment.
+_ENR = "app.services.chinese_names.enrichment"
+
 
 class TestEnrichChineseNames:
     @patch("app.services.species_cache._cache_enriched_species")
-    @patch("app.services.chinese_names._resolve_alternative_names", return_value=None)
-    @patch("app.services.chinese_names._resolve_chinese_name", return_value="紅狐")
-    @patch("app.services.chinese_names.get_species_zh_override", return_value=None)
+    @patch(f"{_ENR}._resolve_alternative_names", return_value=None)
+    @patch(f"{_ENR}._resolve_chinese_name", return_value="紅狐")
+    @patch(f"{_ENR}.get_species_zh_override", return_value=None)
     def test_resolves_chinese_name(self, mock_override, mock_resolve, mock_alt, mock_cache):
         species_list = [
             {"taxon_id": 1000, "scientific_name": "Vulpes vulpes", "taxon_rank": "SPECIES"},
@@ -255,18 +265,18 @@ class TestEnrichChineseNames:
         assert species_list[0]["species_zh"] == "紅狐"
 
     @patch("app.services.species_cache._cache_enriched_species")
-    @patch("app.services.chinese_names._resolve_alternative_names", return_value=None)
-    @patch("app.services.chinese_names._resolve_chinese_name", return_value=None)
-    @patch("app.services.chinese_names.get_species_zh_override", return_value="覆寫")
+    @patch(f"{_ENR}._resolve_alternative_names", return_value=None)
+    @patch(f"{_ENR}._resolve_chinese_name", return_value=None)
+    @patch(f"{_ENR}.get_species_zh_override", return_value="覆寫")
     def test_override_takes_priority(self, mock_override, mock_resolve, mock_alt, mock_cache):
         species_list = [{"taxon_id": 1001, "scientific_name": "Sp.", "taxon_rank": "SPECIES"}]
         _enrich_chinese_names(species_list)
         assert species_list[0]["common_name_zh"] == "覆寫"
 
     @patch("app.services.species_cache._cache_enriched_species")
-    @patch("app.services.chinese_names._resolve_alternative_names", return_value=None)
-    @patch("app.services.chinese_names._resolve_chinese_name", return_value="貓屬")
-    @patch("app.services.chinese_names.get_species_zh_override", return_value=None)
+    @patch(f"{_ENR}._resolve_alternative_names", return_value=None)
+    @patch(f"{_ENR}._resolve_chinese_name", return_value="貓屬")
+    @patch(f"{_ENR}.get_species_zh_override", return_value=None)
     def test_strips_genus_suffix_for_species(self, mock_override, mock_resolve, mock_alt, mock_cache):
         """Species-level taxa should have trailing 屬 stripped."""
         species_list = [{"taxon_id": 1002, "scientific_name": "Felis catus", "taxon_rank": "SPECIES"}]
@@ -274,9 +284,9 @@ class TestEnrichChineseNames:
         assert species_list[0]["common_name_zh"] == "貓"
 
     @patch("app.services.species_cache._cache_enriched_species")
-    @patch("app.services.chinese_names._resolve_alternative_names", return_value=None)
-    @patch("app.services.chinese_names._resolve_chinese_name", return_value="not-cjk")
-    @patch("app.services.chinese_names.get_species_zh_override", return_value=None)
+    @patch(f"{_ENR}._resolve_alternative_names", return_value=None)
+    @patch(f"{_ENR}._resolve_chinese_name", return_value="not-cjk")
+    @patch(f"{_ENR}.get_species_zh_override", return_value=None)
     def test_non_cjk_name_rejected(self, mock_override, mock_resolve, mock_alt, mock_cache):
         """Non-CJK resolved names should be discarded."""
         species_list = [{"taxon_id": 1003, "scientific_name": "Felis", "taxon_rank": "SPECIES"}]
@@ -284,9 +294,9 @@ class TestEnrichChineseNames:
         assert species_list[0]["common_name_zh"] is None
 
     @patch("app.services.species_cache._cache_enriched_species")
-    @patch("app.services.chinese_names._resolve_alternative_names", return_value=None)
-    @patch("app.services.chinese_names._resolve_chinese_name", return_value=None)
-    @patch("app.services.chinese_names.get_species_zh_override", return_value=None)
+    @patch(f"{_ENR}._resolve_alternative_names", return_value=None)
+    @patch(f"{_ENR}._resolve_chinese_name", return_value=None)
+    @patch(f"{_ENR}.get_species_zh_override", return_value=None)
     def test_fallback_to_db_cache(self, mock_override, mock_resolve, mock_alt, mock_cache, db_session):
         """When external APIs return nothing, should try DB cache."""
         sp = SpeciesCache(
@@ -304,9 +314,9 @@ class TestEnrichChineseNames:
         assert species_list[0]["common_name_zh"] == "快取名"
 
     @patch("app.services.species_cache._cache_enriched_species")
-    @patch("app.services.chinese_names._resolve_alternative_names", return_value=None)
-    @patch("app.services.chinese_names._resolve_chinese_name", return_value=None)
-    @patch("app.services.chinese_names.get_species_zh_override", return_value=None)
+    @patch(f"{_ENR}._resolve_alternative_names", return_value=None)
+    @patch(f"{_ENR}._resolve_chinese_name", return_value=None)
+    @patch(f"{_ENR}.get_species_zh_override", return_value=None)
     def test_higher_rank_uses_rank_zh(self, mock_override, mock_resolve, mock_alt, mock_cache):
         """FAMILY-level taxa without common_name_zh should use family_zh."""
         species_list = [
@@ -323,9 +333,9 @@ class TestEnrichChineseNames:
         assert "species_zh" in species_list[0]
 
     @patch("app.services.species_cache._cache_enriched_species")
-    @patch("app.services.chinese_names._resolve_alternative_names", return_value="別名A, 別名B")
-    @patch("app.services.chinese_names._resolve_chinese_name", return_value="紅狐")
-    @patch("app.services.chinese_names.get_species_zh_override", return_value=None)
+    @patch(f"{_ENR}._resolve_alternative_names", return_value="別名A, 別名B")
+    @patch(f"{_ENR}._resolve_chinese_name", return_value="紅狐")
+    @patch(f"{_ENR}.get_species_zh_override", return_value=None)
     def test_alternative_names_resolved(self, mock_override, mock_resolve, mock_alt, mock_cache):
         species_list = [{"taxon_id": 1006, "scientific_name": "Vulpes vulpes", "taxon_rank": "SPECIES"}]
         _enrich_chinese_names(species_list)
