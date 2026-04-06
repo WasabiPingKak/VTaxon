@@ -357,7 +357,7 @@ class TestResolveChineseName:
 
             _resolve_chinese_name.cache_clear()
 
-            with patch("app.services.chinese_names.get_species_zh_override", return_value="手動覆蓋"):
+            with patch("app.services.chinese_names.resolution.get_species_zh_override", return_value="手動覆蓋"):
                 result = _resolve_chinese_name(9685, "Felis catus")
                 assert result == "手動覆蓋"
 
@@ -367,8 +367,10 @@ class TestResolveChineseName:
 
             _resolve_chinese_name.cache_clear()
 
-            with patch("app.services.chinese_names.get_species_zh_override", return_value=None):
-                with patch("app.services.chinese_names.taicol_get_chinese_name", return_value=("家貓", None)):
+            with patch("app.services.chinese_names.resolution.get_species_zh_override", return_value=None):
+                with patch(
+                    "app.services.chinese_names.resolution.taicol_get_chinese_name", return_value=("家貓", None)
+                ):
                     result = _resolve_chinese_name(9685, "Felis catus")
                     assert result == "家貓"
 
@@ -378,9 +380,11 @@ class TestResolveChineseName:
 
             _resolve_chinese_name.cache_clear()
 
-            with patch("app.services.chinese_names.get_species_zh_override", return_value=None):
-                with patch("app.services.chinese_names.taicol_get_chinese_name", return_value=(None, None)):
-                    with patch("app.services.chinese_names.get_chinese_name_by_gbif_id", return_value=("貓", "Cat")):
+            with patch("app.services.chinese_names.resolution.get_species_zh_override", return_value=None):
+                with patch("app.services.chinese_names.resolution.taicol_get_chinese_name", return_value=(None, None)):
+                    with patch(
+                        "app.services.chinese_names.resolution.get_chinese_name_by_gbif_id", return_value=("貓", "Cat")
+                    ):
                         result = _resolve_chinese_name(9685, "Felis catus")
                         assert result == "貓"
 
@@ -390,9 +394,11 @@ class TestResolveChineseName:
 
             _resolve_chinese_name.cache_clear()
 
-            with patch("app.services.chinese_names.get_species_zh_override", return_value=None):
-                with patch("app.services.chinese_names.taicol_get_chinese_name", return_value=(None, None)):
-                    with patch("app.services.chinese_names.get_chinese_name_by_gbif_id", return_value=(None, None)):
+            with patch("app.services.chinese_names.resolution.get_species_zh_override", return_value=None):
+                with patch("app.services.chinese_names.resolution.taicol_get_chinese_name", return_value=(None, None)):
+                    with patch(
+                        "app.services.chinese_names.resolution.get_chinese_name_by_gbif_id", return_value=(None, None)
+                    ):
                         result = _resolve_chinese_name(99999, "Unknown sp.")
                         assert result is None
 
