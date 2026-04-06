@@ -33,13 +33,15 @@ from .chinese_names import (  # noqa: F401
 from .circuit_breaker import CircuitOpenError, gbif_cb
 from .http_client import external_session
 from .species_cache import (  # noqa: F401
-    _build_path_zh,
-    _build_taxon_path,
-    _realign_taxon_path,
     cache_from_search_result,
     get_species,
     get_subspecies,
     get_subspecies_stream,
+)
+from .taxonomy_path import (  # noqa: F401
+    _build_path_zh,
+    _build_taxon_path,
+    _realign_taxon_path,
 )
 
 logger = logging.getLogger(__name__)

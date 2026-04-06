@@ -4,12 +4,11 @@ from unittest.mock import patch
 
 from app.models import SpeciesCache
 from app.services.species_cache import (
-    _build_taxon_path,
-    _realign_taxon_path,
     cache_from_search_result,
     get_species,
     get_subspecies,
 )
+from app.services.taxonomy_path import _build_taxon_path, _realign_taxon_path
 
 # ---------------------------------------------------------------------------
 # _build_taxon_path — pure logic, no DB or HTTP
