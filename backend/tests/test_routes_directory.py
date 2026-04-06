@@ -126,7 +126,7 @@ class TestRecentUsers:
 
 
 class TestDirectory:
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_default_pagination(self, mock_facets, client, db_session):
         _user(db_session, name="Alpha")
         resp = client.get("/api/users/directory")
@@ -138,7 +138,7 @@ class TestDirectory:
         assert data["per_page"] == 24
         assert "facets" in data
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_search_by_name(self, mock_facets, client, db_session):
         _user(db_session, name="UniqueVtuberName")
         _user(db_session, name="OtherUser")
@@ -148,7 +148,7 @@ class TestDirectory:
         assert data["total"] == 1
         assert data["items"][0]["display_name"] == "UniqueVtuberName"
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_has_traits_filter(self, mock_facets, client, db_session):
         u_with = _user(db_session, name="WithTrait")
         _user(db_session, name="WithoutTrait")
@@ -161,7 +161,7 @@ class TestDirectory:
         assert "WithTrait" in names
         assert "WithoutTrait" not in names
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_sort_by_name_asc(self, mock_facets, client, db_session):
         _user(db_session, name="Zebra")
         _user(db_session, name="Apple")
@@ -171,13 +171,13 @@ class TestDirectory:
         assert items[0]["display_name"] == "Apple"
         assert items[1]["display_name"] == "Zebra"
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_per_page_capped(self, mock_facets, client, db_session):
         _user(db_session)
         resp = client.get("/api/users/directory?per_page=999")
         assert resp.get_json()["per_page"] == 100
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_items_include_platforms(self, mock_facets, client, db_session):
         user = _user(db_session, name="PlatformUser")
         acct = OAuthAccount(
@@ -192,7 +192,7 @@ class TestDirectory:
         item = next(i for i in resp.get_json()["items"] if i["display_name"] == "PlatformUser")
         assert "twitch" in item["platforms"]
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_items_include_species_names(self, mock_facets, client, db_session):
         user = _user(db_session, name="SpeciesUser")
         sp = _species(db_session, 500, name="Felis catus", zh="貓")
@@ -203,7 +203,7 @@ class TestDirectory:
         assert item["has_traits"] is True
         assert len(item["species_names"]) >= 1
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_hidden_user_excluded(self, mock_facets, client, db_session):
         user = _user(db_session, name="Invisible")
         user.visibility = "hidden"
@@ -212,7 +212,7 @@ class TestDirectory:
         resp = client.get("/api/users/directory?q=Invisible")
         assert resp.get_json()["total"] == 0
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_has_traits_false_filter(self, mock_facets, client, db_session):
         """has_traits=false should return users without any trait."""
         u_with = _user(db_session, name="HasTrait")
@@ -225,7 +225,7 @@ class TestDirectory:
         assert "NoTrait" in names
         assert "HasTrait" not in names
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_org_type_filter(self, mock_facets, client, db_session):
         _user(db_session, name="CorpUser", org_type="corporate")
         _user(db_session, name="IndieUser", org_type="indie")
@@ -235,7 +235,7 @@ class TestDirectory:
         assert "CorpUser" in names
         assert "IndieUser" not in names
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_platform_filter(self, mock_facets, client, db_session):
         u_yt = _user(db_session, name="YTUser")
         u_tw = _user(db_session, name="TWUser")
@@ -248,7 +248,7 @@ class TestDirectory:
         assert "YTUser" in names
         assert "TWUser" not in names
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_sort_by_created_at_asc(self, mock_facets, client, db_session):
         _user(db_session, name="Older")
         _user(db_session, name="Newer")
@@ -257,7 +257,7 @@ class TestDirectory:
         items = resp.get_json()["items"]
         assert items[0]["display_name"] == "Older"
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_sort_by_debut_date(self, mock_facets, client, db_session):
         _user(db_session, name="DebUser", profile_data={"debut_date": "2025-01-01"})
 
@@ -265,7 +265,7 @@ class TestDirectory:
         assert resp.status_code == 200
         assert len(resp.get_json()["items"]) >= 1
 
-    @patch("app.services.directory.compute_facets", return_value=_EMPTY_FACETS)
+    @patch("app.services.directory.queries.compute_facets", return_value=_EMPTY_FACETS)
     def test_sort_invalid_falls_back_to_created_at(self, mock_facets, client, db_session):
         _user(db_session, name="FallbackSort")
 
