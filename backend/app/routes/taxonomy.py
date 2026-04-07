@@ -18,155 +18,19 @@ from ..constants import Visibility
 from ..extensions import db
 from ..limiter import limiter
 from ..models import FictionalSpecies, OAuthAccount, SpeciesCache, User, VtuberTrait
-from ..services.gbif import _build_path_zh, _realign_taxon_path  # type: ignore[attr-defined]
+from ..services.gbif import _realign_taxon_path  # type: ignore[attr-defined]
+from ..services.taxonomy_path import (
+    assign_default_primary,
+    compute_path_ranks,
+    inject_medusozoa,
+    rebuild_path_zh,
+)
 from ..services.taxonomy_zh import get_parent_species_zh_by_name, get_species_zh_override
 
 logger = logging.getLogger(__name__)
 
 taxonomy_bp = Blueprint("taxonomy", __name__)
 limiter.limit("30/minute")(taxonomy_bp)
-
-# Standard 7-position rank order for taxon_path
-_STANDARD_RANKS = ["KINGDOM", "PHYLUM", "CLASS", "ORDER", "FAMILY", "GENUS", "SPECIES"]
-
-# Medusozoa classes: Cnidaria classes that belong under the Medusozoa subphylum
-_MEDUSOZOA_CLASSES = {"Scyphozoa", "Cubozoa", "Staurozoa", "Hydrozoa"}
-
-
-def _compute_path_ranks(taxon_path: str | None, taxon_rank: str | None) -> list[str]:
-    """Compute a rank label array for each segment of taxon_path.
-
-    Standard 7-segment paths map 1:1 to _STANDARD_RANKS.
-    SUBPHYLUM taxa (3 segments like Animalia|Cnidaria|Medusozoa):
-        → ['KINGDOM', 'PHYLUM', 'SUBPHYLUM']
-    SUBCLASS taxa (4 segments like Animalia|Cnidaria|Hydrozoa|Hydroidolina):
-        → ['KINGDOM', 'PHYLUM', 'CLASS', 'SUBCLASS']
-    """
-    if not taxon_path:
-        return []
-    parts = taxon_path.split("|")
-    n = len(parts)
-    rank_upper = (taxon_rank or "").upper()
-
-    # For SUBPHYLUM/SUBCLASS, the last segment is the sub-rank taxon itself
-    if rank_upper == "SUBPHYLUM" and n >= 2:
-        ranks = list(_STANDARD_RANKS[: n - 1])
-        ranks.append("SUBPHYLUM")
-        return ranks
-    if rank_upper == "SUBCLASS" and n >= 3:
-        ranks = list(_STANDARD_RANKS[: n - 1])
-        ranks.append("SUBCLASS")
-        return ranks
-
-    # SUBSPECIES/VARIETY/FORM: 8-segment path (7 standard + sub-species rank)
-    _SUB_SPECIES_RANKS = {"SUBSPECIES", "VARIETY", "FORM"}
-    if rank_upper in _SUB_SPECIES_RANKS and n > len(_STANDARD_RANKS):
-        ranks = list(_STANDARD_RANKS)  # first 7 (KINGDOM→SPECIES)
-        ranks.append(rank_upper)  # 8th segment
-        return ranks
-
-    # Standard path: use positional mapping
-    return list(_STANDARD_RANKS[:n])
-
-
-def _assign_default_primary(entries: list[dict[str, Any]]) -> None:
-    """For users without an explicit live primary trait, mark their first entry."""
-    users_with_primary = set()
-    for e in entries:
-        if e.get("is_live_primary"):
-            users_with_primary.add(e["user_id"])
-    first_seen = set()
-    for e in entries:
-        uid = e["user_id"]
-        if uid not in users_with_primary and uid not in first_seen:
-            first_seen.add(uid)
-            e["is_live_primary"] = True
-
-
-def _inject_medusozoa(entries: list[dict[str, Any]]) -> None:
-    """Post-process entries to inject Medusozoa subphylum between Cnidaria and its classes.
-
-    Only modifies entries where phylum=Cnidaria and class is one of the
-    Medusozoa classes. Inserts 'Medusozoa' into taxon_path and updates
-    path_ranks and path_zh accordingly.
-
-    This is display-only — does NOT modify the DB.
-    """
-    for entry in entries:
-        path = entry.get("taxon_path")
-        if not path:
-            continue
-
-        parts = path.split("|")
-        path_ranks = entry.get("path_ranks", [])
-
-        # Find phylum position (should be index 1)
-        phylum_idx = None
-        for i, r in enumerate(path_ranks):
-            if r == "PHYLUM":
-                phylum_idx = i
-                break
-        if phylum_idx is None or phylum_idx + 1 >= len(parts):
-            continue
-
-        # Check: is this a Cnidaria entry with a Medusozoa class?
-        if parts[phylum_idx] != "Cnidaria":
-            continue
-        class_idx = phylum_idx + 1
-        if class_idx >= len(parts):
-            continue
-        class_name = parts[class_idx]
-        if class_name not in _MEDUSOZOA_CLASSES:
-            continue
-
-        # Insert Medusozoa between phylum and class
-        insert_pos = phylum_idx + 1
-        parts.insert(insert_pos, "Medusozoa")
-        path_ranks.insert(insert_pos, "SUBPHYLUM")
-
-        entry["taxon_path"] = "|".join(parts)
-        entry["path_ranks"] = path_ranks
-
-        # Update path_zh with subphylum
-        pzh = entry.get("path_zh") or {}
-        if isinstance(pzh, dict):
-            pzh["subphylum"] = "水母亞門"
-            entry["path_zh"] = pzh
-
-
-def _rebuild_path_zh(species: SpeciesCache) -> dict[str, str | None] | None:
-    """Rebuild path_zh using full fallback chain (static table + Wikidata).
-
-    Uses _build_path_zh which has @lru_cache on Wikidata calls,
-    so external API hits only happen once per unique rank name.
-    """
-    data = {
-        "kingdom": species.kingdom,
-        "phylum": species.phylum,
-        "class": species.class_,
-        "order": species.order_,
-        "family": species.family,
-        "genus": species.genus,
-        "taxon_rank": species.taxon_rank,
-        "scientific_name": species.scientific_name,
-    }
-    rank = (species.taxon_rank or "").upper()
-    if rank in ("SUBSPECIES", "VARIETY", "FORM"):
-        # Derive parent species binomial and look up its taxon_id for zh resolution
-        parts = (species.scientific_name or "").split()
-        parent_binomial = " ".join(parts[:2]) if len(parts) >= 2 else None
-        if parent_binomial:
-            parent = SpeciesCache.query.filter(
-                SpeciesCache.scientific_name.ilike(f"{parent_binomial}%"),
-                SpeciesCache.taxon_rank == "SPECIES",
-            ).first()
-            if parent:
-                data["speciesKey"] = parent.taxon_id
-                data["species"] = parent_binomial
-    result = _build_path_zh(data)
-    if result:
-        species.path_zh = result
-    return result
 
 
 @taxonomy_bp.route("/tree", methods=["GET"])
@@ -261,7 +125,7 @@ def get_taxonomy_tree() -> Response:
 
         # Auto-rebuild path_zh from static table if empty
         if not path_zh or path_zh == {}:
-            path_zh = _rebuild_path_zh(species)
+            path_zh = rebuild_path_zh(species)
             if path_zh:
                 needs_commit = True
 
@@ -331,7 +195,7 @@ def get_taxonomy_tree() -> Response:
                 "taxon_id": species.taxon_id,
                 "taxon_rank": species.taxon_rank,
                 "taxon_path": taxon_path,
-                "path_ranks": _compute_path_ranks(taxon_path, species.taxon_rank),
+                "path_ranks": compute_path_ranks(taxon_path, species.taxon_rank),
                 "scientific_name": species.scientific_name,
                 "common_name_zh": get_species_zh_override(species.taxon_id) or species._effective_common_name_zh(),
                 "alternative_names_zh": species.alternative_names_zh,
@@ -352,10 +216,10 @@ def get_taxonomy_tree() -> Response:
             logger.exception("Failed to persist path_zh updates")
 
     # Post-process: inject Medusozoa subphylum for display
-    _inject_medusozoa(entries)
+    inject_medusozoa(entries)
 
     # Auto-assign is_live_primary for users who haven't set one
-    _assign_default_primary(entries)
+    assign_default_primary(entries)
 
     result = {"entries": entries}
     set_tree_cache(result)
@@ -507,7 +371,7 @@ def get_fictional_tree() -> Response:
         )
 
     # Auto-assign is_live_primary for users who haven't set one
-    _assign_default_primary(entries)
+    assign_default_primary(entries)
 
     result = {"entries": entries}
     set_fictional_tree_cache(result)
