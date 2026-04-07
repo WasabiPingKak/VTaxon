@@ -165,7 +165,7 @@ class TestGetTaxonomyTree:
         entry = resp.get_json()["entries"][0]
         assert entry["is_live_primary"] is True
 
-    @patch("app.routes.taxonomy._build_path_zh", return_value={"kingdom": "動物界"})
+    @patch("app.services.taxonomy_path._build_path_zh", return_value={"kingdom": "動物界"})
     def test_auto_rebuild_path_zh(self, mock_build, client, db_session):
         """Empty path_zh should trigger auto-rebuild."""
         user = _user(db_session)
