@@ -160,7 +160,7 @@ export default function ChannelCard({
             {onRefresh && (
               <button type="button" onClick={onRefresh}
                 disabled={refreshing}
-                title="同步平台資料"
+                title="從平台同步頭像與頻道名稱"
                 style={{
                   padding: '1px 8px', borderRadius: '3px',
                   background: 'none', border: '1px solid rgba(255,255,255,0.15)',
@@ -168,7 +168,7 @@ export default function ChannelCard({
                   fontSize: '0.72em', color: 'rgba(255,255,255,0.6)',
                   lineHeight: '1.4', opacity: refreshing ? 0.5 : 1,
                 }}>
-                {refreshing ? '同步中…' : '同步'}
+                {refreshing ? '同步中…' : '同步頭像與名稱'}
               </button>
             )}
           </div>
