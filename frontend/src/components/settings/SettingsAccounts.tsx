@@ -101,12 +101,12 @@ export default function SettingsAccounts() {
       if (user?.primary_platform === account.provider && updated.provider_avatar_url) {
         setUser(prev => prev ? { ...prev, avatar_url: updated.provider_avatar_url } : prev);
       }
-      addToast('同步成功', { type: 'success', duration: 3000 });
+      addToast('已同步頭像與名稱', { type: 'success', duration: 3000 });
     } catch (err: unknown) {
       const errMsg = (err as Error).message;
       if (errMsg.includes('請重新登入') || errMsg.includes('授權已過期')) {
         const providerLabel = PROVIDER_LABELS[account.provider];
-        if (confirm(`${providerLabel} 的驗證已過期，需要重新授權才能同步資料。是否前往重新授權？`)) {
+        if (confirm(`${providerLabel} 的驗證已過期，需要重新授權才能同步頭像與名稱。是否前往重新授權？`)) {
           const supabaseProvider = SUPABASE_PROVIDER_MAP[account.provider];
           sessionStorage.setItem('vtaxon_login_provider', supabaseProvider);
           await supabase.auth.signInWithOAuth({
@@ -120,7 +120,7 @@ export default function SettingsAccounts() {
           });
         }
       } else {
-        addToast(`同步失敗：${errMsg}`, { type: 'error' });
+        addToast(`同步頭像與名稱失敗：${errMsg}`, { type: 'error' });
       }
     } finally {
       setAccountLoading(prev => ({ ...prev, [account.id]: null }));
