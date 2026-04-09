@@ -131,6 +131,17 @@ class TestResolveChinese:
         assert result == "藍灰蝶"
         mock_syn.assert_called_once_with(1920851)
 
+    @patch(f"{_RES}._resolve_via_gbif_synonyms", return_value="藍灰蝶")
+    @patch(f"{_RES}.get_species_zh_override", return_value=None)
+    @patch(f"{_RES}.taicol_get_chinese_name", return_value=(None, None))
+    @patch(f"{_RES}.get_chinese_name_by_gbif_id", return_value=("Elkalyce argiades", None))
+    def test_wikidata_non_cjk_skipped_to_synonym_fallback(self, mock_wiki, mock_taicol, mock_override, mock_syn):
+        """Wikidata languagefallback may return Latin names; these should be
+        rejected so the synonym fallback can still run."""
+        result = _resolve_chinese_name(1920852, "Elkalyce argiades")
+        assert result == "藍灰蝶"
+        mock_syn.assert_called_once_with(1920852)
+
 
 # ---------------------------------------------------------------------------
 # _resolve_alternative_names

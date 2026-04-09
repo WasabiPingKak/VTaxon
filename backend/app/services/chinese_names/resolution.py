@@ -21,6 +21,15 @@ logger = logging.getLogger(__name__)
 GBIF_BASE = "https://api.gbif.org/v1"
 
 
+def _has_cjk(text: str) -> bool:
+    """Check if text contains CJK characters."""
+    for ch in text:
+        cp = ord(ch)
+        if 0x4E00 <= cp <= 0x9FFF or 0x3400 <= cp <= 0x4DBF or 0xF900 <= cp <= 0xFAFF:
+            return True
+    return False
+
+
 def clear_chinese_name_caches() -> None:
     """Clear all in-memory Chinese name LRU caches across all services."""
     _resolve_chinese_name.cache_clear()
@@ -112,7 +121,7 @@ def _resolve_chinese_name(taxon_id: int, scientific_name: str | None) -> str | N
     # Fallback to Wikidata
     try:
         zh_name, _en_name = get_chinese_name_by_gbif_id(taxon_id)
-        if zh_name:
+        if zh_name and _has_cjk(zh_name):
             return zh_name
     except (requests.RequestException, ValueError):
         logger.debug("Wikidata lookup failed for taxon_id=%s", taxon_id)
