@@ -41,6 +41,16 @@ def get_species(taxon_id: int) -> dict[str, Any] | None:
                 db.session.commit()
             except SQLAlchemyError:
                 db.session.rollback()
+
+        # Self-heal: re-resolve if common_name_zh is missing or non-CJK
+        # (e.g. Wikidata languagefallback stored a Latin name by mistake)
+        from .chinese_names.resolution import _has_cjk
+
+        if not cached.common_name_zh or not _has_cjk(cached.common_name_zh):
+            from .chinese_names import resolve_missing_chinese_name
+
+            resolve_missing_chinese_name(cached)
+
         d = SpeciesCacheResponse.from_model(cached).model_dump(mode="json")
         # Fill in any missing *_zh from static table (backward compat for old rows)
         _fill_missing_rank_zh(d, cached)
