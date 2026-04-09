@@ -259,22 +259,25 @@ def youtube_webhook_notify() -> tuple[str, int] | tuple[str, int, dict[str, str]
     from ..services.youtube_pubsub import check_video_is_live, parse_feed, verify_hub_signature
 
     hub_secret = os.environ.get("CRON_SECRET", "")
+    if not hub_secret:
+        logger.error("CRON_SECRET not configured — cannot verify YouTube WebSub signatures")
+        return "", 500
+
     feed_xml = request.get_data(as_text=True)
-    if hub_secret:
-        sig = request.headers.get("X-Hub-Signature", "")
-        if not verify_hub_signature(hub_secret, sig, feed_xml):
-            logger.warning("YouTube WebSub signature verification failed")
+    sig = request.headers.get("X-Hub-Signature", "")
+    if not verify_hub_signature(hub_secret, sig, feed_xml):
+        logger.warning("YouTube WebSub signature verification failed")
 
-            from ..constants import AlertSeverity, AlertType
-            from ..services.alerts import log_alert
+        from ..constants import AlertSeverity, AlertType
+        from ..services.alerts import log_alert
 
-            log_alert(
-                alert_type=AlertType.YT_SIG_FAIL,
-                severity=AlertSeverity.WARNING,
-                title="YouTube WebSub signature verification failed",
-                context={"has_signature": bool(sig), "remote_addr": request.remote_addr},
-            )
-            return "", 403
+        log_alert(
+            alert_type=AlertType.YT_SIG_FAIL,
+            severity=AlertSeverity.WARNING,
+            title="YouTube WebSub signature verification failed",
+            context={"has_signature": bool(sig), "remote_addr": request.remote_addr},
+        )
+        return "", 403
 
     api_key = os.environ.get("YOUTUBE_API_KEY", "")
     entries = parse_feed(feed_xml)
