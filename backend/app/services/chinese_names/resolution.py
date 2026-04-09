@@ -8,6 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ...extensions import db
 from ...models import SpeciesCache
+from ..circuit_breaker import CircuitOpenError, gbif_cb
 from ..http_client import external_session
 from ..taicol import clear_cache as taicol_clear_cache
 from ..taicol import get_chinese_name as taicol_get_chinese_name
@@ -26,6 +27,58 @@ def clear_chinese_name_caches() -> None:
     _resolve_rank_zh.cache_clear()
     wikidata_clear_cache()
     taicol_clear_cache()
+
+
+# ---------------------------------------------------------------------------
+# GBIF synonym fallback
+# ---------------------------------------------------------------------------
+
+# Max synonyms to try against TaiCOL before giving up
+_MAX_SYNONYM_TAICOL_TRIES = 10
+
+
+def _resolve_via_gbif_synonyms(taxon_id: int) -> str | None:
+    """Try GBIF synonyms of a taxon against TaiCOL to find Chinese name.
+
+    When GBIF updates taxonomy (e.g. genus Everes → Elkalyce) but TaiCOL
+    still uses the older name, the primary TaiCOL lookup fails. This
+    function fetches synonym names from GBIF and tries each against TaiCOL.
+    """
+    try:
+        gbif_cb.guard()
+        resp = external_session.get(
+            f"{GBIF_BASE}/species/{taxon_id}/synonyms",
+            params={"limit": _MAX_SYNONYM_TAICOL_TRIES},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+        gbif_cb.record_success()
+    except (CircuitOpenError, requests.RequestException) as exc:
+        if not isinstance(exc, CircuitOpenError):
+            gbif_cb.record_failure(exc)
+        logger.debug("GBIF synonyms fetch failed for taxon_id=%s", taxon_id)
+        return None
+
+    synonyms = resp.json().get("results", [])
+    for syn in synonyms:
+        canonical = syn.get("canonicalName")
+        if not canonical:
+            continue
+        try:
+            zh_name, _alt = taicol_get_chinese_name(canonical)
+            if zh_name:
+                logger.debug(
+                    "Chinese name '%s' resolved via synonym '%s' for taxon_id=%s",
+                    zh_name,
+                    canonical,
+                    taxon_id,
+                )
+                return zh_name
+        except (requests.RequestException, ValueError):
+            continue
+
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -63,6 +116,13 @@ def _resolve_chinese_name(taxon_id: int, scientific_name: str | None) -> str | N
             return zh_name
     except (requests.RequestException, ValueError):
         logger.debug("Wikidata lookup failed for taxon_id=%s", taxon_id)
+
+    # Last resort: fetch GBIF synonyms and try each against TaiCOL.
+    # Handles cases where GBIF updated taxonomy (e.g. Elkalyce argiades)
+    # but TaiCOL still uses an older accepted name (e.g. Everes argiades).
+    zh_name = _resolve_via_gbif_synonyms(taxon_id)
+    if zh_name:
+        return zh_name
 
     return None
 
