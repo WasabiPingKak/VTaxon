@@ -4,7 +4,8 @@ Fallback chain for species-level Chinese names:
   0. Static override table (corrects known Wikidata errors)
   1. TaiCOL (by scientific name) - authoritative for zh-tw
   2. Wikidata (by GBIF taxon ID) - broader coverage, less reliable
-  3. Static taxonomy_zh table (higher ranks only)
+  3. GBIF synonyms → TaiCOL (handles GBIF/TaiCOL taxonomy discrepancies)
+  4. Static taxonomy_zh table (higher ranks only)
 """
 
 from .enrichment import _enrich_chinese_names, clean_alt_names

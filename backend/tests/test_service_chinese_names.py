@@ -15,6 +15,7 @@ from app.services.chinese_names import (
     clear_chinese_name_caches,
     resolve_missing_chinese_name,
 )
+from app.services.chinese_names.resolution import _resolve_via_gbif_synonyms
 
 
 @pytest.fixture(autouse=True)
@@ -98,10 +99,11 @@ class TestResolveChinese:
         result = _resolve_chinese_name(12345, "Felis catus")
         assert result == "維基名"
 
+    @patch(f"{_RES}._resolve_via_gbif_synonyms", return_value=None)
     @patch(f"{_RES}.get_species_zh_override", return_value=None)
     @patch(f"{_RES}.taicol_get_chinese_name", return_value=(None, None))
     @patch(f"{_RES}.get_chinese_name_by_gbif_id", return_value=(None, None))
-    def test_returns_none_when_all_fail(self, mock_wiki, mock_taicol, mock_override):
+    def test_returns_none_when_all_fail(self, mock_wiki, mock_taicol, mock_override, mock_syn):
         result = _resolve_chinese_name(12345, "Unknown species")
         assert result is None
 
@@ -118,6 +120,16 @@ class TestResolveChinese:
         with patch(f"{_RES}.get_chinese_name_by_gbif_id", return_value=("維基名", None)):
             result = _resolve_chinese_name(12345, None)
         assert result == "維基名"
+
+    @patch(f"{_RES}._resolve_via_gbif_synonyms", return_value="藍灰蝶")
+    @patch(f"{_RES}.get_species_zh_override", return_value=None)
+    @patch(f"{_RES}.taicol_get_chinese_name", return_value=(None, None))
+    @patch(f"{_RES}.get_chinese_name_by_gbif_id", return_value=(None, None))
+    def test_gbif_synonym_fallback(self, mock_wiki, mock_taicol, mock_override, mock_syn):
+        """When TaiCOL and Wikidata both fail, GBIF synonym fallback should kick in."""
+        result = _resolve_chinese_name(1920851, "Elkalyce argiades")
+        assert result == "藍灰蝶"
+        mock_syn.assert_called_once_with(1920851)
 
 
 # ---------------------------------------------------------------------------
@@ -152,6 +164,99 @@ class TestResolveAlternativeNames:
     def test_returns_none_when_all_fail(self, mock_wiki, mock_taicol):
         result = _resolve_alternative_names(12345, "Unknown")
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# _resolve_via_gbif_synonyms — GBIF synonym → TaiCOL fallback
+# ---------------------------------------------------------------------------
+
+
+class TestResolveViaGbifSynonyms:
+    @patch(f"{_RES}.taicol_get_chinese_name", return_value=("藍灰蝶", None))
+    @patch(f"{_RES}.external_session")
+    @patch(f"{_RES}.gbif_cb")
+    def test_finds_name_via_synonym(self, mock_cb, mock_session, mock_taicol):
+        """Should resolve Chinese name when TaiCOL recognises a synonym."""
+        mock_resp = mock_session.get.return_value
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "results": [
+                {"canonicalName": "Cupido argiades"},
+                {"canonicalName": "Everes argiades"},
+            ]
+        }
+        result = _resolve_via_gbif_synonyms(1920851)
+        assert result == "藍灰蝶"
+        # Should stop at first successful TaiCOL hit (Cupido argiades)
+        mock_taicol.assert_called_once_with("Cupido argiades")
+
+    @patch(f"{_RES}.taicol_get_chinese_name", return_value=(None, None))
+    @patch(f"{_RES}.external_session")
+    @patch(f"{_RES}.gbif_cb")
+    def test_returns_none_when_no_synonym_matches(self, mock_cb, mock_session, mock_taicol):
+        """Should return None when no synonym is recognised by TaiCOL."""
+        mock_resp = mock_session.get.return_value
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"results": [{"canonicalName": "Cupido argiades"}]}
+        result = _resolve_via_gbif_synonyms(99999)
+        assert result is None
+
+    @patch(f"{_RES}.external_session")
+    @patch(f"{_RES}.gbif_cb")
+    def test_returns_none_on_gbif_http_error(self, mock_cb, mock_session):
+        """Should return None when GBIF synonyms endpoint fails."""
+        mock_resp = mock_session.get.return_value
+        mock_resp.status_code = 500
+        result = _resolve_via_gbif_synonyms(99999)
+        assert result is None
+
+    @patch(f"{_RES}.external_session")
+    @patch(f"{_RES}.gbif_cb")
+    def test_returns_none_on_empty_results(self, mock_cb, mock_session):
+        """Should return None when species has no synonyms."""
+        mock_resp = mock_session.get.return_value
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"results": []}
+        result = _resolve_via_gbif_synonyms(99999)
+        assert result is None
+
+    @patch(f"{_RES}.taicol_get_chinese_name")
+    @patch(f"{_RES}.external_session")
+    @patch(f"{_RES}.gbif_cb")
+    def test_skips_synonyms_without_canonical_name(self, mock_cb, mock_session, mock_taicol):
+        """Should skip synonym entries that lack canonicalName."""
+        mock_taicol.return_value = ("藍灰蝶", None)
+        mock_resp = mock_session.get.return_value
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "results": [
+                {"scientificName": "No canonical"},  # no canonicalName
+                {"canonicalName": "Everes argiades"},
+            ]
+        }
+        result = _resolve_via_gbif_synonyms(1920851)
+        assert result == "藍灰蝶"
+        mock_taicol.assert_called_once_with("Everes argiades")
+
+    @patch(f"{_RES}.taicol_get_chinese_name")
+    @patch(f"{_RES}.external_session")
+    @patch(f"{_RES}.gbif_cb")
+    def test_continues_on_taicol_error(self, mock_cb, mock_session, mock_taicol):
+        """Should continue trying next synonym when TaiCOL raises an error."""
+        mock_taicol.side_effect = [
+            requests.RequestException("timeout"),
+            ("藍灰蝶", None),
+        ]
+        mock_resp = mock_session.get.return_value
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "results": [
+                {"canonicalName": "Cupido argiades"},
+                {"canonicalName": "Everes argiades"},
+            ]
+        }
+        result = _resolve_via_gbif_synonyms(1920851)
+        assert result == "藍灰蝶"
 
 
 # ---------------------------------------------------------------------------
