@@ -192,20 +192,15 @@ class TestYouTubeWebhookNotify:
             )
         assert resp.status_code == 403
 
-    @patch(
-        "app.services.youtube_pubsub.check_video_is_live",
-        return_value={"title": "T", "started_at": "2026-01-01T00:00:00Z"},
-    )
-    def test_no_hub_secret_skips_verification(self, mock_live, client, db_session):
-        """When CRON_SECRET is empty, signature verification is skipped."""
-        _yt_user_for_webhook(db_session, "UC_test_channel")
-        with patch.dict("os.environ", {"CRON_SECRET": "", "YOUTUBE_API_KEY": "key"}):
+    def test_no_hub_secret_returns_500(self, client):
+        """When CRON_SECRET is empty, the endpoint refuses to process."""
+        with patch.dict("os.environ", {"CRON_SECRET": ""}):
             resp = client.post(
                 "/api/webhooks/youtube",
                 data=SAMPLE_ATOM_LIVE,
                 content_type="application/atom+xml",
             )
-        assert resp.status_code == 204
+        assert resp.status_code == 500
 
     @patch("app.services.youtube_pubsub.verify_hub_signature", return_value=True)
     def test_unknown_channel_ignored(self, mock_sig, client, db_session):
