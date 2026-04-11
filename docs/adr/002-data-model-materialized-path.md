@@ -70,10 +70,10 @@ elif existing_path.startswith(new_path + "|"):
 
 ```sql
 CREATE INDEX idx_species_cache_taxon_path
-  ON species_cache (taxon_path varchar_pattern_ops);
+  ON species_cache (taxon_path text_pattern_ops);
 ```
 
-`varchar_pattern_ops` 讓 `LIKE 'prefix%'` 查詢走索引，支援前綴查詢。
+`text_pattern_ops` 讓 `LIKE 'prefix%'` 查詢走索引，支援前綴查詢（`taxon_path` 欄位型別是 `TEXT`，所以用 `text_pattern_ops`；對應 `VARCHAR` 欄位則用 `varchar_pattern_ops`，兩者作用相同）。
 
 ### Partial Unique Index
 
