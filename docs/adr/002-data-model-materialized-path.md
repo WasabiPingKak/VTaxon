@@ -7,22 +7,21 @@
 
 生物分類學是天然的樹狀結構（界→門→綱→目→科→屬→種）。VTaxon 需要：
 
-1. 快速查詢某節點的所有後代（分類樹展開）
-2. 判斷兩個物種的祖先-後代關係（衝突檢測）
-3. 前綴查詢取得子樹（分類樹 API）
+1. API 回傳整棵分類樹給前端時，每筆資料能自帶完整祖先鏈，前端不需再查或自行組樹
+2. 後端在新增 trait 時判斷兩個物種的祖先-後代關係（衝突檢測）
 
 ## 選項
 
 ### A. Adjacency List（parent_id）
 - 優點：簡單、更新容易
-- 缺點：查詢子樹需遞迴 CTE，深層查詢效能差
+- 缺點：API 要回傳整棵樹給前端時，需在後端 JOIN 或前端自行組樹
 
 ### B. Nested Set（lft / rgt）
 - 優點：子樹查詢 O(1)
 - 缺點：插入 / 移動節點需大量更新、GBIF 資料結構不穩定時維護成本高
 
 ### C. Materialized Path
-- 優點：前綴查詢配合 `text_pattern_ops` 索引高效、祖先檢測只需 `startswith`、易於理解
+- 優點：每筆 entry 自帶完整祖先鏈，API 序列化簡單、前端直接 `split('|')` 即可建樹；祖先檢測只需 Python 的 `startswith`
 - 缺點：路徑長度隨深度增長、移動節點需更新所有後代路徑
 
 ## 決定
@@ -66,15 +65,6 @@ elif existing_path.startswith(new_path + "|"):
 
 設計原則：**允許精化（自動升級），禁止泛化（阻止回退）**。
 
-### 索引策略
-
-```sql
-CREATE INDEX idx_species_cache_taxon_path
-  ON species_cache (taxon_path text_pattern_ops);
-```
-
-`text_pattern_ops` 讓 `LIKE 'prefix%'` 查詢走索引，支援前綴查詢（`taxon_path` 欄位型別是 `TEXT`，所以用 `text_pattern_ops`；對應 `VARCHAR` 欄位則用 `varchar_pattern_ops`，兩者作用相同）。
-
 ### Partial Unique Index
 
 ```sql
@@ -91,4 +81,31 @@ CREATE UNIQUE INDEX uq_vtuber_traits_user_fictional
 
 - 路徑重建函式 `_build_taxon_path()` / `_realign_taxon_path()` 需處理 GBIF 資料的不一致性（缺失階級、亞門等）
 - 移動物種節點需更新所有後代的 `taxon_path`——但 GBIF 資料變動極少
-- 分類樹 API 可用 `WHERE taxon_path LIKE 'prefix%'` 高效取得子樹
+- 目前架構是「整棵樹一次給前端」，沒有「依子樹分頁載入」的 API
+
+## 實作現況
+
+`init.sql` / `init_staging.sql` 中存在兩個 `text_pattern_ops` 索引：
+
+```sql
+CREATE INDEX idx_species_cache_taxon_path
+  ON species_cache(taxon_path text_pattern_ops);
+
+CREATE INDEX idx_fictional_species_category_path
+  ON fictional_species(category_path text_pattern_ops);
+```
+
+**這兩個索引目前未被任何 SQL 查詢使用**。原因是現行架構選擇「整棵樹一次給前端」，後端沒有「給定前綴撈子樹」的 API；後端僅有的祖先比對發生在 `services/traits.py` 內，使用 Python 的 `startswith`，不是 SQL `LIKE`。
+
+也就是說，Materialized Path 在這個專案的真實價值是：
+
+1. **API 序列化便利**：每筆 entry 自帶完整祖先鏈，前端 `split('|')` 即可直接建樹
+2. **後端祖先檢測**：`startswith` 比對不需 JOIN
+
+**索引保留**而非刪除，因為：
+
+- 索引佔用空間極小（`species_cache` ~7k 列、`fictional_species` 更少）
+- 若未來改為 viewport-based loading（只先載骨架、節點展開時 lazy fetch 子樹），就會出現 `WHERE taxon_path LIKE 'prefix%'` 查詢，屆時索引立即可用
+- 拿掉再加回來需要一次 migration，沒必要折騰
+
+> ⚠️ 修改本 ADR 或 schema 前請先 grep 一次 `taxon_path.*like` / `category_path.*like`，確認沒有新增的查詢依賴這些索引。

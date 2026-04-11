@@ -155,7 +155,6 @@ report type、status、visibility 等字串常數定義在 `backend/app/constant
 
 - Supabase 免費方案，注意儲存空間限制
 - Cloud Run 冷啟動延遲：精簡 import、延遲載入非必要模組
-- `taxon_path` 欄位需要 `text_pattern_ops` 索引以支援前綴查詢（欄位型別是 `TEXT`，所以用 `text_*` 而非 `varchar_*`）
 
 ## Claude Code 設定
 
