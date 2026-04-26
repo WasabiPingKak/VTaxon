@@ -81,7 +81,8 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Elder Thing',          '古老者',     '現代虛構', '克蘇魯神話', '現代虛構|克蘇魯神話|Elder Thing',          '地球最古老的智慧種族'),
 ('Ghoul (Lovecraftian)', '食屍鬼',     '現代虛構', '克蘇魯神話', '現代虛構|克蘇魯神話|Ghoul (Lovecraftian)', '穴居的食腐種族，曾為人類'),
 ('Star-spawn',           '星之眷族',   '現代虛構', '克蘇魯神話', '現代虛構|克蘇魯神話|Star-spawn',           '追隨舊日支配者的宇宙生物'),
-('Outer God',            '外神',       '現代虛構', '克蘇魯神話', '現代虛構|克蘇魯神話|Outer God',             '克蘇魯神話體系中超越人類理解的至高存在，如阿撒托斯（Azathoth）、猶格·索托斯（Yog-Sothoth）。居於宇宙之外，凡人目睹即陷入瘋狂。')
+('Outer God',            '外神',       '現代虛構', '克蘇魯神話', '現代虛構|克蘇魯神話|Outer God',             '克蘇魯神話體系中超越人類理解的至高存在，如阿撒托斯（Azathoth）、猶格·索托斯（Yog-Sothoth）。居於宇宙之外，凡人目睹即陷入瘋狂。'),
+('Great Old Ones',       '舊日支配者', '現代虛構', '克蘇魯神話', '現代虛構|克蘇魯神話|Great Old Ones',       '宇宙中強大而古老的種族，肉軀由不同於凡間之物的不明物質構成。能力遠超凡人想像，凡人目睹即陷入瘋狂，但仍有外星種族與神秘宗教崇拜祂們。')
 ON CONFLICT(name) DO NOTHING;
 
 -- === 都市傳說 (Urban Legends) ===
