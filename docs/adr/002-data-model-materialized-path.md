@@ -68,10 +68,10 @@ elif existing_path.startswith(new_path + "|"):
 ### Partial Unique Index
 
 ```sql
-CREATE UNIQUE INDEX uq_vtuber_traits_user_taxon
+CREATE UNIQUE INDEX idx_vtuber_traits_user_taxon
   ON vtuber_traits (user_id, taxon_id) WHERE taxon_id IS NOT NULL;
 
-CREATE UNIQUE INDEX uq_vtuber_traits_user_fictional
+CREATE UNIQUE INDEX idx_vtuber_traits_user_fictional
   ON vtuber_traits (user_id, fictional_species_id) WHERE fictional_species_id IS NOT NULL;
 ```
 
