@@ -29,7 +29,7 @@
 ---
 
 ### `fictional_species_expansion.sql`
-**用途**：擴充奇幻生物分類資料，新增 3 大 origin 共 45 筆。
+**用途**：擴充奇幻生物分類資料，新增 3 大 origin 共 46 筆。
 
 | Origin | Sub-origins | 筆數 |
 |--------|-------------|------|

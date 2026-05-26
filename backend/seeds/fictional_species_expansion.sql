@@ -59,7 +59,8 @@ ON CONFLICT(name) DO NOTHING;
 -- === 附魂體 (Soul-bound) ===
 INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
 ('Cursed Doll', '詛咒娃娃', '人造生命', '附魂體', '人造生命|附魂體|Cursed Doll', '靈魂因詛咒而寄宿於娃娃中的存在'),
-('Teddy Bear', '泰迪熊', '人造生命', '附魂體', '人造生命|附魂體|Teddy Bear', '被賦予生命的填充熊玩偶，玩具熊型態的附魂存在')
+('Teddy Bear', '泰迪熊', '人造生命', '附魂體', '人造生命|附魂體|Teddy Bear', '被賦予生命的填充熊玩偶，玩具熊型態的附魂存在'),
+('Galaxy Bear', '宇宙熊', '人造生命', '附魂體', '人造生命|附魂體|Galaxy Bear', '生活在宇宙銀行裡的熊熊，顏色不限定，通常擁有人形熊耳，而非完全獸族，熱愛生活，職業多變。')
 ON CONFLICT(name) DO NOTHING;
 
 -- === 生物合成 (Bio-synthetic Life) ===
