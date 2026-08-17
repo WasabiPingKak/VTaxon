@@ -19,7 +19,7 @@ const DIST = join(__dirname, '..', 'dist');
 const PORT = 4173;
 
 // Only prerender truly static pages (no API dependency)
-const ROUTES = ['/about', '/privacy', '/terms'];
+const ROUTES = ['/about', '/privacy', '/terms', '/search', '/changelog'];
 
 // Find Chrome executable
 function findChrome() {
