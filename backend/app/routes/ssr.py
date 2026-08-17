@@ -135,12 +135,16 @@ def _inject_meta_tags(html: str, *, title: str, description: str, image: str, ur
         html,
     )
 
-    # Replace canonical URL
-    html = re.sub(
+    # Replace canonical URL, or insert one if the template has none
+    # (the SPA index.html carries no static canonical; per-page tags come from Helmet)
+    canonical_tag = f'<link rel="canonical" href="{url_safe}" />'
+    html, replaced = re.subn(
         r'<link\s+rel="canonical"\s+href="[^"]*"\s*/?>',
-        f'<link rel="canonical" href="{url_safe}" />',
+        canonical_tag,
         html,
     )
+    if replaced == 0:
+        html = html.replace("</head>", f"{canonical_tag}\n</head>", 1)
 
     # Replace og: tags
     og_replacements = {

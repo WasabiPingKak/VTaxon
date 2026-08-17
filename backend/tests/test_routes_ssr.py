@@ -27,6 +27,10 @@ MOCK_SPA_HTML = """<!DOCTYPE html>
 <body><div id="root"></div></body>
 </html>"""
 
+# SPA HTML without a static canonical tag (matches the real index.html,
+# where per-page canonical is added client-side by Helmet)
+MOCK_SPA_HTML_NO_CANONICAL = MOCK_SPA_HTML.replace('<link rel="canonical" href="default" />\n', "")
+
 
 class TestSSR:
     @patch("app.routes.ssr._fetch_spa_html", return_value=MOCK_SPA_HTML)
@@ -42,6 +46,20 @@ class TestSSR:
         assert "TestVtuber | VTaxon" in html
         assert "https://example.com/avatar.png" in html
         assert "application/ld+json" in html
+        assert f'<link rel="canonical" href="https://vtaxon.com/vtuber/{uid}" />' in html
+
+    @patch("app.routes.ssr._fetch_spa_html", return_value=MOCK_SPA_HTML_NO_CANONICAL)
+    def test_inserts_canonical_when_template_has_none(self, mock_fetch, client, db_session):
+        """Template without a static canonical should still get one injected."""
+        uid = f"user-{uuid.uuid4().hex[:8]}"
+        u = User(id=uid, display_name="NoCanonUser", role="user")
+        db_session.add(u)
+        db_session.flush()
+
+        resp = client.get(f"/vtuber/{uid}")
+        assert resp.status_code == 200
+        html = resp.data.decode()
+        assert f'<link rel="canonical" href="https://vtaxon.com/vtuber/{uid}" />' in html
 
     @patch("app.routes.ssr._fetch_spa_html", return_value=MOCK_SPA_HTML)
     def test_unknown_user_returns_spa(self, mock_fetch, client):
