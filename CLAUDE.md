@@ -141,9 +141,10 @@ report type、status、visibility 等字串常數定義在 `backend/app/constant
 
 ## 禁止事項
 
-- **不要猜測 bug 原因**：讀 error log、追蹤 code path，假設被推翻就換方向
 - **不要在主 worktree 開 feature branch**：必須用 `EnterWorktree`（見全域 `~/.claude/CLAUDE.md`）
 - **不要直接在 `develop` 上 commit 程式碼**：程式碼修改走 feature branch → merge
+
+（Debug 原則見全域 `~/.claude/CLAUDE.md`）
 
 ## DB Schema 變更規則
 
