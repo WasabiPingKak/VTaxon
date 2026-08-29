@@ -6,11 +6,8 @@ import ProfileInfoCard from './ProfileInfoCard';
 import { displayScientificName } from '../lib/speciesName';
 import { RANK_ORDER, RANK_TO_UPPER, SUB_SPECIES_RANKS } from '../lib/taxonomyConstants';
 import type { OAuthAccount } from '../types';
+import { fieldLabelStyle as previewLabelStyle } from './panelStyles';
 
-const previewLabelStyle: React.CSSProperties = {
-  display: 'inline-block', width: '50px',
-  fontWeight: 500, color: 'rgba(255,255,255,0.45)',
-};
 
 interface SpeciesData {
   taxon_path?: string;

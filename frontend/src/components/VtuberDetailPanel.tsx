@@ -6,6 +6,7 @@ import OrgBadge from './OrgBadge';
 import LinksRow from './LinksRow';
 import { YouTubeIcon, TwitchIcon } from './SnsIcons';
 import ProfileInfoCard from './ProfileInfoCard';
+import { fieldLabelStyle as labelStyle } from './panelStyles';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import { displayScientificName } from '../lib/speciesName';
@@ -739,7 +740,3 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
   );
 }
 
-const labelStyle: React.CSSProperties = {
-  display: 'inline-block', width: '50px',
-  fontWeight: 500, color: 'rgba(255,255,255,0.45)',
-};
