@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { modalOverlayStyle, modalBoxStyle } from './modalStyles';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 
@@ -29,8 +30,8 @@ export default function VtuberDeclarationModal() {
   }
 
   return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
+    <div style={modalOverlayStyle}>
+      <div style={modalBoxStyle(480)}>
         <h2 style={{ margin: '0 0 16px', fontSize: '1.2em' }}>VTuber 身份確認</h2>
 
         <div style={{ marginBottom: '16px', lineHeight: 1.7, fontSize: '0.95em', color: 'rgba(255,255,255,0.85)' }}>
@@ -111,22 +112,4 @@ export default function VtuberDeclarationModal() {
   );
 }
 
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.7)',
-  zIndex: 2000,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '20px',
-};
 
-const modalStyle: React.CSSProperties = {
-  background: '#1a2236',
-  borderRadius: '12px',
-  padding: '28px',
-  maxWidth: '480px',
-  width: '100%',
-  border: '1px solid rgba(255,255,255,0.1)',
-};
