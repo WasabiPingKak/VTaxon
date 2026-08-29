@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SEOHead from '../components/SEOHead';
+import { heading, para, listStyle } from './docStyles';
 
 interface ChangelogMeta {
   date: string;
@@ -32,31 +33,6 @@ const versions: VersionEntry[] = Object.keys(metaFiles)
     };
   })
   .sort((a, b) => b.date.localeCompare(a.date));
-
-const heading: React.CSSProperties = {
-  color: '#fff',
-  fontWeight: 600,
-  fontSize: '1.05em',
-  borderBottom: '1px solid rgba(255,255,255,0.1)',
-  paddingBottom: 8,
-  marginTop: 24,
-  marginBottom: 12,
-};
-
-const para: React.CSSProperties = {
-  color: 'rgba(255,255,255,0.65)',
-  fontSize: '0.88em',
-  lineHeight: 1.75,
-  margin: '8px 0',
-};
-
-const listStyle: React.CSSProperties = {
-  color: 'rgba(255,255,255,0.6)',
-  fontSize: '0.85em',
-  lineHeight: 1.7,
-  paddingLeft: 22,
-  margin: '6px 0',
-};
 
 const subHeading: React.CSSProperties = {
   color: 'rgba(255,255,255,0.85)',

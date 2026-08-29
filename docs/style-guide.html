@@ -334,7 +334,7 @@
     <tr><td>h1</td><td><code>1.5em / #fff / marginBottom 4</code>，下接副標 <code>0.82~0.88em / rgba(255,255,255,0.4) / margin 0 0 32px</code></td>
         <td>只有法規四頁與 VTuberProfilePage 用 h1；其他頁主標用 h2 <span class="warn-tag">語意不對齊</span></td></tr>
     <tr><td>h2（區段）</td><td><code>1.05em / 600 / #fff / borderBottom 1px solid rgba(255,255,255,0.1) / paddingBottom 8 / marginTop 32 / marginBottom 12</code></td>
-        <td>heading 常數被複製 4 份且已漂移（Changelog marginTop 24）</td></tr>
+        <td>原被複製 4 份且漂移，2026-08-29 起統一收斂於 <code>pages/docStyles.ts</code></td></tr>
     <tr><td>h2（頁主標）</td><td>各頁自訂：1.35em（Login）、1.2em（Character）、無樣式吃預設 1.5em（Search）</td>
         <td><span class="warn-tag">四分五裂</span></td></tr>
     <tr><td>h3</td><td><code>0.92~1em / 600 / #fff 或 rgba(255,255,255,0.85)</code></td><td></td></tr>
@@ -351,7 +351,7 @@
   <div class="scroll"><table>
     <tr><th>場景</th><th>值</th></tr>
     <tr><td>頁面水平 padding</td><td><b>20px</b>（全站共識；例外：Directory 手機 12、Login 外層 16）</td></tr>
-    <tr><td>區段之間（h2 上緣）</td><td>32（Changelog 24）</td></tr>
+    <tr><td>區段之間（h2 上緣）</td><td>32（2026-08-29 起含 Changelog 統一）</td></tr>
     <tr><td>Header → 內容 / Tab bar → 內容</td><td>32 / 24</td></tr>
     <tr><td>表單欄位之間</td><td>20（區段結尾 24）</td></tr>
     <tr><td>卡片之間</td><td>Admin 14、通知 10、特徵卡 8</td></tr>
@@ -680,7 +680,7 @@ WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slid
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>STATUS_STYLES 兩份，已抽出共用 <code>components/directory/shared.tsx</code>。修復時發現同兩檔的 PLATFORM_ICONS（僅尺寸 16 / 14 不同）與 DirectoryItem 型別也是複製品，一併抽入共用模組。</li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>tag 樣式兩份，已抽出共用 <code>components/tagChipStyles.ts</code>（chip、移除 ✕、輸入容器外框三組樣式）。</li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>欄位名樣式三份（lblStyle / previewLabelStyle / labelStyle 同值），已抽出共用 <code>components/panelStyles.ts</code> 的 <code>fieldLabelStyle</code>。</li>
-    <li>法規頁 heading / para / list 常數複製 4 份且已漂移（Changelog marginTop 24 vs 32、lineHeight 1.7 vs 1.8）。<span class="ref">AboutPage / PrivacyPolicyPage / TermsOfServicePage / ChangelogPage 開頭</span></li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>法規頁 heading / para / list 常數複製 4 份且已漂移，已抽出共用 <code>pages/docStyles.ts</code>（含英文版降階三式）。漂移值統一收斂到多數：heading marginTop 32、listStyle lineHeight 1.8（Changelog 原 24 / 1.7 為複製後漂移）。</li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>Modal overlay 與容器兩份逐字重複（僅 maxWidth 480 / 520 不同），已抽出共用 <code>components/modalStyles.ts</code>。</li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>「顯示限制 / 代表物種」警告框兩份，已抽出共用 <code>components/settings/TraitNotices.tsx</code>（TraitBudgetNotice / LivePrimaryNotice）。</li>
   </ol>
