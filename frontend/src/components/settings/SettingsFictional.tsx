@@ -3,6 +3,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../lib/ToastContext';
 import { api } from '../../lib/api';
 import FictionalSpeciesPicker from '../FictionalSpeciesPicker';
+import { RemoveButton, LivePrimaryButton } from './TraitButtons';
 import type { FictionalSpecies } from '../../types/models';
 
 interface TraitWithFictional {
@@ -13,58 +14,6 @@ interface TraitWithFictional {
   display_name?: string;
   trait_note?: string | null;
   [key: string]: unknown;
-}
-
-/** Subtle remove button with hover effect */
-function RemoveButton({ onClick }: { onClick: () => void }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        padding: '4px 10px',
-        background: 'transparent',
-        color: hovered ? '#f87171' : 'rgba(255,255,255,0.3)',
-        border: `1px solid ${hovered ? 'rgba(248,113,113,0.3)' : 'rgba(255,255,255,0.1)'}`,
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontWeight: 600,
-        fontSize: '0.8em',
-        flexShrink: 0,
-        transition: 'color 0.15s, border-color 0.15s',
-      }}
-    >
-      移除
-    </button>
-  );
-}
-
-/** Star button for selecting live primary trait */
-function LivePrimaryButton({ isActive, onClick, disabled }: { isActive: boolean; onClick: () => void; disabled: boolean }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      disabled={disabled}
-      title={isActive ? '目前的代表物種' : '設為代表物種'}
-      style={{
-        padding: '4px 8px',
-        background: 'transparent',
-        border: 'none',
-        cursor: disabled ? 'default' : 'pointer',
-        fontSize: '1.2em',
-        color: isActive ? '#f59e0b' : (hovered ? '#fbbf24' : 'rgba(255,255,255,0.15)'),
-        transition: 'color 0.15s',
-        flexShrink: 0,
-      }}
-    >
-      {isActive ? '\u2605' : '\u2606'}
-    </button>
-  );
 }
 
 interface SettingsFictionalProps {
