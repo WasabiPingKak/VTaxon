@@ -41,7 +41,8 @@ VTaxon/
 ├── docs/
 │   ├── adr/                    # 架構決策紀錄（9 份）
 │   ├── changelogs/             # 版本更新日誌
-│   └── claude-skills/          # Claude Code 自訂 skill 定義
+│   ├── claude-skills/          # Claude Code 自訂 skill 定義
+│   └── style-guide.html        # 前端設計文件（現況盤點：色彩/字級/間距/元件/問題清單）
 └── firebase.json               # Firebase Hosting 設定
 ```
 

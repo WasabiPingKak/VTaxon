@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VTaxon 設計文件（現況盤點版）</title>
+<style>
+  :root {
+    --bg: #080d15;
+    --panel: #0d1526;
+    --line: rgba(255,255,255,0.08);
+    --line2: rgba(255,255,255,0.12);
+    --tx: #e2e8f0;
+    --tx2: rgba(255,255,255,0.6);
+    --tx3: rgba(255,255,255,0.4);
+    --acc: #38bdf8;
+    --warn: #f59e0b;
+    --bad: #f87171;
+    --mono: ui-monospace, Consolas, "Cascadia Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--tx);
+    font: 15px/1.75 system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
+  }
+  a { color: var(--acc); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header.doc {
+    max-width: 1020px; margin: 0 auto; padding: 48px 24px 8px;
+  }
+  header.doc h1 { font-size: 1.6em; color: #fff; margin: 0 0 4px; }
+  header.doc .sub { color: var(--tx3); font-size: 0.88em; }
+  .meta {
+    margin-top: 16px; padding: 12px 16px; border: 1px solid var(--line);
+    border-radius: 8px; background: rgba(255,255,255,0.02);
+    font-size: 0.85em; color: var(--tx2);
+  }
+  .meta b { color: var(--tx); font-weight: 600; }
+
+  nav.toc {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(8,13,21,0.9); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+    padding: 8px 24px; margin-top: 24px;
+  }
+  nav.toc .in { max-width: 1020px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.82em; }
+  nav.toc a { color: var(--tx2); }
+  nav.toc a:hover { color: var(--acc); text-decoration: none; }
+
+  main { max-width: 1020px; margin: 0 auto; padding: 8px 24px 96px; }
+  section { margin-top: 48px; }
+  h2 {
+    color: #fff; font-weight: 600; font-size: 1.2em;
+    border-bottom: 1px solid var(--line2); padding-bottom: 8px; margin: 0 0 16px;
+  }
+  h3 { color: #fff; font-weight: 600; font-size: 1em; margin: 28px 0 10px; }
+  h4 { color: rgba(255,255,255,0.85); font-weight: 600; font-size: 0.9em; margin: 20px 0 8px; }
+  p { margin: 8px 0; color: var(--tx2); }
+  p b, li b { color: var(--tx); font-weight: 600; }
+  ul, ol { color: var(--tx2); padding-left: 22px; margin: 8px 0; }
+  li { margin: 4px 0; }
+  code, .ref {
+    font-family: var(--mono); font-size: 0.85em;
+    background: rgba(255,255,255,0.06); border-radius: 4px; padding: 1px 5px;
+  }
+  .ref { color: rgba(255,255,255,0.45); font-size: 0.76em; background: none; padding: 0; }
+  .warn-tag {
+    display: inline-block; font-size: 0.72em; font-weight: 600; vertical-align: 2px;
+    color: var(--warn); background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 4px; padding: 0 6px; margin-left: 6px; white-space: nowrap;
+  }
+  .bug-tag {
+    display: inline-block; font-size: 0.72em; font-weight: 600; vertical-align: 2px;
+    color: var(--bad); background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 4px; padding: 0 6px; margin-left: 6px; white-space: nowrap;
+  }
+
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin: 12px 0; }
+  th { color: rgba(255,255,255,0.8); border-bottom: 1px solid rgba(255,255,255,0.15);
+       padding: 7px 10px; text-align: left; font-weight: 600; white-space: nowrap; }
+  td { color: var(--tx2); border-bottom: 1px solid rgba(255,255,255,0.06);
+       padding: 7px 10px; vertical-align: top; }
+  td code { white-space: nowrap; }
+
+  .swgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin: 12px 0; }
+  .sw { display: flex; gap: 10px; align-items: center; }
+  .chip { width: 42px; height: 42px; border-radius: 8px; border: 1px solid var(--line2); flex: none; }
+  .sw b { display: block; font-family: var(--mono); font-size: 0.82em; color: var(--tx); font-weight: 600; }
+  .sw span { display: block; font-size: 0.78em; color: var(--tx3); line-height: 1.4; }
+
+  .stage {
+    border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin: 12px 0;
+    background: var(--bg);
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  }
+  .stage.col { flex-direction: column; align-items: stretch; gap: 8px; }
+  .spec {
+    font-family: var(--mono); font-size: 0.76em; color: rgba(255,255,255,0.45);
+    background: rgba(255,255,255,0.03); border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 12px; margin: 6px 0 14px; overflow-x: auto; white-space: pre;
+  }
+  .ladder-row { display: flex; align-items: baseline; gap: 14px; padding: 3px 0; }
+  .ladder-row .val { font-family: var(--mono); font-size: 0.78em; color: var(--tx3); width: 190px; flex: none; }
+
+  .issues ol { counter-reset: none; }
+  .issues li { margin: 8px 0; }
+  .issues .ref { display: block; margin-top: 1px; }
+
+  @keyframes vtaxonSpin { to { transform: rotate(360deg); } }
+  @keyframes vtaxonPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<header class="doc">
+  <h1>VTaxon 設計文件</h1>
+  <div class="sub">現況盤點版（descriptive）。記錄前端實際使用中的顏色、字級、間距與元件樣式，並標記不一致之處。</div>
+  <div class="meta">
+    <b>盤點日期：</b>2026-08-29
+    <b>掃描範圍：</b><code>frontend/src</code> 全部 inline style 與 <code>frontend/index.html</code> 全域樣式<br>
+    <b>性質：</b>本文件描述「現在長什麼樣」，不是既定規範。樣式收斂決策見文末草案，尚未定案。<br>
+    <b>維護方式：</b>UI 有大規模改動後重新盤點更新本檔；若完成樣式收斂，改寫為規範版（prescriptive）。
+  </div>
+</header>
+
+<nav class="toc"><div class="in">
+  <a href="#overview">總覽</a>
+  <a href="#colors">色彩</a>
+  <a href="#typography">字體排印</a>
+  <a href="#spacing">間距・圓角・陰影</a>
+  <a href="#layout">版面與 RWD</a>
+  <a href="#components">元件庫</a>
+  <a href="#zindex">zIndex 層級</a>
+  <a href="#motion">動效</a>
+  <a href="#issues">問題清單</a>
+  <a href="#proposal">收斂草案</a>
+</div></nav>
+
+<main>
+
+<!-- ============================================================ -->
+<section id="overview">
+  <h2>1. 總覽</h2>
+  <p>VTaxon 前端<b>沒有 CSS 檔案、沒有 Tailwind、沒有 CSS-in-JS 函式庫</b>。所有樣式都是 TSX 元件裡的
+     inline style 物件；唯一的全域樣式表內嵌在 <code>frontend/index.html</code>（base、keyframes、3 個 utility class）。</p>
+  <p>整體視覺語言：<b>深色單一主題</b>（無淺色模式）、玻璃擬態點綴（backdrop blur）、
+     「tinted 按鈕」公式（半透明底 + 同色邊 + 同色字）、以半透明白階層區分文字層級。</p>
+  <div class="scroll"><table>
+    <tr><th>項目</th><th>值</th><th>出處</th></tr>
+    <tr><td>頁面背景</td><td><code>#080d15</code></td><td rowspan="3"><span class="ref">index.html body 樣式</span></td></tr>
+    <tr><td>預設文字</td><td><code>#e2e8f0</code></td></tr>
+    <tr><td>連結 / 主色</td><td><code>#38bdf8</code></td></tr>
+    <tr><td>字型</td><td>未設定（瀏覽器系統預設）</td><td><span class="ref">全專案僅 2 處 monospace</span></td></tr>
+    <tr><td>Navbar 高度</td><td><code>44px</code>（fixed）</td><td><span class="ref">Navbar.tsx:99，被 5 處硬編碼引用</span></td></tr>
+    <tr><td>RWD 斷點</td><td><code>max-width: 640px</code>（唯一）</td><td><span class="ref">hooks/useIsMobile.ts:3</span></td></tr>
+    <tr><td>互動 transition</td><td><code>0.15s</code>（版面位移 <code>0.3s</code>）</td><td><span class="ref">全站慣例</span></td></tr>
+  </table></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="colors">
+  <h2>2. 色彩</h2>
+
+  <h3>2.1 表面色（Surfaces）</h3>
+  <div class="swgrid">
+    <div class="sw"><div class="chip" style="background:#080d15"></div><div><b>#080d15</b><span>頁面背景（body、HomePage）</span></div></div>
+    <div class="sw"><div class="chip" style="background:#0d1526"></div><div><b>#0d1526</b><span>側邊面板底、graph 中心漸層。同時是主按鈕文字色</span></div></div>
+    <div class="sw"><div class="chip" style="background:#141c2b"></div><div><b>#141c2b</b><span>卡片、下拉選單、BottomSheet（篩選器）</span></div></div>
+    <div class="sw"><div class="chip" style="background:#1a2433"></div><div><b>#1a2433</b><span>輸入框底（主流派）</span></div></div>
+    <div class="sw"><div class="chip" style="background:#1a2236"></div><div><b>#1a2236</b><span>Modal 底（僅兩個 modal）</span></div></div>
+    <div class="sw"><div class="chip" style="background:#1e293b"></div><div><b>#1e293b</b><span>select option 補救色（全專案僅 Pagination 一處）</span></div></div>
+  </div>
+  <p>玻璃擬態變體：Navbar <code>rgba(8,13,21,0.85)</code> + blur(12)、graph 浮動工具列 <code>rgba(8,13,21,0.75)</code> + blur(10)、
+     Login 卡片 <code>rgba(20,28,43,0.75)</code> + blur(16)、WelcomeToast <code>rgba(20,28,40,0.92)</code> + blur(8)。</p>
+  <p><span class="warn-tag">撞值</span> 主按鈕的文字色 <code>#0d1526</code>（on-primary）與側邊面板 surface 是同一個值，語意不同卻共用 hex。</p>
+
+  <h3>2.2 主色</h3>
+  <div class="stage">
+    <div class="sw"><div class="chip" style="background:#38bdf8"></div><div><b>#38bdf8</b><span>主色：連結、主按鈕底、active 狀態、資訊語意</span></div></div>
+    <div class="sw"><div class="chip" style="background:#7dd3fc"></div><div><b>#7dd3fc</b><span>連結 hover（全站僅 DirectoryPage 一處實作）</span></div></div>
+    <div class="sw"><div class="chip" style="background:#0d1526"></div><div><b>#0d1526</b><span>主色上的文字（on-primary）</span></div></div>
+  </div>
+  <p>主色的半透明背景在各處出現 <b>7 種透明度</b>（0.04 / 0.05 / 0.06 / 0.08 / 0.1 / 0.12 / 0.15），
+     邊框 4 種（0.12 / 0.15 / 0.2 / 0.25~0.3）。<span class="warn-tag">無標準</span></p>
+
+  <h3>2.3 文字階層（半透明白）</h3>
+  <p>文字層級全靠 <code>#fff</code>、<code>#e2e8f0</code> 與 <code>rgba(255,255,255,α)</code> 的透明度階梯。
+     實際使用中的 α 多達 <b>17 階</b>，以下列出主要階與其語意：</p>
+  <div class="stage col">
+    <div class="ladder-row"><span class="val">#fff</span><span style="color:#fff;font-weight:600">標題、強調、卡片關鍵欄位值</span></div>
+    <div class="ladder-row"><span class="val">#e2e8f0</span><span style="color:#e2e8f0">全域正文（body 預設）、表單 label 與輸入文字</span></div>
+    <div class="ladder-row"><span class="val">rgba(255,255,255,0.8)</span><span style="color:rgba(255,255,255,0.8)">次強文字：Admin 卡片一般欄位值、表頭</span></div>
+    <div class="ladder-row"><span class="val">rgba(255,255,255,0.7)</span><span style="color:rgba(255,255,255,0.7)">卡片內文、bio、說明文字</span></div>
+    <div class="ladder-row"><span class="val">rgba(255,255,255,0.65)</span><span style="color:rgba(255,255,255,0.65)">法規頁段落正文（para 常數）</span></div>
+    <div class="ladder-row"><span class="val">rgba(255,255,255,0.6)</span><span style="color:rgba(255,255,255,0.6)">清單項、次要按鈕文字、表格內文</span></div>
+    <div class="ladder-row"><span class="val">rgba(255,255,255,0.5)</span><span style="color:rgba(255,255,255,0.5)">提示、副標、載入中文字、未選中 Tab</span></div>
+    <div class="ladder-row"><span class="val">rgba(255,255,255,0.4~0.45)</span><span style="color:rgba(255,255,255,0.42)">meta 資訊、時間戳、欄位 label、圖示按鈕</span></div>
+    <div class="ladder-row"><span class="val">rgba(255,255,255,0.3~0.35)</span><span style="color:rgba(255,255,255,0.33)">極淡提示、空狀態、字數統計、footer 連結</span></div>
+    <div class="ladder-row"><span class="val">rgba(255,255,255,0.25)</span><span style="color:rgba(255,255,255,0.25)">全站 footer、通知時間</span></div>
+    <div class="ladder-row"><span class="val">rgba(255,255,255,0.1~0.2)</span><span style="color:rgba(255,255,255,0.18)">裝飾性文字：404 大字、分隔點、浮動連結</span></div>
+  </div>
+  <p><span class="warn-tag">階數過多</span> 完整清單：0.85 / 0.8 / 0.75 / 0.7 / 0.65 / 0.6 / 0.55 / 0.5 / 0.45 / 0.42 / 0.4 / 0.35 / 0.3 / 0.25 / 0.2 / 0.18 / 0.15 / 0.1。相鄰級距（0.42 vs 0.4）肉眼無法分辨。</p>
+
+  <h3>2.4 狀態色</h3>
+  <div class="scroll"><table>
+    <tr><th>語意</th><th>色值</th><th>樣本</th><th>用途與備註</th></tr>
+    <tr><td rowspan="2">成功</td>
+        <td><code>#4ade80</code></td><td><span style="color:#4ade80">■ 文字</span> <span style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:#4ade80;padding:1px 8px;border-radius:4px;font-size:0.85em">completed</span></td>
+        <td>pages / admin / directory 全用這個；底 <code>rgba(34,197,94,0.15)</code>、框 <code>0.3</code></td></tr>
+    <tr><td><code>#22c55e</code></td><td><span style="color:#22c55e">■ 文字</span></td>
+        <td>graph 元件與 ProfileInfoCard「活動中」<span class="warn-tag">兩套並存</span></td></tr>
+    <tr><td rowspan="2">危險</td>
+        <td><code>#f87171</code></td><td><span style="color:#f87171">■ 文字態</span></td>
+        <td>徽章文字、危險按鈕文字、「移除」hover</td></tr>
+    <tr><td><code>#ef4444</code></td><td><span style="background:#ef4444;color:#fff;padding:1px 8px;border-radius:3px;font-size:0.8em;font-weight:700">LIVE</span></td>
+        <td>實心：LIVE 標、登出按鈕、超量警告 <span class="warn-tag">雙軌</span></td></tr>
+    <tr><td rowspan="4">警告</td>
+        <td><code>#f59e0b</code></td><td><span style="color:#f59e0b">■</span></td>
+        <td>Login 警語、pending_review、未儲存變更、代表物種星號</td></tr>
+    <tr><td><code>#eab308</code></td><td><span style="color:#eab308">■</span></td>
+        <td>in_progress、YT 未授權警告、被檢舉者名稱</td></tr>
+    <tr><td><code>#fbbf24</code></td><td><span style="color:#fbbf24">■</span></td>
+        <td>星號 hover、filterBadges「休止」<span class="warn-tag">四套並存</span></td></tr>
+    <tr><td><code>#facc15</code></td><td><span style="color:#facc15">■</span></td>
+        <td>DirectoryCard「休止」</td></tr>
+    <tr><td>資訊</td><td><code>#38bdf8</code></td><td><span style="color:#38bdf8">■</span></td>
+        <td>= 主色。received / investigating 徽章、審核中橫幅</td></tr>
+    <tr><td rowspan="2">中性 / 停用</td>
+        <td><code>#999</code></td><td><span style="color:#999">■</span></td>
+        <td>dismissed 徽章、已封鎖標記；底 <code>rgba(100,100,100,0.15)</code></td></tr>
+    <tr><td><code>#94a3b8</code></td><td><span style="color:#94a3b8">■</span></td>
+        <td>特徵數提示（=5 時）</td></tr>
+  </table></div>
+  <p><b>Tinted 公式</b>（狀態色的標準用法）：<code>background: rgba(C, 0.08~0.15)</code> +
+     <code>border: 1px solid rgba(C, 0.25~0.3)</code> + <code>color: C</code>。集中定義只有
+     <code>AdminPage.tsx:177</code> 的 <code>ACTION_STYLES</code>，其餘散落手寫。</p>
+  <p><span class="bug-tag">脫節</span> 全域 Toast（<span class="ref">lib/ToastContext.tsx:59</span>）用 Material 實心色
+     <code>#2e7d32</code> / <code>#c62828</code> / <code>#1a73e8</code>，這三色在專案其他地方一次都沒出現。</p>
+
+  <h3>2.5 特殊語意色</h3>
+  <div class="swgrid">
+    <div class="sw"><div class="chip" style="background:#E91E8C"></div><div><b>#E91E8C</b><span>「使用者自己」洋紅（graph 節點、定位自己按鈕；輔助 #f472b6）</span></div></div>
+    <div class="sw"><div class="chip" style="background:#D4A017"></div><div><b>#D4A017</b><span>「定位 / 聚焦」金（樹狀圖定位按鈕、FOCUSED 節點）</span></div></div>
+    <div class="sw"><div class="chip" style="background:#FF6B35"></div><div><b>#FF6B35</b><span>graph 直播中節點（LIVE_COLOR）</span></div></div>
+    <div class="sw"><div class="chip" style="background:#fb923c"></div><div><b>#fb923c</b><span>品種 BREED 橘（品種標籤、RankBadge、企業勢）</span></div></div>
+    <div class="sw"><div class="chip" style="background:#a855f7"></div><div><b>#a855f7</b><span>虛構物種來源紫（SettingsFictional）</span></div></div>
+    <div class="sw"><div class="chip" style="background:#3b82f6"></div><div><b>#3b82f6</b><span>「重新訂閱」按鈕、WelcomeToast「+N」徽章</span></div></div>
+  </div>
+
+  <h4>時間衰減色階（目錄排序徽章，lib/filterBadges.ts getSortBadge）</h4>
+  <div class="stage">
+    <span style="background:rgba(103,232,249,0.15);color:#67e8f9;padding:1px 6px;border-radius:4px;font-size:0.78em">分 / 時 #67e8f9</span>
+    <span style="background:rgba(147,197,253,0.10);color:#93c5fd;padding:1px 6px;border-radius:4px;font-size:0.78em">天 / 週 #93c5fd</span>
+    <span style="background:rgba(165,180,200,0.08);color:#a5b4c8;padding:1px 6px;border-radius:4px;font-size:0.78em">週 #a5b4c8</span>
+    <span style="background:rgba(122,133,150,0.08);color:#7a8596;padding:1px 6px;border-radius:4px;font-size:0.78em">月 #7a8596</span>
+    <span style="background:rgba(88,100,114,0.08);color:#586472;padding:1px 6px;border-radius:4px;font-size:0.78em">年 #586472</span>
+  </div>
+  <p>越舊越暗，是專案裡最有系統性的一組色階設計。直播中用 <code>#f87171</code>、出道年資用 <code>#a78bfa</code>。</p>
+
+  <h3>2.6 平台 / 品牌色</h3>
+  <div class="scroll"><table>
+    <tr><th>品牌</th><th>官方色</th><th>Admin 頁代用色</th><th>備註</th></tr>
+    <tr><td>YouTube</td><td><code style="color:#FF0000">#FF0000</code></td><td><code style="color:#f87171">#f87171</code></td>
+        <td>官方紅在深底可讀性差，Admin 徽章文字換代用色，但背景仍用 <code>rgba(255,0,0,0.12)</code> <span class="warn-tag">文字與底不同源</span></td></tr>
+    <tr><td>Twitch</td><td><code style="color:#9146FF">#9146FF</code>（hover <code>#a970ff</code>）</td><td><code style="color:#a78bfa">#a78bfa</code></td>
+        <td><span class="warn-tag">一色三用</span> #a78bfa 同時是 Twitch 代用、社團勢 OrgBadge、亞種 RankBadge</td></tr>
+    <tr><td>Google</td><td><code style="color:#EA4335">#EA4335</code> <code style="color:#4285F4">#4285F4</code> <code style="color:#FBBC05">#FBBC05</code> <code style="color:#34A853">#34A853</code></td><td>—</td>
+        <td>登入按鈕 SVG 圖示四色；按鈕本體 <code>#141c2b</code> 深底</td></tr>
+  </table></div>
+
+  <h3>2.7 分類階層色（RankBadge + graph）</h3>
+  <p>徽章公式：<code>bg rgba(C,0.15)</code> + <code>border rgba(C,0.3)</code> + <code>color C</code>；
+     「亞 / 下」階降為 <code>0.12 / 0.25</code>。graph 節點用同一組 hex（<span class="ref">components/graph/colors.ts</span>），另附 glow。</p>
+  <div class="stage" style="gap:6px">
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(192,132,252,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.3)">界</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(129,140,248,0.15);color:#818cf8;border:1px solid rgba(129,140,248,0.3)">門</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(165,180,252,0.12);color:#a5b4fc;border:1px solid rgba(165,180,252,0.25)">亞門</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3)">綱</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(125,211,252,0.12);color:#7dd3fc;border:1px solid rgba(125,211,252,0.25)">亞綱</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(186,230,253,0.12);color:#bae6fd;border:1px solid rgba(186,230,253,0.25)">下綱</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(52,211,153,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.3)">目</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(96,165,250,0.15);color:#60a5fa;border:1px solid rgba(96,165,250,0.3)">科</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3)">屬</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(147,197,253,0.15);color:#93c5fd;border:1px solid rgba(147,197,253,0.3)">種</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(167,139,250,0.12);color:#a78bfa;border:1px solid rgba(167,139,250,0.25)">亞種</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(52,211,153,0.15);color:#34d399;border:1px solid rgba(52,211,153,0.3)">變種</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3)">變型</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(251,146,60,0.15);color:#fb923c;border:1px solid rgba(251,146,60,0.3)">品種</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(240,171,252,0.15);color:#f0abfc;border:1px solid rgba(240,171,252,0.3)">虛構</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(249,115,22,0.15);color:#f97316;border:1px solid rgba(249,115,22,0.3)">來源</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(234,179,8,0.12);color:#eab308;border:1px solid rgba(234,179,8,0.25)">子來源</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(45,212,191,0.15);color:#2dd4bf;border:1px solid rgba(45,212,191,0.3)">類型</span>
+    <span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:0.75em;font-weight:600;background:rgba(251,113,133,0.15);color:#fb7185;border:1px solid rgba(251,113,133,0.3)">虛構種</span>
+  </div>
+  <p class="ref">components/RankBadge.tsx、components/graph/colors.ts（graph 另有 VTUBER #64748b、CURRENT_USER #E91E8C、FOCUSED #D4A017、CLOSE #22c55e、LIVE #FF6B35）</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="typography">
+  <h2>3. 字體排印</h2>
+  <p><b>字型：</b>全站未設定 <code>fontFamily</code>，跟隨瀏覽器 / 作業系統預設。
+     例外：AiPromptBlock 與 SpeciesSearch 學名前綴用 <code>monospace</code>；graph canvas 用 <code>sans-serif</code>。</p>
+
+  <h3>3.1 字級</h3>
+  <p>以 <code>em</code> 相對縮放為主（graph 系元件刻意改用 px 避免 em 複合縮放）。使用頻率前四名：</p>
+  <div class="stage col">
+    <div class="ladder-row"><span class="val">0.85em（117 次）</span><span style="font-size:0.85em">最大宗：按鈕、徽章、卡片 meta、下拉項</span></div>
+    <div class="ladder-row"><span class="val">0.9em（77 次）</span><span style="font-size:0.9em">表單輸入、toast、載入文字</span></div>
+    <div class="ladder-row"><span class="val">0.8em（62 次）</span><span style="font-size:0.8em">hint、小徽章、導覽連結</span></div>
+    <div class="ladder-row"><span class="val">0.95em（29 次）</span><span style="font-size:0.95em">Tab、OAuth 按鈕、較大的內文</span></div>
+    <div class="ladder-row"><span class="val">1em</span><span style="font-size:1em">表單輸入（settings 系）、正文</span></div>
+    <div class="ladder-row"><span class="val">1.05em</span><span style="font-size:1.05em;font-weight:600;color:#fff">h2 區段標題</span></div>
+    <div class="ladder-row"><span class="val">1.1 / 1.2em</span><span style="font-size:1.15em;font-weight:600;color:#fff">面板標題、頁面副主標</span></div>
+    <div class="ladder-row"><span class="val">1.5em</span><span style="font-size:1.5em;font-weight:700;color:#fff">h1 頁面主標</span></div>
+    <div class="ladder-row"><span class="val">2em / 4em</span><span style="font-size:1.6em;color:rgba(255,255,255,0.3)">空狀態圖示、404 大字（裝飾）</span></div>
+  </div>
+  <p>完整階梯：0.55 / 0.6 / 0.65 / 0.7 / 0.72 / 0.75 / 0.78 / 0.8 / 0.82 / 0.85 / 0.88 / 0.9 / 0.92 / 0.95 / 1 / 1.05 / 1.1 / 1.2 / 1.35 / 1.5 / 2 / 4em。<span class="warn-tag">階數過多</span></p>
+
+  <h3>3.2 字重</h3>
+  <p><code>600</code> 是絕對主力（110 次）：標題、按鈕、徽章、強調。<code>700 / bold</code>（42 次）：h1、LIVE 標、大數字。
+     <code>500</code>（23 次）：欄位 label、OAuth 按鈕。<code>400</code>：未選中 Tab。</p>
+
+  <h3>3.3 標題規格</h3>
+  <div class="scroll"><table>
+    <tr><th>層級</th><th>典型樣式</th><th>備註</th></tr>
+    <tr><td>h1</td><td><code>1.5em / #fff / marginBottom 4</code>，下接副標 <code>0.82~0.88em / rgba(255,255,255,0.4) / margin 0 0 32px</code></td>
+        <td>只有法規四頁與 VTuberProfilePage 用 h1；其他頁主標用 h2 <span class="warn-tag">語意不對齊</span></td></tr>
+    <tr><td>h2（區段）</td><td><code>1.05em / 600 / #fff / borderBottom 1px solid rgba(255,255,255,0.1) / paddingBottom 8 / marginTop 32 / marginBottom 12</code></td>
+        <td>heading 常數被複製 4 份且已漂移（Changelog marginTop 24）</td></tr>
+    <tr><td>h2（頁主標）</td><td>各頁自訂：1.35em（Login）、1.2em（Character）、無樣式吃預設 1.5em（Search）</td>
+        <td><span class="warn-tag">四分五裂</span></td></tr>
+    <tr><td>h3</td><td><code>0.92~1em / 600 / #fff 或 rgba(255,255,255,0.85)</code></td><td></td></tr>
+  </table></div>
+  <p><b>行高：</b>正文預設；hint 與 toast <code>1.4</code>；法規頁清單 <code>1.7~1.8</code>（兩值並存）。</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="spacing">
+  <h2>4. 間距・圓角・陰影</h2>
+
+  <h3>4.1 間距階梯</h3>
+  <p>實際使用值：<code>2 / 4 / 6 / 8 / 10 / 12 / 14 / 16 / 20 / 24 / 32 / 36 / 40 / 48 / 80</code>。慣例對應：</p>
+  <div class="scroll"><table>
+    <tr><th>場景</th><th>值</th></tr>
+    <tr><td>頁面水平 padding</td><td><b>20px</b>（全站共識；例外：Directory 手機 12、Login 外層 16）</td></tr>
+    <tr><td>區段之間（h2 上緣）</td><td>32（Changelog 24）</td></tr>
+    <tr><td>Header → 內容 / Tab bar → 內容</td><td>32 / 24</td></tr>
+    <tr><td>表單欄位之間</td><td>20（區段結尾 24）</td></tr>
+    <tr><td>卡片之間</td><td>Admin 14、通知 10、特徵卡 8</td></tr>
+    <tr><td>flex / grid gap</td><td>按鈕列 8~10、目錄卡 12、特徵區 16</td></tr>
+    <tr><td>頁尾留白</td><td>80（法規頁、公開檔案頁 padding-bottom）</td></tr>
+  </table></div>
+
+  <h3>4.2 圓角</h3>
+  <div class="stage">
+    <div style="text-align:center"><div style="width:52px;height:36px;background:rgba(255,255,255,0.08);border:1px solid var(--line2);border-radius:3px"></div><span class="ref">3 徽章</span></div>
+    <div style="text-align:center"><div style="width:52px;height:36px;background:rgba(255,255,255,0.08);border:1px solid var(--line2);border-radius:4px"></div><span class="ref">4 按鈕・輸入框</span></div>
+    <div style="text-align:center"><div style="width:52px;height:36px;background:rgba(255,255,255,0.08);border:1px solid var(--line2);border-radius:6px"></div><span class="ref">6 按鈕・chip</span></div>
+    <div style="text-align:center"><div style="width:52px;height:36px;background:rgba(255,255,255,0.08);border:1px solid var(--line2);border-radius:8px"></div><span class="ref">8 卡片・下拉</span></div>
+    <div style="text-align:center"><div style="width:52px;height:36px;background:rgba(255,255,255,0.08);border:1px solid var(--line2);border-radius:10px"></div><span class="ref">10 Admin 卡</span></div>
+    <div style="text-align:center"><div style="width:52px;height:36px;background:rgba(255,255,255,0.08);border:1px solid var(--line2);border-radius:12px"></div><span class="ref">12 大卡・Modal</span></div>
+    <div style="text-align:center"><div style="width:52px;height:36px;background:rgba(255,255,255,0.08);border:1px solid var(--line2);border-radius:16px"></div><span class="ref">16 Login 卡・Sheet</span></div>
+    <div style="text-align:center"><div style="width:52px;height:36px;background:rgba(255,255,255,0.08);border:1px solid var(--line2);border-radius:18px"></div><span class="ref">20 膠囊</span></div>
+    <div style="text-align:center"><div style="width:40px;height:40px;background:rgba(255,255,255,0.08);border:1px solid var(--line2);border-radius:50%"></div><span class="ref">50% 頭像</span></div>
+  </div>
+  <p><span class="warn-tag">無階梯</span> 3 / 4 / 5 / 6 / 8 / 10 / 12 / 16 / 20 / 50% 全在用。同為按鈕就有 4 / 5（Navbar 登入鈕）/ 6 三種；
+     同為卡片有 8 / 10 / 12 / 16 四種。</p>
+
+  <h3>4.3 陰影</h3>
+  <div class="scroll"><table>
+    <tr><th>值</th><th>用途</th></tr>
+    <tr><td><code>0 8px 24px rgba(0,0,0,0.4)</code></td><td>下拉選單（Navbar、通知鈴鐺、篩選 popover）</td></tr>
+    <tr><td><code>-4px 0 30px rgba(0,0,0,0.4)</code></td><td>右側滑入面板</td></tr>
+    <tr><td><code>0 4px 20px rgba(0,0,0,0.4)</code></td><td>WelcomeToast 卡片</td></tr>
+    <tr><td><code>0 4px 12px rgba(0,0,0,0.15)</code></td><td>全域 Toast <span class="warn-tag">強度是淺色主題殘留</span></td></tr>
+    <tr><td><code>0 0 6~12px rgba(239,68,68,…)</code></td><td>LIVE 紅色光暈</td></tr>
+    <tr><td><code>0 2px 12px rgba(56,189,248,0.15)</code></td><td>VtuberCard hover 藍光</td></tr>
+  </table></div>
+  <p><b>邊框：</b>一律 <code>1px solid rgba(255,255,255,α)</code>，α 從 0.06（footer 分隔線）到 0.25 都當「一般邊框」在用。
+     常見：容器 0.06~0.08、卡片與下拉 0.08~0.1、輸入框 0.1~0.15、次要按鈕 0.12~0.18。</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="layout">
+  <h2>5. 版面與 RWD</h2>
+
+  <h3>5.1 全站骨架</h3>
+  <ul>
+    <li><b>Navbar：</b>fixed、高 <code>44px</code>、<code>rgba(8,13,21,0.85)</code> + blur(12)、底線 <code>rgba(255,255,255,0.06)</code>。
+        高度 44 被硬編碼在 5 處：<span class="ref">App.tsx mainStyle、PreviewPanel、VtuberDetailPanel、YouTubeChannelBanner、LoginPage</span></li>
+    <li><b>Footer：</b>置中、<code>padding 32px 20px 24px</code>、<code>0.78em</code>、<code>rgba(255,255,255,0.25)</code>；連結 hover 亮到 0.5（全站唯一 CSS class hover）</li>
+    <li><b>首頁：</b>不走一般版面，全螢幕 fixed canvas</li>
+  </ul>
+
+  <h3>5.2 頁面容器（5 種規格）</h3>
+  <div class="scroll"><table>
+    <tr><th>類型</th><th>maxWidth</th><th>margin / padding</th><th>使用頁面</th></tr>
+    <tr><td>A. 內容長文頁</td><td>720</td><td><code>0 auto</code> / <code>48px 20px 80px</code></td><td>About、Changelog、Privacy、Terms（四頁完全一致）</td></tr>
+    <tr><td>B. 表單 / 管理頁</td><td>700</td><td><code>40px auto</code> / <code>0 20px</code></td><td>Character、Search、Admin</td></tr>
+    <tr><td>C. 公開檔案頁</td><td>700</td><td><code>0 auto</code> / <code>40px 20px 80px</code></td><td>VTuberProfile（載入 / 錯誤態改用 <code>60px auto</code>，切換會跳動 <span class="warn-tag">不一致</span>）</td></tr>
+    <tr><td>D. 目錄頁（寬）</td><td>1200</td><td><code>0 auto</code> / 桌機 <code>24px 20px</code>、手機 <code>16px 12px</code></td><td>Directory</td></tr>
+    <tr><td>E. 窄卡片 / 提示頁</td><td>650 / 500 / 480</td><td>各異</td><td>Notifications(650)、NotFound(500)、Login 卡片(480)</td></tr>
+  </table></div>
+
+  <h3>5.3 RWD</h3>
+  <ul>
+    <li>唯一斷點：<code>max-width: 640px</code>（<span class="ref">hooks/useIsMobile.ts</span>，matchMedia 訂閱）。<b>全站沒有任何 CSS media query</b></li>
+    <li>有做手機版的：<b>DirectoryPage</b>（單欄 grid、縮 padding）、<b>Navbar</b>（縮間距、藏文字留圖示）、
+        <b>FilterDropdown</b>（桌機 popover、手機 BottomSheet）、<b>graph 系</b>（工具列收合、控件放大）、<b>WelcomeToast</b>（compact 卡）</li>
+    <li><span class="warn-tag">缺口</span> 13 頁中 11 頁零 RWD，僅靠 maxWidth + padding 20px 自然縮放</li>
+    <li><span class="bug-tag">死碼</span> <span class="ref">WelcomeToast.tsx:8</span> 有一份 <code>MOBILE_BP = 768</code> 與檔內自寫的 useIsMobile，實際未使用</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="components">
+  <h2>6. 元件庫</h2>
+
+  <h3>6.1 按鈕</h3>
+
+  <h4>主要按鈕（Primary）— 實心水藍</h4>
+  <div class="stage">
+    <button style="padding:6px 14px;background:#38bdf8;color:#0d1526;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;font-weight:600">標準（6px 14px）</button>
+    <button style="padding:10px 24px;background:#38bdf8;color:#0d1526;border:none;border-radius:4px;cursor:pointer;font-size:1em;font-weight:600">大（10px 24px）</button>
+    <button style="padding:6px 14px;background:#38bdf8;color:#0d1526;border:none;border-radius:4px;cursor:not-allowed;font-size:0.85em;font-weight:600;opacity:0.4">停用 opacity .4</button>
+    <button style="padding:10px 24px;background:#f59e0b;color:#0d1526;border:none;border-radius:4px;cursor:pointer;font-size:1em;font-weight:600">未儲存變更態</button>
+  </div>
+  <div class="spec">padding: 6px 14px | background: #38bdf8 | color: #0d1526 | radius: 4px | 0.85em / 600
+變體 padding 共 8 種：4×10 / 5×12 / 6×14 / 7×14 / 8×16 / 10 / 10×24 / 6×16 ⚠ 無 hover 樣式
+disabled: opacity 0.4 或 0.5 + cursor not-allowed（係數不統一）</div>
+  <p class="ref">NameReportForm.tsx:198、SettingsRealSpecies.tsx:233、SettingsProfile.tsx:444（未儲存橘變體）等 8+ 處</p>
+
+  <h4>次要 / 幽靈按鈕（Ghost）</h4>
+  <div class="stage">
+    <button style="padding:6px 14px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.12);border-radius:4px;cursor:pointer;font-size:0.85em">取消</button>
+    <button style="padding:4px 10px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.15);border-radius:4px;cursor:pointer;font-size:0.85em">小型（smallBtn）</button>
+  </div>
+  <div class="spec">background: rgba(255,255,255,0.06) | color: rgba(255,255,255,0.6) | border: 1px solid rgba(255,255,255,0.12~0.15) | radius 4px</div>
+
+  <h4>Tinted 按鈕（ACTION_STYLES 系）— 本專案最主流的樣式語彙</h4>
+  <div class="stage">
+    <button style="padding:6px 16px;background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.25);border-radius:6px;cursor:pointer;font-size:0.85em">primary</button>
+    <button style="padding:6px 16px;background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3);border-radius:6px;cursor:pointer;font-size:0.85em">success</button>
+    <button style="padding:6px 16px;background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25);border-radius:6px;cursor:pointer;font-size:0.85em">danger</button>
+    <button style="padding:3px 8px;background:rgba(212,160,23,0.08);color:#D4A017;border:1px solid rgba(212,160,23,0.25);border-radius:6px;cursor:pointer;font-size:0.75em">🌳 定位（金）</button>
+    <button style="padding:4px 8px;background:rgba(233,30,140,0.1);color:#E91E8C;border:1px solid rgba(233,30,140,0.3);border-radius:6px;cursor:pointer;font-size:0.8em">定位自己（洋紅）</button>
+    <button style="padding:5px 14px;background:rgba(234,179,8,0.15);color:#eab308;border:1px solid rgba(234,179,8,0.5);border-radius:6px;cursor:pointer;font-size:0.85em;font-weight:600">banner CTA（黃）</button>
+  </div>
+  <div class="spec">公式: bg rgba(C, 0.08~0.15) + border 1px solid rgba(C, 0.25~0.3) + color C
+集中定義僅 AdminPage.tsx:177 ACTION_STYLES；同公式在 10+ 處手寫，透明度與 padding 各自為政 ⚠</div>
+
+  <h4>移除按鈕（hover 才轉紅）</h4>
+  <div class="stage">
+    <button style="padding:4px 10px;background:transparent;border-radius:4px;font-weight:600;font-size:0.8em;color:rgba(255,255,255,0.3);border:1px solid rgba(255,255,255,0.1);cursor:pointer">移除（靜態）</button>
+    <button style="padding:4px 10px;background:transparent;border-radius:4px;font-weight:600;font-size:0.8em;color:#f87171;border:1px solid rgba(248,113,113,0.3);cursor:pointer">移除（hover 態）</button>
+  </div>
+  <p class="ref">SettingsRealSpecies.tsx:65 與 SettingsFictional.tsx:18（逐字重複的兩份）</p>
+
+  <h4>Tab（底線式）與膠囊 Tab</h4>
+  <div class="stage">
+    <button style="padding:10px 20px;background:none;border:none;border-bottom:2px solid #38bdf8;color:#38bdf8;font-weight:600;font-size:0.95em;cursor:pointer">選中 Tab</button>
+    <button style="padding:10px 20px;background:none;border:none;border-bottom:2px solid transparent;color:rgba(255,255,255,0.5);font-weight:400;font-size:0.95em;cursor:pointer">未選中</button>
+    <button style="padding:4px 10px;border-radius:4px;font-size:0.8em;border:none;cursor:pointer;background:rgba(56,189,248,0.15);color:#38bdf8;font-weight:600">膠囊 active</button>
+    <button style="padding:4px 10px;border-radius:4px;font-size:0.8em;border:none;cursor:pointer;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6)">膠囊</button>
+    <button style="padding:6px 16px;border-radius:20px;font-size:0.84em;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.04);cursor:pointer">pillBtn（About 頁）</button>
+  </div>
+  <div class="spec">Tab: padding 10px 20px（Admin 18px、Notifications 8px 16px ⚠ 三種） | active = 底線 + 文字 + 字重同時切換 | transition color/border-color 0.15s（Notifications 沒有）</div>
+
+  <h4>OAuth 登入按鈕（全站唯一有完整 hover 設計的按鈕組）</h4>
+  <div class="stage">
+    <button style="display:flex;align-items:center;justify-content:center;gap:10px;width:260px;padding:12px 0;font-size:0.95em;font-weight:500;border-radius:8px;cursor:pointer;background:#141c2b;color:#e2e8f0;border:1px solid rgba(255,255,255,0.18)"><span style="color:#4285F4;font-weight:700">G</span> 使用 Google 登入</button>
+    <button style="display:flex;align-items:center;justify-content:center;gap:10px;width:260px;padding:12px 0;font-size:0.95em;font-weight:500;border-radius:8px;cursor:pointer;background:#9146ff;color:#fff;border:none">使用 Twitch 登入</button>
+  </div>
+  <div class="spec">Google hover → borderColor rgba(255,255,255,0.4) | Twitch hover → background #a970ff | transition all 0.15s ease</div>
+  <p class="ref">LoginPage.tsx:69 btnBase</p>
+
+  <h3>6.2 表單元素</h3>
+  <div class="stage col" style="max-width:460px">
+    <label style="display:block;font-weight:bold;color:#e2e8f0;font-size:0.9em">欄位名稱（labelStyle）</label>
+    <input placeholder="標準輸入框 #1a2433" style="width:100%;padding:8px;border:1px solid rgba(255,255,255,0.12);border-radius:4px;font-size:1em;background:#1a2433;color:#e2e8f0">
+    <div style="font-size:0.8em;color:rgba(255,255,255,0.35);line-height:1.4">提示文字（hintStyle：0.8em / α0.35）</div>
+    <input placeholder="半透明系輸入框（Admin / 詳情面板）" style="width:100%;padding:8px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#fff;font-size:0.85em">
+    <input placeholder="　搜尋框（左留 36px 給放大鏡 icon）" style="width:100%;padding:8px 12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#fff;font-size:0.9em;outline:none">
+    <select style="padding:8px;border:1px solid rgba(255,255,255,0.12);border-radius:4px;font-size:1em;background:#1a2433;color:#e2e8f0;color-scheme:dark"><option>下拉選單（唯一有 colorScheme:'dark' 的地方）</option></select>
+  </div>
+  <div class="spec">標準 input: padding 8px | border rgba(255,255,255,0.12) | radius 4px | bg #1a2433 | color #e2e8f0
+⚠ 底色三套並存: #1a2433（主流 10 檔）/ rgba(255,255,255,0.04)（Admin 系）/ rgba(255,255,255,0.06)（搜尋框系）
+⚠ 全站零 focus 樣式；outline:none 兩處且無替代。checkbox/radio 幾乎全原生，accentColor #38bdf8 僅 LoginPage 一處</div>
+
+  <h3>6.3 卡片 / 面板</h3>
+  <div class="stage col">
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px 20px">
+      <div style="font-size:0.85em;color:rgba(255,255,255,0.5);margin-bottom:8px">標準卡片（Admin / Directory 系）
+        <span style="float:right;background:rgba(34,197,94,0.15);color:#4ade80;padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:600">approved</span></div>
+      <div style="color:#fff;font-size:0.9em">bg rgba(255,255,255,0.03)・border α0.08・radius 10・padding 16px 20px</div>
+    </div>
+    <div style="background:#141c2b;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:12px;font-size:0.9em">
+      實心卡片（ChannelCard / VtuberCard 系）：bg #141c2b・border α0.1・radius 8px
+    </div>
+    <div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:14px;font-size:0.9em">
+      無框資訊區塊（ProfileInfoCard / PreviewPanel 物種卡）：bg α0.06・無 border・radius 8px
+    </div>
+    <div style="background:rgba(20,28,43,0.75);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:20px;font-size:0.9em">
+      玻璃卡片（LoginPage）：rgba(20,28,43,0.75) + blur(16)・radius 16
+    </div>
+  </div>
+  <p><span class="warn-tag">分歧</span> 卡片底透明度 0.02 / 0.03 / 0.04 / 0.06 四種、radius 8 / 10 / 12 / 16 四種並存。
+     下拉面板統一為 <code>#141c2b</code> + <code>0 8px 24px rgba(0,0,0,0.4)</code> + radius 8。</p>
+
+  <h3>6.4 徽章 / 標籤</h3>
+  <h4>狀態徽章（活動中 / 休止 / 準備中）— 三套並存</h4>
+  <div class="stage">
+    <span style="padding:1px 8px;border-radius:10px;font-size:0.85em;background:rgba(34,197,94,0.12);color:#22c55e">活動中</span>
+    <span style="padding:1px 8px;border-radius:10px;font-size:0.85em;background:rgba(245,158,11,0.12);color:#f59e0b">休止</span>
+    <span style="padding:1px 8px;border-radius:10px;font-size:0.85em;background:rgba(56,189,248,0.12);color:#38bdf8">準備中</span>
+    <span class="ref">← ProfileInfoCard</span>
+    <span style="padding:2px 8px;border-radius:10px;font-size:0.85em;background:rgba(74,222,128,0.12);color:#4ade80">活動中</span>
+    <span style="padding:2px 8px;border-radius:10px;font-size:0.85em;background:rgba(250,204,21,0.12);color:#facc15">休止</span>
+    <span class="ref">← DirectoryCard</span>
+    <span style="padding:1px 6px;border-radius:4px;font-size:0.8em;background:rgba(52,211,153,0.2);color:#34d399">活躍</span>
+    <span style="padding:1px 6px;border-radius:4px;font-size:0.8em;background:rgba(251,191,36,0.2);color:#fbbf24">休止</span>
+    <span class="ref">← filterBadges</span>
+  </div>
+
+  <h4>篩選徽章（lib/filterBadges.ts，公式 bg rgba(C,0.2) 無 border）</h4>
+  <div class="stage">
+    <span style="padding:1px 6px;border-radius:4px;font-size:0.75em;background:rgba(96,165,250,0.2);color:#60a5fa">♂男</span>
+    <span style="padding:1px 6px;border-radius:4px;font-size:0.75em;background:rgba(244,114,182,0.2);color:#f472b6">♀女</span>
+    <span style="padding:1px 6px;border-radius:4px;font-size:0.75em;background:rgba(192,132,252,0.2);color:#c084fc">⚧自訂</span>
+    <span style="padding:1px 6px;border-radius:4px;font-size:0.75em;background:rgba(251,146,60,0.2);color:#fb923c">企業</span>
+    <span style="padding:1px 6px;border-radius:4px;font-size:0.75em;background:rgba(56,189,248,0.2);color:#38bdf8">個人</span>
+    <span style="padding:1px 6px;border-radius:4px;font-size:0.75em;background:rgba(167,139,250,0.2);color:#a78bfa">社團</span>
+    <span style="padding:1px 6px;border-radius:4px;font-size:0.75em;background:rgba(255,0,0,0.15);color:#FF0000">YT</span>
+    <span style="padding:1px 6px;border-radius:4px;font-size:0.75em;background:rgba(145,70,255,0.15);color:#9146FF">TW</span>
+  </div>
+
+  <h4>其他標籤</h4>
+  <div class="stage">
+    <span style="background:#ef4444;color:#fff;font-size:0.7em;font-weight:700;letter-spacing:0.5px;padding:0 5px;border-radius:3px;line-height:16px">LIVE</span>
+    <span style="background:rgba(239,68,68,0.15);color:#ef4444;font-size:0.7em;padding:0 4px;border-radius:3px;line-height:16px">LIVE 外框態</span>
+    <span style="font-size:0.75em;font-weight:600;padding:1px 6px;border-radius:8px;background:rgba(56,189,248,0.15);color:#38bdf8">42</span>
+    <span class="ref">← 計數 pill（Navbar 圖鑑數）</span>
+    <span style="padding:2px 8px;background:rgba(56,189,248,0.12);border-radius:12px;font-size:0.85em;color:#93c5fd">創作者 tag ×</span>
+    <span style="padding:2px 8px;border-radius:4px;font-size:0.8em;font-weight:600;background:rgba(251,146,60,0.15);color:#fb923c;border:1px solid rgba(251,146,60,0.3)">品種標</span>
+    <span style="padding:1px 6px;border-radius:3px;background:rgba(233,30,140,0.15);color:#f472b6;border:1px solid rgba(244,114,182,0.3);font-size:0.72em;font-weight:600">★ 主要頻道</span>
+  </div>
+  <p>OrgBadge（企業勢 / 社團勢）不是徽章，只是彩色文字：<span style="color:#fb923c;font-size:0.85em">企業勢</span>
+     <span style="color:#a78bfa;font-size:0.85em">社團勢</span>（indie 不渲染）。</p>
+
+  <h3>6.5 Toast — 兩套互不相容的系統</h3>
+  <div class="stage col" style="max-width:420px">
+    <div style="background:#2e7d32;color:#fff;padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:0.9em;display:flex;gap:10px">✓ 全域 Toast success（右上角 / zIndex 9999 / Material 色）<span style="opacity:0.7;cursor:pointer">✕</span></div>
+    <div style="background:#c62828;color:#fff;padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:0.9em">✕ 全域 Toast error #c62828</div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;background:rgba(20,28,40,0.92);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e2e8f0;font-size:0.85em;max-width:300px;box-shadow:0 4px 20px rgba(0,0,0,0.4)">🎉 WelcomeToast（右下角 / zIndex 900 / 玻璃卡風）</div>
+  </div>
+  <div class="spec">ToastContext: top 16 right 16 | 實心 #2e7d32 / #c62828 / #1a73e8 | toast-in 0.3s | 預設 5000ms | 只有進場動畫
+WelcomeToast: bottom 20 right 20 | 玻璃深色卡 | slideIn 0.4s + 離場 opacity/transform 0.3s
+⚠ 位置、zIndex、視覺語言、色彩全部不共用</div>
+
+  <h3>6.6 彈層（Modal / 側邊面板 / BottomSheet）</h3>
+  <div class="scroll"><table>
+    <tr><th>元件</th><th>backdrop</th><th>容器</th><th>動畫</th></tr>
+    <tr><td>Modal（宣告 / ShadowBan）</td><td><code>rgba(0,0,0,0.7)</code>・zIndex 2000</td>
+        <td><code>#1a2236</code>・radius 12・padding 28・maxWidth 480 / 520・border α0.1</td>
+        <td><b>無</b> <span class="warn-tag">突兀</span></td></tr>
+    <tr><td>右側滑入面板（詳情 / 預覽）</td><td><code>rgba(0,0,0,0.5)</code>・zIndex 999</td>
+        <td>寬 360px（max 90vw）・<code>#0d1526</code>・top 44・shadow <code>-4px 0 30px</code>・zIndex 1000</td>
+        <td>slide in 300ms / out 250ms（兩份逐字複製，keyframes 名不同）</td></tr>
+    <tr><td>BottomSheet（手機）</td><td><code>rgba(0,0,0,0.5)</code> 漸變・zIndex 1000</td>
+        <td><code>#0d1526</code>（篩選器傳 #141c2b）・radius 16 16 0 0・maxHeight 85vh・safe-area 底距・handle bar 36×4</td>
+        <td><code>300ms cubic-bezier(0.32,0.72,0,1)</code>，唯一完整進出場</td></tr>
+  </table></div>
+
+  <h3>6.7 Pagination</h3>
+  <div class="stage">
+    <button style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:4px 10px;font-size:0.85em;color:rgba(255,255,255,0.2);cursor:default">上一頁</button>
+    <button style="border-radius:6px;padding:4px 10px;font-size:0.85em;cursor:pointer;background:rgba(56,189,248,0.2);border:1px solid rgba(56,189,248,0.5);color:#38bdf8;font-weight:600">1</button>
+    <button style="border-radius:6px;padding:4px 10px;font-size:0.85em;cursor:pointer;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.7)">2</button>
+    <span style="padding:0 4px;color:rgba(255,255,255,0.3)">…</span>
+    <button style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:4px 10px;font-size:0.85em;color:rgba(255,255,255,0.7);cursor:pointer">下一頁</button>
+  </div>
+  <p><span class="warn-tag">濃度偏高</span> active 底 0.2 / 框 0.5，比全站 active 慣例（0.12~0.15 / 0.3）濃。無 hover、無 transition。</p>
+
+  <h3>6.8 載入與空狀態</h3>
+  <div class="stage" style="gap:32px">
+    <div style="text-align:center">
+      <div style="width:32px;height:32px;border:3px solid rgba(255,255,255,0.1);border-top-color:#38bdf8;border-radius:50%;animation:vtaxonSpin 0.8s linear infinite;margin:0 auto 10px"></div>
+      <span class="ref">Spinner（vtaxonSpin，VTuberProfilePage）</span>
+    </div>
+    <div style="text-align:center;color:rgba(255,255,255,0.5)">載入中…<br><span class="ref">純文字（3 種 marginTop / 顏色變體）</span></div>
+    <div style="text-align:center;color:rgba(255,255,255,0.3)">
+      <div style="font-size:2em;margin-bottom:6px">🔍</div>找不到符合條件的結果<br><span class="ref">完整空狀態（Directory）</span>
+    </div>
+  </div>
+  <p><span class="bug-tag">Bug</span> Directory 骨架屏與 Admin 內嵌 spinner 分別引用了不存在的 keyframe
+     <code>pulse</code> / <code>spin</code>（全域只定義了 <code>vtaxonPulse</code> / <code>vtaxonSpin</code>），實際上不會動。
+     <span class="ref">DirectoryPage.tsx:279~310、AdminPage.tsx:642</span></p>
+
+  <h3>6.9 頭像</h3>
+  <p>圓形（radius 50%）。無圖片時的 fallback 有三種實作：hsl hash 色（<code>hsl(hash%360, 55%, 55%)</code>，Navbar / Directory）、
+     平台色底（ChannelCard）、純灰 <code>rgba(255,255,255,0.1)</code> + <code>?</code>（VtuberCard 等 4 處）。<span class="warn-tag">未統一</span></p>
+</section>
+
+<!-- ============================================================ -->
+<section id="zindex">
+  <h2>7. zIndex 層級</h2>
+  <div class="scroll"><table>
+    <tr><th>zIndex</th><th>用途</th><th>出處</th></tr>
+    <tr><td><code>1 ~ 10</code></td><td>內容層 sticky（搜尋表頭 1、儲存列 5、國家下拉 10、首頁角落連結 10）</td><td><span class="ref">SpeciesSearch、SettingsProfile、CountryPicker、HomePage</span></td></tr>
+    <tr><td><code>40 ~ 60</code></td><td>graph 浮層（無結果遮罩 40、說明面板 / 工具列 50、FocusHUD 60）</td><td><span class="ref">components/graph/*</span></td></tr>
+    <tr><td><code>99</code></td><td>YouTube 頻道提示 banner（貼 Navbar 下）</td><td><span class="ref">YouTubeChannelBanner.tsx:70</span></td></tr>
+    <tr><td><code>100</code></td><td><b>Navbar</b>。<span class="bug-tag">衝突</span> FloatingToolbar 排序下拉也用 100</td><td><span class="ref">Navbar.tsx:100、FloatingToolbar.tsx:651</span></td></tr>
+    <tr><td><code>200</code></td><td>Navbar 使用者下拉、通知鈴鐺下拉</td><td><span class="ref">Navbar.tsx:213、NotificationBell.tsx:134</span></td></tr>
+    <tr><td><code>300</code></td><td>目錄篩選 popover</td><td><span class="ref">FilterDropdown.tsx:171</span></td></tr>
+    <tr><td><code>900</code></td><td>WelcomeToast（右下）</td><td><span class="ref">WelcomeToast.tsx:271</span></td></tr>
+    <tr><td><code>999 / 1000</code></td><td>側邊面板 backdrop / 面板本體、BottomSheet</td><td><span class="ref">VtuberDetailPanel、PreviewPanel、BottomSheet</span></td></tr>
+    <tr><td><code>2000</code></td><td>Modal</td><td><span class="ref">VtuberDeclarationModal、ShadowBanNotice</span></td></tr>
+    <tr><td><code>9999</code></td><td>全域 Toast（右上）</td><td><span class="ref">ToastContext.tsx:56</span></td></tr>
+  </table></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="motion">
+  <h2>8. 動效</h2>
+  <p><b>標準 duration：</b>互動回饋 <code>0.15s</code>、版面位移 <code>0.3s</code>。
+     iOS 風緩動 <code>cubic-bezier(0.32, 0.72, 0, 1)</code> 只用在 BottomSheet / FocusHUD drawer。</p>
+  <div class="scroll"><table>
+    <tr><th>transition 值</th><th>次數</th><th>典型用途</th></tr>
+    <tr><td><code>all 0.15s</code></td><td>10</td><td>FloatingToolbar 全部按鈕</td></tr>
+    <tr><td><code>color 0.15s</code>（含組合）</td><td>13</td><td>連結、Tab、圖示 hover</td></tr>
+    <tr><td><code>background 0.15s / 0.2s</code></td><td>6</td><td>清單列 hover、儲存鈕變色</td></tr>
+    <tr><td><code>border-color 0.15s</code></td><td>2</td><td>卡片 hover</td></tr>
+    <tr><td><code>transform / max-height 0.2~0.3s</code></td><td>4</td><td>展開箭頭、摺疊</td></tr>
+    <tr><td><code>300ms cubic-bezier(0.32,0.72,0,1)</code></td><td>3</td><td>BottomSheet、FocusHUD drawer</td></tr>
+  </table></div>
+  <div class="scroll"><table>
+    <tr><th>keyframes</th><th>定義處</th><th>內容</th></tr>
+    <tr><td><code>vtaxonSpin</code></td><td>index.html</td><td>旋轉 360°（spinner）</td></tr>
+    <tr><td><code>vtaxonPulse</code></td><td>index.html</td><td>opacity 0.4 ↔ 1</td></tr>
+    <tr><td><code>vtaxon-live-pulse</code></td><td>VtuberCard（JS 注入）+ VtuberDetailPanel</td><td>LIVE 圓點呼吸 + 縮放，1.5s</td></tr>
+    <tr><td><code>toast-in</code></td><td>ToastContext</td><td>右滑進場 40px、0.3s</td></tr>
+    <tr><td><code>welcomeToastSlideIn</code></td><td>WelcomeToast</td><td>右滑進場 60px、0.4s</td></tr>
+    <tr><td><code>vtaxonSlideIn/Out</code>、<code>profSlideIn/Out</code></td><td>VtuberDetailPanel / PreviewPanel</td><td>面板 300ms 進 / 250ms 出（同定義、不同名 <span class="warn-tag">重複</span>）</td></tr>
+  </table></div>
+  <p><span class="bug-tag">Bug</span> <code>pulse</code> 與 <code>spin</code> 兩個名稱被引用但不存在（見 6.8）。</p>
+  <p><b>hover 實作三分天下：</b>JS onMouseEnter/Leave 直接改 style（最多）、React state（RemoveButton、FloatingToolbar）、
+     CSS class（僅 footer 連結與 TreeNode）。主要按鈕與 Pagination 完全沒有 hover。</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="issues" class="issues">
+  <h2>9. 問題清單</h2>
+  <p>盤點過程發現的所有不一致與缺陷，按嚴重度分類。編號供後續收斂作業引用。</p>
+
+  <h3>A. Bug 級（實際壞掉或衝突）</h3>
+  <ol>
+    <li>Directory 骨架屏引用不存在的 keyframe <code>pulse</code>，實際不會閃爍。<span class="ref">DirectoryPage.tsx:279~310（全域只有 vtaxonPulse）</span></li>
+    <li>Admin 被檢舉者載入 spinner 引用不存在的 <code>spin</code>，實際靜止。<span class="ref">AdminPage.tsx:642</span></li>
+    <li>淺色主題殘留，在深色底上不可讀：TaxonomyTree 的 toolBtn（#ddd / #666）與 skeleton（#eee）、TreeNode 的 countBadge（#e8e8e8）與 showMoreBtn（#ccc）、index.html 的 .vtaxon-tree-node hover（#FFF8E1 / #f5f5f5）。<span class="ref">TaxonomyTree.tsx:259,264、TreeNode.tsx:18,23、index.html:33~36</span></li>
+    <li>全域 Toast 的陰影 <code>0 4px 12px rgba(0,0,0,0.15)</code> 是淺色主題強度（全站深色陰影都是 0.3~0.4），配色也用脫節的 Material 三色。<span class="ref">lib/ToastContext.tsx:59</span></li>
+    <li>FloatingToolbar 排序下拉 <code>zIndex:100</code> 與 Navbar 同層，會相互競爭。<span class="ref">FloatingToolbar.tsx:651</span></li>
+    <li><code>MOBILE_BP = 768</code> 與檔內自寫的 useIsMobile 是死碼（實際用 hooks 的 640px 版），常數留著容易誤導。<span class="ref">WelcomeToast.tsx:8,24~32</span></li>
+  </ol>
+
+  <h3>B. 逐字重複的程式碼（樣式漂移源頭）</h3>
+  <ol start="7">
+    <li>VtuberDetailPanel 與 PreviewPanel 整包複製（容器、header、tab、卡片；keyframes 同定義不同名）。</li>
+    <li>RemoveButton / LivePrimaryButton 兩份逐字相同。<span class="ref">SettingsFictional.tsx:18 ↔ SettingsRealSpecies.tsx:65</span></li>
+    <li>STATUS_STYLES 兩份。<span class="ref">DirectoryCard.tsx:8 ↔ DirectoryListItem.tsx:9</span></li>
+    <li>tag 樣式兩份。<span class="ref">TagInput.tsx:52 ↔ CountryPicker.tsx:60</span></li>
+    <li>lblStyle 三份。<span class="ref">ProfileInfoCard.tsx:246 / PreviewPanel.tsx:10 / VtuberDetailPanel.tsx:742</span></li>
+    <li>法規頁 heading / para / list 常數複製 4 份且已漂移（Changelog marginTop 24 vs 32、lineHeight 1.7 vs 1.8）。<span class="ref">AboutPage / PrivacyPolicyPage / TermsOfServicePage / ChangelogPage 開頭</span></li>
+    <li>Modal overlay 兩份逐字相同。<span class="ref">VtuberDeclarationModal.tsx:114 ↔ ShadowBanNotice.tsx:167</span></li>
+    <li>「顯示限制 / 代表物種」警告框兩份。<span class="ref">SettingsRealSpecies.tsx:241 ↔ SettingsFictional.tsx:178</span></li>
+  </ol>
+
+  <h3>C. 色彩分歧</h3>
+  <ol start="15">
+    <li>成功綠兩套：<code>#4ade80</code>（pages / admin）vs <code>#22c55e</code>（graph、ProfileInfoCard）。</li>
+    <li>警告黃四套：<code>#f59e0b</code> / <code>#eab308</code> / <code>#fbbf24</code> / <code>#facc15</code> 語意重疊。</li>
+    <li>危險紅雙軌：<code>#f87171</code>（文字態）vs <code>#ef4444</code>（實心）——分工尚可，但界線未明文。</li>
+    <li>全域 Toast 的 Material 三色與全站狀態色完全脫節（另見 A-4）。</li>
+    <li>半透明白 17 階，相鄰級距肉眼不可分。</li>
+    <li>主色背景透明度 7 種、邊框 4 種，自由組合。</li>
+    <li><code>#a78bfa</code> 一色三用：Twitch 代用 / 社團勢 / 亞種。</li>
+    <li>Admin 平台徽章文字用代用色（#f87171 / #a78bfa）但背景仍用官方色 rgba，文字與底不同源。<span class="ref">AdminPage.tsx:626~628</span></li>
+    <li>主按鈕文字色 <code>#0d1526</code> 與面板 surface 撞值。</li>
+    <li>同一張 Admin 卡片上 #fff、rgba 0.8、#e2e8f0 三種「正文色」混用。</li>
+  </ol>
+
+  <h3>D. 尺寸與版面分歧</h3>
+  <ol start="25">
+    <li>主要按鈕 padding 8 種（4×10 ~ 10×24）。</li>
+    <li>borderRadius 無階梯：按鈕 4 / 5 / 6、卡片 8 / 10 / 12 / 16 並存。</li>
+    <li>Tab 三種 padding；AdminPage 同頁混用底線式與膠囊式兩種 tab 範式。</li>
+    <li>卡片底透明度 0.02 / 0.03 / 0.04 / 0.06 四種。</li>
+    <li>輸入框三套底色（#1a2433 / α0.04 / α0.06），邊框 0.1 / 0.12 / 0.15。</li>
+    <li>容器規格：700 寬頁兩種垂直節奏；Notifications 用 650；maxWidth <code>'700px'</code> 與 <code>700</code> 型別混用；VTuberProfilePage 載入態與內容態容器不同會跳動；Admin 無權限態沒有容器。</li>
+    <li>頁面主標題四分五裂：SearchPage 的 h2 完全無樣式、字級 1.5 / 1.35 / 1.2em 並存、marginBottom 0 / 4 / 20；h1 與 h2 的語意層級和視覺層級不對齊。</li>
+    <li>徽章底色公式分歧：RankBadge α0.15 + border、filterBadges α0.2 無 border、STATUS_BADGE α0.15 無 border、ProfileInfoCard α0.12。</li>
+    <li>狀態徽章（活動中 / 休止 / 準備中）三套配色並存（見 6.4）。</li>
+    <li>AvatarFallback 三種實作 + 純灰第四種（見 6.9）。</li>
+    <li>單位混用：<code>marginTop:'40px'</code> vs <code>40</code>；fontSize em / px 混用（graph 系刻意 px）；同一個 ✕ 在面板是 1.4em、在 graph 是 18px。</li>
+    <li>Pagination active 濃度（bg 0.2 / border 0.5）高於全站 active 慣例（0.12~0.15 / 0.3）。</li>
+  </ol>
+
+  <h3>E. 互動與無障礙</h3>
+  <ol start="37">
+    <li>全站零 focus 樣式；<code>outline:'none'</code> 兩處且無替代指示，鍵盤操作完全無視覺回饋。</li>
+    <li>主要按鈕、Pagination、下拉項完全無 hover；連結 hover 只有 DirectoryPage 一處；hover 實作三分（JS handler / state / CSS class）。</li>
+    <li>Modal 無進出場動畫（BottomSheet 有完整動畫）；backdrop 濃度 0.7 vs 0.5 兩種。</li>
+    <li>checkbox / radio 幾乎全原生未樣式化，accentColor 只有 LoginPage 一處；select 的 colorScheme:'dark' 只有一處，Pagination 用 #1e293b 逐一設 option 補救。</li>
+  </ol>
+
+  <h3>F. RWD</h3>
+  <ol start="41">
+    <li>13 頁只有 DirectoryPage 做 RWD；LoginPage 卡片 padding 36 / 32px 在 360px 螢幕過大；法規頁 48px 頂距無手機縮減。</li>
+    <li>法規頁英文版降階策略不完整：文字有降透明度，連結色卻不一致。<span class="ref">PrivacyPolicyPage.tsx:245、TermsOfServicePage.tsx:207</span></li>
+  </ol>
+</section>
+
+<!-- ============================================================ -->
+<section id="proposal">
+  <h2>10. 收斂草案（未定案）</h2>
+  <p>以下是根據盤點結果的收斂建議，<b>尚未實作、尚未定案</b>，僅供後續討論起點：</p>
+  <ul>
+    <li><b>文字階：</b>17 階收斂到 6 階，例如 <code>#fff</code>（標題）/ <code>#e2e8f0</code>（正文）/ α0.7（說明）/ α0.5（提示）/ α0.35（佔位）/ α0.2（裝飾）。</li>
+    <li><b>狀態色一套：</b>成功 <code>#4ade80</code>、警告 <code>#f59e0b</code>、危險文字 <code>#f87171</code> + 實心 <code>#ef4444</code>、資訊 <code>#38bdf8</code>；全域 Toast 改用同一套（tinted 深色卡風格取代 Material 實心）。</li>
+    <li><b>tinted 公式定版：</b><code>bg rgba(C, 0.12)</code> + <code>border rgba(C, 0.25)</code> + <code>color C</code>，active 同格式。</li>
+    <li><b>圓角階梯：</b>4（輸入框 / 小按鈕）、6（按鈕 / chip）、10（卡片）、16（大卡 / Sheet）、999（膠囊）、50%（圓）。</li>
+    <li><b>間距階梯：</b>4 / 8 / 12 / 16 / 24 / 32 / 48。</li>
+    <li><b>按鈕規格定版：</b>主按鈕兩種尺寸（小 6px 14px、大 10px 24px），統一 disabled 係數與 hover 行為。</li>
+    <li><b>抽共用：</b>建 <code>lib/theme.ts</code>（design tokens）+ 共用元件（Button / Badge / Input / Modal / EmptyState），優先消滅問題清單 B 節的逐字重複。</li>
+    <li><b>立即可修：</b>問題清單 A 節 6 項 bug（keyframe 名稱、淺色殘留、zIndex 衝突、死碼）。</li>
+    <li><b>無障礙：</b>加全站 <code>:focus-visible</code> 樣式（主色外框）。</li>
+  </ul>
+</section>
+
+</main>
+</body>
+</html>
