@@ -682,7 +682,7 @@ WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slid
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>欄位名樣式三份（lblStyle / previewLabelStyle / labelStyle 同值），已抽出共用 <code>components/panelStyles.ts</code> 的 <code>fieldLabelStyle</code>。</li>
     <li>法規頁 heading / para / list 常數複製 4 份且已漂移（Changelog marginTop 24 vs 32、lineHeight 1.7 vs 1.8）。<span class="ref">AboutPage / PrivacyPolicyPage / TermsOfServicePage / ChangelogPage 開頭</span></li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>Modal overlay 與容器兩份逐字重複（僅 maxWidth 480 / 520 不同），已抽出共用 <code>components/modalStyles.ts</code>。</li>
-    <li>「顯示限制 / 代表物種」警告框兩份。<span class="ref">SettingsRealSpecies.tsx:241 ↔ SettingsFictional.tsx:178</span></li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>「顯示限制 / 代表物種」警告框兩份，已抽出共用 <code>components/settings/TraitNotices.tsx</code>（TraitBudgetNotice / LivePrimaryNotice）。</li>
   </ol>
 
   <h3>C. 色彩分歧</h3>
