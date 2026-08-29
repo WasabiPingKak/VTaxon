@@ -677,7 +677,7 @@ WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slid
   <ol start="7">
     <li>VtuberDetailPanel 與 PreviewPanel 整包複製（容器、header、tab、卡片；keyframes 同定義不同名）。</li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>RemoveButton / LivePrimaryButton 兩份逐字相同，已抽出共用 <code>components/settings/TraitButtons.tsx</code>。</li>
-    <li>STATUS_STYLES 兩份。<span class="ref">DirectoryCard.tsx:8 ↔ DirectoryListItem.tsx:9</span></li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>STATUS_STYLES 兩份，已抽出共用 <code>components/directory/shared.tsx</code>。修復時發現同兩檔的 PLATFORM_ICONS（僅尺寸 16 / 14 不同）與 DirectoryItem 型別也是複製品，一併抽入共用模組。</li>
     <li>tag 樣式兩份。<span class="ref">TagInput.tsx:52 ↔ CountryPicker.tsx:60</span></li>
     <li>lblStyle 三份。<span class="ref">ProfileInfoCard.tsx:246 / PreviewPanel.tsx:10 / VtuberDetailPanel.tsx:742</span></li>
     <li>法規頁 heading / para / list 常數複製 4 份且已漂移（Changelog marginTop 24 vs 32、lineHeight 1.7 vs 1.8）。<span class="ref">AboutPage / PrivacyPolicyPage / TermsOfServicePage / ChangelogPage 開頭</span></li>
