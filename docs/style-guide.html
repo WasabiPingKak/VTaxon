@@ -577,7 +577,7 @@ WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slid
         <td><b>無</b> <span class="warn-tag">突兀</span></td></tr>
     <tr><td>右側滑入面板（詳情 / 預覽）</td><td><code>rgba(0,0,0,0.5)</code>・zIndex 999</td>
         <td>寬 360px（max 90vw）・<code>#0d1526</code>・top 44・shadow <code>-4px 0 30px</code>・zIndex 1000</td>
-        <td>slide in 300ms / out 250ms（兩份逐字複製，keyframes 名不同）</td></tr>
+        <td>slide in 300ms / out 250ms（2026-08-29 起共用 SidePanel 殼）</td></tr>
     <tr><td>BottomSheet（手機）</td><td><code>rgba(0,0,0,0.5)</code> 漸變・zIndex 1000</td>
         <td><code>#0d1526</code>（篩選器傳 #141c2b）・radius 16 16 0 0・maxHeight 85vh・safe-area 底距・handle bar 36×4</td>
         <td><code>300ms cubic-bezier(0.32,0.72,0,1)</code>，唯一完整進出場</td></tr>
@@ -651,7 +651,7 @@ WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slid
     <tr><td><code>vtaxon-live-pulse</code></td><td>VtuberCard（JS 注入）+ VtuberDetailPanel</td><td>LIVE 圓點呼吸 + 縮放，1.5s</td></tr>
     <tr><td><code>toast-in</code></td><td>ToastContext</td><td>右滑進場 40px、0.3s</td></tr>
     <tr><td><code>welcomeToastSlideIn</code></td><td>WelcomeToast</td><td>右滑進場 60px、0.4s</td></tr>
-    <tr><td><code>vtaxonSlideIn/Out</code>、<code>profSlideIn/Out</code></td><td>VtuberDetailPanel / PreviewPanel</td><td>面板 300ms 進 / 250ms 出（同定義、不同名 <span class="warn-tag">重複</span>）</td></tr>
+    <tr><td><code>vtaxonSlideIn/Out</code>、<code>vtaxonFadeIn/Out</code></td><td>SidePanel（兩面板共用殼）</td><td>面板 300ms 進 / 250ms 出（2026-08-29 起單一定義，profSlideIn 系已移除）</td></tr>
   </table></div>
   <p><span class="fixed-tag">已修 2026-08-29</span><code>pulse</code> / <code>spin</code> 曾被引用但不存在的問題已修正（見 6.8）。</p>
   <p><b>hover 實作三分天下：</b>JS onMouseEnter/Leave 直接改 style（最多）、React state（RemoveButton、FloatingToolbar）、
@@ -675,7 +675,7 @@ WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slid
 
   <h3>B. 逐字重複的程式碼（樣式漂移源頭）</h3>
   <ol start="7">
-    <li>VtuberDetailPanel 與 PreviewPanel 整包複製（容器、header、tab、卡片；keyframes 同定義不同名）。</li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>VtuberDetailPanel 與 PreviewPanel 整包複製。殼層（keyframes、backdrop、容器、header、捲動區）已抽出共用 <code>components/SidePanel.tsx</code>，tab 樣式共用 <code>panelTabStyle()</code>。面板內部的卡片內容因資料模型不同（TreeEntry vs Trait）維持各自實作，屬相似但非逐字重複。</li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>RemoveButton / LivePrimaryButton 兩份逐字相同，已抽出共用 <code>components/settings/TraitButtons.tsx</code>。</li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>STATUS_STYLES 兩份，已抽出共用 <code>components/directory/shared.tsx</code>。修復時發現同兩檔的 PLATFORM_ICONS（僅尺寸 16 / 14 不同）與 DirectoryItem 型別也是複製品，一併抽入共用模組。</li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>tag 樣式兩份，已抽出共用 <code>components/tagChipStyles.ts</code>（chip、移除 ✕、輸入容器外框三組樣式）。</li>

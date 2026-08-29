@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import RankBadge from './RankBadge';
@@ -6,6 +6,7 @@ import OrgBadge from './OrgBadge';
 import LinksRow from './LinksRow';
 import { YouTubeIcon, TwitchIcon } from './SnsIcons';
 import ProfileInfoCard from './ProfileInfoCard';
+import SidePanel, { panelTabStyle } from './SidePanel';
 import { fieldLabelStyle as labelStyle } from './panelStyles';
 import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
@@ -13,9 +14,6 @@ import { displayScientificName } from '../lib/speciesName';
 import useLiveStatus from '../hooks/useLiveStatus';
 import { RANK_ORDER, RANK_TO_UPPER, SUB_SPECIES_RANKS } from '../lib/taxonomyConstants';
 import type { TreeEntry, OAuthAccount, User } from '../types';
-
-const ANIM_DURATION_IN = 300;
-const ANIM_DURATION_OUT = 250;
 
 interface TaxonomyPathProps {
   taxonPath: string;
@@ -344,7 +342,6 @@ export interface VtuberDetailPanelProps {
 
 export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus, onSwitchEntry }: VtuberDetailPanelProps) {
   const [imgError, setImgError] = useState(false);
-  const [closing, setClosing] = useState(false);
   const [userDetail, setUserDetail] = useState<(User & { oauth_accounts?: OAuthAccount[] }) | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [traitsData, setTraitsData] = useState<DetailEntry[] | null>(null);
@@ -411,11 +408,6 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
         }))
       : 0;
 
-  const handleClose = useCallback(() => setClosing(true), []);
-  const handleAnimEnd = useCallback((e: React.AnimationEvent) => {
-    if (e.animationName === 'vtaxonSlideOut') { setClosing(false); onClose(); }
-  }, [onClose]);
-
   if (!entry) return null;
 
   const oauthAccounts = userDetail?.oauth_accounts || ([] as OAuthAccount[]);
@@ -423,52 +415,10 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
   const bio = userDetail?.bio;
 
   return createPortal(
-    <>
-      <style>{`
-        @keyframes vtaxonSlideIn  { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        @keyframes vtaxonSlideOut { from { transform: translateX(0); } to { transform: translateX(100%); } }
-        @keyframes vtaxonFadeIn   { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes vtaxonFadeOut  { from { opacity: 1; } to { opacity: 0; } }
-        @keyframes vtaxon-live-pulse { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
-      `}</style>
-
-      {/* Backdrop */}
-      <div onClick={handleClose}
-        onAnimationEnd={(e: React.AnimationEvent) => { if (e.animationName === 'vtaxonFadeOut') e.stopPropagation(); }}
-        style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999,
-          animation: closing
-            ? `vtaxonFadeOut ${ANIM_DURATION_OUT}ms ease-in forwards`
-            : `vtaxonFadeIn ${ANIM_DURATION_IN}ms ease-out forwards`,
-        }}
-      />
-
-      {/* Panel */}
-      <div onAnimationEnd={handleAnimEnd} style={{
-        position: 'fixed', top: 44, right: 0, bottom: 0,
-        width: '360px', maxWidth: '90vw',
-        background: '#0d1526', zIndex: 1000,
-        boxShadow: '-4px 0 30px rgba(0,0,0,0.4)',
-        display: 'flex', flexDirection: 'column',
-        overflow: 'hidden', color: '#e2e8f0',
-        animation: closing
-          ? `vtaxonSlideOut ${ANIM_DURATION_OUT}ms ease-in forwards`
-          : `vtaxonSlideIn ${ANIM_DURATION_IN}ms ease-out forwards`,
-      }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)',
-        }}>
-          <span style={{ fontWeight: 600, fontSize: '1.1em' }}>Vtuber 詳情</span>
-          <button type="button" onClick={handleClose} style={{
-            background: 'none', border: 'none', fontSize: '1.4em',
-            cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: '4px',
-          }}>✕</button>
-        </div>
-
-        {/* Trait selector tabs */}
-        {effectiveAllEntries && effectiveAllEntries.length > 1 && (
+    <SidePanel
+      title="Vtuber 詳情"
+      onClose={onClose}
+      topContent={effectiveAllEntries && effectiveAllEntries.length > 1 && (
           <div style={{
             display: 'flex', gap: '6px', padding: '10px 20px 0', flexWrap: 'wrap',
           }}>
@@ -489,22 +439,16 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
                       onSwitchEntry(e as TreeEntry);
                     }
                   }}
-                  style={{
-                    padding: '4px 10px', borderRadius: '4px', fontSize: '0.8em',
-                    cursor: 'pointer', border: 'none',
-                    background: active ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
-                    color: active ? '#38bdf8' : 'rgba(255,255,255,0.6)',
-                    fontWeight: active ? 600 : 400,
-                  }}>
+                  style={panelTabStyle(active)}>
                   {label}
                 </button>
               );
             })}
           </div>
-        )}
-
-        {/* Body (scrollable) */}
-        <div className="vtaxon-scroll" style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+      )}
+    >
+      {(close) => (<>
+        <style>{'@keyframes vtaxon-live-pulse { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }'}</style>
           {/* Avatar */}
           <div style={{ textAlign: 'center', marginBottom: '6px' }}>
             <div style={{
@@ -602,7 +546,7 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
           {/* Focus button */}
           {onFocus && (
             <div style={{ marginBottom: '16px' }}>
-              <button type="button" onClick={() => { onFocus(entry!); handleClose(); }} style={{
+              <button type="button" onClick={() => { onFocus(entry!); close(); }} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 width: '100%', padding: '8px 16px', borderRadius: '6px',
                 fontSize: '0.9em',
@@ -733,9 +677,8 @@ export default function VtuberDetailPanel({ entry, allEntries, onClose, onFocus,
               />
             </div>
           )}
-        </div>
-      </div>
-    </>,
+      </>)}
+    </SidePanel>,
     document.body,
   );
 }
