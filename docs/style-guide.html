@@ -618,9 +618,9 @@ WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slid
   <div class="scroll"><table>
     <tr><th>zIndex</th><th>用途</th><th>出處</th></tr>
     <tr><td><code>1 ~ 10</code></td><td>內容層 sticky（搜尋表頭 1、儲存列 5、國家下拉 10、首頁角落連結 10）</td><td><span class="ref">SpeciesSearch、SettingsProfile、CountryPicker、HomePage</span></td></tr>
-    <tr><td><code>40 ~ 60</code></td><td>graph 浮層（無結果遮罩 40、說明面板 / 工具列 50、FocusHUD 60）</td><td><span class="ref">components/graph/*</span></td></tr>
+    <tr><td><code>40 ~ 60</code></td><td>graph 浮層（無結果遮罩 40、說明面板 / 工具列 50、FocusHUD 60、排序下拉 60）</td><td><span class="ref">components/graph/*</span></td></tr>
     <tr><td><code>99</code></td><td>YouTube 頻道提示 banner（貼 Navbar 下）</td><td><span class="ref">YouTubeChannelBanner.tsx:70</span></td></tr>
-    <tr><td><code>100</code></td><td><b>Navbar</b>。<span class="bug-tag">衝突</span> FloatingToolbar 排序下拉也用 100</td><td><span class="ref">Navbar.tsx:100、FloatingToolbar.tsx:651</span></td></tr>
+    <tr><td><code>100</code></td><td><b>Navbar</b>（排序下拉原本也誤用 100，2026-08-29 改為 60）</td><td><span class="ref">Navbar.tsx:100</span></td></tr>
     <tr><td><code>200</code></td><td>Navbar 使用者下拉、通知鈴鐺下拉</td><td><span class="ref">Navbar.tsx:213、NotificationBell.tsx:134</span></td></tr>
     <tr><td><code>300</code></td><td>目錄篩選 popover</td><td><span class="ref">FilterDropdown.tsx:171</span></td></tr>
     <tr><td><code>900</code></td><td>WelcomeToast（右下）</td><td><span class="ref">WelcomeToast.tsx:271</span></td></tr>
@@ -669,7 +669,7 @@ WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slid
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>Admin 被檢舉者載入 spinner 引用不存在的 <code>spin</code>，實際靜止。已改為 <code>vtaxonSpin</code>。<span class="ref">AdminPage.tsx:642</span></li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>淺色主題殘留（TaxonomyTree 的 toolBtn / skeleton、TreeNode 的 countBadge / showMoreBtn、index.html 的 .vtaxon-tree-node hover）。追查後確認 TaxonomyTree 與 TreeNode 是舊版 DOM 分類樹的死碼（已被 canvas 版 TaxonomyGraph 取代，無任何 import），已連同 index.html 對應 CSS 一併刪除。</li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>全域 Toast 的陰影是淺色主題強度、配色用脫節的 Material 三色。已改為玻璃深色卡 + 全站狀態色 tinted 邊框 + 深色陰影（見 6.5）。<span class="ref">lib/ToastContext.tsx</span></li>
-    <li>FloatingToolbar 排序下拉 <code>zIndex:100</code> 與 Navbar 同層，會相互競爭。<span class="ref">FloatingToolbar.tsx:651</span></li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>FloatingToolbar 排序下拉 <code>zIndex:100</code> 與 Navbar 同層。已改為 60（graph 浮層帶頂端；它在 toolbar 的 stacking context 內，只需蓋過同層元素）。<span class="ref">FloatingToolbar.tsx:651</span></li>
     <li><code>MOBILE_BP = 768</code> 與檔內自寫的 useIsMobile 是死碼（實際用 hooks 的 640px 版），常數留著容易誤導。<span class="ref">WelcomeToast.tsx:8,24~32</span></li>
   </ol>
 
