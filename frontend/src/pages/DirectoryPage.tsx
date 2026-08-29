@@ -276,10 +276,10 @@ function LoadingSkeleton({ viewMode }: LoadingSkeletonProps): React.JSX.Element 
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.04)',
           }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', animation: 'pulse 1.5s ease-in-out infinite' }} />
-            <div style={{ width: 120, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.06)', animation: 'pulse 1.5s ease-in-out infinite' }} />
-            <div style={{ width: 60, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite' }} />
-            <div style={{ flex: 1, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', animation: 'vtaxonPulse 1.5s ease-in-out infinite' }} />
+            <div style={{ width: 120, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.06)', animation: 'vtaxonPulse 1.5s ease-in-out infinite' }} />
+            <div style={{ width: 60, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: 'vtaxonPulse 1.5s ease-in-out infinite' }} />
+            <div style={{ flex: 1, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: 'vtaxonPulse 1.5s ease-in-out infinite' }} />
           </div>
         ))}
       </div>
@@ -300,14 +300,14 @@ function LoadingSkeleton({ viewMode }: LoadingSkeletonProps): React.JSX.Element 
           height: 160,
         }}>
           <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', animation: 'vtaxonPulse 1.5s ease-in-out infinite' }} />
             <div>
-              <div style={{ width: 100, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.06)', marginBottom: 8, animation: 'pulse 1.5s ease-in-out infinite' }} />
-              <div style={{ width: 60, height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              <div style={{ width: 100, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.06)', marginBottom: 8, animation: 'vtaxonPulse 1.5s ease-in-out infinite' }} />
+              <div style={{ width: 60, height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: 'vtaxonPulse 1.5s ease-in-out infinite' }} />
             </div>
           </div>
-          <div style={{ width: '70%', height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)', marginBottom: 8, animation: 'pulse 1.5s ease-in-out infinite' }} />
-          <div style={{ width: '50%', height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+          <div style={{ width: '70%', height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)', marginBottom: 8, animation: 'vtaxonPulse 1.5s ease-in-out infinite' }} />
+          <div style={{ width: '50%', height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: 'vtaxonPulse 1.5s ease-in-out infinite' }} />
         </div>
       ))}
     </div>

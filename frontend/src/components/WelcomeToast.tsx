@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import useIsMobile from '../hooks/useIsMobile';
 
 const LS_KEY = 'vtaxon_last_seen_new_user';
 const POLL_INTERVAL = 30_000;
 const STAGGER_DELAY = 1_000;
-const MOBILE_BP = 768;
 const MAX_SEEN_IDS = 500;
 const MAX_QUEUE_SIZE = 50;
 
@@ -19,17 +19,6 @@ interface RecentUser {
   entry_fictional_path?: string;
   entry_breed_id?: number;
   entry_fictional_species_id?: number;
-}
-
-function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BP);
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${MOBILE_BP}px)`);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-  return isMobile;
 }
 
 interface ToastCardProps {

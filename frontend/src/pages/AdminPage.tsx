@@ -639,7 +639,7 @@ const ReportCard = memo(function ReportCard({ req, onUpdate }: CardProps) {
             <span style={{
               display: 'inline-block', width: 12, height: 12,
               border: '2px solid rgba(255,255,255,0.1)', borderTopColor: '#eab308',
-              borderRadius: '50%', animation: 'spin 0.8s linear infinite',
+              borderRadius: '50%', animation: 'vtaxonSpin 0.8s linear infinite',
             }} />
           )}
 

@@ -57,22 +57,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           maxWidth: '400px',
         }}>
           {toasts.map(t => {
-            const bg = t.type === 'success' ? '#2e7d32'
-              : t.type === 'error' ? '#c62828'
-              : '#1a73e8';
+            // 狀態色沿用全站語彙：成功 #4ade80、錯誤 #f87171、資訊 #38bdf8
+            const accent = t.type === 'success' ? { dot: '#4ade80', border: 'rgba(34,197,94,0.3)' }
+              : t.type === 'error' ? { dot: '#f87171', border: 'rgba(239,68,68,0.3)' }
+              : { dot: '#38bdf8', border: 'rgba(56,189,248,0.3)' };
             return (
             <div key={t.id} style={{
-              background: bg, color: '#fff', padding: '12px 16px',
-              borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              background: 'rgba(20,28,40,0.92)', backdropFilter: 'blur(8px)',
+              color: '#e2e8f0', padding: '12px 16px',
+              border: `1px solid ${accent.border}`,
+              borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
               fontSize: '0.9em', lineHeight: '1.4',
               display: 'flex', alignItems: 'flex-start', gap: '10px',
               animation: 'toast-in 0.3s ease-out',
             }}>
+              <span style={{
+                width: 8, height: 8, borderRadius: '50%', background: accent.dot,
+                flexShrink: 0, marginTop: 6,
+              }} />
               <span style={{ flex: 1 }}>{t.message}</span>
               <button onClick={() => dismiss(t.id)} style={{
-                background: 'none', border: 'none', color: '#fff',
+                background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)',
                 cursor: 'pointer', fontSize: '1.1em', padding: 0,
-                lineHeight: 1, opacity: 0.7, flexShrink: 0,
+                lineHeight: 1, flexShrink: 0,
               }}>✕</button>
             </div>
             );

@@ -648,7 +648,7 @@ export default function FloatingToolbar({
               {sortDropdownOpen && (
                 <div style={{
                   position: 'absolute', top: '100%', left: 0, marginTop: 4,
-                  zIndex: 100, minWidth: 140,
+                  zIndex: 60, minWidth: 140,
                   background: 'rgba(8,13,21,0.95)',
                   backdropFilter: 'blur(12px)',
                   WebkitBackdropFilter: 'blur(12px)',
