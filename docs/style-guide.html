@@ -651,7 +651,7 @@ WelcomeToast: bottom 20 right 20 | 玻璃深色卡 | slideIn 0.4s + 離場 opaci
   </table></div>
   <p><span class="fixed-tag">已修 2026-08-29</span><code>pulse</code> / <code>spin</code> 曾被引用但不存在的問題已修正（見 6.8）。</p>
   <p><b>hover 實作三分天下：</b>JS onMouseEnter/Leave 直接改 style（最多）、React state（RemoveButton、FloatingToolbar）、
-     CSS class（僅 footer 連結與 TreeNode）。主要按鈕與 Pagination 完全沒有 hover。</p>
+     CSS class（僅 footer 連結）。主要按鈕與 Pagination 完全沒有 hover。</p>
 </section>
 
 <!-- ============================================================ -->
@@ -663,7 +663,7 @@ WelcomeToast: bottom 20 right 20 | 玻璃深色卡 | slideIn 0.4s + 離場 opaci
   <ol>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>Directory 骨架屏引用不存在的 keyframe <code>pulse</code>，實際不會閃爍。已統一改為 <code>vtaxonPulse</code>。<span class="ref">DirectoryPage.tsx:279~310</span></li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>Admin 被檢舉者載入 spinner 引用不存在的 <code>spin</code>，實際靜止。已改為 <code>vtaxonSpin</code>。<span class="ref">AdminPage.tsx:642</span></li>
-    <li>淺色主題殘留，在深色底上不可讀：TaxonomyTree 的 toolBtn（#ddd / #666）與 skeleton（#eee）、TreeNode 的 countBadge（#e8e8e8）與 showMoreBtn（#ccc）、index.html 的 .vtaxon-tree-node hover（#FFF8E1 / #f5f5f5）。<span class="ref">TaxonomyTree.tsx:259,264、TreeNode.tsx:18,23、index.html:33~36</span></li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>淺色主題殘留（TaxonomyTree 的 toolBtn / skeleton、TreeNode 的 countBadge / showMoreBtn、index.html 的 .vtaxon-tree-node hover）。追查後確認 TaxonomyTree 與 TreeNode 是舊版 DOM 分類樹的死碼（已被 canvas 版 TaxonomyGraph 取代，無任何 import），已連同 index.html 對應 CSS 一併刪除。</li>
     <li>全域 Toast 的陰影 <code>0 4px 12px rgba(0,0,0,0.15)</code> 是淺色主題強度（全站深色陰影都是 0.3~0.4），配色也用脫節的 Material 三色。<span class="ref">lib/ToastContext.tsx:59</span></li>
     <li>FloatingToolbar 排序下拉 <code>zIndex:100</code> 與 Navbar 同層，會相互競爭。<span class="ref">FloatingToolbar.tsx:651</span></li>
     <li><code>MOBILE_BP = 768</code> 與檔內自寫的 useIsMobile 是死碼（實際用 hooks 的 640px 版），常數留著容易誤導。<span class="ref">WelcomeToast.tsx:8,24~32</span></li>
