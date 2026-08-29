@@ -415,7 +415,7 @@
     <li>有做手機版的：<b>DirectoryPage</b>（單欄 grid、縮 padding）、<b>Navbar</b>（縮間距、藏文字留圖示）、
         <b>FilterDropdown</b>（桌機 popover、手機 BottomSheet）、<b>graph 系</b>（工具列收合、控件放大）、<b>WelcomeToast</b>（compact 卡）</li>
     <li><span class="warn-tag">缺口</span> 13 頁中 11 頁零 RWD，僅靠 maxWidth + padding 20px 自然縮放</li>
-    <li><span class="bug-tag">死碼</span> <span class="ref">WelcomeToast.tsx:8</span> 有一份 <code>MOBILE_BP = 768</code> 與檔內自寫的 useIsMobile，實際未使用</li>
+    <li><span class="fixed-tag">已修 2026-08-29</span> WelcomeToast 原本檔內自寫一份 768px 的 useIsMobile（與全站 640px 不一致），已改用共用 hook，斷點全站統一為 640px</li>
   </ul>
 </section>
 
@@ -670,7 +670,7 @@ WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slid
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>淺色主題殘留（TaxonomyTree 的 toolBtn / skeleton、TreeNode 的 countBadge / showMoreBtn、index.html 的 .vtaxon-tree-node hover）。追查後確認 TaxonomyTree 與 TreeNode 是舊版 DOM 分類樹的死碼（已被 canvas 版 TaxonomyGraph 取代，無任何 import），已連同 index.html 對應 CSS 一併刪除。</li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>全域 Toast 的陰影是淺色主題強度、配色用脫節的 Material 三色。已改為玻璃深色卡 + 全站狀態色 tinted 邊框 + 深色陰影（見 6.5）。<span class="ref">lib/ToastContext.tsx</span></li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>FloatingToolbar 排序下拉 <code>zIndex:100</code> 與 Navbar 同層。已改為 60（graph 浮層帶頂端；它在 toolbar 的 stacking context 內，只需蓋過同層元素）。<span class="ref">FloatingToolbar.tsx:651</span></li>
-    <li><code>MOBILE_BP = 768</code> 與檔內自寫的 useIsMobile 是死碼（實際用 hooks 的 640px 版），常數留著容易誤導。<span class="ref">WelcomeToast.tsx:8,24~32</span></li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>WelcomeToast 檔內自寫一份 768px 的 useIsMobile。修正時確認它其實有被使用（原盤點誤判為死碼），等於全站存在兩個不同斷點。已刪除檔內版並改用共用 hook（640px）。<span class="ref">WelcomeToast.tsx</span></li>
   </ol>
 
   <h3>B. 逐字重複的程式碼（樣式漂移源頭）</h3>
