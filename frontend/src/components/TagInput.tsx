@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { tagChipStyle, tagRemoveStyle, tagFieldStyle } from './tagChipStyles';
 
 interface TagInputProps {
   value?: string[];
@@ -41,23 +42,14 @@ export default function TagInput({ value = [], onChange, placeholder }: TagInput
   return (
     <div
       onClick={() => inputRef.current?.focus()}
-      style={{
-        display: 'flex', flexWrap: 'wrap', gap: '6px',
-        padding: '6px 8px', border: '1px solid rgba(255,255,255,0.12)',
-        borderRadius: '4px', minHeight: '40px', cursor: 'text',
-        background: '#1a2433', boxSizing: 'border-box',
-      }}
+      style={{ ...tagFieldStyle, padding: '6px 8px', cursor: 'text' }}
     >
       {value.map((tag, i) => (
-        <span key={i} style={{
-          display: 'inline-flex', alignItems: 'center', gap: '4px',
-          padding: '2px 8px', background: 'rgba(56,189,248,0.12)',
-          borderRadius: '12px', fontSize: '0.85em', color: '#93c5fd',
-        }}>
+        <span key={i} style={tagChipStyle}>
           {tag}
           <span
             onClick={(e: React.MouseEvent) => { e.stopPropagation(); remove(i); }}
-            style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}
+            style={tagRemoveStyle}
           >×</span>
         </span>
       ))}
