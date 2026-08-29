@@ -242,8 +242,8 @@
   <p><b>Tinted 公式</b>（狀態色的標準用法）：<code>background: rgba(C, 0.08~0.15)</code> +
      <code>border: 1px solid rgba(C, 0.25~0.3)</code> + <code>color: C</code>。集中定義只有
      <code>AdminPage.tsx:177</code> 的 <code>ACTION_STYLES</code>，其餘散落手寫。</p>
-  <p><span class="bug-tag">脫節</span> 全域 Toast（<span class="ref">lib/ToastContext.tsx:59</span>）用 Material 實心色
-     <code>#2e7d32</code> / <code>#c62828</code> / <code>#1a73e8</code>，這三色在專案其他地方一次都沒出現。</p>
+  <p><span class="fixed-tag">已修 2026-08-29</span> 全域 Toast 原本用 Material 實心色
+     <code>#2e7d32</code> / <code>#c62828</code> / <code>#1a73e8</code>（與全站脫節），已改為玻璃深色卡 + 全站狀態色（見 6.5）。</p>
 
   <h3>2.5 特殊語意色</h3>
   <div class="swgrid">
@@ -379,8 +379,7 @@
     <tr><th>值</th><th>用途</th></tr>
     <tr><td><code>0 8px 24px rgba(0,0,0,0.4)</code></td><td>下拉選單（Navbar、通知鈴鐺、篩選 popover）</td></tr>
     <tr><td><code>-4px 0 30px rgba(0,0,0,0.4)</code></td><td>右側滑入面板</td></tr>
-    <tr><td><code>0 4px 20px rgba(0,0,0,0.4)</code></td><td>WelcomeToast 卡片</td></tr>
-    <tr><td><code>0 4px 12px rgba(0,0,0,0.15)</code></td><td>全域 Toast <span class="warn-tag">強度是淺色主題殘留</span></td></tr>
+    <tr><td><code>0 4px 20px rgba(0,0,0,0.4)</code></td><td>全域 Toast、WelcomeToast 卡片（2026-08-29 起統一）</td></tr>
     <tr><td><code>0 0 6~12px rgba(239,68,68,…)</code></td><td>LIVE 紅色光暈</td></tr>
     <tr><td><code>0 2px 12px rgba(56,189,248,0.15)</code></td><td>VtuberCard hover 藍光</td></tr>
   </table></div>
@@ -555,15 +554,20 @@ disabled: opacity 0.4 或 0.5 + cursor not-allowed（係數不統一）</div>
   <p>OrgBadge（企業勢 / 社團勢）不是徽章，只是彩色文字：<span style="color:#fb923c;font-size:0.85em">企業勢</span>
      <span style="color:#a78bfa;font-size:0.85em">社團勢</span>（indie 不渲染）。</p>
 
-  <h3>6.5 Toast — 兩套互不相容的系統</h3>
+  <h3>6.5 Toast</h3>
+  <p><span class="fixed-tag">已修 2026-08-29</span>全域 Toast 原為 Material 實心色（#2e7d32 / #c62828 / #1a73e8）+ 淺色主題陰影，
+     已改為與 WelcomeToast 同語彙的玻璃深色卡 + 全站狀態色 tinted 邊框：</p>
   <div class="stage col" style="max-width:420px">
-    <div style="background:#2e7d32;color:#fff;padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:0.9em;display:flex;gap:10px">✓ 全域 Toast success（右上角 / zIndex 9999 / Material 色）<span style="opacity:0.7;cursor:pointer">✕</span></div>
-    <div style="background:#c62828;color:#fff;padding:12px 16px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-size:0.9em">✕ 全域 Toast error #c62828</div>
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;background:rgba(20,28,40,0.92);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e2e8f0;font-size:0.85em;max-width:300px;box-shadow:0 4px 20px rgba(0,0,0,0.4)">🎉 WelcomeToast（右下角 / zIndex 900 / 玻璃卡風）</div>
+    <div style="background:rgba(20,28,40,0.92);backdrop-filter:blur(8px);color:#e2e8f0;padding:12px 16px;border:1px solid rgba(34,197,94,0.3);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.4);font-size:0.9em;line-height:1.4;display:flex;align-items:flex-start;gap:10px"><span style="width:8px;height:8px;border-radius:50%;background:#4ade80;flex-shrink:0;margin-top:6px"></span><span style="flex:1">全域 Toast success：已儲存變更</span><span style="color:rgba(255,255,255,0.5);cursor:pointer;font-size:1.1em;line-height:1">✕</span></div>
+    <div style="background:rgba(20,28,40,0.92);backdrop-filter:blur(8px);color:#e2e8f0;padding:12px 16px;border:1px solid rgba(239,68,68,0.3);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.4);font-size:0.9em;line-height:1.4;display:flex;align-items:flex-start;gap:10px"><span style="width:8px;height:8px;border-radius:50%;background:#f87171;flex-shrink:0;margin-top:6px"></span><span style="flex:1">全域 Toast error：儲存失敗，請再試一次</span><span style="color:rgba(255,255,255,0.5);cursor:pointer;font-size:1.1em;line-height:1">✕</span></div>
+    <div style="background:rgba(20,28,40,0.92);backdrop-filter:blur(8px);color:#e2e8f0;padding:12px 16px;border:1px solid rgba(56,189,248,0.3);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.4);font-size:0.9em;line-height:1.4;display:flex;align-items:flex-start;gap:10px"><span style="width:8px;height:8px;border-radius:50%;background:#38bdf8;flex-shrink:0;margin-top:6px"></span><span style="flex:1">全域 Toast info</span><span style="color:rgba(255,255,255,0.5);cursor:pointer;font-size:1.1em;line-height:1">✕</span></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;background:rgba(20,28,40,0.92);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#e2e8f0;font-size:0.85em;max-width:300px;box-shadow:0 4px 20px rgba(0,0,0,0.4)">🎉 WelcomeToast（右下角 / zIndex 900）</div>
   </div>
-  <div class="spec">ToastContext: top 16 right 16 | 實心 #2e7d32 / #c62828 / #1a73e8 | toast-in 0.3s | 預設 5000ms | 只有進場動畫
-WelcomeToast: bottom 20 right 20 | 玻璃深色卡 | slideIn 0.4s + 離場 opacity/transform 0.3s
-⚠ 位置、zIndex、視覺語言、色彩全部不共用</div>
+  <div class="spec">ToastContext: top 16 right 16 | zIndex 9999 | bg rgba(20,28,40,0.92) + blur(8) | border rgba(狀態色,0.3)
+  狀態圓點 8px：success #4ade80 / error #f87171 / info #38bdf8 | shadow 0 4px 20px rgba(0,0,0,0.4)
+  toast-in 0.3s | 預設 5000ms | 只有進場動畫
+WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slideIn 0.4s + 離場 opacity/transform 0.3s
+⚠ 位置、zIndex、圓角與程式碼仍未共用（視覺語言已於 2026-08-29 對齊）</div>
 
   <h3>6.6 彈層（Modal / 側邊面板 / BottomSheet）</h3>
   <div class="scroll"><table>
@@ -664,7 +668,7 @@ WelcomeToast: bottom 20 right 20 | 玻璃深色卡 | slideIn 0.4s + 離場 opaci
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>Directory 骨架屏引用不存在的 keyframe <code>pulse</code>，實際不會閃爍。已統一改為 <code>vtaxonPulse</code>。<span class="ref">DirectoryPage.tsx:279~310</span></li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>Admin 被檢舉者載入 spinner 引用不存在的 <code>spin</code>，實際靜止。已改為 <code>vtaxonSpin</code>。<span class="ref">AdminPage.tsx:642</span></li>
     <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>淺色主題殘留（TaxonomyTree 的 toolBtn / skeleton、TreeNode 的 countBadge / showMoreBtn、index.html 的 .vtaxon-tree-node hover）。追查後確認 TaxonomyTree 與 TreeNode 是舊版 DOM 分類樹的死碼（已被 canvas 版 TaxonomyGraph 取代，無任何 import），已連同 index.html 對應 CSS 一併刪除。</li>
-    <li>全域 Toast 的陰影 <code>0 4px 12px rgba(0,0,0,0.15)</code> 是淺色主題強度（全站深色陰影都是 0.3~0.4），配色也用脫節的 Material 三色。<span class="ref">lib/ToastContext.tsx:59</span></li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>全域 Toast 的陰影是淺色主題強度、配色用脫節的 Material 三色。已改為玻璃深色卡 + 全站狀態色 tinted 邊框 + 深色陰影（見 6.5）。<span class="ref">lib/ToastContext.tsx</span></li>
     <li>FloatingToolbar 排序下拉 <code>zIndex:100</code> 與 Navbar 同層，會相互競爭。<span class="ref">FloatingToolbar.tsx:651</span></li>
     <li><code>MOBILE_BP = 768</code> 與檔內自寫的 useIsMobile 是死碼（實際用 hooks 的 640px 版），常數留著容易誤導。<span class="ref">WelcomeToast.tsx:8,24~32</span></li>
   </ol>
@@ -686,7 +690,7 @@ WelcomeToast: bottom 20 right 20 | 玻璃深色卡 | slideIn 0.4s + 離場 opaci
     <li>成功綠兩套：<code>#4ade80</code>（pages / admin）vs <code>#22c55e</code>（graph、ProfileInfoCard）。</li>
     <li>警告黃四套：<code>#f59e0b</code> / <code>#eab308</code> / <code>#fbbf24</code> / <code>#facc15</code> 語意重疊。</li>
     <li>危險紅雙軌：<code>#f87171</code>（文字態）vs <code>#ef4444</code>（實心）——分工尚可，但界線未明文。</li>
-    <li>全域 Toast 的 Material 三色與全站狀態色完全脫節（另見 A-4）。</li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>全域 Toast 的 Material 三色與全站狀態色完全脫節（另見 A-4，已一併修正）。</li>
     <li>半透明白 17 階，相鄰級距肉眼不可分。</li>
     <li>主色背景透明度 7 種、邊框 4 種，自由組合。</li>
     <li><code>#a78bfa</code> 一色三用：Twitch 代用 / 社團勢 / 亞種。</li>
@@ -732,7 +736,7 @@ WelcomeToast: bottom 20 right 20 | 玻璃深色卡 | slideIn 0.4s + 離場 opaci
   <p>以下是根據盤點結果的收斂建議，<b>尚未實作、尚未定案</b>，僅供後續討論起點：</p>
   <ul>
     <li><b>文字階：</b>17 階收斂到 6 階，例如 <code>#fff</code>（標題）/ <code>#e2e8f0</code>（正文）/ α0.7（說明）/ α0.5（提示）/ α0.35（佔位）/ α0.2（裝飾）。</li>
-    <li><b>狀態色一套：</b>成功 <code>#4ade80</code>、警告 <code>#f59e0b</code>、危險文字 <code>#f87171</code> + 實心 <code>#ef4444</code>、資訊 <code>#38bdf8</code>；全域 Toast 改用同一套（tinted 深色卡風格取代 Material 實心）。</li>
+    <li><b>狀態色一套：</b>成功 <code>#4ade80</code>、警告 <code>#f59e0b</code>、危險文字 <code>#f87171</code> + 實心 <code>#ef4444</code>、資訊 <code>#38bdf8</code>；全域 Toast 改用同一套（tinted 深色卡風格取代 Material 實心，已於 2026-08-29 完成）。</li>
     <li><b>tinted 公式定版：</b><code>bg rgba(C, 0.12)</code> + <code>border rgba(C, 0.25)</code> + <code>color C</code>，active 同格式。</li>
     <li><b>圓角階梯：</b>4（輸入框 / 小按鈕）、6（按鈕 / chip）、10（卡片）、16（大卡 / Sheet）、999（膠囊）、50%（圓）。</li>
     <li><b>間距階梯：</b>4 / 8 / 12 / 16 / 24 / 32 / 48。</li>
