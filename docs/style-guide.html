@@ -334,7 +334,7 @@
     <tr><td>h1</td><td><code>1.5em / #fff / marginBottom 4</code>，下接副標 <code>0.82~0.88em / rgba(255,255,255,0.4) / margin 0 0 32px</code></td>
         <td>只有法規四頁與 VTuberProfilePage 用 h1；其他頁主標用 h2 <span class="warn-tag">語意不對齊</span></td></tr>
     <tr><td>h2（區段）</td><td><code>1.05em / 600 / #fff / borderBottom 1px solid rgba(255,255,255,0.1) / paddingBottom 8 / marginTop 32 / marginBottom 12</code></td>
-        <td>heading 常數被複製 4 份且已漂移（Changelog marginTop 24）</td></tr>
+        <td>原被複製 4 份且漂移，2026-08-29 起統一收斂於 <code>pages/docStyles.ts</code></td></tr>
     <tr><td>h2（頁主標）</td><td>各頁自訂：1.35em（Login）、1.2em（Character）、無樣式吃預設 1.5em（Search）</td>
         <td><span class="warn-tag">四分五裂</span></td></tr>
     <tr><td>h3</td><td><code>0.92~1em / 600 / #fff 或 rgba(255,255,255,0.85)</code></td><td></td></tr>
@@ -351,7 +351,7 @@
   <div class="scroll"><table>
     <tr><th>場景</th><th>值</th></tr>
     <tr><td>頁面水平 padding</td><td><b>20px</b>（全站共識；例外：Directory 手機 12、Login 外層 16）</td></tr>
-    <tr><td>區段之間（h2 上緣）</td><td>32（Changelog 24）</td></tr>
+    <tr><td>區段之間（h2 上緣）</td><td>32（2026-08-29 起含 Changelog 統一）</td></tr>
     <tr><td>Header → 內容 / Tab bar → 內容</td><td>32 / 24</td></tr>
     <tr><td>表單欄位之間</td><td>20（區段結尾 24）</td></tr>
     <tr><td>卡片之間</td><td>Admin 14、通知 10、特徵卡 8</td></tr>
@@ -577,7 +577,7 @@ WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slid
         <td><b>無</b> <span class="warn-tag">突兀</span></td></tr>
     <tr><td>右側滑入面板（詳情 / 預覽）</td><td><code>rgba(0,0,0,0.5)</code>・zIndex 999</td>
         <td>寬 360px（max 90vw）・<code>#0d1526</code>・top 44・shadow <code>-4px 0 30px</code>・zIndex 1000</td>
-        <td>slide in 300ms / out 250ms（兩份逐字複製，keyframes 名不同）</td></tr>
+        <td>slide in 300ms / out 250ms（2026-08-29 起共用 SidePanel 殼）</td></tr>
     <tr><td>BottomSheet（手機）</td><td><code>rgba(0,0,0,0.5)</code> 漸變・zIndex 1000</td>
         <td><code>#0d1526</code>（篩選器傳 #141c2b）・radius 16 16 0 0・maxHeight 85vh・safe-area 底距・handle bar 36×4</td>
         <td><code>300ms cubic-bezier(0.32,0.72,0,1)</code>，唯一完整進出場</td></tr>
@@ -651,7 +651,7 @@ WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slid
     <tr><td><code>vtaxon-live-pulse</code></td><td>VtuberCard（JS 注入）+ VtuberDetailPanel</td><td>LIVE 圓點呼吸 + 縮放，1.5s</td></tr>
     <tr><td><code>toast-in</code></td><td>ToastContext</td><td>右滑進場 40px、0.3s</td></tr>
     <tr><td><code>welcomeToastSlideIn</code></td><td>WelcomeToast</td><td>右滑進場 60px、0.4s</td></tr>
-    <tr><td><code>vtaxonSlideIn/Out</code>、<code>profSlideIn/Out</code></td><td>VtuberDetailPanel / PreviewPanel</td><td>面板 300ms 進 / 250ms 出（同定義、不同名 <span class="warn-tag">重複</span>）</td></tr>
+    <tr><td><code>vtaxonSlideIn/Out</code>、<code>vtaxonFadeIn/Out</code></td><td>SidePanel（兩面板共用殼）</td><td>面板 300ms 進 / 250ms 出（2026-08-29 起單一定義，profSlideIn 系已移除）</td></tr>
   </table></div>
   <p><span class="fixed-tag">已修 2026-08-29</span><code>pulse</code> / <code>spin</code> 曾被引用但不存在的問題已修正（見 6.8）。</p>
   <p><b>hover 實作三分天下：</b>JS onMouseEnter/Leave 直接改 style（最多）、React state（RemoveButton、FloatingToolbar）、
@@ -675,14 +675,14 @@ WelcomeToast: bottom 20 right 20 | zIndex 900 | radius 12（Toast 為 8）| slid
 
   <h3>B. 逐字重複的程式碼（樣式漂移源頭）</h3>
   <ol start="7">
-    <li>VtuberDetailPanel 與 PreviewPanel 整包複製（容器、header、tab、卡片；keyframes 同定義不同名）。</li>
-    <li>RemoveButton / LivePrimaryButton 兩份逐字相同。<span class="ref">SettingsFictional.tsx:18 ↔ SettingsRealSpecies.tsx:65</span></li>
-    <li>STATUS_STYLES 兩份。<span class="ref">DirectoryCard.tsx:8 ↔ DirectoryListItem.tsx:9</span></li>
-    <li>tag 樣式兩份。<span class="ref">TagInput.tsx:52 ↔ CountryPicker.tsx:60</span></li>
-    <li>lblStyle 三份。<span class="ref">ProfileInfoCard.tsx:246 / PreviewPanel.tsx:10 / VtuberDetailPanel.tsx:742</span></li>
-    <li>法規頁 heading / para / list 常數複製 4 份且已漂移（Changelog marginTop 24 vs 32、lineHeight 1.7 vs 1.8）。<span class="ref">AboutPage / PrivacyPolicyPage / TermsOfServicePage / ChangelogPage 開頭</span></li>
-    <li>Modal overlay 兩份逐字相同。<span class="ref">VtuberDeclarationModal.tsx:114 ↔ ShadowBanNotice.tsx:167</span></li>
-    <li>「顯示限制 / 代表物種」警告框兩份。<span class="ref">SettingsRealSpecies.tsx:241 ↔ SettingsFictional.tsx:178</span></li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>VtuberDetailPanel 與 PreviewPanel 整包複製。殼層（keyframes、backdrop、容器、header、捲動區）已抽出共用 <code>components/SidePanel.tsx</code>，tab 樣式共用 <code>panelTabStyle()</code>。面板內部的卡片內容因資料模型不同（TreeEntry vs Trait）維持各自實作，屬相似但非逐字重複。</li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>RemoveButton / LivePrimaryButton 兩份逐字相同，已抽出共用 <code>components/settings/TraitButtons.tsx</code>。</li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>STATUS_STYLES 兩份，已抽出共用 <code>components/directory/shared.tsx</code>。修復時發現同兩檔的 PLATFORM_ICONS（僅尺寸 16 / 14 不同）與 DirectoryItem 型別也是複製品，一併抽入共用模組。</li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>tag 樣式兩份，已抽出共用 <code>components/tagChipStyles.ts</code>（chip、移除 ✕、輸入容器外框三組樣式）。</li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>欄位名樣式三份（lblStyle / previewLabelStyle / labelStyle 同值），已抽出共用 <code>components/panelStyles.ts</code> 的 <code>fieldLabelStyle</code>。</li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>法規頁 heading / para / list 常數複製 4 份且已漂移，已抽出共用 <code>pages/docStyles.ts</code>（含英文版降階三式）。漂移值統一收斂到多數：heading marginTop 32、listStyle lineHeight 1.8（Changelog 原 24 / 1.7 為複製後漂移）。</li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>Modal overlay 與容器兩份逐字重複（僅 maxWidth 480 / 520 不同），已抽出共用 <code>components/modalStyles.ts</code>。</li>
+    <li class="fixed"><span class="fixed-tag">已修 2026-08-29</span>「顯示限制 / 代表物種」警告框兩份，已抽出共用 <code>components/settings/TraitNotices.tsx</code>（TraitBudgetNotice / LivePrimaryNotice）。</li>
   </ol>
 
   <h3>C. 色彩分歧</h3>

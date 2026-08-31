@@ -1,30 +1,6 @@
 import { Link } from 'react-router-dom';
 import SEOHead from '../components/SEOHead';
-
-const heading: React.CSSProperties = {
-  color: '#fff',
-  fontWeight: 600,
-  fontSize: '1.05em',
-  borderBottom: '1px solid rgba(255,255,255,0.1)',
-  paddingBottom: 8,
-  marginTop: 32,
-  marginBottom: 12,
-};
-
-const para: React.CSSProperties = {
-  color: 'rgba(255,255,255,0.65)',
-  fontSize: '0.88em',
-  lineHeight: 1.75,
-  margin: '8px 0',
-};
-
-const listStyle: React.CSSProperties = {
-  color: 'rgba(255,255,255,0.6)',
-  fontSize: '0.85em',
-  lineHeight: 1.8,
-  paddingLeft: 22,
-  margin: '6px 0',
-};
+import { heading, para, listStyle } from './docStyles';
 
 const pillBtn: React.CSSProperties = {
   display: 'inline-flex',

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import 'flag-icons/css/flag-icons.min.css';
 import COUNTRIES from '../lib/countries';
+import { tagChipStyle, tagRemoveStyle, tagFieldStyle } from './tagChipStyles';
 
 interface CountryPickerProps {
   selected?: string[];
@@ -45,11 +46,7 @@ export default function CountryPicker({ selected = [], onChange }: CountryPicker
       {/* Selected tags */}
       <div
         onClick={() => setOpen(!open)}
-        style={{
-          display: 'flex', flexWrap: 'wrap', gap: '6px',
-          padding: '8px', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '4px',
-          minHeight: '40px', cursor: 'pointer', background: '#1a2433',
-        }}
+        style={{ ...tagFieldStyle, padding: '8px', cursor: 'pointer' }}
       >
         {selected.length === 0 && (
           <span style={{ color: 'rgba(255,255,255,0.35)' }}>點擊選擇國家/地區…</span>
@@ -57,16 +54,12 @@ export default function CountryPicker({ selected = [], onChange }: CountryPicker
         {selected.map((code) => {
           const country = COUNTRIES.find((c) => c.code === code);
           return (
-            <span key={code} style={{
-              display: 'inline-flex', alignItems: 'center', gap: '4px',
-              padding: '2px 8px', background: 'rgba(56,189,248,0.12)', borderRadius: '12px',
-              fontSize: '0.85em', color: '#93c5fd',
-            }}>
+            <span key={code} style={tagChipStyle}>
               <span className={`fi fi-${code.toLowerCase()}`} style={{ width: 16, display: 'inline-block', borderRadius: 2 }} />
               {country?.name || code}
               <span
                 onClick={(e: React.MouseEvent) => { e.stopPropagation(); remove(code); }}
-                style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}
+                style={tagRemoveStyle}
               >
                 ×
               </span>

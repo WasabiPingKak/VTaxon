@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { modalOverlayStyle, modalBoxStyle } from './modalStyles';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 
@@ -30,8 +31,8 @@ export default function ShadowBanNotice(): React.ReactElement | null {
   }
 
   return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
+    <div style={modalOverlayStyle}>
+      <div style={modalBoxStyle(520)}>
         {user.visibility === 'hidden' ? (
           <>
             <h2 style={{ margin: '0 0 16px', fontSize: '1.2em', color: '#f59e0b' }}>
@@ -164,25 +165,7 @@ export default function ShadowBanNotice(): React.ReactElement | null {
   );
 }
 
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.7)',
-  zIndex: 2000,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '20px',
-};
 
-const modalStyle: React.CSSProperties = {
-  background: '#1a2236',
-  borderRadius: '12px',
-  padding: '28px',
-  maxWidth: '520px',
-  width: '100%',
-  border: '1px solid rgba(255,255,255,0.1)',
-};
 
 const primaryBtnStyle: React.CSSProperties = {
   flex: 1,

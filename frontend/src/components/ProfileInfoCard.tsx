@@ -1,4 +1,5 @@
 import { getZodiacSign } from '../lib/zodiac';
+import { fieldLabelStyle as lblStyle } from './panelStyles';
 
 interface StatusConfig {
   label: string;
@@ -243,7 +244,3 @@ export default function ProfileInfoCard({ profileData }: ProfileInfoCardProps): 
   );
 }
 
-const lblStyle: React.CSSProperties = {
-  display: 'inline-block', width: '50px',
-  fontWeight: 500, color: 'rgba(255,255,255,0.45)',
-};

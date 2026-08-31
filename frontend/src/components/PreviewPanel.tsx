@@ -1,16 +1,13 @@
-import { useState, useCallback } from 'react';
 import RankBadge from './RankBadge';
 import OrgBadge from './OrgBadge';
 import LinksRow from './LinksRow';
 import ProfileInfoCard from './ProfileInfoCard';
+import SidePanel, { panelTabStyle } from './SidePanel';
 import { displayScientificName } from '../lib/speciesName';
 import { RANK_ORDER, RANK_TO_UPPER, SUB_SPECIES_RANKS } from '../lib/taxonomyConstants';
 import type { OAuthAccount } from '../types';
+import { fieldLabelStyle as previewLabelStyle } from './panelStyles';
 
-const previewLabelStyle: React.CSSProperties = {
-  display: 'inline-block', width: '50px',
-  fontWeight: 500, color: 'rgba(255,255,255,0.45)',
-};
 
 interface SpeciesData {
   taxon_path?: string;
@@ -90,9 +87,6 @@ function TaxonomyPath({ species }: TaxonomyPathProps) {
   );
 }
 
-const PREVIEW_ANIM_IN = 300;
-const PREVIEW_ANIM_OUT = 250;
-
 interface FictionalPathProps {
   fictional: FictionalData;
 }
@@ -152,7 +146,6 @@ export interface PreviewPanelProps {
 
 /** Slide-in preview panel -- replicates VtuberDetailPanel as fixed right panel */
 export default function PreviewPanel({ user, oauthAccounts, traits, selectedTraitIdx, onSelectTrait, onClose }: PreviewPanelProps) {
-  const [closing, setClosing] = useState(false);
   // All traits (real + fictional) for tab switching
   const allTraits = traits.filter(t => t.taxon_id || t.fictional_species_id);
   const trait = allTraits[selectedTraitIdx] || allTraits[0];
@@ -160,55 +153,11 @@ export default function PreviewPanel({ user, oauthAccounts, traits, selectedTrai
   const species = isReal ? trait?.species : null;
   const fictional = !isReal ? trait?.fictional : null;
 
-  const handleClose = useCallback(() => setClosing(true), []);
-  const handleAnimEnd = useCallback((e: React.AnimationEvent) => {
-    if (e.animationName === 'profSlideOut') { setClosing(false); onClose(); }
-  }, [onClose]);
-
   return (
-    <>
-      <style>{`
-        @keyframes profSlideIn  { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        @keyframes profSlideOut { from { transform: translateX(0); } to { transform: translateX(100%); } }
-        @keyframes profFadeIn   { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes profFadeOut  { from { opacity: 1; } to { opacity: 0; } }
-      `}</style>
-
-      {/* Backdrop */}
-      <div onClick={handleClose}
-        onAnimationEnd={(e: React.AnimationEvent) => { if (e.animationName === 'profFadeOut') e.stopPropagation(); }}
-        style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 999,
-          animation: closing
-            ? `profFadeOut ${PREVIEW_ANIM_OUT}ms ease-in forwards`
-            : `profFadeIn ${PREVIEW_ANIM_IN}ms ease-out forwards`,
-        }}
-      />
-
-      {/* Panel */}
-      <div onAnimationEnd={handleAnimEnd} style={{
-        position: 'fixed', top: 44, right: 0, bottom: 0,
-        width: '360px', maxWidth: '90vw',
-        background: '#0d1526', zIndex: 1000,
-        boxShadow: '-4px 0 30px rgba(0,0,0,0.4)',
-        display: 'flex', flexDirection: 'column',
-        overflow: 'hidden', color: '#e2e8f0',
-        animation: closing
-          ? `profSlideOut ${PREVIEW_ANIM_OUT}ms ease-in forwards`
-          : `profSlideIn ${PREVIEW_ANIM_IN}ms ease-out forwards`,
-      }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)',
-        }}>
-          <span style={{ fontWeight: 600, fontSize: '1.1em' }}>側邊欄預覽</span>
-          <button type="button" onClick={handleClose} style={{
-            background: 'none', border: 'none', fontSize: '1.4em',
-            cursor: 'pointer', color: 'rgba(255,255,255,0.4)', padding: '4px',
-          }}>✕</button>
-        </div>
-
+    <SidePanel
+      title="側邊欄預覽"
+      onClose={onClose}
+      topContent={<>
         {/* Hint */}
         <div style={{
           textAlign: 'center', fontSize: '0.75em', color: 'rgba(255,255,255,0.3)',
@@ -228,22 +177,16 @@ export default function PreviewPanel({ user, oauthAccounts, traits, selectedTrai
                 : (t.fictional?.name_zh || t.fictional?.name || t.display_name);
               const active = i === (selectedTraitIdx ?? 0);
               return (
-                <button key={t.id} type="button" onClick={() => onSelectTrait(i)} style={{
-                  padding: '4px 10px', borderRadius: '4px', fontSize: '0.8em',
-                  cursor: 'pointer', border: 'none',
-                  background: active ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.06)',
-                  color: active ? '#38bdf8' : 'rgba(255,255,255,0.6)',
-                  fontWeight: active ? 600 : 400,
-                }}>
+                <button key={t.id} type="button" onClick={() => onSelectTrait(i)} style={panelTabStyle(active)}>
                   {label}
                 </button>
               );
             })}
           </div>
         )}
-
-        {/* Body (scrollable) */}
-        <div className="vtaxon-scroll" style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+      </>}
+    >
+      <>
           {/* Avatar */}
           <div style={{ textAlign: 'center', marginBottom: '6px' }}>
             {user.avatar_url ? (
@@ -378,8 +321,7 @@ export default function PreviewPanel({ user, oauthAccounts, traits, selectedTrai
               尚未設定物種特徵
             </div>
           )}
-        </div>
-      </div>
-    </>
+      </>
+    </SidePanel>
   );
 }
