@@ -30,6 +30,20 @@ NS = {
     "yt": "http://www.youtube.com/xml/schemas/2015",
 }
 
+# requests 的錯誤訊息會附完整 URL，其中含 ``key=<API 金鑰>``，
+# 寫進 log 或 alert context 前必須遮掉，避免金鑰外流到 Cloud Logging 與告警信。
+_API_KEY_RE = re.compile(r"([?&]key=)[^&\s]+")
+
+
+def _redact_api_key(text: str) -> str:
+    """把文字中 URL 的 ``key=`` 參數值換成 ``***``。"""
+    return _API_KEY_RE.sub(r"\1***", text)
+
+
+def _safe_error(e: BaseException) -> str:
+    """回傳已遮罩、截斷到 200 字的錯誤訊息，供 alert context 使用。"""
+    return _redact_api_key(str(e))[:200]
+
 
 def verify_hub_signature(secret: str, signature_header: str | None, body: str) -> bool:
     """Verify the X-Hub-Signature HMAC-SHA1 from PubSubHubbub.
@@ -133,7 +147,7 @@ def resolve_handle_to_channel_id(handle: str, api_key: str) -> str | None:
         return None
     except requests.RequestException as e:
         youtube_cb.record_failure(e)
-        logger.error("YouTube API resolve_handle error for @%s: %s", handle, e)
+        logger.error("YouTube API resolve_handle error for @%s: %s", handle, _redact_api_key(str(e)))
         return None
 
 
@@ -292,7 +306,9 @@ def check_video_is_live(video_id: str, api_key: str) -> dict[str, Any] | None:
             youtube_cb.record_failure(YouTubeQuotaExhaustedError())
         else:
             youtube_cb.record_failure(e)
-        logger.error("YouTube API check_video_is_live HTTP %s for %s: %s", status_code, video_id, e)
+        logger.error(
+            "YouTube API check_video_is_live HTTP %s for %s: %s", status_code, video_id, _redact_api_key(str(e))
+        )
         from ..constants import AlertSeverity, AlertType
         from .alerts import log_alert
 
@@ -300,12 +316,12 @@ def check_video_is_live(video_id: str, api_key: str) -> dict[str, Any] | None:
             alert_type=AlertType.YT_API_QUOTA,
             severity=AlertSeverity.CRITICAL if status_code == 403 else AlertSeverity.WARNING,
             title=f"YouTube API error (check_video_is_live): HTTP {status_code}",
-            context={"video_id": video_id, "status_code": status_code, "error": str(e)[:200]},
+            context={"video_id": video_id, "status_code": status_code, "error": _safe_error(e)},
         )
         return None
     except requests.RequestException as e:
         youtube_cb.record_failure(e)
-        logger.error("YouTube API check_video_is_live error for %s: %s", video_id, e)
+        logger.error("YouTube API check_video_is_live error for %s: %s", video_id, _redact_api_key(str(e)))
         from ..constants import AlertSeverity, AlertType
         from .alerts import log_alert
 
@@ -313,7 +329,7 @@ def check_video_is_live(video_id: str, api_key: str) -> dict[str, Any] | None:
             alert_type=AlertType.YT_API_QUOTA,
             severity=AlertSeverity.WARNING,
             title="YouTube API connection error (check_video_is_live)",
-            context={"video_id": video_id, "error": str(e)[:200]},
+            context={"video_id": video_id, "error": _safe_error(e)},
         )
         return None
 
@@ -373,7 +389,7 @@ def check_streams_ended(video_ids: list[str], api_key: str) -> set[str]:
                 youtube_cb.record_failure(YouTubeQuotaExhaustedError())
             else:
                 youtube_cb.record_failure(e)
-            logger.error("YouTube API check_streams_ended HTTP %s: %s", status_code, e)
+            logger.error("YouTube API check_streams_ended HTTP %s: %s", status_code, _redact_api_key(str(e)))
             from ..constants import AlertSeverity, AlertType
             from .alerts import log_alert
 
@@ -381,11 +397,11 @@ def check_streams_ended(video_ids: list[str], api_key: str) -> set[str]:
                 alert_type=AlertType.YT_API_QUOTA,
                 severity=AlertSeverity.CRITICAL if status_code == 403 else AlertSeverity.WARNING,
                 title=f"YouTube API error (check_streams_ended): HTTP {status_code}",
-                context={"batch_size": len(batch), "status_code": status_code, "error": str(e)[:200]},
+                context={"batch_size": len(batch), "status_code": status_code, "error": _safe_error(e)},
             )
         except requests.RequestException as e:
             youtube_cb.record_failure(e)
-            logger.error("YouTube API check_streams_ended error: %s", e)
+            logger.error("YouTube API check_streams_ended error: %s", _redact_api_key(str(e)))
             from ..constants import AlertSeverity, AlertType
             from .alerts import log_alert
 
@@ -393,7 +409,7 @@ def check_streams_ended(video_ids: list[str], api_key: str) -> set[str]:
                 alert_type=AlertType.YT_API_QUOTA,
                 severity=AlertSeverity.WARNING,
                 title="YouTube API connection error (check_streams_ended)",
-                context={"batch_size": len(batch), "error": str(e)[:200]},
+                context={"batch_size": len(batch), "error": _safe_error(e)},
             )
 
     return ended

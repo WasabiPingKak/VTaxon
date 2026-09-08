@@ -8,6 +8,7 @@ import requests
 
 from app.services.circuit_breaker import CircuitState, youtube_cb
 from app.services.youtube_pubsub import (
+    _redact_api_key,
     check_streams_ended,
     check_video_is_live,
     extract_channel_id,
@@ -589,3 +590,102 @@ class TestYouTubeCircuitBreaker:
         result = resolve_handle_to_channel_id("test2", "api_key")
         assert result is None
         mock_get.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# _redact_api_key — 遮罩 URL 中的 API 金鑰
+# ---------------------------------------------------------------------------
+
+
+class TestRedactApiKey:
+    def test_masks_key_at_end_of_url(self):
+        text = "500 Server Error for url: https://x/videos?part=status&id=abc&key=AIzaSecret123"
+        assert _redact_api_key(text) == "500 Server Error for url: https://x/videos?part=status&id=abc&key=***"
+
+    def test_masks_key_in_middle_of_query(self):
+        text = "https://x/videos?key=AIzaSecret123&part=status"
+        assert _redact_api_key(text) == "https://x/videos?key=***&part=status"
+
+    def test_masks_key_as_first_param(self):
+        text = "https://x/videos?key=AIzaSecret123"
+        assert _redact_api_key(text) == "https://x/videos?key=***"
+
+    def test_does_not_touch_other_params(self):
+        text = "https://x/videos?forHandle=@monkey&part=id"
+        assert _redact_api_key(text) == text
+
+    def test_does_not_match_substring_of_other_param(self):
+        # ``apikey=`` 或 ``monkey=`` 不該被誤判成 ``key=``
+        text = "https://x/?apikey=keep&monkey=keep"
+        assert _redact_api_key(text) == text
+
+
+class TestApiKeyNotLeakedToAlerts:
+    """YouTube API 失敗時，alert context 與 log 都不能出現 API 金鑰。"""
+
+    SECRET = "AIzaSyVERYSECRETKEY"
+    URL = f"https://www.googleapis.com/youtube/v3/videos?part=status&id=vid1&key={SECRET}"
+
+    def setup_method(self):
+        youtube_cb.reset()
+
+    def teardown_method(self):
+        youtube_cb.reset()
+
+    def _http_500(self):
+        mock_resp = MagicMock(status_code=500)
+        return requests.HTTPError(f"500 Server Error: Internal Server Error for url: {self.URL}", response=mock_resp)
+
+    @patch("app.services.alerts.log_alert")
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_check_streams_ended_http_error(self, mock_get, mock_log_alert, caplog):
+        mock_get.return_value.raise_for_status.side_effect = self._http_500()
+
+        check_streams_ended(["vid1"], self.SECRET)
+
+        mock_log_alert.assert_called_once()
+        ctx = mock_log_alert.call_args.kwargs["context"]
+        assert self.SECRET not in ctx["error"]
+        assert "key=***" in ctx["error"]
+        assert self.SECRET not in caplog.text
+
+    @patch("app.services.alerts.log_alert")
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_check_streams_ended_connection_error(self, mock_get, mock_log_alert, caplog):
+        mock_get.side_effect = requests.ConnectionError(f"Max retries exceeded with url: {self.URL}")
+
+        check_streams_ended(["vid1"], self.SECRET)
+
+        ctx = mock_log_alert.call_args.kwargs["context"]
+        assert self.SECRET not in ctx["error"]
+        assert self.SECRET not in caplog.text
+
+    @patch("app.services.alerts.log_alert")
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_check_video_is_live_http_error(self, mock_get, mock_log_alert, caplog):
+        mock_get.return_value.raise_for_status.side_effect = self._http_500()
+
+        check_video_is_live("vid1", self.SECRET)
+
+        ctx = mock_log_alert.call_args.kwargs["context"]
+        assert self.SECRET not in ctx["error"]
+        assert self.SECRET not in caplog.text
+
+    @patch("app.services.alerts.log_alert")
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_check_video_is_live_connection_error(self, mock_get, mock_log_alert, caplog):
+        mock_get.side_effect = requests.ConnectionError(f"Max retries exceeded with url: {self.URL}")
+
+        check_video_is_live("vid1", self.SECRET)
+
+        ctx = mock_log_alert.call_args.kwargs["context"]
+        assert self.SECRET not in ctx["error"]
+        assert self.SECRET not in caplog.text
+
+    @patch("app.services.youtube_pubsub.requests.get")
+    def test_resolve_handle_log_does_not_leak(self, mock_get, caplog):
+        mock_get.side_effect = requests.ConnectionError(f"Max retries exceeded with url: {self.URL}")
+
+        resolve_handle_to_channel_id("monkey", self.SECRET)
+
+        assert self.SECRET not in caplog.text
