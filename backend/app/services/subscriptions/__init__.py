@@ -8,17 +8,20 @@ from .twitch import (
 )
 from .youtube import (
     backfill_youtube_channels,
+    confirm_youtube_subscription,
     list_youtube_subs,
     rebuild_youtube_subs,
     subscribe_youtube_user,
     unsubscribe_youtube_user,
     youtube_check_offline,
+    youtube_check_sub_health,
     youtube_renew_subs,
     youtube_subscribe_one,
 )
 
 __all__ = [
     "backfill_youtube_channels",
+    "confirm_youtube_subscription",
     "list_twitch_subs",
     "list_youtube_subs",
     "rebuild_twitch_subs",
@@ -28,6 +31,7 @@ __all__ = [
     "unsubscribe_twitch_user",
     "unsubscribe_youtube_user",
     "youtube_check_offline",
+    "youtube_check_sub_health",
     "youtube_renew_subs",
     "youtube_subscribe_one",
 ]

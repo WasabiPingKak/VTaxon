@@ -12,10 +12,11 @@ import os
 import re
 import xml.etree.ElementTree as ET
 from typing import Any
-from urllib.parse import unquote
+from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 
+from ..constants import LiveSubStatus
 from .circuit_breaker import CircuitOpenError, YouTubeQuotaExhaustedError, youtube_cb
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,9 @@ logger = logging.getLogger(__name__)
 HUB_URL = "https://pubsubhubbub.appspot.com/subscribe"
 TOPIC_TEMPLATE = "https://www.youtube.com/xml/feeds/videos.xml?channel_id={}"
 YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3"
+
+# (connect, read) 秒數。每個請求會佔住一個 gunicorn sync worker，read 不要拉太長
+HUB_TIMEOUT = (5, 10)
 
 # Atom + YouTube XML namespaces
 NS = {
@@ -76,6 +80,16 @@ def extract_channel_id(channel_url: str | None) -> str | None:
         return None
     match = re.search(r"youtube\.com/channel/(UC[\w-]+)", channel_url)
     return match.group(1) if match else None
+
+
+def extract_channel_id_from_topic(topic: str | None) -> str | None:
+    """Extract the channel ID (UCxxx) from a hub.topic feed URL (see TOPIC_TEMPLATE)."""
+    if not topic:
+        return None
+    values = parse_qs(urlparse(topic).query).get("channel_id", [])
+    if values and re.fullmatch(r"UC[\w-]+", values[0]):
+        return values[0]
+    return None
 
 
 def extract_handle(channel_url: str | None) -> str | None:
@@ -178,11 +192,16 @@ def fetch_my_channel_id(access_token: str) -> str | None:
         return None
 
 
-def subscribe_channel(channel_id: str, callback_url: str, secret: str | None = None) -> bool:
+def subscribe_channel(channel_id: str, callback_url: str, secret: str | None = None) -> str:
     """Subscribe to a YouTube channel's feed via PubSubHubbub.
 
     If *secret* is provided, the hub will sign notifications with HMAC-SHA1.
-    Returns True if the hub accepted the request (HTTP 202/204).
+
+    Returns a ``LiveSubStatus`` value:
+      - SUBSCRIBED: hub 接受請求（HTTP 202/204）
+      - PENDING: 請求已送達但等不到回應（read timeout）。hub 忙碌時常常其實有收，
+        結果要等 hub 的驗證 GET 才知道，這時重打只會在同一個壞時段多卡一次
+      - FAILED: 請求沒送到（連線失敗）或 hub 明確拒絕，值得重試
     """
     try:
         data = {
@@ -193,17 +212,20 @@ def subscribe_channel(channel_id: str, callback_url: str, secret: str | None = N
         }
         if secret:
             data["hub.secret"] = secret
-        resp = requests.post(HUB_URL, data=data, timeout=15)
+        resp = requests.post(HUB_URL, data=data, timeout=HUB_TIMEOUT)
         if resp.status_code in (202, 204):
             logger.info("YouTube WebSub subscribe OK for %s", channel_id)
-            return True
+            return LiveSubStatus.SUBSCRIBED
         logger.warning(
             "YouTube WebSub subscribe failed for %s: HTTP %s — %s", channel_id, resp.status_code, resp.text[:200]
         )
-        return False
+        return LiveSubStatus.FAILED
+    except requests.exceptions.ReadTimeout as e:
+        logger.warning("YouTube WebSub subscribe read timeout for %s (outcome unknown): %s", channel_id, e)
+        return LiveSubStatus.PENDING
     except requests.RequestException as e:
         logger.error("YouTube WebSub subscribe error for %s: %s", channel_id, e)
-        return False
+        return LiveSubStatus.FAILED
 
 
 def unsubscribe_channel(channel_id: str, callback_url: str, secret: str | None = None) -> bool:
@@ -220,7 +242,7 @@ def unsubscribe_channel(channel_id: str, callback_url: str, secret: str | None =
         }
         if secret:
             data["hub.secret"] = secret
-        resp = requests.post(HUB_URL, data=data, timeout=15)
+        resp = requests.post(HUB_URL, data=data, timeout=HUB_TIMEOUT)
         if resp.status_code in (202, 204):
             logger.info("YouTube WebSub unsubscribe OK for %s", channel_id)
             return True

@@ -2,19 +2,67 @@
 
 import logging
 import os
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from ...constants import LiveSubStatus
 from ...extensions import db
 from ...models import LiveStream, OAuthAccount, User
 
 logger = logging.getLogger(__name__)
+
+# 健康檢查門檻。前提：續訂排程每天跑一次，hub 租約固定 5 天
+# 超過這段時間完全沒有訂閱嘗試，代表續訂根本沒跑到這個帳號
+SUB_STALE_AFTER = timedelta(days=3)
+# PENDING 要等 hub 補送驗證請求，超過這段時間還沒確認才算異常
+SUB_CONFIRM_GRACE = timedelta(hours=6)
+SUB_HEALTH_MIN_UNHEALTHY = 5
+SUB_HEALTH_WARNING_RATIO = 0.2
+SUB_HEALTH_CRITICAL_RATIO = 0.5
 
 
 def _invalidate_live_cache() -> None:
     from ...routes.livestream import invalidate_live_cache
 
     invalidate_live_cache()
+
+
+def _as_utc(dt: datetime) -> datetime:
+    """SQLite 回傳 naive datetime，比較前補上 UTC。"""
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+
+
+def _find_account_by_channel_id(channel_id: str) -> OAuthAccount | None:
+    account: OAuthAccount | None = OAuthAccount.query.filter(
+        OAuthAccount.provider == "youtube",
+        OAuthAccount.channel_url.ilike(f"%/channel/{channel_id}%"),
+    ).first()
+    return account
+
+
+def _confirmed_since(account: OAuthAccount, since: datetime) -> bool:
+    """帳號是否在 *since* 之後已被 hub 的驗證請求確認為 SUBSCRIBED。"""
+    # 直接查欄位繞過 identity map，拿 DB 目前的值
+    row = (
+        db.session.query(OAuthAccount.live_sub_status, OAuthAccount.live_sub_at)
+        .filter(OAuthAccount.id == account.id)
+        .first()
+    )
+    if not row or row[0] != LiveSubStatus.SUBSCRIBED or row[1] is None:
+        return False
+    return _as_utc(row[1]) >= since
+
+
+def _record_sub_result(account: OAuthAccount, status: str, started_at: datetime) -> None:
+    """把一次訂閱嘗試的結果寫回帳號（不 commit）。
+
+    hub 回應很慢時，驗證請求可能比訂閱請求的逾時更早抵達並已把狀態翻成 SUBSCRIBED，
+    這時不要再用 PENDING 蓋回去。
+    """
+    if status == LiveSubStatus.PENDING and _confirmed_since(account, started_at):
+        return
+    account.live_sub_status = status
+    account.live_sub_at = datetime.now(UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -140,26 +188,27 @@ def youtube_renew_subs() -> dict[str, Any] | None:
     callback_url = f"{webhook_base_url}/api/webhooks/youtube"
     hub_secret = os.environ.get("CRON_SECRET", "") or None
     renewed = 0
+    pending = 0
     errors = 0
     for p in params_list:
-        ok = subscribe_channel(p["channel_id"], callback_url, secret=hub_secret)
-        account = OAuthAccount.query.filter(
-            OAuthAccount.provider == "youtube",
-            OAuthAccount.channel_url.ilike(f"%/channel/{p['channel_id']}%"),
-        ).first()
+        started_at = datetime.now(UTC)
+        status = subscribe_channel(p["channel_id"], callback_url, secret=hub_secret)
+        account = _find_account_by_channel_id(p["channel_id"])
         if account:
-            account.live_sub_status = "subscribed" if ok else "failed"
-            account.live_sub_at = datetime.now(UTC)
-        if ok:
+            _record_sub_result(account, status, started_at)
+        if status == LiveSubStatus.SUBSCRIBED:
             renewed += 1
+        elif status == LiveSubStatus.PENDING:
+            pending += 1
         else:
             errors += 1
     db.session.commit()
 
     logger.info(
-        "YouTube renew-subs (sync fallback): total=%d, renewed=%d, skipped=%d, errors=%d",
+        "YouTube renew-subs (sync fallback): total=%d, renewed=%d, pending=%d, skipped=%d, errors=%d",
         len(accounts),
         renewed,
+        pending,
         skipped,
         errors,
     )
@@ -171,13 +220,31 @@ def youtube_renew_subs() -> dict[str, Any] | None:
             alert_type=AlertType.WEBSUB_RENEW_FAIL,
             severity=AlertSeverity.CRITICAL if renewed == 0 else AlertSeverity.WARNING,
             title=f"WebSub renew (sync): {errors} error(s) / {len(params_list)} total",
-            context={"renewed": renewed, "errors": errors, "total": len(accounts), "skipped": skipped, "mode": "sync"},
+            context={
+                "renewed": renewed,
+                "pending": pending,
+                "errors": errors,
+                "total": len(accounts),
+                "skipped": skipped,
+                "mode": "sync",
+            },
         )
-    return {"mode": "sync", "total": len(accounts), "renewed": renewed, "skipped": skipped, "errors": errors}
+    return {
+        "mode": "sync",
+        "total": len(accounts),
+        "renewed": renewed,
+        "pending": pending,
+        "skipped": skipped,
+        "errors": errors,
+    }
 
 
 def youtube_subscribe_one(channel_id: str) -> tuple[dict[str, Any], int]:
-    """Subscribe a single YouTube channel. Returns (result_dict, http_status)."""
+    """Subscribe a single YouTube channel. Returns (result_dict, http_status).
+
+    只有 FAILED 回 500 讓 Cloud Tasks 重試。PENDING 回 200：請求已送達 hub，
+    重試只會在 hub 忙碌的同一個時段再卡一次，結果交給驗證請求確認。
+    """
     from ..youtube_pubsub import subscribe_channel
 
     webhook_base_url = os.environ.get("WEBHOOK_BASE_URL", "")
@@ -186,23 +253,92 @@ def youtube_subscribe_one(channel_id: str) -> tuple[dict[str, Any], int]:
 
     callback_url = f"{webhook_base_url}/api/webhooks/youtube"
     hub_secret = os.environ.get("CRON_SECRET", "") or None
-    ok = subscribe_channel(channel_id, callback_url, secret=hub_secret)
+    started_at = datetime.now(UTC)
+    status = subscribe_channel(channel_id, callback_url, secret=hub_secret)
 
-    account = OAuthAccount.query.filter(
-        OAuthAccount.provider == "youtube",
-        OAuthAccount.channel_url.ilike(f"%/channel/{channel_id}%"),
-    ).first()
+    account = _find_account_by_channel_id(channel_id)
     if account:
-        account.live_sub_status = "subscribed" if ok else "failed"
-        account.live_sub_at = datetime.now(UTC)
+        _record_sub_result(account, status, started_at)
         db.session.commit()
 
-    if ok:
-        logger.info("YouTube subscribe-one OK: %s", channel_id)
-        return {"channel_id": channel_id, "status": "subscribed"}, 200
+    if status == LiveSubStatus.FAILED:
+        logger.warning("YouTube subscribe-one FAILED: %s", channel_id)
+        return {"channel_id": channel_id, "status": status}, 500
 
-    logger.warning("YouTube subscribe-one FAILED: %s", channel_id)
-    return {"channel_id": channel_id, "status": "failed"}, 500
+    logger.info("YouTube subscribe-one %s: %s", status, channel_id)
+    return {"channel_id": channel_id, "status": status}, 200
+
+
+def confirm_youtube_subscription(channel_id: str) -> bool:
+    """hub 送來訂閱驗證請求時呼叫：hub 確實收到並接受了訂閱，把狀態翻成 SUBSCRIBED。
+
+    Returns False if no account matches the channel.
+    """
+    # 直接 UPDATE，不載入帳號：載入會觸發 token 欄位的 KMS 解密，而 hub 在等我們回 challenge
+    updated: int = OAuthAccount.query.filter(
+        OAuthAccount.provider == "youtube",
+        OAuthAccount.channel_url.ilike(f"%/channel/{channel_id}%"),
+    ).update(
+        {"live_sub_status": LiveSubStatus.SUBSCRIBED, "live_sub_at": datetime.now(UTC)},
+        synchronize_session=False,
+    )
+    db.session.commit()
+    return updated > 0
+
+
+def youtube_check_sub_health() -> dict[str, Any]:
+    """檢查 YouTube 訂閱的整體健康度，異常比例過高時記一筆 WEBSUB_RENEW_FAIL 告警。
+
+    Cloud Tasks 模式下 renew-subs 只知道「派發成功」，後續 subscribe-one 大量失敗
+    不會回報到任何地方，這裡從結果面（帳號上的訂閱狀態）補上偵測。
+    """
+    from ..youtube_pubsub import extract_channel_id
+
+    now = datetime.now(UTC)
+    total = 0
+    stale = 0
+    failed = 0
+    unconfirmed = 0
+    # 只查需要的欄位：載入整個帳號會讓每個 token 欄位各打一次 KMS 解密，這支每小時跑一次
+    rows = (
+        db.session.query(OAuthAccount.channel_url, OAuthAccount.live_sub_status, OAuthAccount.live_sub_at)
+        .filter(OAuthAccount.provider == "youtube")
+        .all()
+    )
+    for channel_url, sub_status, sub_at in rows:
+        if not extract_channel_id(channel_url):
+            continue  # 續訂本來就會跳過這些帳號
+        total += 1
+        age = now - _as_utc(sub_at) if sub_at else None
+        if age is None or age > SUB_STALE_AFTER:
+            stale += 1
+        elif sub_status == LiveSubStatus.FAILED:
+            failed += 1
+        elif sub_status != LiveSubStatus.SUBSCRIBED and age > SUB_CONFIRM_GRACE:
+            unconfirmed += 1
+
+    unhealthy = stale + failed + unconfirmed
+    ratio = unhealthy / total if total else 0.0
+    result: dict[str, Any] = {
+        "total": total,
+        "unhealthy": unhealthy,
+        "stale": stale,
+        "failed": failed,
+        "unconfirmed": unconfirmed,
+        "ratio": round(ratio, 3),
+    }
+
+    if unhealthy >= SUB_HEALTH_MIN_UNHEALTHY and ratio >= SUB_HEALTH_WARNING_RATIO:
+        from ...constants import AlertSeverity, AlertType
+        from ..alerts import log_alert
+
+        log_alert(
+            alert_type=AlertType.WEBSUB_RENEW_FAIL,
+            severity=AlertSeverity.CRITICAL if ratio >= SUB_HEALTH_CRITICAL_RATIO else AlertSeverity.WARNING,
+            title=f"WebSub 訂閱健康檢查：{unhealthy}/{total} 個頻道訂閱異常",
+            context={**result, "mode": "health_check"},
+        )
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -260,6 +396,7 @@ def rebuild_youtube_subs(*, offset: int, limit: int, clean: bool) -> tuple[dict[
                 unsubscribed += 1
 
     subscribed = 0
+    pending = 0
     skipped = 0
     errors = 0
     for account in yt_accounts:
@@ -267,20 +404,22 @@ def rebuild_youtube_subs(*, offset: int, limit: int, clean: bool) -> tuple[dict[
         if not channel_id:
             skipped += 1
             continue
-        ok = subscribe_channel(channel_id, callback_url, secret=hub_secret)
-        if ok:
+        started_at = datetime.now(UTC)
+        status = subscribe_channel(channel_id, callback_url, secret=hub_secret)
+        _record_sub_result(account, status, started_at)
+        if status == LiveSubStatus.SUBSCRIBED:
             subscribed += 1
-            account.live_sub_status = "subscribed"
+        elif status == LiveSubStatus.PENDING:
+            pending += 1
         else:
             errors += 1
-            account.live_sub_status = "failed"
-        account.live_sub_at = datetime.now(UTC)
 
     db.session.commit()
 
     next_offset = offset + limit
     return {
         "subscribed": subscribed,
+        "pending": pending,
         "skipped": skipped,
         "errors": errors,
         "unsubscribed": unsubscribed,
@@ -315,6 +454,7 @@ def backfill_youtube_channels(api_key: str) -> dict[str, Any]:
     resolved_handle = 0
     resolved_token = 0
     subscribe_ok = 0
+    subscribe_pending = 0
     subscribe_fail = 0
     still_missing = 0
     details: list[dict[str, str | None]] = []
@@ -351,11 +491,13 @@ def backfill_youtube_channels(api_key: str) -> dict[str, Any]:
 
         # Subscribe to WebSub
         if callback_url:
-            ok = subscribe_channel(channel_id, callback_url, secret=hub_secret)
-            account.live_sub_status = "subscribed" if ok else "failed"
-            account.live_sub_at = datetime.now(UTC)
-            if ok:
+            started_at = datetime.now(UTC)
+            status = subscribe_channel(channel_id, callback_url, secret=hub_secret)
+            _record_sub_result(account, status, started_at)
+            if status == LiveSubStatus.SUBSCRIBED:
                 subscribe_ok += 1
+            elif status == LiveSubStatus.PENDING:
+                subscribe_pending += 1
             else:
                 subscribe_fail += 1
 
@@ -366,10 +508,11 @@ def backfill_youtube_channels(api_key: str) -> dict[str, Any]:
     db.session.commit()
 
     logger.info(
-        "YouTube backfill: handle=%d, token=%d, subscribed=%d, failed=%d, missing=%d",
+        "YouTube backfill: handle=%d, token=%d, subscribed=%d, pending=%d, failed=%d, missing=%d",
         resolved_handle,
         resolved_token,
         subscribe_ok,
+        subscribe_pending,
         subscribe_fail,
         still_missing,
     )
@@ -377,6 +520,7 @@ def backfill_youtube_channels(api_key: str) -> dict[str, Any]:
         "resolved_handle": resolved_handle,
         "resolved_token": resolved_token,
         "subscribe_ok": subscribe_ok,
+        "subscribe_pending": subscribe_pending,
         "subscribe_fail": subscribe_fail,
         "still_missing": still_missing,
         "details": details,
@@ -396,7 +540,7 @@ def subscribe_youtube_user(channel_url: str, oauth_account: OAuthAccount | None 
     if not webhook_base_url:
         logger.warning("WEBHOOK_BASE_URL not configured, skipping YouTube WebSub for %s", channel_url)
         if oauth_account:
-            oauth_account.live_sub_status = "failed"
+            oauth_account.live_sub_status = LiveSubStatus.FAILED
             oauth_account.live_sub_at = datetime.now(UTC)
             db.session.commit()
         return
@@ -405,18 +549,18 @@ def subscribe_youtube_user(channel_url: str, oauth_account: OAuthAccount | None 
     if not channel_id:
         logger.warning("Could not extract channel ID from %s", channel_url)
         if oauth_account:
-            oauth_account.live_sub_status = "failed"
+            oauth_account.live_sub_status = LiveSubStatus.FAILED
             oauth_account.live_sub_at = datetime.now(UTC)
             db.session.commit()
         return
 
     callback_url = f"{webhook_base_url}/api/webhooks/youtube"
     hub_secret = os.environ.get("CRON_SECRET", "") or None
-    ok = subscribe_channel(channel_id, callback_url, secret=hub_secret)
+    started_at = datetime.now(UTC)
+    status = subscribe_channel(channel_id, callback_url, secret=hub_secret)
 
     if oauth_account:
-        oauth_account.live_sub_status = "subscribed" if ok else "failed"
-        oauth_account.live_sub_at = datetime.now(UTC)
+        _record_sub_result(oauth_account, status, started_at)
         db.session.commit()
 
 

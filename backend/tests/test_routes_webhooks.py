@@ -116,6 +116,69 @@ class TestYouTubeWebhookVerify:
         resp = client.get("/api/webhooks/youtube")
         assert resp.status_code == 404
 
+    TOPIC = "https://www.youtube.com/xml/feeds/videos.xml?channel_id=UCverify123"
+
+    def _yt_account(self, db_session, status):
+        uid = f"user-{uuid.uuid4().hex[:8]}"
+        db_session.add(User(id=uid, display_name="YT", role="user"))
+        db_session.flush()
+        acct = OAuthAccount(
+            user_id=uid,
+            provider="youtube",
+            provider_account_id=f"yt-{uuid.uuid4().hex[:6]}",
+            channel_url="https://www.youtube.com/channel/UCverify123",
+            live_sub_status=status,
+        )
+        db_session.add(acct)
+        db_session.commit()
+        return acct
+
+    def test_subscribe_verification_confirms_pending_account(self, client, db_session):
+        acct = self._yt_account(db_session, "pending")
+        resp = client.get(
+            "/api/webhooks/youtube",
+            query_string={
+                "hub.mode": "subscribe",
+                "hub.topic": self.TOPIC,
+                "hub.challenge": "abc123",
+                "hub.lease_seconds": "432000",
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.data.decode() == "abc123"
+        db_session.refresh(acct)
+        assert acct.live_sub_status == "subscribed"
+        assert acct.live_sub_at is not None
+
+    def test_unsubscribe_verification_does_not_touch_status(self, client, db_session):
+        acct = self._yt_account(db_session, "failed")
+        resp = client.get(
+            "/api/webhooks/youtube",
+            query_string={"hub.mode": "unsubscribe", "hub.topic": self.TOPIC, "hub.challenge": "abc123"},
+        )
+        assert resp.status_code == 200
+        assert resp.data.decode() == "abc123"
+        db_session.refresh(acct)
+        assert acct.live_sub_status == "failed"
+
+    def test_unknown_channel_still_echoes_challenge(self, client):
+        """帳號可能還沒 commit（剛連結帳號時 hub 就來驗證），不能因此拒絕驗證。"""
+        resp = client.get(
+            "/api/webhooks/youtube",
+            query_string={"hub.mode": "subscribe", "hub.topic": self.TOPIC, "hub.challenge": "abc123"},
+        )
+        assert resp.status_code == 200
+        assert resp.data.decode() == "abc123"
+
+    @patch("app.services.subscriptions.confirm_youtube_subscription", side_effect=RuntimeError("db down"))
+    def test_confirm_error_still_echoes_challenge(self, mock_confirm, client):
+        resp = client.get(
+            "/api/webhooks/youtube",
+            query_string={"hub.mode": "subscribe", "hub.topic": self.TOPIC, "hub.challenge": "abc123"},
+        )
+        assert resp.status_code == 200
+        assert resp.data.decode() == "abc123"
+
 
 # ---------------------------------------------------------------------------
 # POST /api/webhooks/youtube (notification)

@@ -225,6 +225,12 @@ def youtube_webhook_verify() -> tuple[str, int, dict[str, str]] | tuple[str, int
       - name: hub.challenge
         in: query
         type: string
+      - name: hub.mode
+        in: query
+        type: string
+      - name: hub.topic
+        in: query
+        type: string
     responses:
       200:
         description: 回傳 hub.challenge
@@ -232,9 +238,24 @@ def youtube_webhook_verify() -> tuple[str, int, dict[str, str]] | tuple[str, int
         description: 缺少 challenge
     """
     challenge = request.args.get("hub.challenge", "")
-    if challenge:
-        return challenge, 200, {"Content-Type": "text/plain"}
-    return "", 404
+    if not challenge:
+        return "", 404
+
+    # hub 來驗證代表訂閱請求確實有送達並被接受，順手把帳號狀態翻成 subscribed。
+    # 回傳 challenge 才是訂閱成立的關鍵，狀態更新失敗不能影響它
+    if request.args.get("hub.mode") == "subscribe":
+        from ..services.subscriptions import confirm_youtube_subscription
+        from ..services.youtube_pubsub import extract_channel_id_from_topic
+
+        channel_id = extract_channel_id_from_topic(request.args.get("hub.topic"))
+        if channel_id:
+            try:
+                confirm_youtube_subscription(channel_id)
+            except Exception:
+                logger.exception("Failed to confirm YouTube WebSub subscription for %s", channel_id)
+                db.session.rollback()
+
+    return challenge, 200, {"Content-Type": "text/plain"}
 
 
 @webhooks_bp.route("/webhooks/youtube", methods=["POST"])

@@ -58,6 +58,20 @@ class RequestStatus:
 
 
 # ---------------------------------------------------------------------------
+# Live subscription status (oauth_accounts.live_sub_status)
+# ---------------------------------------------------------------------------
+
+
+class LiveSubStatus:
+    SUBSCRIBED = "subscribed"
+    # 訂閱請求已送達但還沒得到確認（例如 hub 回應逾時），等 hub 的驗證請求翻成 SUBSCRIBED
+    PENDING = "pending"
+    FAILED = "failed"
+
+    ALL = (SUBSCRIBED, PENDING, FAILED)
+
+
+# ---------------------------------------------------------------------------
 # Admin alert types & severities
 # ---------------------------------------------------------------------------
 
