@@ -1,12 +1,16 @@
 """Livestream subscription management — cron jobs and admin endpoints."""
 
+import logging
 import os
 
 from flask import Blueprint, Response, jsonify, request
 
 from ..auth import admin_required
+from ..extensions import db
 from ..limiter import limiter
 from ..services import subscriptions as subs_svc
+
+logger = logging.getLogger(__name__)
 
 subscriptions_bp = Blueprint("subscriptions", __name__)
 
@@ -100,6 +104,13 @@ def alert_digest() -> tuple[Response, int] | Response:
 
     from ..services.alerts import send_alert_digest
 
+    # 先跑訂閱健康檢查，有異常的話這一輪摘要信就會帶到。檢查本身出錯不能擋住摘要信
+    try:
+        subs_svc.youtube_check_sub_health()
+    except Exception:
+        logger.exception("YouTube sub health check failed")
+        db.session.rollback()
+
     return jsonify(send_alert_digest())
 
 
@@ -121,13 +132,13 @@ def youtube_subscribe_one() -> tuple[Response, int]:
         required: true
     responses:
       200:
-        description: 訂閱成功
+        description: 訂閱成功，或請求已送達但等不到 hub 回應（status=pending，不重試）
       400:
         description: 缺少 channel_id
       403:
         description: 未授權
       500:
-        description: 訂閱失敗
+        description: 訂閱失敗（Cloud Tasks 會重試）
     """
     if not _verify_cron_secret():
         secret = os.environ.get("CRON_SECRET", "")

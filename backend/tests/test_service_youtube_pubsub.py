@@ -6,12 +6,14 @@ from unittest.mock import MagicMock, patch
 
 import requests
 
+from app.constants import LiveSubStatus
 from app.services.circuit_breaker import CircuitState, youtube_cb
 from app.services.youtube_pubsub import (
     _redact_api_key,
     check_streams_ended,
     check_video_is_live,
     extract_channel_id,
+    extract_channel_id_from_topic,
     extract_handle,
     fetch_my_channel_id,
     normalize_youtube_channel_url,
@@ -248,7 +250,9 @@ class TestSubscribeChannel:
         mock_resp.status_code = 202
         mock_post.return_value = mock_resp
 
-        assert subscribe_channel("UC123", "https://example.com/cb") is True
+        assert subscribe_channel("UC123", "https://example.com/cb") == LiveSubStatus.SUBSCRIBED
+        # connect / read 逾時分開設定
+        assert mock_post.call_args.kwargs["timeout"] == (5, 10)
 
     @patch("app.services.youtube_pubsub.requests.post")
     def test_success_204(self, mock_post):
@@ -256,7 +260,7 @@ class TestSubscribeChannel:
         mock_resp.status_code = 204
         mock_post.return_value = mock_resp
 
-        assert subscribe_channel("UC123", "https://example.com/cb", secret="s") is True
+        assert subscribe_channel("UC123", "https://example.com/cb", secret="s") == LiveSubStatus.SUBSCRIBED
 
     @patch("app.services.youtube_pubsub.requests.post")
     def test_failure_400(self, mock_post):
@@ -265,13 +269,51 @@ class TestSubscribeChannel:
         mock_resp.text = "Bad Request"
         mock_post.return_value = mock_resp
 
-        assert subscribe_channel("UC123", "https://example.com/cb") is False
+        assert subscribe_channel("UC123", "https://example.com/cb") == LiveSubStatus.FAILED
 
     @patch("app.services.youtube_pubsub.requests.post")
     def test_request_exception(self, mock_post):
         mock_post.side_effect = requests.RequestException("Network error")
 
-        assert subscribe_channel("UC123", "https://example.com/cb") is False
+        assert subscribe_channel("UC123", "https://example.com/cb") == LiveSubStatus.FAILED
+
+    @patch("app.services.youtube_pubsub.requests.post")
+    def test_read_timeout_is_pending(self, mock_post):
+        """請求已送達但等不到回應：結果未知，不當成確定失敗。"""
+        mock_post.side_effect = requests.exceptions.ReadTimeout("Read timed out. (read timeout=10)")
+
+        assert subscribe_channel("UC123", "https://example.com/cb") == LiveSubStatus.PENDING
+
+    @patch("app.services.youtube_pubsub.requests.post")
+    def test_connect_timeout_is_failed(self, mock_post):
+        """連線階段就逾時代表請求沒送到，值得重試。"""
+        mock_post.side_effect = requests.exceptions.ConnectTimeout("connect timed out")
+
+        assert subscribe_channel("UC123", "https://example.com/cb") == LiveSubStatus.FAILED
+
+    @patch("app.services.youtube_pubsub.requests.post")
+    def test_connection_error_is_failed(self, mock_post):
+        mock_post.side_effect = requests.exceptions.ConnectionError("refused")
+
+        assert subscribe_channel("UC123", "https://example.com/cb") == LiveSubStatus.FAILED
+
+
+class TestExtractChannelIdFromTopic:
+    def test_extracts_from_feed_url(self):
+        topic = "https://www.youtube.com/xml/feeds/videos.xml?channel_id=UCuAXFkgsw1L7xaCfnd5JJOw"
+        assert extract_channel_id_from_topic(topic) == "UCuAXFkgsw1L7xaCfnd5JJOw"
+
+    def test_none_and_empty(self):
+        assert extract_channel_id_from_topic(None) is None
+        assert extract_channel_id_from_topic("") is None
+
+    def test_missing_channel_id_param(self):
+        assert extract_channel_id_from_topic("https://www.youtube.com/xml/feeds/videos.xml") is None
+
+    def test_rejects_malformed_channel_id(self):
+        # 值會被拿去組 LIKE 查詢，不符合 UCxxx 格式的一律不收
+        assert extract_channel_id_from_topic("https://x/feeds?channel_id=%25") is None
+        assert extract_channel_id_from_topic("https://x/feeds?channel_id=notachannel") is None
 
 
 class TestUnsubscribeChannel:

@@ -7,6 +7,7 @@ from typing import Any
 
 import requests as _requests
 
+from ...constants import LiveSubStatus
 from ...extensions import db
 from ...models import OAuthAccount
 
@@ -88,7 +89,7 @@ def rebuild_twitch_subs(*, offset: int, limit: int, clean: bool) -> tuple[dict[s
                 logger.exception("Failed to create %s sub for %s", event_type, broadcaster_id)
                 errors += 1
                 error_details.append(f"{broadcaster_id}:{event_type}:request_failed")
-        account.live_sub_status = "subscribed" if account_success == 2 else "failed"
+        account.live_sub_status = LiveSubStatus.SUBSCRIBED if account_success == 2 else LiveSubStatus.FAILED
         account.live_sub_at = datetime.now(UTC)
 
     db.session.commit()
@@ -123,7 +124,7 @@ def subscribe_twitch_user(provider_account_id: str, oauth_account: OAuthAccount 
     if not all([client_id, client_secret, webhook_secret, webhook_base_url]):
         logger.warning("Twitch EventSub not configured, skipping subscription for %s", provider_account_id)
         if oauth_account:
-            oauth_account.live_sub_status = "failed"
+            oauth_account.live_sub_status = LiveSubStatus.FAILED
             oauth_account.live_sub_at = datetime.now(UTC)
             db.session.commit()
         return
@@ -142,7 +143,7 @@ def subscribe_twitch_user(provider_account_id: str, oauth_account: OAuthAccount 
             logger.exception("Failed to create Twitch EventSub %s for %s", event_type, provider_account_id)
 
     if oauth_account:
-        oauth_account.live_sub_status = "subscribed" if success_count == 2 else "failed"
+        oauth_account.live_sub_status = LiveSubStatus.SUBSCRIBED if success_count == 2 else LiveSubStatus.FAILED
         oauth_account.live_sub_at = datetime.now(UTC)
         db.session.commit()
 

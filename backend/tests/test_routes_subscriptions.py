@@ -3,6 +3,7 @@
 import sys
 import types
 import uuid
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 from app.models import LiveStream, OAuthAccount, User
@@ -74,6 +75,68 @@ class TestAlertDigest:
         assert resp.status_code == 200
         assert resp.get_json()["status"] == "sent"
         mock_send.assert_called_once()
+
+    @patch("app.services.email.send_admin_notification")
+    def test_unhealthy_subs_are_included_in_same_digest(self, mock_send, client, db_session):
+        for i in range(6):
+            _, acct = _yt_user(db_session, f"UC_failed{i}")
+            acct.live_sub_status = "failed"
+            acct.live_sub_at = datetime.now(UTC)
+        db_session.commit()
+        with patch.dict("os.environ", {"CRON_SECRET": "test-cron-secret"}):
+            resp = client.post("/api/cron/alert-digest", headers=CRON_HEADERS)
+        assert resp.status_code == 200
+        assert resp.get_json()["status"] == "sent"
+        assert "websub_renew_fail" in mock_send.call_args.args[1]
+
+    @patch("app.services.subscriptions.youtube_check_sub_health", side_effect=RuntimeError("boom"))
+    def test_health_check_error_does_not_block_digest(self, mock_health, client):
+        with patch.dict("os.environ", {"CRON_SECRET": "test-cron-secret"}):
+            resp = client.post("/api/cron/alert-digest", headers=CRON_HEADERS)
+        assert resp.status_code == 200
+        assert resp.get_json()["status"] == "no_events"
+
+
+# ---------------------------------------------------------------------------
+# POST /api/livestream/youtube-subscribe-one
+# ---------------------------------------------------------------------------
+
+
+class TestYouTubeSubscribeOne:
+    ENV = {"CRON_SECRET": "test-cron-secret", "WEBHOOK_BASE_URL": "https://x.run.app"}
+
+    def _post(self, client, channel_id="UC_one111"):
+        with patch.dict("os.environ", self.ENV):
+            return client.post(f"/api/livestream/youtube-subscribe-one?channel_id={channel_id}", headers=CRON_HEADERS)
+
+    @patch("app.services.youtube_pubsub.subscribe_channel", return_value="subscribed")
+    def test_subscribed(self, mock_sub, client, db_session):
+        _, acct = _yt_user(db_session, "UC_one111")
+        resp = self._post(client)
+        assert resp.status_code == 200
+        assert resp.get_json()["status"] == "subscribed"
+        db_session.refresh(acct)
+        assert acct.live_sub_status == "subscribed"
+
+    @patch("app.services.youtube_pubsub.subscribe_channel", return_value="pending")
+    def test_hub_read_timeout_returns_200_without_retry(self, mock_sub, client, db_session):
+        _, acct = _yt_user(db_session, "UC_one111")
+        resp = self._post(client)
+        assert resp.status_code == 200
+        assert resp.get_json()["status"] == "pending"
+        db_session.refresh(acct)
+        assert acct.live_sub_status == "pending"
+
+    @patch("app.services.youtube_pubsub.subscribe_channel", return_value="failed")
+    def test_failed_returns_500(self, mock_sub, client, db_session):
+        _yt_user(db_session, "UC_one111")
+        resp = self._post(client)
+        assert resp.status_code == 500
+
+    def test_missing_channel_id(self, client):
+        with patch.dict("os.environ", self.ENV):
+            resp = client.post("/api/livestream/youtube-subscribe-one", headers=CRON_HEADERS)
+        assert resp.status_code == 400
 
 
 # ---------------------------------------------------------------------------
@@ -169,7 +232,7 @@ class TestYouTubeRenewSubs:
                 },
             ),
             patch.dict(sys.modules, {"app.utils.cloud_tasks_client": mock_mod}),
-            patch("app.services.youtube_pubsub.subscribe_channel", return_value=True) as mock_sub,
+            patch("app.services.youtube_pubsub.subscribe_channel", return_value="subscribed") as mock_sub,
         ):
             _yt_user(db_session, "UC_aaa111")
             _yt_user(db_session, "UC_bbb222")
@@ -180,7 +243,7 @@ class TestYouTubeRenewSubs:
         assert data["renewed"] == 2
         assert mock_sub.call_count == 2
 
-    @patch("app.services.youtube_pubsub.subscribe_channel", return_value=True)
+    @patch("app.services.youtube_pubsub.subscribe_channel", return_value="subscribed")
     def test_no_cloud_run_url_uses_sync(self, mock_sub, client, db_session, app):
         with patch.dict(
             "os.environ",
@@ -240,7 +303,7 @@ def _yt_user_null(db_session, token="some-token"):
 
 
 class TestBackfillYouTubeChannels:
-    @patch("app.services.youtube_pubsub.subscribe_channel", return_value=True)
+    @patch("app.services.youtube_pubsub.subscribe_channel", return_value="subscribed")
     @patch("app.services.youtube_pubsub.resolve_handle_to_channel_id", return_value="UCresolved123")
     def test_resolves_handle(self, mock_resolve, mock_sub, client, db_session):
         _yt_user_handle(db_session, "testchannel")
@@ -254,7 +317,7 @@ class TestBackfillYouTubeChannels:
         assert data["resolved_handle"] == 1
         assert data["subscribe_ok"] == 1
 
-    @patch("app.services.youtube_pubsub.subscribe_channel", return_value=True)
+    @patch("app.services.youtube_pubsub.subscribe_channel", return_value="subscribed")
     @patch("app.services.youtube_pubsub.fetch_my_channel_id", return_value="UCmyChannel")
     @patch("app.services.youtube_pubsub.resolve_handle_to_channel_id", return_value=None)
     def test_resolves_null_via_token(self, mock_resolve, mock_fetch, mock_sub, client, db_session):

@@ -134,6 +134,9 @@ export default function SettingsAccounts() {
       setOauthAccounts(prev => prev.map(a => a.id === account.id ? updated : a));
       if (updated.live_sub_status === 'subscribed') {
         addToast('直播訂閱已重新建立', { type: 'success', duration: 3000 });
+      } else if (updated.live_sub_status === 'pending') {
+        // 後端已送出訂閱但 YouTube 還沒回覆，確認後狀態會自己變成 subscribed
+        addToast('已送出申請，YouTube 目前回應比較慢，直播通知稍後會自動啟用', { type: 'info' });
       } else {
         addToast('直播訂閱仍然失敗，請稍後再試', { type: 'error' });
       }
