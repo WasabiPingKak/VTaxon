@@ -56,6 +56,11 @@ INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path,
 ('Snake Spirit', '蛇妖', '東方神話', '中國神話', '東方神話|中國神話|妖異|Snake Spirit', '蛇類修煉幻化人形的妖怪，保留蛇瞳、蛇信等獸態特徵；以《白蛇傳》白素貞為最著名的代表')
 ON CONFLICT(name) DO NOTHING;
 
+-- 印度神話
+INSERT INTO fictional_species (name, name_zh, origin, sub_origin, category_path, description) VALUES
+('Avatar', '化身', '東方神話', '印度神話', '東方神話|印度神話|神靈|Avatar', '印度教中的神性概念，梵語 avatāra 直譯為降臨、降生，指神靈轉世於人間的肉身存有。根據《薄伽梵歌》與諸《往世書》的記載，神靈（尤其是毗濕奴、濕婆、夏克提）藉由化身降臨人間，並建立正法。')
+ON CONFLICT(name) DO NOTHING;
+
 -- === 西方神話 ===
 
 -- 希臘神話
