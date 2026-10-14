@@ -1,5 +1,7 @@
 flask~=3.0
 flask-sqlalchemy~=3.1
+# 鎖在 2.0 系列：SQLAlchemy 2.1 把 postgresql:// 預設驅動改為 psycopg 3，與 psycopg2-binary 不相容
+sqlalchemy~=2.0.0
 flask-cors~=5.0
 flask-limiter~=3.5
 pydantic~=2.11
