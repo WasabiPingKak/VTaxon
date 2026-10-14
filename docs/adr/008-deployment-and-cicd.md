@@ -102,3 +102,4 @@ feature/xxx (worktree) → merge → develop → merge → main
 - 單一 Supabase 實例的 schema 隔離簡化維運，但 migration 需同時寫兩段 SQL
 - 手寫 migration 靈活但缺乏版本追蹤——目前 migration 數量少，可控
 - Firebase Hosting 的 API 反向代理讓前端不需處理 CORS
+- 每次部署都重建 image 並重新解析 `requirements.txt`，沒有 lock file。間接依賴在兩次部署之間升大版會讓「零後端改動」的部署炸掉：2026-10-14 SQLAlchemy 2.1 將 `postgresql://` 預設驅動改為 psycopg 3，造成 prod 與 staging 全站 503 約 20 分鐘，已以 `sqlalchemy~=2.0.0` 鎖版本。若再發生可考慮改用 pip-compile 產生 lock file
